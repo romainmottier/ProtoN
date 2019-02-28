@@ -401,8 +401,19 @@ public:
                     RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
             }
         }
-
+        
         RHS.block(cell_LHS_offset, 0, cbs, 1) += rhs.block(0, 0, cbs, 1);
+        if ( rhs.rows() > cbs )
+        {
+            for (size_t face_i = 0; face_i < num_faces; face_i++)
+            {
+                auto fc = fcs[face_i];
+                auto face_offset = offset(msh, fc);
+                auto face_LHS_offset = cbs * msh.cells.size() + compress_table.at(face_offset)*fbs;
+                
+                RHS.block(face_LHS_offset, 0, fbs, 1) += rhs.block(cbs+face_i*fbs, 0, fbs, 1);
+            }
+        }
     } // assemble()
 
     template<typename Function>

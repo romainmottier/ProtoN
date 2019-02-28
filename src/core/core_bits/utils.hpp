@@ -61,15 +61,15 @@
 
 class hho_degree_info
 {
-    size_t  cell_deg, face_deg, reconstruction_deg;
+    size_t  cell_deg, face_deg, reconstruction_deg, grad_deg;
 
 public:
     hho_degree_info()
-        : cell_deg(1), face_deg(1), reconstruction_deg(2)
+        : cell_deg(1), face_deg(1), reconstruction_deg(2), grad_deg(1)
     {}
 
     explicit hho_degree_info(size_t degree)
-        : cell_deg(degree), face_deg(degree), reconstruction_deg(degree+1)
+        : cell_deg(degree), face_deg(degree), reconstruction_deg(degree+1), grad_deg(degree)
     {}
 
     hho_degree_info(size_t cd, size_t fd)
@@ -81,6 +81,7 @@ public:
             cell_deg            = cd;
             face_deg            = fd;
             reconstruction_deg  = fd+1;
+            grad_deg            = fd;
 
         }
         else
@@ -89,9 +90,27 @@ public:
             cell_deg            = fd;
             face_deg            = fd;
             reconstruction_deg  = fd+1;
+            grad_deg            = fd;
         }
+    }
 
-        //std::cout << cell_deg << " " << face_deg << " " << reconstruction_deg << std::endl;
+    hho_degree_info(size_t cd, size_t fd, size_t gd)
+    {
+        bool c1 = fd > 0 && (cd == fd - 1 || cd == fd || cd == fd + 1);
+        bool c2 = fd == 0 && (cd == fd || cd == fd + 1);
+        bool c3 = gd >= fd;
+        if (c1 || c2 || c3) {
+            cell_deg           = cd;
+            face_deg           = fd;
+            reconstruction_deg = fd + 1;
+            grad_deg           = gd;
+        } else {
+            std::cout << "Invalid cell degree. Reverting to equal-order" << std::endl;
+            cell_deg           = fd;
+            face_deg           = fd;
+            reconstruction_deg = fd + 1;
+            grad_deg           = fd;
+        }
     }
 
     size_t cell_degree() const
@@ -107,6 +126,19 @@ public:
     size_t reconstruction_degree() const
     {
         return reconstruction_deg;
+    }
+    
+    size_t
+    grad_degree() const
+    {
+       return grad_deg;
+    }
+
+    void
+    info_degree() const
+    {
+       std::cout << cell_deg << " " << face_deg << " " << reconstruction_deg << " " << grad_deg
+                 << std::endl;
     }
 };
 

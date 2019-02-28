@@ -188,6 +188,11 @@ public:
         return basis_size;
     }
 
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+    
     static size_t size(size_t degree)
     {
         return (degree+2)*(degree+1)/2;
@@ -284,8 +289,109 @@ public:
         return basis_size;
     }
 
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
     static size_t size(size_t degree)
     {
         return degree+1;
+    }
+};
+
+
+
+////////////////////  VECTOR BASIS  /////////////////////////
+
+template<typename Mesh, typename VT>
+class vector_cell_basis
+{
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+    typedef Matrix<VT, 2, 2>                gradient_type;
+    typedef Matrix<VT, Dynamic, 2>          function_type;
+
+    point_type          cell_bar;
+    coordinate_type     cell_h;
+    size_t              basis_degree, basis_size;
+
+    cell_basis<Mesh,VT>          scalar_basis;
+    
+#ifdef POWER_CACHE
+    std::vector<coordinate_type>  power_cache;
+#endif
+
+public:
+    vector_cell_basis(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree) :
+        scalar_basis(msh, cl, degree)
+    {
+        cell_bar        = barycenter(msh, cl);
+        cell_h          = diameter(msh, cl);
+        basis_degree    = degree;
+        basis_size      = 2*(basis_degree+2)*(basis_degree+1)/2;
+    }
+
+    Matrix<VT, Dynamic, 2>
+    eval_basis(const point_type& pt)
+    {
+        Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size, 2);
+        // Matrix<VT, Dynamic, 2> ret;
+        
+        const auto phi = scalar_basis.eval_basis(pt);
+
+        
+        for(size_t i = 0; i < scalar_basis.size(); i++)
+        {
+            ret(2 * i, 0)     = phi(i);
+            ret(2 * i + 1, 1) = phi(i);
+        }
+        
+        assert(2 * scalar_basis.size() == basis_size);
+
+        return ret;
+    }
+
+    std::vector<gradient_type>
+    eval_gradients(const point_type& pt)
+    {
+        std::vector<gradient_type> ret;
+        ret.reserve(basis_size);
+
+        const function_type dphi = scalar_basis.eval_gradients(pt);
+
+        for (size_t i = 0; i < scalar_basis.size(); i++)
+        {
+            const Matrix<VT, 1, 2> dphi_i = dphi.row(i);
+            gradient_type                   g;
+
+            g        = gradient_type::Zero();
+            g.row(0) = dphi_i;
+            ret.push_back(g);
+
+            g        = gradient_type::Zero();
+            g.row(1) = dphi_i;
+            ret.push_back(g);
+        }
+        
+        
+        assert(ret.size() == basis_size);
+
+        return ret;
+    }
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return 2*(degree+2)*(degree+1)/2;
     }
 };
