@@ -71,7 +71,7 @@ find_library(MKL_mkl_intel_thread_LIBRARY
 
 if (APPLE)
 	find_library(MKL_runtime_LIBRARY
-		NAMES   mkl_intel
+		NAMES   mkl_intel_lp64
 		PATHS   /opt/intel/mkl/lib
 			"/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
             "${INTEL_MKL_LIB_SEARCH_DIRS}"
@@ -97,6 +97,22 @@ find_path(MKL_INCLUDE_DIRS
 if (CYGWIN)
 	SET(CMAKE_FIND_LIBRARY_PREFIXES "${_CFLP}")
 	SET(CMAKE_FIND_LIBRARY_SUFFIXES "${_CFLS}")
+endif()
+
+f(MKL_iomp5_LIBRARY)
+message(ok iomp)
+endif()
+if(MKL_INCLUDE_DIRS)
+message(ok include)
+endif()
+if(MKL_mkl_core_LIBRARY)
+message(ok core)
+endif()
+if(MKL_mkl_intel_thread_LIBRARY)
+message(ok thread)
+endif()
+if(MKL_runtime_LIBRARY)
+message(ok run)
 endif()
 
 
