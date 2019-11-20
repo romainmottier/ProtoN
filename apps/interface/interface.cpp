@@ -51,11 +51,693 @@ using namespace Eigen;
 //#include "sol2/sol.hpp"
 
 
+
+
 /*****************************************************************************
- *   Test stuff
+ *   Test stuff ADDED by StePicca
  *****************************************************************************/
 
 
+template<typename T, typename Mesh>
+bool
+pt_in_cell(const Mesh& msh, const point<T,2>& , const typename Mesh::cell_type& );
+
+template<typename T,typename Mesh>
+std::vector< point<T,2> >
+equidistriduted_nodes(const Mesh& , const typename Mesh::cell_type& , size_t );
+
+template<typename T>
+std::vector<point<T,1> >
+reference_nodes(size_t );
+
+template< typename FonctionD , typename Mesh , typename FonctionA >
+void
+testing_level_set(const Mesh msh , const FonctionD& ,  const FonctionA& );
+
+
+
+// Qualitative testing of the discrete level set function wrt the analytical one
+template< typename FonctionD , typename Mesh , typename FonctionA >
+void
+testing_level_set(const Mesh msh , const FonctionD& level_set_disc , const FonctionA& level_set_anal)
+{
+    typedef typename Mesh::point_type       point_type;
+    postprocess_output<double> postoutput1;
+    double valueD , valueA , derDx , derDy , derAx , derAy;
+    Eigen::Matrix<double,2,1> derD , derA;
+    point<double,2> node;
+    size_t N, M;
+    N = 40;
+    M = 40;
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc.dat");
+    auto test_anal = std::make_shared< gnuplot_output_object<double> >("testing_interface_anal.dat");
+    
+    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX.dat");
+    auto test_anal_gradX = std::make_shared< gnuplot_output_object<double> >("testing_der_analX.dat");
+    
+    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY.dat");
+    auto test_anal_gradY = std::make_shared< gnuplot_output_object<double> >("testing_der_analY.dat");
+    
+    for(size_t i = 0 ; i<= N ; i++ )
+    {
+        for (size_t j = 0 ; j<= M ; j++ )
+        {
+            double px = i*(1.0/N);
+            double py = j*(1.0/M);
+            node = point_type(px,py);
+            valueD = level_set_disc(node);
+            valueA = level_set_anal(node);
+            
+            derD = level_set_disc.gradient(node);
+            derA = level_set_anal.gradient(node);
+            
+            derDx = derD(0);
+            derDy = derD(1);
+            derAx = derA(0);
+            derAy = derA(1);
+            
+            test_disc->add_data(node,valueD);
+            test_anal->add_data(node,valueA);
+            
+            test_disc_gradX->add_data(node,derDx);
+            test_anal_gradX->add_data(node,derAx);
+            test_disc_gradY->add_data(node,derDy);
+            test_anal_gradY->add_data(node,derAy);
+            
+        }
+        
+    }
+    postoutput1.add_object(test_disc);
+    postoutput1.add_object(test_anal);
+    
+    postoutput1.add_object(test_disc_gradX);
+    postoutput1.add_object(test_anal_gradX);
+    postoutput1.add_object(test_disc_gradY);
+    postoutput1.add_object(test_anal_gradY);
+    
+    postoutput1.write();
+    
+}
+
+
+
+
+
+// Lagrangian basis b_kl(x,y) = b_k(x)*b_l(y) over a set of equidistributed 2-dimensional nodes (3D CASE NOT YET IMPLEMENTED)
+
+template<typename Mesh, typename T >
+class cell_basis_Lagrangian
+{
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+
+    point_type          cell_bar;
+    coordinate_type     cell_h;
+    size_t              basis_degree, basis_size;
+    std::vector<point<T, 2> >          nodes;
+/*
+#ifdef POWER_CACHE
+    std::vector<coordinate_type>  power_cache;
+#endif
+*/
+public:
+    cell_basis_Lagrangian(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree)
+    {
+        nodes           = equidistriduted_nodes<T,Mesh>(msh, cl, degree);
+       // cell_bar        = barycenter(msh, cl);
+       // cell_h          = diameter(msh, cl);
+        basis_degree    = degree;
+        basis_size      = (basis_degree+1)*(basis_degree+1);
+    }
+
+    Matrix<T, Dynamic, 1>
+    eval_basis(const point_type& pt)
+    {
+        Matrix<T, Dynamic, 1> rety = Matrix<T, Dynamic, 1>::Zero(basis_size);
+        Matrix<T, Dynamic, 1> retx = Matrix<T, Dynamic, 1>::Zero(basis_size);
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(basis_size);
+
+        // Per la y, trovo la colonna facendo col = l%(degree+1)
+        // scorro su tutta la colonna tmpy = [col:(degree+1): col+(degree+1)*degree]
+        // faccio base bl moltiplicando tutti tranne quando tmpy = l
+        for ( size_t l = 0; l < basis_size ; l++ )
+        {
+            size_t col = l%(basis_degree+1);
+            T bl = 1.0;
+            for (size_t tmpy = col; tmpy <= col+(basis_degree+1)*basis_degree; tmpy+=(basis_degree+1))
+            {
+                if (tmpy!=l)
+                {
+                    bl *= ( ( pt.y() - (nodes.at(tmpy)).y() )/ ( (nodes.at(l)).y() - (nodes.at(tmpy)).y() ) );
+                }
+            }
+            rety(l) = bl;
+        }
+        
+        // Per la x, trovo la riga facendo riga = floor(k/(degree+1))
+        //scorro su tutta la riga tmpx = [(degree+1)*riga: (degree+1)*(riga+1)-1]
+        // faccio base bk moltiplicando tutti tranne quando tmpx = k
+         
+        for (size_t k = 0 ; k < basis_size ; k++ )
+        {
+            T bk = 1.0;
+            size_t row=floor( k/(basis_degree+1) );
+            for (size_t tmpx = (basis_degree+1)*row; tmpx <= (basis_degree+1)*(row+1)-1; tmpx++)
+            {
+                if (tmpx!=k) {
+                    bk *= ( ( pt.x() - (nodes.at(tmpx)).x() )/ ( (nodes.at(k)).x() - (nodes.at(tmpx)).x() ) );
+                }
+            }
+            retx(k) = bk;
+        }
+        
+        // INUTILI DA TOGLIERE FORSE
+        /*
+        #ifdef POWER_CACHE
+                if ( power_cache.size() != (basis_degree+1)*2 )
+                  power_cache.resize( (basis_degree+1)*2);
+
+                power_cache[0] = 1.0;
+                power_cache[1] = 1.0;
+                for (size_t i = 1; i <= basis_degree; i++)
+                {
+                    power_cache[2*i]    = iexp_pow(bx, i);
+                    power_cache[2*i+1]  = iexp_pow(by, i);
+                }
+        #endif
+        */
+
+        //assert( pos == basis_size );
+        for (size_t i = 0; i<basis_size; i++)
+        {
+            ret(i) = rety(i)*retx(i);
+        }
+        return ret;
+        
+    }
+
+    Matrix<T, Dynamic, 2>
+    eval_gradients(const point_type& pt)
+    {
+        // Modified Yves Daoust Algorithm (https://math.stackexchange.com/questions/809927/first-derivative-of-lagrange-polynomial)
+        
+        Matrix<T, Dynamic, 2> ret = Matrix<T, Dynamic, 2>::Zero(basis_size, 2);
+        /*
+        // INUtile da togliere poi forse
+        #ifdef POWER_CACHE
+                if ( power_cache.size() != (basis_degree+1)*2 )
+                  power_cache.resize( (basis_degree+1)*2);
+
+                power_cache[0] = 1.0;
+                power_cache[1] = 1.0;
+                for (size_t i = 1; i <= basis_degree; i++)
+                {
+                    power_cache[2*i]    = iexp_pow(bx, i);
+                    power_cache[2*i+1]  = iexp_pow(by, i);
+                }
+        #endif
+        */
+        Matrix<T, Dynamic, 1> rety = Matrix<T, Dynamic, 1>::Zero(basis_size);
+        Matrix<T, Dynamic, 1> retx = Matrix<T, Dynamic, 1>::Zero(basis_size);
+        Matrix<T, Dynamic, 1> sy = Matrix<T, Dynamic, 1>::Zero(basis_size);
+        Matrix<T, Dynamic, 1> sx = Matrix<T, Dynamic, 1>::Zero(basis_size);
+
+
+        // for each l, b_l(y)' = {sum(tmpy!=l)[prod(jy!=l,jy!=tmpy)[x-x_jy]]}/prod(tmpy!=l)[x_l-x_tmpy]
+        
+        for ( size_t l = 0; l < basis_size ; l++ )
+        {
+            size_t col = l%(basis_degree+1);
+            T bl = 1.0 , bl_der = 1.0 ;
+            T sumy = 0.0;
+            for (size_t tmpy = col; tmpy <= col+(basis_degree+1)*basis_degree; tmpy+=(basis_degree+1))
+            {
+                 T sumyy = 1.0 ;
+                if (tmpy!=l)
+                {
+
+                    bl *= ( ( pt.y() - (nodes.at(tmpy)).y() )/ ( (nodes.at(l)).y() - (nodes.at(tmpy)).y() ) );
+
+                    bl_der *= ( 1.0/ ( (nodes.at(l)).y() - (nodes.at(tmpy)).y() ) );
+                    for ( size_t jy = col; jy <= col+(basis_degree+1)*basis_degree; jy+=(basis_degree+1) )
+                   {
+                        if (jy!=tmpy && jy!=l)
+                        {
+                            sumyy *= ( pt.y()-(nodes.at(jy)).y() );
+                        }
+                    }
+                    sumy +=sumyy;
+                }
+            }
+            rety(l) = bl;
+            sy(l) = bl_der*sumy;
+        }
+        
+        // For the x-derivative of b_k(x), same procedure of b_l(y)'
+         
+        for (size_t k = 0 ; k < basis_size ; k++ )
+        {
+            size_t row=floor( k/(basis_degree+1) );
+            T bk = 1.0 , bk_der = 1.0 ;
+            T sumx = 0.0;
+            for (size_t tmpx = (basis_degree+1)*row; tmpx <= (basis_degree+1)*(row+1)-1; tmpx++)
+            {
+                T sumxx = 1.0 ;
+                
+                if (tmpx!=k) {
+                    
+                    bk *= ( ( pt.x() - (nodes.at(tmpx)).x() )/ ( (nodes.at(k)).x() - (nodes.at(tmpx)).x() ) );
+                    bk_der *= ( 1.0/ ( (nodes.at(k)).x() - (nodes.at(tmpx)).x() ) );
+                    for (size_t jx = (basis_degree+1)*row; jx <= (basis_degree+1)*(row+1)-1; jx++)
+                    {
+                        if (jx!=tmpx && jx!=k)
+                        {
+                            sumxx *= ( pt.x()-(nodes.at(jx)).x() );
+                        }
+                    }
+                    sumx += sumxx;
+                    
+                }
+            }
+            retx(k) = bk;
+            sx(k) = bk_der*sumx;
+        }
+        
+        for (size_t i = 0; i<basis_size; i++)
+        {
+            ret(i,0) = rety(i)*sx(i);
+            ret(i,1) = retx(i)*sy(i);
+            
+        }
+        return ret;
+        
+    }
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return (degree+1)*(degree+1);
+    }
+};
+
+
+
+// CELL BASIS Qk-> MODAL APPROACH, BUT IT IS NOT LAGRANGIAN. This means that in projected_level_set::operator() I cannot evaluate phi(xi) to find the coefficient of the modal basis, but <phi,qi>/( normL2(qi) )^2, with (normL2(qi)^2 = ( <qi,qi> )
+// NOT USED, MAYBE DELETE
+
+template<typename Mesh, typename T >
+class cell_basis_Qk
+{
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+
+    point_type          cell_bar;
+    coordinate_type     cell_h;
+    size_t              basis_degree, basis_size;
+
+#ifdef POWER_CACHE
+    std::vector<coordinate_type>  power_cache;
+#endif
+
+public:
+    cell_basis_Qk(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree)
+    {
+        cell_bar        = barycenter(msh, cl);
+        cell_h          = diameter(msh, cl);
+        basis_degree    = degree;
+        basis_size      = (basis_degree+1)*(basis_degree+1);
+    }
+
+    Matrix<T, Dynamic, 1>
+    eval_basis(const point_type& pt)
+    {
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(basis_size);
+
+        auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_h);
+        auto by = (pt.y() - cell_bar.y()) / (0.5*cell_h);
+
+#ifdef POWER_CACHE
+        if ( power_cache.size() != (basis_degree+1)*2 )
+          power_cache.resize( (basis_degree+1)*2);
+
+        power_cache[0] = 1.0;
+        power_cache[1] = 1.0;
+        for (size_t i = 1; i <= basis_degree; i++)
+        {
+            power_cache[2*i]    = iexp_pow(bx, i);
+            power_cache[2*i+1]  = iexp_pow(by, i);
+        }
+#endif
+
+        size_t pos = 0;
+        for (size_t k = 0; k <= basis_degree; k++)
+        {
+            for (size_t i = 0; i <= basis_degree; i++)
+            {
+                auto pow_x = k-i;
+                auto pow_y = i;
+#ifdef POWER_CACHE
+                auto bv = power_cache[2*pow_x] * power_cache[2*pow_y+1];
+#else
+                auto bv = iexp_pow(bx, pow_x) * iexp_pow(by, pow_y);
+#endif
+                ret(pos++) = bv;
+            }
+        }
+
+        assert(pos == basis_size);
+
+        return ret;
+    }
+
+    Matrix<T, Dynamic, 2>
+    eval_gradients(const point_type& pt)
+    {
+        Matrix<T, Dynamic, 2> ret = Matrix<T, Dynamic, 2>::Zero(basis_size, 2);
+
+        auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_h);
+        auto by = (pt.y() - cell_bar.y()) / (0.5*cell_h);
+        auto ih = 2.0/cell_h;
+
+#ifdef POWER_CACHE
+        if ( power_cache.size() != (basis_degree+1)*2 )
+          power_cache.resize( (basis_degree+1)*2);
+
+        power_cache[0] = 1.0;
+        power_cache[1] = 1.0;
+        for (size_t i = 1; i <= basis_degree; i++)
+        {
+            power_cache[2*i]    = iexp_pow(bx, i);
+            power_cache[2*i+1]  = iexp_pow(by, i);
+        }
+#endif
+
+        size_t pos = 0;
+        for (size_t k = 0; k <= basis_degree; k++)
+        {
+            for (size_t i = 0; i <= basis_degree; i++)
+            {
+                auto pow_x = k-i;
+                auto pow_y = i;
+#ifdef POWER_CACHE
+                auto px = power_cache[2*pow_x];
+                auto py = power_cache[2*pow_y+1];
+                auto dx = (pow_x == 0) ? 0 : pow_x*ih*power_cache[2*(pow_x-1)];
+                auto dy = (pow_y == 0) ? 0 : pow_y*ih*power_cache[2*(pow_y-1)+1];
+#else
+                auto px = iexp_pow(bx, pow_x);
+                auto py = iexp_pow(by, pow_y);
+                auto dx = (pow_x == 0) ? 0 : pow_x*ih*iexp_pow(bx, pow_x-1);
+                auto dy = (pow_y == 0) ? 0 : pow_y*ih*iexp_pow(by, pow_y-1);
+#endif
+                ret(pos,0) = dx*py;
+                ret(pos,1) = px*dy;
+                pos++;
+            }
+        }
+
+        assert(pos == basis_size);
+
+        return ret;
+    }
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return (degree+1)*(degree+1);
+    }
+};
+
+
+
+
+
+
+
+
+template<typename T, typename Mesh ,typename Fonction >
+struct projected_level_set: public level_set<T>
+{
+    std::vector< T > values;
+    size_t degree_FEM;
+    size_t number_elements;
+    Mesh msh;
+
+
+    projected_level_set(const Fonction & level_set, const Mesh & msh, size_t degree_k)
+        : number_elements((degree_k+1)*(degree_k+1)), msh(msh),degree_FEM(degree_k)
+    {
+        
+        // MAYBE I COULD DO LIKE BEFORE -> (accelerate??)
+        //#ifdef NODES
+        
+        for(auto& cl:msh.cells)
+        {
+            auto qps = equidistriduted_nodes<T,Mesh>(msh, cl, degree_FEM);
+            for ( const auto & qp : qps)
+            {
+                values.push_back( level_set(qp) );
+            }
+        }
+       //#endif
+    }
+
+    T operator()(const point<T,2>& pt) const
+    {
+        size_t counter=0;
+        for( const auto& cl:msh.cells)
+        {
+            if( pt_in_cell<T,Mesh>(msh,pt,cl) )
+            {
+                //cell_basis_Qk<Mesh,T> cb(msh, cl, degree_FEM);
+                cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+                T tmp=0;
+               
+                for(auto i = 0; i<number_elements ; i++)
+                {
+                    tmp += (values.at(i+counter))*(cb.eval_basis(pt))[i];
+                }
+                return tmp;
+            }
+            counter+=number_elements;
+        }
+        std::cout<<"IF HERE, THERE IS A PROBLEM IN projected_level_set::operator()!!!"<<std::endl;
+        return 1e10; //to check if doesn't enter in the loop
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        size_t counter=0;
+        Eigen::Matrix<T,2,1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        for( const auto& cl:msh.cells)
+        {
+            if(pt_in_cell<T,Mesh>(msh,pt,cl))
+            {
+                //cell_basis_Qk<Mesh,T> cb(msh, cl, degree_FEM);
+                cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+                auto grad_eval =  cb.eval_gradients(pt);
+                for(auto i = 0; i<number_elements ; i++)
+                {
+                    ret(0) += values.at(i+counter)*grad_eval(i,0);
+                    ret(1) += values.at(i+counter)*grad_eval(i,1);
+                }
+                return ret;
+            }
+            counter+=number_elements;
+
+        }
+        std::cout<<"Se compare questo problema in gradient()"<<std::endl;
+        ret(0)+=1e10;
+        ret(1)+=1e10;
+        return ret; //to check if doesn't enter in the loop
+
+    }
+};
+
+
+template<typename T, typename Mesh>
+bool
+pt_in_cell(const Mesh& msh, const point<T,2>& point_to_find, const typename Mesh::cell_type& cl)
+{
+    bool ret = FALSE;
+    auto pts =points(msh,cl);
+    for (size_t i = 0; i < pts.size(); i++)
+    {
+        if( pts[i].x()>=point_to_find.x() && pts[i].y()>=point_to_find.y() )
+            ret = TRUE;
+    }
+    return ret;
+
+}
+
+
+template<typename T,typename Mesh>
+std::vector< point<T,2> >
+equidistriduted_nodes(const Mesh& msh,
+          const typename Mesh::cell_type& cl,
+          size_t degree)
+{
+    typedef typename Mesh::point_type    point_type;
+
+    auto qps = reference_nodes<T>(degree);
+    auto pts = points(msh, cl);
+
+    auto v0 = pts[1] - pts[0];
+    auto v1 = pts[2] - pts[1];
+    auto v2 = pts[3] - pts[2];
+    auto v3 = pts[3] - pts[0];
+
+    std::vector< point<T,2> > ret;
+
+    auto P = [&](T xi, T eta) -> T {
+        return 0.25 * pts[0].x() * (1-xi)*(1-eta) +
+               0.25 * pts[1].x() * (1+xi)*(1-eta) +
+               0.25 * pts[2].x() * (1+xi)*(1+eta) +
+               0.25 * pts[3].x() * (1-xi)*(1+eta);
+    };
+
+    auto Q = [&](T xi, T eta) -> T {
+        return 0.25 * pts[0].y() * (1-xi)*(1-eta) +
+               0.25 * pts[1].y() * (1+xi)*(1-eta) +
+               0.25 * pts[2].y() * (1+xi)*(1+eta) +
+               0.25 * pts[3].y() * (1-xi)*(1+eta);
+    };
+
+    for (auto jtor = qps.begin(); jtor != qps.end(); jtor++)
+    {
+        for (auto itor = qps.begin(); itor != qps.end(); itor++)
+        {
+            auto qp_x = *itor;
+            auto qp_y = *jtor;
+
+            auto xi = qp_x.x();
+            auto eta = qp_y.x();
+
+            auto px = P(xi, eta);
+            auto py = Q(xi, eta);
+
+            ret.push_back( point_type(px, py) );
+        }
+    }
+
+    return ret;
+}
+
+template<typename T>
+std::vector<point<T,1> >
+reference_nodes(size_t degree)
+{
+    auto comp_degree = degree + 1;
+
+    size_t reqd_nodes = comp_degree;
+
+    std::vector<point<T,1> > ret;
+    ret.reserve(reqd_nodes);
+
+    point<T,1>  qp;
+    T           a1, a2;
+    T           delta_x;
+    switch(reqd_nodes)
+    {
+        case 1:
+            qp = point<T,1>({0.0});
+            ret.push_back(qp);
+            return ret;
+
+        case 2:
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            return ret;
+
+        case 3:
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            qp = point<T,1>({0.0});
+            ret.push_back( qp );
+            return ret;
+
+        case 4:
+            a1 = 1.0/3.0;
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            qp = point<T,1>({ a1 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            return ret;
+
+        case 5:
+            // Be carefull in what order data is inserted in ret!
+            // In Gauss Legendre the first one was 0.0, now is the last one
+            a2 = 0.5;
+            a1 = 1.0;
+            qp = point<T,1>({ a1 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+
+            qp = point<T,1>({ a2 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+
+            return ret;
+
+        default:
+
+            delta_x = 1.0/degree;
+            a1 = 1.0;
+            while (a1>0) {
+                qp = point<T,1>({ a1 });
+                ret.push_back( -qp );
+                ret.push_back( qp );
+                a1-=delta_x;
+
+            }
+            if(a1==0)
+            {
+                qp = point<T,1>({0.0});
+                ret.push_back( qp );
+            }
+            return ret;
+    }
+
+    return ret;
+}
+
+
+
+
+
+
+
+
+/*****************************************************************************
+ *   Test stuff
+ *****************************************************************************/
+ //   template<typename RealType>
+ //   auto lagrange_interpolation<RealType>(const cuthho_poly_mesh<RealType>&, const T&, const size_t);
 
 template<typename Mesh, typename Function>
 void
@@ -629,12 +1311,12 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
 
     auto level_set_function = test_case.level_set_;
 
-    auto rhs_fun = test_case.rhs_fun;    
+    auto rhs_fun = test_case.rhs_fun;
     auto sol_fun = test_case.sol_fun;
     auto sol_grad = test_case.sol_grad;
     auto bcs_fun = test_case.bcs_fun;
-    
-    
+
+
     /************** OPEN SILO DATABASE **************/
     silo_database silo;
     silo.create("cuthho_fictdom.silo");
@@ -666,8 +1348,8 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
     for (auto& n : msh.nodes)
         node_pos.push_back( location(msh, n) == element_location::IN_POSITIVE_SIDE ? +1.0 : -1.0 );
     silo.add_variable("mesh", "node_pos", node_pos.data(), node_pos.size(), nodal_variable_t);
-    
-    
+
+
     timecounter tc;
 
     bool sc = true; // static condensation
@@ -781,7 +1463,7 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
         bool hide_fict_dom = true; // hide the fictitious domain in the gnuplot outputs
         if (hide_fict_dom && location(msh,cl) == element_location::IN_POSITIVE_SIDE)
             continue;
-        
+
         cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi.cell_degree());
         auto cbs = cb.size();
 
@@ -790,15 +1472,15 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
             locdata = assembler_sc.take_local_data(msh, cl, sol);
         else
             locdata = assembler.take_local_data(msh, cl, sol);
-        
+
         Matrix<RealType, Dynamic, 1> cell_dofs = locdata.head(cbs);
-        
+
         auto bar = barycenter(msh, cl, element_location::IN_NEGATIVE_SIDE);
-        
+
         Matrix<RealType, Dynamic, 1> c_phi = cb.eval_basis(bar);
         auto c_val = cell_dofs.dot( c_phi );
         solution_uT.push_back(c_val);
-        
+
 
         if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE ||
              location(msh, cl) == element_location::ON_INTERFACE )
@@ -1281,6 +1963,7 @@ auto make_Nitsche_interface_method_2(const cuthho_mesh<T, ET>& msh, const T eta_
 }
 
 /////////////////////////////////
+// Matrix<RealType, Dynamic, 1>
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
@@ -1320,7 +2003,6 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
         else
             assembler.assemble(msh, cl, lc, f);
     }
-
     if( sc )
         assembler_sc.finalize();
     else
@@ -1400,7 +2082,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
         auto fcs = faces(msh, cl);
         auto num_faces = fcs.size();
         auto fbs = face_basis<cuthho_poly_mesh<RealType>,RealType>::size(hdi.face_degree());
-        
+
         Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
         Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
 
@@ -1436,12 +2118,13 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = cell_dofs_n.dot(t_phi);
                 uT_gp->add_data(qp.first, v);
-                
+
                 /* Compute L2-error */
                 L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+             //   std::cout<<"The v is "<<v<<", the qp.second is
             }
-            
-            
+
+
             auto qps_p = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
             for (auto& qp : qps_p)
             {
@@ -1460,6 +2143,8 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
 
                 /* Compute L2-error */
                 L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+               // std::cout<<"The v is "<<v<<", the qp.second is "<<qp.second<<std::endl;
+               //  std::cout<<"The error L2 is "<<L2_error<<std::endl;
             }
         }
         else
@@ -1486,10 +2171,12 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
 
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = cell_dofs.dot(t_phi);
+                
                 uT_gp->add_data(qp.first, v);
 
                 /* Compute L2-error */
                 L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                 //std::cout<<"The v is "<<v<<std::endl;
             }
         }
 
@@ -1555,10 +2242,9 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
     tc.toc();
     std::cout << bold << yellow << "Postprocessing: " << tc << " seconds" << reset << std::endl;
 
-
-    return TI;
-}
-
+    //sol;
+        return TI;
+    }
 
 
 
@@ -1793,9 +2479,10 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     using RealType = double;
-    
+
     size_t degree           = 0;
     size_t int_refsteps     = 4;
+    size_t degree_FEM       = 0;
 
     bool dump_debug         = false;
     bool solve_interface    = false;
@@ -1807,6 +2494,7 @@ int main(int argc, char **argv)
     mip.Ny = 5;
 
     /* k <deg>:     method degree
+     * g<deg>:  method FEM degree
      * M <num>:     number of cells in x direction
      * N <num>:     number of cells in y direction
      * r <num>:     number of interface refinement steps
@@ -1815,18 +2503,22 @@ int main(int argc, char **argv)
      * f:           solve fictitious domain problem
      *
      * D:           use node displacement to solve bad cuts (default)
-     * A:           use agglomeration to solve bad cuts 
+     * A:           use agglomeration to solve bad cuts
      *
      * d:           dump debug data
      */
 
     int ch;
-    while ( (ch = getopt(argc, argv, "k:M:N:r:ifDAd")) != -1 )
+    while ( (ch = getopt(argc, argv, "k:g:M:N:r:ifDAd")) != -1 )
     {
         switch(ch)
         {
             case 'k':
                 degree = atoi(optarg);
+                break;
+
+            case 'g':
+                degree_FEM = atoi(optarg);
                 break;
 
             case 'M':
@@ -1877,19 +2569,41 @@ int main(int argc, char **argv)
     /************** BUILD MESH **************/
     tc.tic();
     cuthho_poly_mesh<RealType> msh(mip);
+    typedef cuthho_poly_mesh<RealType> Mesh;
     tc.toc();
     std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
-    /************** LEVEL SET FUNCTION **************/
+    
+    /************** ANALYTIC LEVEL SET FUNCTION  **************/
     RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+   // auto level_set_function_anal = circle_level_set<RealType>(radius, 0.5, 0.5);
+   auto level_set_function_anal = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
     // auto level_set_function = line_level_set<RealType>(0.5);
-    // auto level_set_function = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
+    
+    
+    /************** ANALYTIC LEVEL SET FUNCTION, OLD IMPLEMENTATION **************/
+    //auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+   // auto level_set_function = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
+    // auto level_set_function = line_level_set<RealType>(0.5);
+
+
+    typedef RealType T;
+    //typedef  circle_level_set<T> Fonction;
+    typedef  flower_level_set<T> Fonction; //DA RIMETTERE POI PER LA DISCRETA
+    //typedef line_level_set<T> Fonction;
+
+     /************** LEVEL SET FUNCTION DISCRETISATION **************/
+    std::cout<<"degree FEM "<<degree_FEM<<std::endl;
+    auto level_set_function = projected_level_set< T, Mesh,Fonction>(level_set_function_anal, msh, degree_FEM);
+
+     /************** LEVEL SET FUNCTION TESTING **************/
+
+     testing_level_set(msh,level_set_function,level_set_function_anal);
+
     /************** DO cutHHO MESH PROCESSING **************/
 
     tc.tic();
     detect_node_position(msh, level_set_function);
     detect_cut_faces(msh, level_set_function);
-
     if (agglomeration)
     {
         detect_cut_cells(msh, level_set_function);
@@ -1907,7 +2621,6 @@ int main(int argc, char **argv)
         refine_interface(msh, level_set_function, int_refsteps);
     }
 
-
     tc.toc();
     std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
 
@@ -1917,7 +2630,7 @@ int main(int argc, char **argv)
         output_mesh_info(msh, level_set_function);
         test_projection(msh, level_set_function, degree);
     }
-
+    
     output_mesh_info(msh, level_set_function);
 
     // jumps sin_sin -> exp_cos
@@ -1929,14 +2642,14 @@ int main(int argc, char **argv)
     // auto method = make_sym_gradrec_interface_method(msh, 1.0, test_case);
     // auto method = make_gradrec_interface_method(msh, 1.0, test_case);
     auto method = make_Nitsche_interface_method_2(msh, 1.0, test_case);
-
-    if (solve_interface)
+    //Matrix<RealType, Dynamic, 1> sol;
+    if(solve_interface){
         run_cuthho_interface(msh, degree, method, test_case);
-    
+    }
     if (solve_fictdom)
         run_cuthho_fictdom(msh, degree, test_case);
 
-
+    //sol =  run_cuthho_interface(msh, degree, method, test_case);
     return 0;
 }
 #endif
