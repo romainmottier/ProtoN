@@ -1065,7 +1065,7 @@ void convergence_test(void)
     mesh_sizes.push_back(8);
     mesh_sizes.push_back(16);
     mesh_sizes.push_back(32);
-    mesh_sizes.push_back(64);
+    // mesh_sizes.push_back(64);
     // mesh_sizes.push_back(128);
     // mesh_sizes.push_back(256);
 
@@ -1113,15 +1113,15 @@ void convergence_test(void)
             mip.Nx = N;
             mip.Ny = N;
             cuthho_poly_mesh<T> msh(mip);
-            size_t int_refsteps = 1;
+            size_t int_refsteps = 4;
             T radius = 1.0/3.0;
             auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 
             // auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
-            // auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
+            auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
             // auto level_set_function = square_level_set<T>(1.05, -0.05, -0.05, 1.05);
             // auto level_set_function = square_level_set<T>(1.0, -0.0, -0.0, 1.0);
-            auto level_set_function = square_level_set<T>(0.76, 0.24, 0.24, 0.76);
+            // auto level_set_function = square_level_set<T>(0.76, 0.24, 0.24, 0.76);
             detect_node_position(msh, level_set_function);
             detect_cut_faces(msh, level_set_function);
             if(1)  // AGGLOMERATION
@@ -1146,10 +1146,12 @@ void convergence_test(void)
             if(1)
             {
                 // auto test_case = make_test_case_stokes_1(msh, level_set_function);
-                auto test_case = make_test_case_stokes_2(msh, level_set_function);
-                TI = run_cuthho_fictdom(msh, k, test_case);
+                // auto test_case = make_test_case_stokes_2(msh, level_set_function);
+                auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
+                // TI = run_cuthho_fictdom(msh, k, test_case);
                 // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
-                // TI = run_cuthho_interface(msh, k, method, test_case);
+                auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
+                TI = run_cuthho_interface(msh, k, method, test_case);
             }
 
             // report info in the file
@@ -1332,7 +1334,8 @@ int main(int argc, char **argv)
     output_mesh_info(msh, level_set_function);
 
     // auto test_case = make_test_case_stokes_1(msh, level_set_function);
-    auto test_case = make_test_case_stokes_2(msh, level_set_function);
+    // auto test_case = make_test_case_stokes_2(msh, level_set_function);
+    auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
 
     // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
     auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);

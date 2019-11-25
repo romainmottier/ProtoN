@@ -750,3 +750,67 @@ auto make_test_case_stokes_2(const Mesh& msh, Function level_set_function)
     return test_case_stokes_2<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
+
+///// test_case_static_bubble
+// !! available for circle_level_set only !!
+// exact solution : 0 in the whole domain for vel_component 1
+//                  0 in the whole domain for vel_component 2
+//                  k/R - \pi k R         in Omega_1 for p
+//                  - \pi k R             in Omega_2 for p
+// \kappa_1 = \kappa_2 = 1
+template<typename T, typename Mesh>
+class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, Mesh>
+{
+   public:
+    test_case_static_bubble(T R, T a, T b, T k)
+        : test_case_stokes<T, circle_level_set<T>, Mesh>
+        (circle_level_set<T>(R, a, b), params<T>(),
+         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+         [a,b,R,k](const typename Mesh::point_type& pt) -> T { // p
+             T x1 = pt.x() - a;
+             T y1 = pt.y() - b;
+             if( x1 * x1 + y1 * y1 < R*R)
+                 return k / R - M_PI * R * k;
+             else
+                 return -M_PI * R * k;},
+         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+             Matrix<T, 2, 1> ret;
+             ret(0) = 0.0;
+             ret(1) = 0.0;
+             return ret;},
+         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+         [](const typename Mesh::point_type& pt) -> auto { // grad
+             Matrix<T, 2, 2> ret;
+             ret(0,0) = 0.0;
+             ret(0,1) = 0.0;
+             ret(1,0) = 0.0;
+             ret(1,1) = 0.0;
+             return ret;},
+         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+             Matrix<T, 2, 1> ret;
+             ret(0) = 0.0;
+             ret(1) = 0.0;
+             return ret;},
+         [this, k, R](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+             Matrix<T, 2, 1> ret;
+             Matrix<T, 1, 2> normal = this->level_set_.normal(pt);
+             ret(0) = - k / R * normal(0);
+             ret(1) = - k / R * normal(1);
+             return ret;})
+        {}
+};
+
+template<typename Mesh, typename T>
+auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k)
+{
+    return test_case_static_bubble<typename Mesh::coordinate_type, Mesh>(R,a,b,k);
+}
+
