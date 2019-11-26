@@ -1335,7 +1335,11 @@ int main(int argc, char **argv)
 
     // auto test_case = make_test_case_stokes_1(msh, level_set_function);
     // auto test_case = make_test_case_stokes_2(msh, level_set_function);
-    auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
+    // auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
+    auto parms = params<RealType>();
+    parms.kappa_1 = 1.0;
+    parms.kappa_2 = 100.0;
+    auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, parms);
 
     // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
     auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
