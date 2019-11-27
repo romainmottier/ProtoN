@@ -1,0 +1,25 @@
+set terminal latex
+set output './output/figH1.tex'
+set xlabel '$h$'
+set ylabel '$H^1$'
+set key left top
+set logscale
+plot './output/test_k0.txt' using 2:3:xtic(2) with linespoints title '$H^1 : k = 0$', './output/test_k1.txt' using 2:3:xtic(2) with linespoints title '$H^1 : k = 1$', './output/test_k2.txt' using 2:3:xtic(2) with linespoints title '$H^1 : k = 2$', './output/test_k3.txt' using 2:3:xtic(2) with linespoints title '$H^1 : k = 3$'
+
+
+set terminal latex
+set output './output/figL2.tex'
+set xlabel '$h$'
+set ylabel '$L^2$'
+set key left top
+set logscale
+plot './output/test_k0.txt' using 2:5:xtic(2) with linespoints title '$L^2 : k = 0$', './output/test_k1.txt' using 2:5:xtic(2) with linespoints title '$L^2 : k = 1$', './output/test_k2.txt' using 2:5:xtic(2) with linespoints title '$L^2 : k = 2$', './output/test_k3.txt' using 2:5:xtic(2) with linespoints title '$L^2 : k = 3$'
+
+
+set terminal latex
+set output './output/figCond.tex'
+set xlabel '$h$'
+set ylabel 'Cond'
+set key left top
+set logscale
+plot './output/test_k0.txt' using 2:7:xtic(2) with linespoints title '$k = 0$', './output/test_k1.txt' using 2:7:xtic(2) with linespoints title '$k = 1$', './output/test_k2.txt' using 2:7:xtic(2) with linespoints title '$k = 2$', './output/test_k3.txt' using 2:7:xtic(2) with linespoints title '$k = 3$'

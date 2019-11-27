@@ -83,7 +83,7 @@ find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& l
      * acceptable. Since with 24 iterations we reduce the error by 16384
      * and the worst case is that the two points are at the opposite sides
      * of the element, we put 30 as limit. */
-    size_t max_iter = 30;
+    size_t max_iter = 50;
 
     do {
         auto la = level_set_function(pa);
@@ -150,125 +150,13 @@ detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             continue;
         }
 
-        auto threshold = diameter(msh, fc) / 1e4;
+        auto threshold = diameter(msh, fc) / 1e20;
         auto pm = find_zero_crossing(pts[0], pts[1], level_set_function, threshold);
 
         /* If node 0 is in the negative region, mark it as node inside, otherwise mark node 1 */
         fc.user_data.node_inside = ( l0 < 0 ) ? 0 : 1;
         fc.user_data.location = element_location::ON_INTERFACE;
         fc.user_data.intersection_point = pm;
-    }
-}
-
-template<typename T, size_t ET, typename Function>
-void
-detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
-    typedef typename cuthho_mesh<T, ET>::face_type  face_type;
-    typedef typename cuthho_mesh<T, ET>::point_type point_type;
-
-    const T threshold = 0.3;
-
-    for (auto& cl : msh.cells)
-    {
-        auto fcs = faces(msh, cl);
-        auto pts = points(msh, cl);
-        auto nds = nodes(msh, cl);
-
-        if (fcs.size() != 4)
-            throw std::invalid_argument("This works only on quads for now");
-
-        /* If it is a quadrilateral we have 6 possible configurations of the
-         * element-cut intersection. */
-
-        auto agglo_set_single_node = [&](size_t n) -> void
-        {
-            auto f1 = (n == 0) ? fcs.size()-1 : n-1;
-            auto f2 = n;
-
-            auto ma = measure(msh, fcs[f1]);
-            auto pa = (pts[n] - fcs[f1].user_data.intersection_point);
-            auto da = pa.to_vector().norm() / ma;
-
-            auto mb = measure(msh, fcs[f2]);
-            auto pb = (pts[n] - fcs[f2].user_data.intersection_point);
-            auto db = pb.to_vector().norm() / mb;
-
-            assert(da >= 0 && da <= 1);
-            assert(db >= 0 && db <= 1);
-
-            if ( std::min(da, db) > threshold )
-            {
-                cl.user_data.agglo_set = cell_agglo_set::T_OK;
-                return;
-            }
-
-            if ( location(msh, nds[n]) == element_location::IN_NEGATIVE_SIDE )
-                cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
-            else
-                cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
-        };
-        
-        auto agglo_set_double_node = [&](size_t f1, size_t f2) -> void
-        {
-            assert ( (f1 == 0 && f2 == 2) || ( f1 == 1 && f2 == 3 ) );
-
-            auto n1 = f1;
-            auto n2 = (f2+1) % fcs.size();
-
-            auto ma = measure(msh, fcs[f1]);
-            auto pa = (pts[n1] - fcs[f1].user_data.intersection_point);
-            auto da = pa.to_vector().norm() / ma;
-
-            auto mb = measure(msh, fcs[f2]);
-            auto pb = (pts[n2] - fcs[f2].user_data.intersection_point);
-            auto db = pb.to_vector().norm() / mb;
-
-            auto m1 = std::max(da, db);
-            auto m2 = std::max(1-da, 1-db);
-
-            if ( std::min(m1, m2) > threshold )
-            {
-                cl.user_data.agglo_set = cell_agglo_set::T_OK;
-                return;
-            }
-
-            if ( location(msh, nds[n1]) == element_location::IN_NEGATIVE_SIDE )
-                cl.user_data.agglo_set = (m1 <= threshold) ? cell_agglo_set::T_KO_NEG : cell_agglo_set::T_KO_POS;
-            else
-                cl.user_data.agglo_set = (m2 <= threshold) ? cell_agglo_set::T_KO_NEG : cell_agglo_set::T_KO_POS;
-        };
-
-        for (size_t i = 0; i < fcs.size(); i++)
-        {
-            auto f1 = i;
-            auto f2 = (i+1) % fcs.size();
-            auto n = (i+1) % fcs.size();
-
-            if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
-                agglo_set_single_node(n);
-
-        }
-
-        if ( is_cut(msh, fcs[0]) && is_cut(msh, fcs[2]) )
-            agglo_set_double_node(0,2);
-
-        if ( is_cut(msh, fcs[1]) && is_cut(msh, fcs[3]) )
-            agglo_set_double_node(1,3);
-/*
-        if ( is_cut(msh, fcs[0]) && is_cut(msh, fcs[3]) )
-            agglo_set_case_1();
-        else if ( is_cut(msh, fcs[0]) && is_cut(msh, fcs[1]) )
-            agglo_set_case_2();
-        else if ( is_cut(msh, fcs[1]) && is_cut(msh, fcs[2]) )
-            agglo_set_case_3();
-        else if ( is_cut(msh, fcs[2]) && is_cut(msh, fcs[3]) )
-            agglo_set_case_4();
-        else if ( is_cut(msh, fcs[0]) && is_cut(msh, fcs[2]) )
-            agglo_set_case_5();
-        else if ( is_cut(msh, fcs[1]) && is_cut(msh, fcs[3]) )
-            agglo_set_case_6();
-            */
     }
 }
 
@@ -337,46 +225,6 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 
         cell_i++;
     }
-}
-
-/* this creates Delta(T) */
-template<typename T, size_t ET>
-void
-make_neighbors_info(cuthho_mesh<T, ET>& msh)
-{
-    for (size_t i = 0; i < msh.cells.size(); i++)
-    {
-        for (size_t j = i+1; j < msh.cells.size(); j++)
-        {
-            auto &cl1 = msh.cells.at(i);
-            auto &cl2 = msh.cells.at(j);
-
-            bool are_neighbors = false;
-
-            for (size_t ip = 0; ip < cl1.ptids.size(); ip++)
-                for (size_t jp = 0; jp < cl2.ptids.size(); jp++)
-                    if ( cl1.ptids[ip] == cl2.ptids[jp] )
-                        are_neighbors = true;
-
-            if ( !are_neighbors )
-                continue;
-
-            auto ofs_cl1 = offset(msh, cl1);
-            auto ofs_cl2 = offset(msh, cl2);
-
-            cl1.user_data.neighbors.insert(ofs_cl2);
-            cl2.user_data.neighbors.insert(ofs_cl1);
-        }
-    }
-
-    /*
-    for (auto& cl : msh.cells)
-    {
-        for (auto& n : cl.user_data.neighbors)
-            std::cout << n << " ";
-        std::cout << std::endl;
-    }
-    */
 }
 
 //#define USE_OLD_DISPLACEMENT
@@ -633,12 +481,12 @@ refine_interface(cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type
 
     if ( !((lm >= 0 && ls1 >= 0) || (lm < 0 && ls1 < 0)) )
     {
-        auto threshold = diameter(msh, cl) / 10000.0;
+        auto threshold = diameter(msh, cl) / 1e20;
         ip = find_zero_crossing(pm, ps1, level_set_function, threshold);
     }
     else if ( !((lm >= 0 && ls2 >= 0) || (lm < 0 && ls2 < 0)) )
     {
-        auto threshold = diameter(msh, cl) / 10000.0;
+        auto threshold = diameter(msh, cl) / 1e20;
         ip = find_zero_crossing(pm, ps2, level_set_function, threshold);
     }
     else
@@ -737,7 +585,8 @@ struct temp_tri
         auto v1 = pts[1] - pts[0];
         auto v2 = pts[2] - pts[0];
 
-        return std::abs( v1.x()*v2.y() - v2.x()*v1.y() ) / 2.0;
+        return ( v1.x()*v2.y() - v2.x()*v1.y() ) / 2.0;
+        // can be negative
     }
 };
 
@@ -751,6 +600,60 @@ operator<<(std::ostream& os, const temp_tri<T>& t)
     return os;
 }
 
+
+template<typename T, size_t ET>
+typename cuthho_mesh<T, ET>::point_type
+tesselation_center(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+                    element_location where)
+{
+    auto fcs = faces(msh, cl);
+    auto pts = points(msh, cl);
+    auto nds = nodes(msh, cl);
+
+    if (fcs.size() != 4)
+        throw std::invalid_argument("This works only on quads for now");
+
+    if( !is_cut(msh, cl) )
+        throw std::invalid_argument("No tesselation centers for uncut cells");
+
+    // if two consecutive faces are cut
+    // return either the common node or the opposite node
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        auto f1 = i;
+        auto f2 = (i+1) % fcs.size();
+        auto n = (i+1) % fcs.size();
+
+        if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
+        {
+            if ( location(msh, nds[n]) == where )
+                return pts[n];
+            else
+                return pts[(n+2)%4];
+        }
+    }
+
+    // if two opposite faces are cut
+    // return the center of one of the other faces
+    for (size_t i = 0; i < 2; i++)
+    {
+        auto f1 = i;
+        auto f2 = i+2;
+        auto n = i+1;
+
+        if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
+        {
+            if( location(msh, nds[n]) == where )
+                return 0.5*(pts[n] + pts[n+1]);
+            else
+                return 0.5*(pts[(n+2)%4] + pts[(n+3)%4]);
+        }
+    }
+
+    // normally the tesselation center is already found
+    throw std::logic_error("we shouldn't arrive here !!");
+}
+
 template<typename T, size_t ET>
 std::vector<temp_tri<T>>
 triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
@@ -759,7 +662,8 @@ triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
     assert( is_cut(msh, cl) );
 
     auto tp = collect_triangulation_points(msh, cl, where);
-    auto bar = barycenter(tp);
+    // auto bar = barycenter(tp);
+    auto bar = tesselation_center(msh, cl, where);
 
     std::vector<temp_tri<T>> tris;
 
@@ -797,13 +701,17 @@ measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_t
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-          size_t degree, const element_location& where)
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+               size_t degree, const element_location& where)
 {
+    std::vector< std::pair<point<T,2>, T> > ret;
+
+    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
+        return ret;
+
     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
         return integrate(msh, cl, degree);
 
-    std::vector< std::pair<point<T,2>, T> > ret;
     auto tris = triangulate(msh, cl, where);
     for (auto& tri : tris)
     {
@@ -813,6 +721,24 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell
 
     return ret;
 }
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+          size_t degree, const element_location& where)
+{
+    if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
+        return cl.user_data.integration_n;
+
+    if( cl.user_data.integration_p.size() != 0 && where == element_location::IN_POSITIVE_SIDE)
+        return cl.user_data.integration_p;
+
+    return make_integrate(msh, cl, degree, where);
+}
+
+
+
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
@@ -1257,3 +1183,127 @@ auto make_assembler(const cuthho_mesh<T, ET>& msh, hho_degree_info hdi)
 }
 
 #endif
+
+
+//////////////////////////  CUT BASIS  ///////////////////////////
+
+
+template<typename Mesh, typename VT>
+class cut_face_basis
+{
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+
+    point_type          face_bar;
+    point_type          base;
+    coordinate_type     face_h;
+    size_t              basis_degree, basis_size;
+
+public:
+    cut_face_basis(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree,
+                   element_location where)
+    {
+        auto loc = location(msh,fc);
+        if( loc != where && loc != element_location::ON_INTERFACE)
+        {
+            face_bar        = barycenter(msh, fc);
+            face_h          = diameter(msh, fc);
+            basis_degree    = degree;
+            basis_size      = degree+1;
+
+            auto pts = points(msh, fc);
+            base = face_bar - pts[0];
+        }
+        else
+        {
+            face_bar        = barycenter(msh, fc, where);
+            face_h          = diameter(msh, fc, where);
+            basis_degree    = degree;
+            basis_size      = degree+1;
+
+            auto pts = points(msh, fc, where);
+            base = face_bar - pts[0];
+        }
+    }
+    Matrix<VT, Dynamic, 1>
+    eval_basis(const point_type& pt)
+    {
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
+
+        auto v = base.to_vector();
+        auto t = (pt - face_bar).to_vector();
+        auto dot = v.dot(t);
+        auto ep = 4.0*dot/(face_h*face_h);
+
+        coordinate_type coeff = sqrt(face_h / 2.0);
+
+        ret(0) = sqrt(1.0 / 2.0) / coeff;
+        if( basis_degree == 0)
+            return ret;
+
+        ret(1) = ep * sqrt(3.0 / 2.0) / coeff;
+        if( basis_degree == 1)
+            return ret;
+
+        ret(2) = (3*ep*ep - 1) * sqrt(5.0/8.0) / coeff;
+        if( basis_degree == 2)
+            return ret;
+
+        ret(3) = (5*ep*ep*ep - 3*ep) * sqrt(7.0 / 8.0) / coeff;
+        if( basis_degree == 3)
+            return ret;
+
+        throw std::logic_error("bases : we shouldn't be here");
+    }
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return degree+1;
+    }
+};
+
+
+
+template<typename T, size_t ET>
+auto
+barycenter(const cuthho_mesh<T, ET>& msh,
+           const typename cuthho_mesh<T, ET>::face_type& fc,
+           element_location where)
+{
+    if ( !is_cut(msh, fc) )
+        return barycenter(msh, fc);
+
+    auto tp = points(msh, fc, where);
+
+    point<T, 2> bar;
+    bar[0] = 0.5 * (tp[0][0] + tp[1][0]);
+    bar[1] = 0.5 * (tp[0][1] + tp[1][1]);
+
+    return bar;
+}
+
+
+template<typename T, size_t ET>
+auto
+diameter(const cuthho_mesh<T, ET>& msh,
+           const typename cuthho_mesh<T, ET>::face_type& fc,
+           element_location where)
+{
+    if ( !is_cut(msh, fc) )
+        return diameter(msh, fc);
+
+    auto tp = points(msh, fc, where);
+    auto vect = (tp[0] - tp[1]).to_vector();
+    T ret = vect.norm();
+    return ret;
+}

@@ -327,7 +327,8 @@ measure(const Mesh& msh, const typename Mesh::cell_type& cl)
     {
         auto u = (pts.at(i) - pts.at(0)).to_vector();
         auto v = (pts.at(i+1) - pts.at(0)).to_vector();
-        acc += std::abs(u(0)*v(1) - u(1)*v(0)) * 0.5;
+        acc += (u(0)*v(1) - u(1)*v(0)) * 0.5;
+        // acc is negative when the point are sorted clockwise
     }
 
     return acc;

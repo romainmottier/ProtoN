@@ -25,3 +25,6 @@
 #include "cuthho_bits/cuthho_mesh.hpp"
 #include "cuthho_bits/cuthho_geom.hpp"
 #include "cuthho_bits/cuthho_utils.hpp"
+#include "cuthho_bits/cuthho_assemblers.hpp"
+#include "cuthho_bits/cuthho_agglomeration.hpp"
+#include "cuthho_bits/cuthho_export.hpp"

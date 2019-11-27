@@ -4,4 +4,4 @@ add_subdirectory(cuthho_meth2)
 add_subdirectory(obstacle)
 add_subdirectory(stabilization_test)
 add_subdirectory(polymesh)
-
+add_subdirectory(agglomeration_tests)
