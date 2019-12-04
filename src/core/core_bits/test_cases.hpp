@@ -828,7 +828,7 @@ template<typename T, typename Mesh>
 class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, Mesh>
 {
    public:
-    test_case_kink_velocity(T R, T a, T b, params<T> parms_)
+    test_case_kink_velocity(T R, T a, T b, params<T> parms_, bool sym_grad)
         : test_case_stokes<T, circle_level_set<T>, Mesh>
         (circle_level_set<T>(R, a, b), parms_,
          [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
@@ -918,17 +918,28 @@ class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, M
              ret(0) = 0.0;
              ret(1) = 0.0;
              return ret;},
-         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+         [R,a,b,parms_,sym_grad](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
              Matrix<T, 2, 1> ret;
-             ret(0) = 0.0;
-             ret(1) = 0.0;
+             if(sym_grad)
+             {
+                 T x1 = (pt.x() - a);
+                 T y1 = (pt.y() - b);
+                 T r2 = x1 * x1 + y1 * y1;
+                 ret(0) = - (1.0 - parms_.kappa_2 / parms_.kappa_1) * r2 * r2 * y1;
+                 ret(1) = (1.0 - parms_.kappa_2 / parms_.kappa_1) * r2 * r2 * x1;
+             }
+             else
+             {
+                 ret(0) = 0.0;
+                 ret(1) = 0.0;
+             }
              return ret;})
         {}
 };
 
 template<typename Mesh, typename T>
-auto make_test_case_kink_velocity(const Mesh& msh, T R, T a, T b, params<T> parms_)
+auto make_test_case_kink_velocity(const Mesh& msh, T R, T a, T b, params<T> parms_, bool sym_grad)
 {
-    return test_case_kink_velocity<typename Mesh::coordinate_type, Mesh>(R,a,b,parms_);
+    return test_case_kink_velocity<typename Mesh::coordinate_type, Mesh>(R,a,b,parms_,sym_grad);
 }
 
