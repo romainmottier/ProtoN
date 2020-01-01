@@ -12,16 +12,16 @@ set (CMAKE_MODULE_PATH
 
 include(safeguards)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++14 -g -fpermissive -fsanitize=address")
+set(CMAKE_CXX_FLAGS_DEBUG "-std=c++14 -g -fpermissive")
 set(CMAKE_CXX_FLAGS_RELEASE "-std=c++14 -O3 -mavx -g -fpermissive")
 set(CMAKE_CXX_FLAGS_RELEASEASSERT "-std=c++14 -O3 -mavx -g -fpermissive")
 
-#find_package(MKL)
-#if (MKL_FOUND)
-#	include_directories(${MKL_INCLUDE_DIRS})
-#	set(LINK_LIBS ${LINK_LIBS} ${MKL_LIBRARIES})
-#	set(HAVE_INTEL_MKL TRUE)
-#endif()
+find_package(MKL)
+if (MKL_FOUND)
+	include_directories(${MKL_INCLUDE_DIRS})
+	set(LINK_LIBS ${LINK_LIBS} ${MKL_LIBRARIES})
+	set(HAVE_INTEL_MKL TRUE)
+endif()
 
 find_package(SILO REQUIRED)
 if (SILO_FOUND)

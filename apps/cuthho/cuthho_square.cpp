@@ -1047,6 +1047,7 @@ int main(int argc, char **argv)
     cuthho_poly_mesh<RealType> msh(mip);
     tc.toc();
     std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
+    
     /************** LEVEL SET FUNCTION **************/
     RealType radius = 1.0/3.0;
     auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
