@@ -834,6 +834,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
 
     auto uT1_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT1.dat");
     auto uT2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT2.dat");
+    auto uT_l2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT_norm.dat");
     auto p_gp    = std::make_shared< gnuplot_output_object<RealType> >("interface_p.dat");
 
     tc.tic();
@@ -883,23 +884,25 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                     grad += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                H1_error += qp.second * test_case.parms.kappa_1 * inner_product(grad_sym_diff , grad_sym_diff);
 
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs_n;
                 Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * test_case.parms.kappa_1 * sol_diff.dot(sol_diff);
 
                 uT1_gp->add_data( qp.first, v(0) );
                 uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
 
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
                 RealType p_num = p_phi.dot(P_locdata_n);
                 RealType p_diff = test_case.sol_p( qp.first ) - p_num;
-                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / test_case.parms.kappa_1;
 
                 p_gp->add_data( qp.first, p_num );
             }
@@ -915,22 +918,24 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                     grad += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                H1_error += qp.second * test_case.parms.kappa_2 * inner_product(grad_sym_diff , grad_sym_diff);
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs_p;
                 Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * test_case.parms.kappa_2 * sol_diff.dot(sol_diff);
 
                 uT1_gp->add_data( qp.first, v(0) );
                 uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
 
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
                 RealType p_num = p_phi.dot(P_locdata_p);
                 RealType p_diff = test_case.sol_p( qp.first ) - p_num;
-                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / test_case.parms.kappa_2;
 
                 p_gp->add_data( qp.first, p_num );
             }
@@ -949,6 +954,10 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
             }
             vel_cell_dofs = vel_locdata.head(cbs);
 
+            RealType kappa = test_case.parms.kappa_1;
+            if( location(msh, cl) == element_location::IN_POSITIVE_SIDE )
+                kappa = test_case.parms.kappa_2;
+
             auto qps = integrate(msh, cl, 2*hdi.cell_degree());
             for (auto& qp : qps)
             {
@@ -960,22 +969,24 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                     grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                H1_error += qp.second * kappa * inner_product(grad_diff , grad_diff);
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs;
                 Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
 
                 uT1_gp->add_data( qp.first, v(0) );
                 uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
 
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
                 RealType p_num = p_phi.dot(P_locdata);
                 RealType p_diff = test_case.sol_p( qp.first ) - p_num;
-                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / kappa;
 
                 p_gp->add_data( qp.first, p_num );
             }
@@ -989,6 +1000,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
 
     postoutput.add_object(uT1_gp);
     postoutput.add_object(uT2_gp);
+    postoutput.add_object(uT_l2_gp);
     postoutput.add_object(p_gp);
     postoutput.write();
 
@@ -1065,7 +1077,7 @@ void convergence_test(void)
     mesh_sizes.push_back(8);
     mesh_sizes.push_back(16);
     mesh_sizes.push_back(32);
-    // mesh_sizes.push_back(64);
+    mesh_sizes.push_back(64);
     // mesh_sizes.push_back(128);
     // mesh_sizes.push_back(256);
 
@@ -1113,7 +1125,7 @@ void convergence_test(void)
             mip.Nx = N;
             mip.Ny = N;
             cuthho_poly_mesh<T> msh(mip);
-            size_t int_refsteps = 4;
+            size_t int_refsteps = 10;
             T radius = 1.0/3.0;
             auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 
