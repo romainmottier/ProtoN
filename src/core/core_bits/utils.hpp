@@ -182,6 +182,54 @@ make_mass_matrix(const Mesh& msh, const typename Mesh::face_type& fc, size_t deg
     return ret;
 }
 
+template<typename Mesh>
+Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
+make_mass_matrix(const Mesh& msh, const typename Mesh::cell_type& cl,
+                 hho_degree_info hdi, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;
+
+    auto cbs = cell_basis<Mesh,T>::size(hdi.cell_degree());
+    auto fbs = face_basis<Mesh,T>::size(hdi.face_degree());
+
+    auto fcs = faces(msh, cl);
+    auto num_faces = fcs.size();
+    
+    Matrix<T, Dynamic, Dynamic> mass_mat = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs,cbs+num_faces*fbs);
+
+    Matrix<T, Dynamic, Dynamic> cell_mm = make_mass_matrix(msh, cl, hdi.cell_degree(), di);
+    mass_mat.block(0, 0, cbs, cbs) = cell_mm;
+
+    for (size_t i = 0; i < num_faces; i++)
+    {
+        auto fc = fcs[i];
+        Matrix<T, Dynamic, Dynamic> face_mm = make_mass_matrix(msh, fc, hdi.face_degree(), di);
+        mass_mat.block(cbs+i*fbs, cbs+i*fbs, fbs, fbs) = face_mm;
+    }
+
+    return mass_mat;
+}
+
+template<typename Mesh>
+Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
+make_cell_mass_matrix(const Mesh& msh, const typename Mesh::cell_type& cl,
+                 hho_degree_info hdi, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;
+
+    auto cbs = cell_basis<Mesh,T>::size(hdi.cell_degree());
+    auto fbs = face_basis<Mesh,T>::size(hdi.face_degree());
+
+    auto fcs = faces(msh, cl);
+    auto num_faces = fcs.size();
+    
+    Matrix<T, Dynamic, Dynamic> mass_mat = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs,cbs+num_faces*fbs);
+
+    Matrix<T, Dynamic, Dynamic> cell_mm = make_mass_matrix(msh, cl, hdi.cell_degree(), di);
+    mass_mat.block(0, 0, cbs, cbs) = cell_mm;
+    return mass_mat;
+}
+
 template<typename Mesh, typename Function>
 Matrix<typename Mesh::coordinate_type, Dynamic, 1>
 make_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
