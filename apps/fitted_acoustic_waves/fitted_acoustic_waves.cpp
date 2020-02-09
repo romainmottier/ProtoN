@@ -49,8 +49,10 @@ using namespace Eigen;
 
 ////////////////////////// @omar::Begining:: simple fitted implementation /////////////////////////////////////////////
 
-//#define spatial_errors_Q
+#define fancy_stabilization_Q
+#define spatial_errors_Q
 //#define quadratic_time_solution_Q
+//#define quadratic_space_solution_Q
 
 int main(int argc, char **argv)
 {
@@ -58,8 +60,12 @@ int main(int argc, char **argv)
     size_t k_degree = 0;
     size_t n_divs   = 0;
     
-    size_t nt       = 10;
-    RealType dt     = 0.1;
+    // Final time value 1.0
+    std::vector<size_t> nt_v = {10,20,40,80,160,320};
+    std::vector<double> dt_v = {0.1,0.05,0.025,0.0125,0.00625,0.003125};
+    int tref = 5;
+    size_t nt       = nt_v[tref];
+    RealType dt     = dt_v[tref];
     RealType ti = 0.0;
     
     int opt;
@@ -108,159 +114,6 @@ int main(int argc, char **argv)
 
     std::cout << bold << cyan << "Mesh generation: " << tc << " seconds" << reset << std::endl;
     
-//    RealType tf = dt*nt;
-    Matrix<RealType, Dynamic, 1> alpha_dof_n_m;
-    Matrix<RealType, Dynamic, 1> alpha_dof_n;
-    
-//    // Preliminary Initialization
-//    for(size_t it = 0; it < 0; it++){
-//
-//    std::cout << bold << yellow << "Time step number : " << it << " being executed." << reset << std::endl;
-//
-//    // Manufactured solution
-//        RealType t = dt*it+ti;
-//        auto rhs_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
-//#ifdef quadratic_time_solution_Q
-//            return 2.0 * (M_PI * M_PI * t * t + 1.0) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-//#else
-//            return 2.0 * M_PI * M_PI * std::cos(std::sqrt(2.0)*M_PI*t)  * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-//#endif
-//        };
-//
-//        auto exact_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
-//
-//#ifdef quadratic_time_solution_Q
-//            return t * t * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-//#else
-//            return std::cos(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-//#endif
-//        };
-//    #ifdef spatial_errors_Q
-//        auto exact_grad_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> Matrix<RealType, 1, 2> {
-//            Matrix<RealType, 1, 2> grad;
-//            grad(0,0) = std::cos(std::sqrt(2.0)*M_PI*t) * M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-//            grad(0,1) = std::cos(std::sqrt(2.0)*M_PI*t) * M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-//            return grad;
-//        };
-//    #endif
-//
-//        // Creating HHO approximation spaces and corresponding linear operator
-//        hho_degree_info hho_di(k_degree,k_degree); // simple stabilization term
-//
-//        auto assembler = make_assembler(msh, hho_di);
-//        tc.tic();
-//        for (auto& cell : msh.cells)
-//        {
-//            auto reconstruction_operator = make_hho_laplacian(msh, cell, hho_di);
-//            auto stabilization_operator = make_hho_naive_stabilization(msh, cell, hho_di);
-//
-//            Matrix<RealType, Dynamic, Dynamic> laplacian_loc = reconstruction_operator.second + stabilization_operator;
-//            Matrix<RealType, Dynamic, 1> f_loc = make_rhs(msh, cell, hho_di.cell_degree(), rhs_fun);
-//            assembler.assemble(msh, cell, laplacian_loc, f_loc, exact_sol_fun);
-//        }
-//        assembler.finalize();
-//        tc.toc();
-//
-//        std::cout << bold << cyan << "Assembly completed: " << tc << " seconds" << reset << std::endl;
-//
-//        Matrix<RealType, Dynamic, 1> alpha_dof_n_p;
-//
-//        tc.tic();
-//        SparseLU<SparseMatrix<RealType>> analysis;
-//        analysis.analyzePattern(assembler.LHS);
-//        analysis.factorize(assembler.LHS);
-//        alpha_dof_n_p = analysis.solve(assembler.RHS);
-//        tc.toc();
-//
-//        std::cout << bold << cyan << "Solution completed: " << tc << " seconds" << reset << std::endl;
-//
-//        size_t cell_i = 0;
-//    #ifdef spatial_errors_Q
-//        tc.tic();
-//        RealType l2_error = 0.0;
-//        RealType H1_error = 0.0;
-//
-//        for (auto &cell : msh.cells) {
-//
-//            if(cell_i == 0){
-//                RealType h = diameter(msh, cell);
-//                    std::cout << green << "h size = " << std::endl << h << std::endl;
-//            }
-//
-//            cell_basis<poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
-//            auto cell_dof = cell_basis.size();
-//            Matrix<RealType, Dynamic, 1> cell_alpha_dof_n_p = alpha_dof_n_p.block(cell_i*cell_dof, 0, cell_dof, 1);
-//            auto int_rule = integrate(msh, cell, 2.0*hho_di.cell_degree());
-//
-//            // Error integrals
-//            for (auto & point_pair : int_rule) {
-//
-//                RealType omega = point_pair.second;
-//
-//                // L2-error
-//                auto t_phi = cell_basis.eval_basis( point_pair.first );
-//                RealType u_exact = exact_sol_fun(point_pair.first);
-//                RealType uh = cell_alpha_dof_n_p.dot( t_phi );
-//                RealType error = u_exact - uh;
-//                l2_error += omega * error * error;
-//
-//                // H1-error
-//                auto t_dphi = cell_basis.eval_gradients( point_pair.first );
-//                Matrix<RealType, 1, 2> grad_uh = Matrix<RealType, 1, 2>::Zero();
-//
-//                for (size_t i = 1; i < cell_dof; i++ ){
-//                    grad_uh += cell_alpha_dof_n_p(i) * t_dphi.block(i, 0, 1, 2);
-//                }
-//
-//                Matrix<RealType, 1, 2> grad_u_exact = exact_grad_sol_fun(point_pair.first);
-//                H1_error += omega * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
-//
-//
-//            }
-//            cell_i++;
-//        }
-//
-//
-//        std::cout << green << "L2-norm error = " << std::endl << std::sqrt(l2_error) << std::endl;
-//        std::cout << green << "H1-norm error = " << std::endl << std::sqrt(H1_error) << std::endl;
-//        std::cout << std::endl;
-//        tc.toc();
-//
-//        std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;
-//
-//    #endif
-//
-//        auto num_cells = msh.cells.size();
-//        std::vector<RealType> exact_u, approx_u;
-//        exact_u.reserve( num_cells );
-//        approx_u.reserve( num_cells );
-//        cell_i = 0;
-//        for (auto& cell : msh.cells)
-//        {
-//
-//            auto bar = barycenter(msh, cell);
-//            exact_u.push_back( exact_sol_fun(bar) );
-//
-//            cell_basis<poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
-//            auto cell_dof = cell_basis.size();
-//            Matrix<RealType, Dynamic, 1> cell_alpha_dof_n_p = alpha_dof_n_p.block(cell_i*cell_dof, 0, cell_dof, 1);
-//            auto t_phi = cell_basis.eval_basis( bar );
-//             RealType uh = cell_alpha_dof_n_p.dot( t_phi );
-//            approx_u.push_back(uh);
-//            cell_i++;
-//        }
-//
-//        silo_database silo;
-//        std::string silo_file_name = "scalar_wave_" + std::to_string(it) + ".silo";
-//        silo.create(silo_file_name.c_str());
-//        silo.add_mesh(msh, "mesh");
-//                silo.add_variable("mesh", "u", exact_u.data(), exact_u.size(), zonal_variable_t);
-//        silo.add_mesh(msh, "mesh");
-//                silo.add_variable("mesh", "uh", approx_u.data(), approx_u.size(), zonal_variable_t);
-//        silo.close();
-//
-//    }
-    
     // Creating HHO approximation spaces and corresponding linear operator
     hho_degree_info hho_di(k_degree,k_degree);
     // Construct Mass matrix
@@ -273,6 +126,7 @@ int main(int argc, char **argv)
         RealType t = 0.0;
         
 #ifdef quadratic_time_solution_Q
+
         auto exact_scal_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
             return t * t * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
         };
@@ -283,15 +137,30 @@ int main(int argc, char **argv)
             return 2.0* std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
         };
 #else
+        
+#ifdef quadratic_space_solution_Q
         auto exact_scal_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
-            return std::cos(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            return std::cos(std::sqrt(2.0)*M_PI*t) * (1.0-pt.x())*pt.x() * (1.0-pt.y())*pt.y();
         };
         auto exact_vel_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
-            return -std::sqrt(2.0)*M_PI*std::sin(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            return -std::sqrt(2.0)*M_PI*std::sin(std::sqrt(2.0)*M_PI*t) * (1.0-pt.x())*pt.x() * (1.0-pt.y())*pt.y();
         };
         auto exact_accel_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
-            return -2.0*M_PI*M_PI*std::cos(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            return -2.0*M_PI*M_PI*std::cos(std::sqrt(2.0)*M_PI*t) * (1.0-pt.x())*pt.x() * (1.0-pt.y())*pt.y();
         };
+#else
+        
+        auto exact_scal_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
+            return (1.0/(std::sqrt(2.0)*M_PI))*std::sin(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        };
+        auto exact_vel_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
+            return std::cos(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        };
+        auto exact_accel_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> RealType {
+            return -2.0 * M_PI * std::sin(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        };
+#endif
+        
 #endif
         for (auto& cell : msh.cells)
         {
@@ -339,7 +208,11 @@ int main(int argc, char **argv)
 #ifdef quadratic_time_solution_Q
             return t * t * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
 #else
-            return std::cos(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+#ifdef quadratic_space_solution_Q
+            return std::cos(std::sqrt(2.0)*M_PI*t) * (1.0-pt.x())*pt.x() * (1.0-pt.y())*pt.y();
+#else
+            return (1.0/(std::sqrt(2.0)*M_PI))*std::sin(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+#endif
 #endif
         };
         
@@ -368,8 +241,6 @@ int main(int argc, char **argv)
         silo.close();
     }
     
-    //
-    
     // Transient problem
     bool is_implicit_Q = true;
     
@@ -390,7 +261,15 @@ int main(int argc, char **argv)
 #ifdef quadratic_time_solution_Q
                 return 2.0 * (M_PI * M_PI * t * t + 1.0) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
 #else
+#ifdef quadratic_space_solution_Q
+                double x,y;
+                x = pt.x();
+                y = pt.y();
+                return 2*(x - std::pow(x,2) + y - std::pow(M_PI,2)*(-1 + x)*x*(-1 + y)*y - std::pow(y,2))*
+                std::cos(std::sqrt(2)*M_PI*t);
+#else
                 return 0;
+#endif
 #endif
             };
 
@@ -399,33 +278,64 @@ int main(int argc, char **argv)
 #ifdef quadratic_time_solution_Q
                 return t * t * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
 #else
-                return std::cos(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+#ifdef quadratic_space_solution_Q
+                return std::cos(std::sqrt(2.0)*M_PI*t) * (1.0-pt.x())*pt.x() * (1.0-pt.y())*pt.y();
+#else
+                return (1.0/(std::sqrt(2.0)*M_PI))*std::sin(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+#endif
 #endif
             };
-            #ifdef spatial_errors_Q
+            
+#ifdef spatial_errors_Q
+       
+#ifdef quadratic_time_solution_Q
+            auto exact_grad_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> Matrix<RealType, 1, 2> {
+                Matrix<RealType, 1, 2> grad;
+                grad(0,0) = t * t * M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+                grad(0,1) = t * t * M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+                return grad;
+            };
+#else
+            
+#ifdef quadratic_space_solution_Q
                 auto exact_grad_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> Matrix<RealType, 1, 2> {
                     Matrix<RealType, 1, 2> grad;
-                    grad(0,0) = std::cos(std::sqrt(2.0)*M_PI*t) * M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-                    grad(0,1) = std::cos(std::sqrt(2.0)*M_PI*t) * M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+                    double x,y;
+                    x = pt.x();
+                    y = pt.y();
+                    grad(0,0) = (1 - x)*(1 - y)*y*std::cos(std::sqrt(2)*M_PI*t) - x*(1 - y)*y*std::cos(std::sqrt(2)*M_PI*t);
+                    grad(0,1) = (1 - x)*x*(1 - y)*std::cos(std::sqrt(2)*M_PI*t) - (1 - x)*x*y*std::cos(std::sqrt(2)*M_PI*t);
                     return grad;
                 };
-            #endif
-                
-                
-                auto assembler = make_assembler(msh, hho_di);
-                tc.tic();
-                for (auto& cell : msh.cells)
-                {
-                    auto reconstruction_operator = make_hho_laplacian(msh, cell, hho_di);
-                    auto stabilization_operator = make_hho_naive_stabilization(msh, cell, hho_di);
-                    Matrix<RealType, Dynamic, Dynamic> laplacian_loc = reconstruction_operator.second + stabilization_operator;
+#else
+                auto exact_grad_sol_fun = [&t](const typename poly_mesh<RealType>::point_type& pt) -> Matrix<RealType, 1, 2> {
+                    Matrix<RealType, 1, 2> grad;
+                    grad(0,0) = (1.0/std::sqrt(2.0))*std::sin(std::sqrt(2.0)*M_PI*t) * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+                    grad(0,1) = (1.0/std::sqrt(2.0))*std::sin(std::sqrt(2.0)*M_PI*t) * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+                    return grad;
+                };
+#endif
 
-                    Matrix<RealType, Dynamic, 1> f_loc = make_rhs(msh, cell, hho_di.cell_degree(), rhs_fun);
-//                    Matrix<RealType, Dynamic, 1> alpha_loc = project_function(msh, cell, hho_di, rhs_fun);
-                    
-                    assembler.assemble(msh, cell, laplacian_loc, f_loc, exact_sol_fun);
-                }
-                assembler.finalize();
+#endif
+       
+            
+#endif
+            
+            auto assembler = make_assembler(msh, hho_di);
+            tc.tic();
+            for (auto& cell : msh.cells)
+            {
+                auto reconstruction_operator = make_hho_laplacian(msh, cell, hho_di);
+#ifdef fancy_stabilization_Q
+                auto stabilization_operator = make_hho_fancy_stabilization(msh, cell, reconstruction_operator.first, hho_di);
+#else
+                auto stabilization_operator = make_hho_naive_stabilization(msh, cell, hho_di);
+#endif
+                Matrix<RealType, Dynamic, Dynamic> laplacian_loc = reconstruction_operator.second + stabilization_operator;
+                Matrix<RealType, Dynamic, 1> f_loc = make_rhs(msh, cell, hho_di.cell_degree(), rhs_fun);
+                assembler.assemble(msh, cell, laplacian_loc, f_loc, exact_sol_fun);
+            }
+            assembler.finalize();
             
             
             // Compute intermediate state for scalar and rate
@@ -433,48 +343,29 @@ int main(int argc, char **argv)
             v_dof_n = v_dof_n + dt*(1-gamma)*a_dof_n;
             Matrix<RealType, Dynamic, 1> res = assembler.LHS*p_dof_n;
             
-//            std::cout << bold << cyan << "p_dof_n : " << p_dof_n << reset << std::endl;
-//            std::cout << bold << cyan << "v_dof_n : " << v_dof_n << reset << std::endl;
-//            std::cout << bold << cyan << "a_dof_n : " << v_dof_n << reset << std::endl;
-            
             assembler.LHS *= beta*(dt*dt);
             assembler.LHS += mass_assembler_a.LHS;
-            
-        //        std::cout << bold << cyan << "Mass matrix : " << mass_assembler.LHS << " seconds" << reset << std::endl;
-        //        std::cout << bold << cyan << "DU2DT2 matrix : " << assembler.RHS << " seconds" << reset << std::endl;
-            
-//                Matrix<RealType, Dynamic, 1> lhs =
-//                         + (2.0/(dt*dt))*(alpha_dof_n)
-//                         - (1.0/(dt*dt))*(alpha_dof_n_m);
             assembler.RHS -= res;
-            
-        //        std::cout << bold << cyan << "F matrix : " << assembler.RHS << " seconds" << reset << std::endl;
-        //        assembler.RHS =
-        //        - (2.0/(dt*dt))*(mass_assembler.LHS * alpha_dof_n)
-        //        + (1.0/(dt*dt))*(mass_assembler.LHS * alpha_dof_n_m);
-        //        std::cout << bold << red << "F matrix : " << assembler.RHS << " seconds" << reset << std::endl;
-                tc.toc();
+            tc.toc();
+            std::cout << bold << cyan << "Assembly completed: " << tc << " seconds" << reset << std::endl;
+                    
+            tc.tic();
+            SparseLU<SparseMatrix<RealType>> analysis;
+            analysis.analyzePattern(assembler.LHS);
+            analysis.factorize(assembler.LHS);
+            a_dof_np = analysis.solve(assembler.RHS); // new acceleration
+            tc.toc();
 
-                std::cout << bold << cyan << "Assembly completed: " << tc << " seconds" << reset << std::endl;
-                
+            // update scalar and rate
+            p_dof_n += beta*dt*dt*a_dof_np;
+            v_dof_n += gamma*dt*a_dof_np;
+            a_dof_n  = a_dof_np;
+        
+            std::cout << bold << cyan << "Solution completed: " << tc << " seconds" << reset << std::endl;
+            size_t cell_i = 0;
 
-                
-                tc.tic();
-                SparseLU<SparseMatrix<RealType>> analysis;
-                analysis.analyzePattern(assembler.LHS);
-                analysis.factorize(assembler.LHS);
-                a_dof_np = analysis.solve(assembler.RHS); // new acceleration
-                tc.toc();
-
-                // update scalar and rate
-                p_dof_n += beta*dt*dt*a_dof_np;
-                v_dof_n += gamma*dt*a_dof_np;
-                a_dof_n  = a_dof_np;
-            
-                std::cout << bold << cyan << "Solution completed: " << tc << " seconds" << reset << std::endl;
-                
-                size_t cell_i = 0;
-            #ifdef spatial_errors_Q
+#ifdef spatial_errors_Q
+            if (it == nt) {
                 tc.tic();
                 RealType l2_error = 0.0;
                 RealType H1_error = 0.0;
@@ -486,95 +377,97 @@ int main(int argc, char **argv)
                             std::cout << green << "h size = " << std::endl << h << std::endl;
                     }
                     
-                    cell_basis<poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
-                    auto cell_dof = cell_basis.size();
-                    Matrix<RealType, Dynamic, 1> cell_alpha_dof_n_p = p_dof_n.block(cell_i*cell_dof, 0, cell_dof, 1);
-                    auto int_rule = integrate(msh, cell, 2.0*hho_di.cell_degree());
-                    
-                    // Error integrals
-                    for (auto & point_pair : int_rule) {
+                    {
+                        cell_basis<poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
+                        auto cell_dof = cell_basis.size();
                         
-                        RealType omega = point_pair.second;
+                        Matrix<RealType, Dynamic, 1> cell_alpha_dof_n_p = p_dof_n.block(cell_i*cell_dof, 0, cell_dof, 1);
+                        auto int_rule = integrate(msh, cell, 2*(hho_di.cell_degree()+1));
                         
-                        // L2-error
-                        auto t_phi = cell_basis.eval_basis( point_pair.first );
-                        RealType u_exact = exact_sol_fun(point_pair.first);
-                        RealType uh = cell_alpha_dof_n_p.dot( t_phi );
-                        RealType error = u_exact - uh;
-                        l2_error += omega * error * error;
-                        
-                        // H1-error
-                        auto t_dphi = cell_basis.eval_gradients( point_pair.first );
-                        Matrix<RealType, 1, 2> grad_uh = Matrix<RealType, 1, 2>::Zero();
-
-                        for (size_t i = 1; i < cell_dof; i++ ){
-                            grad_uh += cell_alpha_dof_n_p(i) * t_dphi.block(i, 0, 1, 2);
+                        // Error integrals
+                        for (auto & point_pair : int_rule) {
+                            
+                            RealType omega = point_pair.second;
+                            
+                            // L2-error
+                            auto t_phi = cell_basis.eval_basis( point_pair.first );
+                            RealType u_exact = exact_sol_fun(point_pair.first);
+                            RealType uh = cell_alpha_dof_n_p.dot( t_phi );
+                            RealType error = u_exact - uh;
+                            l2_error += omega * error * error;
+                            
                         }
-
-                        Matrix<RealType, 1, 2> grad_u_exact = exact_grad_sol_fun(point_pair.first);
-                        H1_error += omega * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
-                        
-                        
                     }
+
+                    {
+                        auto int_rule = integrate(msh, cell, 2*(hho_di.cell_degree()+1));
+                        cell_basis<poly_mesh<RealType>, RealType> rec_basis(msh, cell, hho_di.reconstruction_degree());
+                        auto gr = make_hho_laplacian(msh, cell, hho_di);
+                        Matrix<RealType, Dynamic, 1> all_dofs = assembler.take_local_data(msh, cell, p_dof_n, exact_sol_fun);
+                        Matrix<RealType, Dynamic, 1> recdofs = gr.first * all_dofs;
+                        
+                        // Error integrals
+                        for (auto & point_pair : int_rule) {
+                            
+                            RealType omega = point_pair.second;
+
+                            // H1-error
+                            auto t_dphi = rec_basis.eval_gradients( point_pair.first );
+                            Matrix<RealType, 1, 2> grad_uh = Matrix<RealType, 1, 2>::Zero();
+
+                            for (size_t i = 1; i < t_dphi.rows(); i++){
+                                grad_uh = grad_uh + recdofs(i-1)*t_dphi.block(i, 0, 1, 2);
+                            }
+
+                            Matrix<RealType, 1, 2> grad_u_exact = exact_grad_sol_fun(point_pair.first);
+                            H1_error += omega * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
+                            
+                            
+                        }
+                    }
+                    
                     cell_i++;
                 }
-                
 
                 std::cout << green << "L2-norm error = " << std::endl << std::sqrt(l2_error) << std::endl;
                 std::cout << green << "H1-norm error = " << std::endl << std::sqrt(H1_error) << std::endl;
                 std::cout << std::endl;
                 tc.toc();
-
                 std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;
-                
-            #endif
-                
-                auto num_cells = msh.cells.size();
-                std::vector<RealType> exact_u, approx_u;
-                exact_u.reserve( num_cells );
-                approx_u.reserve( num_cells );
-                cell_i = 0;
-                for (auto& cell : msh.cells)
-                {
-
-                    auto bar = barycenter(msh, cell);
-                    exact_u.push_back( exact_sol_fun(bar) );
-                    
-                    cell_basis<poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
-                    auto cell_dof = cell_basis.size();
-                    Matrix<RealType, Dynamic, 1> cell_alpha_dof_n_p = p_dof_n.block(cell_i*cell_dof, 0, cell_dof, 1);
-                    auto t_phi = cell_basis.eval_basis( bar );
-                     RealType uh = cell_alpha_dof_n_p.dot( t_phi );
-                    approx_u.push_back(uh);
-                    cell_i++;
-                }
-                
-                silo_database silo;
-                std::string silo_file_name = "scalar_wave_" + std::to_string(it) + ".silo";
-                silo.create(silo_file_name.c_str());
-                silo.add_mesh(msh, "mesh");
-                        silo.add_variable("mesh", "u", exact_u.data(), exact_u.size(), zonal_variable_t);
-                silo.add_mesh(msh, "mesh");
-                        silo.add_variable("mesh", "uh", approx_u.data(), approx_u.size(), zonal_variable_t);
-                silo.close();
-                
-        //        Matrix<RealType, Dynamic, 1> du2dt2 =
-        //                - (1.0/(dt*dt))*(alpha_dof_n_p)
-        //                + (2.0/(dt*dt))*(alpha_dof_n)
-        //                - (1.0/(dt*dt))*(alpha_dof_n_m);
-        //
-        //                std::cout << bold << cyan << "F approx: " << mass_assembler.LHS*du2dt2 << " seconds" << reset << std::endl;
-                
-        //        std::cout << yellow << "Solution at n-1 : " << std::endl << alpha_dof_n_m << reset << std::endl;
-        //
-        //        std::cout << yellow << "Solution at n : " << std::endl << alpha_dof_n << reset << std::endl;
-        //
-        //        std::cout << yellow << "Solution at n+1 : " << std::endl << alpha_dof_n_p << reset << std::endl;
-                
-//                // update states
-//                alpha_dof_n_m = alpha_dof_n;
-//                alpha_dof_n = alpha_dof_n_p;
             }
+#endif
+            
+            
+            // Rendering silo file
+            auto num_cells = msh.cells.size();
+            std::vector<RealType> exact_u, approx_u;
+            exact_u.reserve( num_cells );
+            approx_u.reserve( num_cells );
+            cell_i = 0;
+            for (auto& cell : msh.cells)
+            {
+
+                auto bar = barycenter(msh, cell);
+                exact_u.push_back( exact_sol_fun(bar) );
+                
+                cell_basis<poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
+                auto cell_dof = cell_basis.size();
+                Matrix<RealType, Dynamic, 1> cell_alpha_dof_n_p = p_dof_n.block(cell_i*cell_dof, 0, cell_dof, 1);
+                auto t_phi = cell_basis.eval_basis( bar );
+                 RealType uh = cell_alpha_dof_n_p.dot( t_phi );
+                approx_u.push_back(uh);
+                cell_i++;
+            }
+            
+            silo_database silo;
+            std::string silo_file_name = "scalar_wave_" + std::to_string(it) + ".silo";
+            silo.create(silo_file_name.c_str());
+            silo.add_mesh(msh, "mesh");
+                    silo.add_variable("mesh", "u", exact_u.data(), exact_u.size(), zonal_variable_t);
+            silo.add_mesh(msh, "mesh");
+                    silo.add_variable("mesh", "uh", approx_u.data(), approx_u.size(), zonal_variable_t);
+            silo.close();
+        }
     }
 
     return 0;
