@@ -822,7 +822,7 @@ auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k)
 //                 -u(r) cos(theta) in the whole domain for vel_component 2
 //         with u(r) = r^6 / kappa_1 in Omega_1
 //              u(r) = (r^6 - R^6)/kappa_2 + R^6/kappa_1 in Omega_2
-//                   sin(x+y)     in the whole domain for p
+//                 p(r) = r^4     in the whole domain for p
 // \kappa_1 , \kappa_2 given
 template<typename T, typename Mesh>
 class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, Mesh>
@@ -850,7 +850,8 @@ class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, M
          [a,b](const typename Mesh::point_type& pt) -> T { // p
              T x1 = pt.x() - a;
              T y1 = pt.y() - b;
-             return std::sin(x1 + y1);},
+             T r2 = x1*x1 + y1*y1;
+             return r2*r2 - 7.0/180.0;},
          [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
              T x1 = pt.x() - a;
              T y1 = pt.y() - b;
@@ -863,8 +864,8 @@ class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, M
                      + (1.0 - parms_.kappa_2 / parms_.kappa_1) * R2 * R2 * R2 / r2;
 
              Matrix<T, 2, 1> ret;
-             ret(0) = - y1 * kappa_Delta_ur / r + std::cos(x1 + y1);
-             ret(1) = x1 * kappa_Delta_ur / r + std::cos(x1 + y1);
+             ret(0) = - y1 * kappa_Delta_ur / r + 4.0*x1*r2;
+             ret(1) = x1 * kappa_Delta_ur / r + 4.0*y1*r2;
              return ret;},
          [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
              Matrix<T, 2, 1> ret;
