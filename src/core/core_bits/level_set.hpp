@@ -28,7 +28,7 @@ class level_set
     virtual T operator()(const point<T,2>& pt) const
     {
     }
-
+    
     virtual Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
     {
     }
@@ -40,6 +40,7 @@ class level_set
         ret = gradient(pt);
         return ret/ret.norm();
     }
+   
 };
 
 template<typename T>
@@ -212,3 +213,234 @@ struct flower_level_set: public level_set<T>
         return ret;
     }
 };
+
+
+
+/*
+
+template<typename T, typename Mesh>
+bool
+pt_in_cell(const Mesh& msh, const point<T,2>& point_to_find, const typename Mesh::cell_type& cl)
+{
+    bool ret = 0;
+    auto pts =points(msh,cl);
+    for (size_t i = 0; i < pts.size(); i++)
+    {
+        if( pts[i].x()>=point_to_find.x() && pts[i].y()>=point_to_find.y() )
+            ret = 1;
+    }
+    return ret;
+
+}
+*/
+
+/*
+// Ho due possibilità.. se uso values_bis1 uso una vector notation,
+//                      se uso values_bis uso la matrix notation -> USO QUESTA PER ORA, MA I TEST CHE HO FATTO PER N,M=32, 64 RILEVANO CHE SONO PRATICAMENTE LO STESSO
+
+template<typename T, typename Mesh ,typename Fonction >
+struct projected_level_set: public level_set<T>
+{
+    std::vector< T > values;
+    Eigen::Matrix<T, Dynamic, Dynamic> values_bis; // MATRIX NOTATION
+    //Eigen::Matrix<T, Dynamic, 1> values_bis1; // VECTOR NOTATION
+    Eigen::Matrix<T, Dynamic, 1> vertices; // saving level_set on vertices mesh
+    size_t degree_FEM;
+    size_t number_elements;
+    Mesh msh;
+    size_t      Nx, Ny;
+    size_t  last_row_init, last_row_end, number_faces_one_row;
+  //  size_t counter_cell , counter_face, num_cell_row;
+    
+    projected_level_set(const Fonction & level_set, const Mesh & msh, size_t degree_k , const mesh_init_params<T>& params)
+        : number_elements((degree_k+1)*(degree_k+1)), msh(msh),degree_FEM(degree_k),Nx(params.Nx),Ny(params.Ny)
+    //, values_bis( Eigen::Matrix<T, Dynamic, 1>::Zero(number_elements*msh.cells.size(), 1) )
+    {
+        
+        last_row_init = Ny*(2*Nx+1); // There are 2 faces for each row of cells + Ny
+        last_row_end = last_row_init + Nx-1;
+        number_faces_one_row = 2*Nx+1; // for each cell I count only the low and sx faces, respectevely 0-1 2-3 4-5 6-7 8 + the last on the right boundary
+        vertices = Eigen::Matrix<T, Dynamic, 1>::Zero( ((Nx+1)*(Ny+1)), 1 );
+        // MAYBE I COULD DO LIKE BEFORE -> (accelerate??)
+        //#ifdef NODES
+        
+        values_bis= Eigen::Matrix<T, Dynamic, Dynamic>::Zero(number_elements, msh.cells.size());                  // MATRIX NOTATION
+        
+        //values_bis1= Eigen::Matrix<T, Dynamic, 1>::Zero(number_elements*msh.cells.size(), 1 );      // VECTOR NOTATION
+        
+        //std::cout<<"Number of cells "<<msh.cells.size()<<std::endl;
+        
+        // MATRIX NOTATION
+        // std::cout<<"Dimension of the basis "<<values_bis.size()<<std::endl;
+        // VECTOR NOTATION
+        // std::cout<<"Dimension of the basis "<<values_bis1.size()<<std::endl;
+         size_t i_global = 0 , i_local=0 , i_vertex=0;
+        for(auto& cl:msh.cells)
+        {
+            auto qps = equidistriduted_nodes<T,Mesh>(msh, cl, degree_FEM);
+            i_local = 0;
+            for ( const auto & qp : qps)
+            {
+                values.push_back( level_set(qp) );
+                values_bis(i_local,i_global) = level_set(qp) ;  // MATRIX NOTATION
+                //values_bis1(i_local+i_global) = level_set(qp) ; // VECTOR NOTATION
+                i_vertex = i_global+floor(i_global/Nx);
+                if( i_local==0 )
+                    vertices(i_vertex) = level_set(qp) ;
+                
+                if( i_local==1 )
+                    vertices(i_vertex+1) = level_set(qp) ;
+                
+                if( i_local==(degree_FEM+2) )
+                    vertices(i_vertex+Nx+2) = level_set(qp) ;
+                
+                if( i_local==(degree_FEM+1) )
+                    vertices(i_vertex+Nx+1) = level_set(qp) ;
+                i_local++;
+            }
+             i_global++;  // MATRIX NOTATION
+           //  i_global+=number_elements;       // VECTOR NOTATION
+        }
+       //#endif
+    }
+    
+    
+    T operator()( const typename Mesh::node_type& node ) const
+    {
+        // Optimised to check the value of the level set only in the vertices
+        // std::cout<<"Value in vertices "<<vertices(node.ptid)<<", at position "<<node.ptid<<std::endl;
+        return vertices(node.ptid);
+        
+    }
+    
+    
+
+    T operator()(const point<T,2>& pt) const
+    {
+        size_t counter=0;
+        for( const auto& cl:msh.cells)
+        {
+            if( pt_in_cell<T,Mesh>(msh,pt,cl) )
+            {
+                //cell_basis_Qk<Mesh,T> cb(msh, cl, degree_FEM);
+                cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+                T tmp=0;
+               
+                for(auto i = 0; i<number_elements ; i++)
+                {
+                    tmp += (values.at(i+counter))*(cb.eval_basis(pt))[i];
+                }
+                return tmp;
+            }
+            counter+=number_elements;
+        }
+        std::cout<<"IF HERE, THERE IS A PROBLEM IN projected_level_set::operator()!!!"<<std::endl;
+        return 1e10; //to check if doesn't enter in the loop
+    }
+
+    
+    T operator()( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
+    {
+        
+        // MATRIX NOTATION
+        size_t counter = offset(msh,cl);
+        //std::cout<<"Value of offset "<<counter<<std::endl;
+        //cell_basis_Qk<Mesh,T> cb(msh, cl, degree_FEM);
+        cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+        auto values_cell = (values_bis.block(0,counter,number_elements,1)).col(0);
+        T tmp = values_cell.dot( cb.eval_basis(pt) );
+        return tmp;
+        
+        // VECTOR NOTATION
+        
+        //size_t counter = offset(msh,cl)*number_elements;
+        //cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+        //auto values_cell = (values_bis1.segment(counter,number_elements));
+        //T tmp = values_cell.dot( cb.eval_basis(pt) );
+        //return tmp;
+        
+        
+    }
+    
+ 
+    T operator()( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::face_type& fc ) const
+       {
+           
+           // MATRIX NOTATION
+           auto counter_face = offset(msh,fc);
+           size_t counter_cell;
+           // da fc devo trovare la cella in cui sono per la base
+           //std::cout<<"Face number "<<counter_face<<std::endl;
+
+           // ATTENTION, ALL THIS WORKS IN STRUCTURED QUADRANGULAR MESHES
+           
+           // Check if I am in the last row, upper faces (ordered differently)
+           if(counter_face>=last_row_init && counter_face<=last_row_end)
+           {
+               counter_cell = (Ny-1)*Nx + counter_face%(last_row_init);
+           }
+           else
+           {
+            // Find in what row the face is
+             auto  num_cell_row = floor(counter_face/(number_faces_one_row));
+               if ( counter_face!= ( (2*Nx)*(num_cell_row+1)+num_cell_row ) )
+               {
+                // Faces not on the right boudary, to know in what cell are, it is sufficient to analyse the low and left face of each quadrangular cell.
+                   counter_cell = floor( (counter_face-num_cell_row)/2.0 );
+               }
+               else
+               {
+                // Face on the right boudary,
+                   counter_cell = ( num_cell_row+1 )*Nx -1;
+               }
+           
+           }
+           //std::cout<<"Face->Cell number "<<counter_cell<<std::endl;
+           auto cl = msh.cells.at(counter_cell);
+           //cell_basis_Qk<Mesh,T> cb(msh, cl, degree_FEM);
+           cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+           auto values_cell = (values_bis.block(0,counter_cell,number_elements,1)).col(0);
+           T tmp = values_cell.dot( cb.eval_basis(pt) );
+           return tmp;
+
+           
+       }
+    
+
+    
+
+
+    
+    
+    
+    
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        size_t counter=0;
+        Eigen::Matrix<T,2,1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        for( const auto& cl:msh.cells)
+        {
+            if(pt_in_cell<T,Mesh>(msh,pt,cl))
+            {
+                //cell_basis_Qk<Mesh,T> cb(msh, cl, degree_FEM);
+                cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+                auto grad_eval =  cb.eval_gradients(pt);
+                for(auto i = 0; i<number_elements ; i++)
+                {
+                    ret(0) += values.at(i+counter)*grad_eval(i,0);
+                    ret(1) += values.at(i+counter)*grad_eval(i,1);
+                }
+                return ret;
+            }
+            counter+=number_elements;
+
+        }
+        std::cout<<"Se compare questo problema in gradient()"<<std::endl;
+        ret(0)+=1e10;
+        ret(1)+=1e10;
+        return ret; //to check if doesn't enter in the loop
+
+    }
+};
+
+*/

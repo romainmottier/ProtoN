@@ -152,7 +152,7 @@ protected:
     size_t num_cells, num_other_faces, loc_cbs;
 
 public:
-
+//  Function                            dir_func; // ERA PROTECTED!!!!!!!!!!!!
     SparseMatrix<T>         LHS;
     Matrix<T, Dynamic, 1>   RHS;
 
@@ -162,6 +162,9 @@ public:
     {
     }
 
+void set_dir_func(const Function& f) {
+  dir_func = f;
+}
     size_t
     face_SOL_offset(const Mesh& msh, const typename Mesh::face_type& fc)
     {
@@ -311,7 +314,6 @@ public:
 
         auto asm_map = init_asm_map(msh, cl);
         auto dirichlet_data = get_dirichlet_data(msh, cl);
-
         assert( asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols() );
 
         // LHS
@@ -368,6 +370,7 @@ public:
             }
 
             auto face_LHS_offset = face_SOL_offset(msh, fc);
+            // If I would bdry cond on cut cells I should modify here
             if ( location(msh, fc) == element_location::ON_INTERFACE
                  && loc_zone == element_location::ON_INTERFACE )
             {
@@ -652,9 +655,10 @@ public:
             else
                 num_all_faces += 1;
         }
-
+         std::cout<<"Number of all faces (faces on interface counted twice) =  "<<num_all_faces<<std::endl;
         /* We assume that cut cells can not have dirichlet faces */
         auto num_dirichlet_faces = std::count_if(msh.faces.begin(), msh.faces.end(), is_dirichlet);
+      //  std::cout<<"Number of dirichlet faces "<<num_dirichlet_faces<<std::endl;
         this->num_other_faces = num_all_faces - num_dirichlet_faces;
 
         this->face_table.resize( msh.faces.size() );
@@ -781,7 +785,7 @@ public:
         auto fbs = face_basis<Mesh,T>::size(facdeg);
 
         auto system_size = fbs * this->num_other_faces;
-
+        std::cout<<"system_size (num of faces - Dirichlet faces) is "<<system_size<<std::endl;
         this->LHS = SparseMatrix<T>( system_size, system_size );
         this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size );
 
@@ -820,7 +824,6 @@ public:
         auto mat_sc = static_condensation_compute(lhs, rhs, cbs, f_dofs);
         Matrix<T, Dynamic, Dynamic> lhs_sc = mat_sc.first;
         Matrix<T, Dynamic, 1> rhs_sc = mat_sc.second;
-
         this->assemble_bis(msh, cl, lhs_sc, rhs_sc);
     } // assemble()
 
@@ -839,7 +842,7 @@ public:
         auto fcs = faces(msh, cl);
         auto num_faces = fcs.size();
         auto f_dofs = num_faces * fbs;
-
+        // solF is the sol also in dirichlet fcs
         auto solF = this->get_solF(msh, cl, solution);
         size_t offset_cl = offset(msh, cl);
         auto loc_mat = loc_LHS.at(offset_cl);
@@ -1328,6 +1331,12 @@ public:
     {
     }
 
+    
+    void set_dir_func(const Function& f) {
+      dir_func = f;
+    }
+    
+    
     size_t
     face_SOL_offset(const Mesh& msh, const typename Mesh::face_type& fc)
     {
@@ -2498,4 +2507,3 @@ auto make_stokes_interface_condensed_assembler(const Mesh& msh, Function& dirich
 {
     return stokes_interface_condensed_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
-

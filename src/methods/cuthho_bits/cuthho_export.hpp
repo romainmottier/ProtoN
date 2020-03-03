@@ -67,6 +67,36 @@ public:
     }
 };
 
+template<typename T>
+class gnuplot_output_object_vec : public postprocess_output_object<T>
+{
+    std::string                                 output_filename;
+    std::vector< std::pair< point<T,2>, std::pair< T,T > > >   data;
+
+public:
+    gnuplot_output_object_vec(const std::string& filename)
+        : output_filename(filename)
+    {}
+
+    void add_data(const point<T,2>& pt1, const std::pair< T,T >& pt2)
+    {
+        data.push_back( std::make_pair(pt1, pt2) );
+    }
+
+    bool write()
+    {
+        std::ofstream ofs(output_filename);
+
+        for (auto& d : data)
+            ofs << d.first.x() << " " << d.first.y() << " " << d.second.first  << " "  << d.second.second << std::endl;
+
+        ofs.close();
+
+        return true;
+    }
+};
+
+
 
 template<typename T>
 class postprocess_output

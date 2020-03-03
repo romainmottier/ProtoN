@@ -115,14 +115,17 @@ find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& l
     //auto ip = (pts[1] - pts[0]) * t + pts[0];
 }
 
+
+
 template<typename T, size_t ET, typename Function>
 void
 detect_node_position(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 {
     for (auto& n : msh.nodes)
     {
-        auto pt = points(msh, n);
-        if ( level_set_function(pt) < 0 )
+        auto pt = points(msh, n); //deleted by Stefano
+        if ( level_set_function(pt) < 0 ) //deleted by Stefano
+        //if ( level_set_function(n) < 0 ) // add by Stefano
             n.user_data.location = element_location::IN_NEGATIVE_SIDE;
         else
             n.user_data.location = element_location::IN_POSITIVE_SIDE;
@@ -136,8 +139,12 @@ detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
     for (auto& fc : msh.faces)
     {
         auto pts = points(msh, fc);
-        auto l0 = level_set_function(pts[0]);
-        auto l1 = level_set_function(pts[1]);
+        auto l0 = level_set_function(pts[0]);      //deleted by Stefano
+        auto l1 = level_set_function(pts[1]);       //deleted by Stefano
+        
+        //auto l0 = level_set_function(pts[0],msh,fc);      // add by Stefano
+        //auto l1 = level_set_function(pts[1],msh,fc);       // add by Stefano
+        
         if (l0 >= 0 && l1 >= 0)
         {
             fc.user_data.location = element_location::IN_POSITIVE_SIDE;
@@ -152,6 +159,7 @@ detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 
         auto threshold = diameter(msh, fc) / 1e20;
         auto pm = find_zero_crossing(pts[0], pts[1], level_set_function, threshold);
+        //auto pm = find_zero_crossing(pts[0], pts[1], level_set_function, threshold,msh,fc);
 
         /* If node 0 is in the negative region, mark it as node inside, otherwise mark node 1 */
         fc.user_data.node_inside = ( l0 < 0 ) ? 0 : 1;
@@ -166,6 +174,7 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 {
     typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
+     typedef typename cuthho_mesh<T, ET>::cell_type cell_type;
 
     size_t cell_i = 0;
     for (auto& cl : msh.cells)
@@ -187,7 +196,11 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         if (k == 0)
         {
             auto is_positive = [&](const point_type& pt) -> bool {
-                return level_set_function(pt) > 0;
+            return level_set_function(pt) > 0;
+           /*
+            auto is_positive = [&](const point_type& pt, const cuthho_mesh<T, ET> & msh, const cell_type& cl) -> bool {
+                return level_set_function(pt,msh,cl) > 0;
+                */
             };
 
             auto pts = points(msh, cl);
@@ -712,8 +725,24 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
         return integrate(msh, cl, degree);
 
     auto tris = triangulate(msh, cl, where);
+   // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
     for (auto& tri : tris)
     {
+        // fatto io da qua
+        /*
+        auto v0 = tri.pts[1] - tri.pts[0];
+        auto v1 = tri.pts[2] - tri.pts[0];
+        auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
+        auto counter = offset(msh,cl);
+        if(area < 0){
+               for( auto& r : cl.user_data.interface ){
+                  std::cout<<"In cella num "<<counter<<std::endl;
+                   std::cout<<"Point r: x is "<<r.x()<<", y is "<<r.y()<<std::endl;
+               }
+           
+           }
+         */
+        // a qua
         auto qpts = triangle_quadrature(tri.pts[0], tri.pts[1], tri.pts[2], degree);
         ret.insert(ret.end(), qpts.begin(), qpts.end());
     }

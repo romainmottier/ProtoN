@@ -720,15 +720,34 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
 {
     if ( location(msh, cl) == where )
         return make_rhs(msh, cl, degree, f);
-
+    /*
+    if(cl.user_data.offset_subcells>1)
+    {
+        for (auto offset:cl.user_data.offset_subcells)
+        {
+            cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
+            auto cbs = cb.size();
+            //  std::cout<<"I M in make_rhs cuttho_utils  "<<std::endl;
+            Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+            auto qps = integrate(msh, cl, 2*degree, where);
+            for (auto& qp : qps)
+            {
+                auto phi = cb.eval_basis(qp.first);
+                //std::cout<<"Point to find "<<qp.first.x()<<","<<qp.first.y()<<std::endl;
+                ret += qp.second * phi * f(qp.first);
+            }
+        }
+    }
+    */
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
-
+   //  std::cout<<"I M in make_rhs cuttho_utils  "<<std::endl;
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
     auto qps = integrate(msh, cl, 2*degree, where);
     for (auto& qp : qps)
     {
         auto phi = cb.eval_basis(qp.first);
+        //std::cout<<"Point to find "<<qp.first.x()<<","<<qp.first.y()<<std::endl;
         ret += qp.second * phi * f(qp.first);
     }
     return ret;

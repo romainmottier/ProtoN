@@ -57,6 +57,9 @@ struct cell_cuthho_info
     std::vector< std::pair<point<T,2>, T> > integration_p;
 
     bool                        highlight; // for tests
+    
+    std::vector<size_t>         offset_subcells;
+    
     cell_cuthho_info() :
         location(element_location::UNDEF),
         agglo_set(cell_agglo_set::UNDEF),

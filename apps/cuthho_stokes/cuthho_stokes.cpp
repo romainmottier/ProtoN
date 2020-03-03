@@ -1342,7 +1342,7 @@ void convergence_test(void)
 }
 
 //////////////////////////     MAIN        ////////////////////////////
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     convergence_test();
@@ -1352,7 +1352,7 @@ int main(int argc, char **argv)
 }
 #endif
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -1483,19 +1483,32 @@ int main(int argc, char **argv)
     output_mesh_info(msh, level_set_function);
 
     // auto test_case = make_test_case_stokes_1(msh, level_set_function);
-    // auto test_case = make_test_case_stokes_2(msh, level_set_function);
-    // auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
-    auto parms = params<RealType>();
-    parms.kappa_1 = 100.0;
-    parms.kappa_2 = 1.0;
-    bool sym_grad = true;
-    auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, parms, sym_grad);
+//<<<<<<< HEAD
+//    // auto test_case = make_test_case_stokes_2(msh, level_set_function);
+//    // auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
+//    auto parms = params<RealType>();
+//    parms.kappa_1 = 100.0;
+//    parms.kappa_2 = 1.0;
+//    bool sym_grad = true;
+//    auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, parms, sym_grad);
+//
+//    // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
+//    // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
+//    // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
+//    auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
+//=======
+    auto test_case = make_test_case_stokes_2(msh, level_set_function);
+    // auto test_case = make_test_case_kink_velocity(msh, .... );
+    
+    //auto test_case = make_test_case_kink_velocity2(msh, level_set_function);
+    
+    
+    
+    auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
+//>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
 
-    // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
-    // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
-    // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
-    auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
-
+    
+    
     if (solve_interface)
         run_cuthho_interface(msh, degree, method, test_case);
 

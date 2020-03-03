@@ -31,6 +31,7 @@
 
 #include "point.hpp"
 
+
 /*****************************************************************************
  *   Mesh stuff
  *****************************************************************************/
@@ -195,6 +196,7 @@ struct mesh_init_params {
         return (max_y - min_y)/Ny;
     }
 };
+
 
 
 
@@ -395,6 +397,7 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
         std::sort(faces.begin(), faces.end());
         faces.erase( std::unique(faces.begin(), faces.end()), faces.end() );
 
+        
         for (auto& fc : faces)
         {
             if (fc.is_boundary)

@@ -122,7 +122,7 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
             else
                 cl.user_data.agglo_set = (m2 <= threshold) ? cell_agglo_set::T_KO_NEG : cell_agglo_set::T_KO_POS;
         };
-
+        // for all the faces of the cell cl
         for (size_t i = 0; i < fcs.size(); i++)
         {
             auto f1 = i;
@@ -728,10 +728,13 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
 
     // integration -> save composite quadrature
     size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
+  //   std::cout << bold << yellow << "Before integrate 1" << reset << std::endl;
     auto integration1_n = integrate(msh, cl1, degree_max, element_location::IN_NEGATIVE_SIDE);
+  //  std::cout << bold << yellow << "Before integrate 2" << reset << std::endl;
     auto integration1_p = integrate(msh, cl1, degree_max, element_location::IN_POSITIVE_SIDE);
-
+   //std::cout << bold << yellow << "Before integrate 3" << reset << std::endl;
     auto integration2_n = integrate(msh, cl2, degree_max, element_location::IN_NEGATIVE_SIDE);
+ //   std::cout << bold << yellow << "Before integrate 4" << reset << std::endl;
     auto integration2_p = integrate(msh, cl2, degree_max, element_location::IN_POSITIVE_SIDE);
 
     cl.user_data.integration_n = integration1_n;
@@ -760,7 +763,7 @@ public:
 
     cell_type new_cell;
 
-    loc_agglo(cell_type cl1, cell_type cl2, cell_type n_cell)
+    loc_agglo( size_t offset1, size_t offset2, cell_type cl1, cell_type cl2, cell_type n_cell)
     {
         // check that the two cells are neighbors
         auto pts1 = cl1.ptids;
@@ -781,6 +784,8 @@ public:
         cells.push_back( cl2 );
 
         new_cell = n_cell;
+        new_cell.user_data.offset_subcells.push_back(offset1);
+        new_cell.user_data.offset_subcells.push_back(offset2);
     }
 
     bool is_agglo_possible(size_t offset)
@@ -833,7 +838,16 @@ public:
         }
 
         cells.push_back(cl_added);
-        new_cell = new_new_cell;
+        // Adding the subcells offeset to the new agglomerated cell
+        // Stefano from here
+        for( auto& i:new_cell.user_data.offset_subcells )
+            new_new_cell.user_data.offset_subcells.push_back(i);
+        
+        new_new_cell.user_data.offset_subcells.push_back(offset);
+        // Stefano to here
+        new_cell = new_new_cell; // I don't know if I am passing all the properties
+       // std::cout<<"Adding a cell in agglomeration: CHECK SUBCELLS OF new_cell!!!"<<std::endl;
+       // std::cout<<"Number of subcells "<< new_cell.user_data.offset_subcells.size()<<std::endl;
     }
 };
 
@@ -1092,6 +1106,8 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
     ///////////////////////   LOOK FOR NEIGHBORS  ////////////////
     size_t nb_step1 = 0;
     size_t nb_step2 = 0;
+    size_t nb_ko_neg_cls = 0;
+    size_t nb_ko_pos_cls = 0;
     // start the process for domain 1, and then domain 2
     for(size_t domain=1; domain < 3; domain++)
     {
@@ -1152,13 +1168,23 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
                 agglo_table_pos.at(offset1) = offset2;
                 nb_step2++;
             }
+            
+            //if(domain==1)
+            //    nb_ko_neg_cls++;
+            //if (domain==2)
+            //    nb_ko_pos_cls++;
+            
         }
 
         if(domain == 1)
             output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_one.okc");
         if(domain == 2)
             output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_two.okc");
+        
     }
+    
+    //std::cout<<"Nb of KO_NEG cells "<<nb_ko_neg_cls<<" and of KO_POS "<<nb_ko_pos_cls
+    //std::cout<<"Nb of agglomerated cells in neg side "<<nb_step1<<" and in pos side "<<nb_step2<<std::endl;
     //////////////   CHANGE THE AGGLO FOR THE CELLS OF DOMAIN 1 THAT ARE TARGETTED ///////
     size_t nb_step3 = 0;
     for (auto cl : msh.cells)
@@ -1208,6 +1234,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
         agglo_table_neg.at(offset1) = -1;
     }
     output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_three.okc");
+    //std::cout<<"Nb of removed cells in neg side "<<nb_step3<<std::endl;
     
     ///////////////////  BUILD LOCAL AGGLOMERATIONS  //////////////////
     std::vector< loc_agglo<typename Mesh::cell_type> > loc_agglos;
@@ -1272,10 +1299,13 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
         }
         else if(!already_agglo_cl && !already_agglo_neigh)
         {
+            
+            //std::cout<<"The cell number "<<offset(msh,cl)<<" is aggloremated with the cell num "<<offset(msh,neigh)<<std::endl;
+           
             // create a new local agglomeration
             auto MC = merge_cells(msh, cl, neigh);
 
-            loc_agglos.push_back( loc_agglo<typename Mesh::cell_type>(cl, neigh, MC.first) );
+            loc_agglos.push_back( loc_agglo<typename Mesh::cell_type>(offset(msh,cl),offset(msh,neigh),cl, neigh, MC.first) );
 
             for(size_t i=0; i<MC.second.size(); i++)
             {
@@ -1286,6 +1316,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
         }
         else // only one cell is already agglomerated
         {
+            //std::cout<<"The cell number "<<offset(msh,cl)<<" is aggloremated with the cell num "<<offset(msh,neigh)<<std::endl;
             typename Mesh::cell_type cl1, cl2;
             size_t offset_cl2, agglo_offset;
             if(already_agglo_cl)
@@ -1311,7 +1342,6 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
             if(CC.first)
             {
                 auto offset_added_cell = offset(msh, CC.second);
-
                 auto MC_bis = merge_cells(msh, CC.second, cl1);
                 loc_agglos.at(agglo_offset).add_cell(CC.second, offset_added_cell,
                                                          MC_bis.first);
@@ -1372,6 +1402,21 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
 
     // sort the new list of cells
     std::sort(msh.cells.begin(), msh.cells.end());
+    
+    // Check out if subcells work correctly
+    
+    /*
+    for(auto&cl:msh.cells)
+    {
+        //if(cl.user_data.offset_subcells.size()>1){
+            std::cout<<"The subcell of "<<offset(msh,cl)<<" are: ";
+            for(auto& i: cl.user_data.offset_subcells)
+                std::cout<<i<<", ";
+            std::cout<<std::endl;
+        //}
+        
+    }
+    */
     
     // remove faces
     typename std::vector<typename Mesh::face_type>::iterator it_RF;

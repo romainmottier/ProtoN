@@ -199,7 +199,12 @@ make_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
     for (auto& qp : qps)
     {
         auto phi = cb.eval_basis(qp.first);
-        ret += qp.second * phi * f(qp.first);
+      //  std::cout<<"Problem here?"<<std::endl;
+     //   std::cout<<"I m aggloext size is "<<agglo_LS_cl.user_data.offset_subcells.size()<<std::endl;
+      //  std::cout<<"I m cl size is "<<cl.user_data.offset_subcells.size()<<std::endl;
+        ret += qp.second * phi * f(qp.first); //ADDED CL HERE
+    
+     //   std::cout<<"Problem here!!!"<<std::endl;
     }
 
     return ret;
@@ -208,17 +213,15 @@ make_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
 template<typename Mesh, typename Function>
 Matrix<typename Mesh::coordinate_type, Dynamic, 1>
 make_rhs(const Mesh& msh, const typename Mesh::face_type& fc,
-         size_t degree, const Function& f, size_t di = 0)
+         size_t degree, Function& f, size_t di = 0)
 {
     using T = typename Mesh::coordinate_type;
 
     face_basis<Mesh,T> fb(msh, fc, degree);
     auto fbs = fb.size();
-
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(fbs);
 
     auto qps = integrate(msh, fc, 2*(degree+di));
-
     for (auto& qp : qps)
     {
         auto phi = fb.eval_basis(qp.first);

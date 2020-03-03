@@ -28,7 +28,7 @@ class test_case
     std::function<T(const typename Mesh::point_type&)> sol_fun;
     std::function<T(const typename Mesh::point_type&)> rhs_fun;
     std::function<T(const typename Mesh::point_type&)> bcs_fun;
-
+    
     test_case(){}
     
     test_case(Function level_set__,
@@ -37,8 +37,51 @@ class test_case
               std::function<T(const typename Mesh::point_type&)> bcs_fun_)
         : level_set_(level_set__), sol_fun(sol_fun_), rhs_fun(rhs_fun_), bcs_fun(bcs_fun_)
         {}
+    
+   
 };
 
+template<typename T, typename Function, typename Mesh>
+class test_case_LS_discrete
+{
+   public:
+    Function level_set_;
+    std::function<T(const typename Mesh::point_type&)> sol_fun;
+    std::function<T(const typename Mesh::point_type&)> rhs_fun;
+    std::function<T(const typename Mesh::point_type&)> bcs_fun;
+    typedef typename Mesh::cell_type cell_type;
+    //cell_type agglocl;
+    
+    test_case_LS_discrete(){}
+    
+    test_case_LS_discrete(Function level_set__,
+              std::function<T(const typename Mesh::point_type&)> sol_fun_,
+              std::function<T(const typename Mesh::point_type&)> rhs_fun_,
+              std::function<T(const typename Mesh::point_type&)> bcs_fun_)
+        : level_set_(level_set__), sol_fun(sol_fun_), rhs_fun(rhs_fun_), bcs_fun(bcs_fun_)
+        {
+            std::cout<<"Im mother class 2  "<<std::endl;
+        }
+    
+    /*
+    void test_case_cell_assignment(const cell_type& cl)
+    {
+        agglocl = cl;
+        //level_set_.cell_assignment(agglocl);
+            std::cout<<"Sono qua in assignment? in test_case_LS_discrete.."<<std::endl;
+             std::cout<<"The size of agglocl is "<<agglocl.user_data.offset_subcells.size()<<std::endl;
+         std::cout<<"The size of LS_agglocl is "<<level_set_.agglo_LS_cl.user_data.offset_subcells.size()<<std::endl;
+        
+    }
+     */
+    /*
+    typename Mesh::cell_type get_cell()
+    {
+         std::cout<<"Im get_cell del figlio-figlio class 1  "<<std::endl;
+        return agglocl;
+    }
+    */
+};
 
 /////////////////////////////  TESTS CASES FOR LAPLACIAN  ////////////////////////////
 template<typename T>
@@ -76,6 +119,37 @@ class test_case_laplacian: public test_case<T, Function, Mesh>
         neumann_jump(neumann_jump_)
         {}
 };
+
+
+template<typename T, typename Function, typename Mesh>
+class test_case_laplacian_LS_discrete: public test_case_LS_discrete<T, Function, Mesh>
+{
+   public:
+    std::function<Eigen::Matrix<T, 1, 2>(const typename Mesh::point_type&)> sol_grad;
+    std::function<T(const typename Mesh::point_type&)> dirichlet_jump;
+    std::function<T(const typename Mesh::point_type&)> neumann_jump;
+
+    struct params<T> parms;
+
+    test_case_laplacian_LS_discrete(){}
+    
+    test_case_laplacian_LS_discrete(Function level_set__, params<T> parms_,
+                        std::function<T(const typename Mesh::point_type&)> sol_fun_,
+                        std::function<T(const typename Mesh::point_type&)> rhs_fun_,
+                        std::function<T(const typename Mesh::point_type&)> bcs_fun_,
+                        std::function<Eigen::Matrix<T, 1, 2>
+                        (const typename Mesh::point_type&)> sol_grad_,
+                        std::function<T(const typename Mesh::point_type&)> dirichlet_jump_,
+                        std::function<T(const typename Mesh::point_type&)> neumann_jump_)
+    : test_case_LS_discrete<T, Function, Mesh>(level_set__, sol_fun_, rhs_fun_, bcs_fun_),
+        parms(parms_), sol_grad(sol_grad_), dirichlet_jump(dirichlet_jump_),
+        neumann_jump(neumann_jump_)
+        {
+            std::cout<<"Im son class 2  "<<std::endl;
+        }
+};
+
+
 
 ///// test_case_laplacian_sin_sin
 // exact solution : sin(\pi x) * sin(\pi y) in the whole domain
@@ -368,6 +442,109 @@ auto make_test_case_laplacian_jumps_3(const Mesh& msh, Function level_set_functi
 {
     return test_case_laplacian_jumps_3<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
+
+
+
+
+
+///// test_case_laplacian_jumps_3bis FOR DISCRETE LEVEL_SET
+// exact solution : sin(\pi x) sin(\pi y)               in \Omega_1
+//                  sin(\pi x) sin(\pi y) + 2 + x^3 * y^3   in \Omega_2
+// \kappa_1 = \kappa_2 = 1
+template<typename T, typename Function, typename Mesh , typename Curr_Cell>
+class test_case_laplacian_jumps_3_LS_discrete: public test_case_laplacian_LS_discrete<T, Function, Mesh>
+{
+    typedef typename Mesh::cell_type cell_type;
+   
+    Function ls_cl;
+   public:
+    cell_type cl_uploaded;
+    Curr_Cell current_cell;
+    test_case_laplacian_jumps_3_LS_discrete(Function level_set__,Curr_Cell current_cell)
+        : ls_cl(level_set__), current_cell(current_cell), test_case_laplacian_LS_discrete<T, Function, Mesh>
+        (level_set__, params<T>(),
+         [=](const typename Mesh::point_type& pt) -> T { /* sol */
+            Function ls_cl_bis = ls_cl;
+            ls_cl_bis.cell_assignment(current_cell.get_cell());
+           
+            if(ls_cl_bis(pt) > 0)
+                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y())
+                    + 2. + pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
+            else return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+         [=](const typename Mesh::point_type& pt) mutable ->  T { /* rhs */
+            std::cout<<"Here in RHS..NON DEVO ESSERE QUI"<<std::endl;
+            Function ls_cl_bis = ls_cl;
+             ls_cl_bis.cell_assignment(current_cell.get_cell());
+          //  std::cout<<"The size of current_cell1 is "<<current_cell.crr_cl.user_data.offset_subcells.size()<<std::endl;
+          //  std::cout<<"The size of current_cell2 is "<<ls_cl_bis.agglo_LS_cl.user_data.offset_subcells.size()<<std::endl;
+            
+             if(ls_cl_bis(pt)  > 0)
+                 return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - 6 * pt.x() * pt.y() * (pt.x() * pt.x() + pt.y() * pt.y() );
+            else return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+         [this,level_set__](const typename Mesh::point_type& pt) -> T { // bcs
+             if(level_set__(pt)  > 0)
+                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 2.
+                    + pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
+            else return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+         [this,level_set__](const typename Mesh::point_type& pt) -> auto { // grad
+             Matrix<T, 1, 2> ret;
+             if(level_set__(pt)  > 0)
+             {
+                 ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 3*pt.x()*pt.x()*pt.y()*pt.y()*pt.y();
+                 ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y()) + 3*pt.x()*pt.x()*pt.x()*pt.y()*pt.y();
+                 return ret;
+             }
+             else {
+                 ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+                 ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+                 return ret;}},
+         [](const typename Mesh::point_type& pt) -> T {/* Dir */
+             return - 2. - pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();},
+         [this,level_set__](const typename Mesh::point_type& pt) -> T {/* Neu */
+             Matrix<T, 1, 2> normal = level_set__.normal(pt);
+             return -3 * pt.x() * pt.x() * pt.y() * pt.y() * (pt.y() * normal(0) + pt.x() * normal(1));})
+        {
+            std::cout<<"Im figlio del figlio class 1. NON DEVO ESSERE QUI "<<std::endl;
+        }
+    
+   
+    
+    void test_case_cell_assignment(const typename Mesh::cell_type& cl)
+    {
+        cl_uploaded = cl;
+       // ls_cl.cell_assignment(agglocl);
+    //    std::cout<<"Sono qua in assignment CLASSE FIGLIO FIGLIO? in RHS.."<<std::endl;
+    //    std::cout<<"The size of cl_uploaded is "<<cl_uploaded.user_data.offset_subcells.size()<<std::endl;
+    }
+    
+   
+    //typename Mesh::cell_type get_cell()
+    //{
+   //      std::cout<<"Im get_cell del figlio-figlio class 1  "<<std::endl;
+    //    return agglocl;
+   // }
+    
+};
+
+template<typename Mesh, typename Function , typename Curr_Cell>
+auto make_test_case_laplacian_jumps_3bis(const Mesh& msh, Function level_set_function, Curr_Cell current_cell)
+{
+    return test_case_laplacian_jumps_3_LS_discrete<typename Mesh::coordinate_type, Function, Mesh, Curr_Cell>(level_set_function,current_cell);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ////////////////////  TESTS CASES FOR CIRCLES   ////////////////////////////
 
@@ -761,51 +938,97 @@ auto make_test_case_stokes_2(const Mesh& msh, Function level_set_function)
 template<typename T, typename Mesh>
 class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, Mesh>
 {
-   public:
-    test_case_static_bubble(T R, T a, T b, T k)
-        : test_case_stokes<T, circle_level_set<T>, Mesh>
-        (circle_level_set<T>(R, a, b), params<T>(),
-         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+//<<<<<<< HEAD
+//   public:
+//    test_case_static_bubble(T R, T a, T b, T k)
+//        : test_case_stokes<T, circle_level_set<T>, Mesh>
+//        (circle_level_set<T>(R, a, b), params<T>(),
+//         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+//=======
+  public:
+   test_case_static_bubble(T R, T a, T b, T k)
+       : test_case_stokes<T, circle_level_set<T>, Mesh>
+       (circle_level_set<T>(R, a, b), params<T>(),
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+           Matrix<T, 2, 1> ret;
+           ret(0) = 0.0;
+           ret(1) = 0.0;
+           return ret;},
+        [a,b,R,k](const typename Mesh::point_type& pt) -> T { // p
+            T x1 = pt.x() - a;
+            T y1 = pt.y() - b;
+            if( x1 * x1 + y1 * y1 < R*R)
+                return k / R - M_PI * R * k;
+            else
+                return -M_PI * R * k;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+//>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
             Matrix<T, 2, 1> ret;
             ret(0) = 0.0;
             ret(1) = 0.0;
             return ret;},
-         [a,b,R,k](const typename Mesh::point_type& pt) -> T { // p
-             T x1 = pt.x() - a;
-             T y1 = pt.y() - b;
-             if( x1 * x1 + y1 * y1 < R*R)
-                 return k / R - M_PI * R * k;
-             else
-                 return -M_PI * R * k;},
-         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
-             Matrix<T, 2, 1> ret;
-             ret(0) = 0.0;
-             ret(1) = 0.0;
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+//<<<<<<< HEAD
+//         [a,b,R,k](const typename Mesh::point_type& pt) -> T { // p
+//             T x1 = pt.x() - a;
+//             T y1 = pt.y() - b;
+//             if( x1 * x1 + y1 * y1 < R*R)
+//                 return k / R - M_PI * R * k;
+//             else
+//                 return -M_PI * R * k;},
+//         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+//             Matrix<T, 2, 1> ret;
+//             ret(0) = 0.0;
+//             ret(1) = 0.0;
+//             return ret;},
+//         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+//=======
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+           Matrix<T, 2, 1> ret;
+           ret(0) = 0.0;
+           ret(1) = 0.0;
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 2, 2> ret;
+            ret(0,0) = 0.0;
+            ret(0,1) = 0.0;
+            ret(1,0) = 0.0;
+            ret(1,1) = 0.0;
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+//>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
             Matrix<T, 2, 1> ret;
             ret(0) = 0.0;
             ret(1) = 0.0;
             return ret;},
-         [](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 2, 2> ret;
-             ret(0,0) = 0.0;
-             ret(0,1) = 0.0;
-             ret(1,0) = 0.0;
-             ret(1,1) = 0.0;
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
-             Matrix<T, 2, 1> ret;
-             ret(0) = 0.0;
-             ret(1) = 0.0;
-             return ret;},
-         [this, k, R](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
-             Matrix<T, 2, 1> ret;
-             Matrix<T, 1, 2> normal = this->level_set_.normal(pt);
-             ret(0) = - k / R * normal(0);
-             ret(1) = - k / R * normal(1);
-             return ret;})
-        {}
+//<<<<<<< HEAD
+//         [](const typename Mesh::point_type& pt) -> auto { // grad
+//             Matrix<T, 2, 2> ret;
+//             ret(0,0) = 0.0;
+//             ret(0,1) = 0.0;
+//             ret(1,0) = 0.0;
+//             ret(1,1) = 0.0;
+//             return ret;},
+//         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+//             Matrix<T, 2, 1> ret;
+//             ret(0) = 0.0;
+//             ret(1) = 0.0;
+//             return ret;},
+//         [this, k, R](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+//             Matrix<T, 2, 1> ret;
+//             Matrix<T, 1, 2> normal = this->level_set_.normal(pt);
+//             ret(0) = - k / R * normal(0);
+//             ret(1) = - k / R * normal(1);
+//             return ret;})
+//        {}
+//=======
+        [this, k, R](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+            Matrix<T, 2, 1> ret;
+            Matrix<T, 1, 2> normal = this->level_set_.normal(pt);
+            ret(0) = - k / R * normal(0);
+            ret(1) = - k / R * normal(1);
+            return ret;})
+       {}
+//>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
 };
 
 template<typename Mesh, typename T>
@@ -822,16 +1045,69 @@ auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k)
 //                 -u(r) cos(theta) in the whole domain for vel_component 2
 //         with u(r) = r^6 / kappa_1 in Omega_1
 //              u(r) = (r^6 - R^6)/kappa_2 + R^6/kappa_1 in Omega_2
+
+
+//<<<<<<< HEAD
+
+
 //                 p(r) = r^4 - 7/180    in the whole domain for p
 // \kappa_1 , \kappa_2 given
+//template<typename T, typename Mesh>
+//class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, Mesh>
+//{
+//   public:
+//    test_case_kink_velocity(T R, T a, T b, params<T> parms_, bool sym_grad)
+//        : test_case_stokes<T, circle_level_set<T>, Mesh>
+//        (circle_level_set<T>(R, a, b), parms_,
+//         [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+//=======
+//                   sin(x+y)     in the whole domain for p
+// \kappa_1 , \kappa_2 given
+/*
 template<typename T, typename Mesh>
 class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, Mesh>
 {
-   public:
-    test_case_kink_velocity(T R, T a, T b, params<T> parms_, bool sym_grad)
-        : test_case_stokes<T, circle_level_set<T>, Mesh>
-        (circle_level_set<T>(R, a, b), parms_,
-         [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+  public:
+   test_case_kink_velocity(T R, T a, T b, params<T> parms_, bool sym_grad)
+       : test_case_stokes<T, circle_level_set<T>, Mesh>
+       (circle_level_set<T>(R, a, b), parms_,
+        [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+           Matrix<T, 2, 1> ret;
+           T x1 = pt.x() - a;
+           T y1 = pt.y() - b;
+           T r2 = x1*x1 + y1*y1;
+           T r = std::sqrt(r2);
+           T R2 = R * R;
+           T ur;
+           if( r2 < R2 )
+               ur = r2 * r2 * r2 / parms_.kappa_1;
+           else
+               ur = ( r2 * r2 * r2 - R2 * R2 * R2 ) / parms_.kappa_2
+                   + R2*R2*R2 / parms_.kappa_1;
+           ret(0) = ur * y1 / r;
+           ret(1) = - ur * x1 / r;
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> T { // p
+            T x1 = pt.x() - a;
+            T y1 = pt.y() - b;
+            return std::sin(x1 + y1);},
+        [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+            T x1 = pt.x() - a;
+            T y1 = pt.y() - b;
+            T r2 = x1*x1 + y1*y1;
+            T r = std::sqrt(r2);
+            T R2 = R*R;
+            T kappa_Delta_ur = 35.0 * r2 * r2;
+            if(r2 > R2)
+                kappa_Delta_ur = kappa_Delta_ur
+                    + (1.0 - parms_.kappa_2 / parms_.kappa_1) * R2 * R2 * R2 / r2;
+
+            Matrix<T, 2, 1> ret;
+            ret(0) = - y1 * kappa_Delta_ur / r + std::cos(x1 + y1);
+            ret(1) = x1 * kappa_Delta_ur / r + std::cos(x1 + y1);
+            return ret;},
+        [R,a,b,parms_](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
             Matrix<T, 2, 1> ret;
             T x1 = pt.x() - a;
             T y1 = pt.y() - b;
@@ -847,6 +1123,7 @@ class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, M
             ret(0) = ur * y1 / r;
             ret(1) = - ur * x1 / r;
             return ret;},
+<<<<<<< HEAD
          [a,b](const typename Mesh::point_type& pt) -> T { // p
              T x1 = pt.x() - a;
              T y1 = pt.y() - b;
@@ -914,12 +1191,12 @@ class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, M
                      - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 * R2 * R2 * x1 * y1 / (r*r2);
              }
              return ret;},
-         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Dir 
              Matrix<T, 2, 1> ret;
              ret(0) = 0.0;
              ret(1) = 0.0;
              return ret;},
-         [R,a,b,parms_,sym_grad](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+         [R,a,b,parms_,sym_grad](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Neu 
              Matrix<T, 2, 1> ret;
              if(sym_grad)
              {
@@ -936,11 +1213,164 @@ class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, M
              }
              return ret;})
         {}
+=======
+        [R,a,b,parms_](const typename Mesh::point_type& pt) -> auto { // grad
+            T x1 = (pt.x() - a);
+            T y1 = (pt.y() - b);
+            T r2 = x1 * x1 + y1 * y1;
+            T r = std::sqrt(r2);
+            T R2 = R * R;
+            T A = 5.0 * r * r2 * x1 * y1;
+            T B = 5.0 * r * r2 * y1 * y1 + r * r2 * r2;
+            T C = - 5.0 * r * r2 * x1 * x1 - r * r2 * r2;
+            T D = - 5.0 * r * r2 * x1 * y1;
+
+            Matrix<T, 2, 2> ret;
+            if(r2 < R2)
+            {
+                ret(0,0) = A / parms_.kappa_1;
+                ret(0,1) = B / parms_.kappa_1;
+                ret(1,0) = C / parms_.kappa_1;
+                ret(1,1) = D / parms_.kappa_1;
+            }
+            else
+            {
+                ret(0,0) = A / parms_.kappa_2
+                    + (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 * R2 * R2 * x1 * y1 / (r*r2);
+                ret(0,1) = B / parms_.kappa_2
+                    - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 * R2 * R2 * x1 * x1 / (r*r2);
+                ret(1,0) = C / parms_.kappa_2
+                    + (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 * R2 * R2 * y1 * y1 / (r*r2);
+                ret(1,1) = D / parms_.kappa_2
+                    - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 * R2 * R2 * x1 * y1 / (r*r2);
+            }
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Dir //
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+        [R,a,b,parms_,sym_grad](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Neu //
+            Matrix<T, 2, 1> ret;
+            if(sym_grad)
+            {
+                T x1 = (pt.x() - a);
+                T y1 = (pt.y() - b);
+                T r2 = x1 * x1 + y1 * y1;
+                ret(0) = - (1.0 - parms_.kappa_2 / parms_.kappa_1) * r2 * r2 * y1;
+                ret(1) = (1.0 - parms_.kappa_2 / parms_.kappa_1) * r2 * r2 * x1;
+            }
+            else
+            {
+                ret(0) = 0.0;
+                ret(1) = 0.0;
+            }
+            return ret;})
+       {}
+>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
 };
 
 template<typename Mesh, typename T>
 auto make_test_case_kink_velocity(const Mesh& msh, T R, T a, T b, params<T> parms_, bool sym_grad)
 {
+<<<<<<< HEAD
     return test_case_kink_velocity<typename Mesh::coordinate_type, Mesh>(R,a,b,parms_,sym_grad);
 }
 
+=======
+   return test_case_kink_velocity<typename Mesh::coordinate_type, Mesh>(R,a,b,parms_,sym_grad);
+}
+ */
+
+
+
+
+///// test_case_kink_velocity --> DISCRETE LEVEL SET, BY STEFANO
+// !! available for circle_level_set only !!
+// exact solution : u(r) sin(theta) in the whole domain for vel_component 1
+//                 -u(r) cos(theta) in the whole domain for vel_component 2
+//         with u(r) = r^6 / kappa_1 in Omega_1
+//              u(r) = (r^6 - R^6)/kappa_2 + R^6/kappa_1 in Omega_2
+//                   sin(x+y)     in the whole domain for p
+// \kappa_1 , \kappa_2 given
+template<typename T, typename Mesh, typename Function >
+class test_case_kink_velocity2: public test_case_stokes<T, Function , Mesh>
+{
+  public:
+   test_case_kink_velocity2(const Function & level_set__, params<T> parms_, bool sym_grad)
+       : test_case_stokes<T, Function , Mesh>
+       (level_set__, parms_,
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+           Matrix<T, 2, 1> ret;
+           T C = 1.0;
+           T mid_point = 1.0/2.0;
+           T x1 = pt.x() - mid_point ;
+           T y1 = mid_point - pt.y() ;
+
+           ret(0) = C*x1 ;
+           ret(1) = C*y1 ;
+           return ret;},
+        [level_set__](const typename Mesh::point_type& pt) -> T { // p
+           T k = 1.0;
+           T R = 1.0/3.0;
+           if(level_set__(pt) < 0)
+               return k / R - M_PI * R * k;
+            else
+                return -M_PI * R * k;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0 ;
+            ret(1) = 0.0 ;
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+           Matrix<T, 2, 1> ret;
+           T C = 1.0;
+           T mid_point = 1.0/2.0;
+           T x1 = pt.x() - mid_point ;
+           T y1 = mid_point - pt.y() ;
+           ret(0) = C*x1 ;
+           ret(1) = C*y1 ;
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> auto { // grad
+           
+           Matrix<T, 2, 2> ret;
+           T C = 1.0;
+           ret(0,0) = C*1.0;
+           ret(0,1) = C*0.0;
+           ret(1,0) = C*0.0;
+           ret(1,1) = C*(-1.0);
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+        [level_set__,parms_,sym_grad](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+            Matrix<T, 2, 1> ret;
+            if(sym_grad)
+            {
+                T gamma = 1.0;
+                T k = 1.0;
+                T R = 1.0/3.0;
+               
+                //T H = level_set__.normal(pt)
+                ret(0) = - k / R * level_set__.normal(pt)(0);  // gamma*level_set__.normal(pt);
+                ret(1) = - k / R * level_set__.normal(pt)(1);  // gamma*level_set__.normal(pt);
+            }
+            else
+            {
+                ret(0) = 0.0;
+                ret(1) = 0.0;
+            }
+            return ret;})
+       {}
+};
+
+template<typename Mesh, typename T, typename Function>
+auto make_test_case_kink_velocity2(const Mesh& msh, const Function& level_set_function, params<T> parms_, bool sym_grad)
+{
+   return test_case_kink_velocity2<typename Mesh::coordinate_type, Mesh , Function>(level_set_function,parms_,sym_grad);
+}
+
+
+>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
