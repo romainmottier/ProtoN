@@ -683,12 +683,15 @@ public:
 
 
         // stokes stabilization terms
+        T coeff_stab = gamma_0/parms.kappa_2;
         auto stokes_stab = make_stokes_interface_stabilization(msh, cl, hdi, level_set_function);
-        lhs.block(0, 0, 2*cbs, 2*cbs) -= gamma_0 * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
-        lhs.block(0, lc.rows(), 2*cbs, 2*pbs) -= gamma_0 * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
-        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs) -= gamma_0 * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
+        lhs.block(0, 0, 2*cbs, 2*cbs) -= coeff_stab * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
+        lhs.block(0, lc.rows(), 2*cbs, 2*pbs)
+            -= coeff_stab * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
+        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs)
+            -= coeff_stab * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
         lhs.block(lc.rows(), lc.rows(), 2*pbs, 2*pbs)
-            -= gamma_0 * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
+            -= coeff_stab * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
 
 
 
@@ -714,8 +717,8 @@ public:
         auto stab_rhs = make_stokes_interface_stabilization_RHS
             (msh, cl, hdi, level_set_function, test_case.neumann_jump);
 
-        rhs.head(2*cbs) -= gamma_0 * stab_rhs.head(2*cbs);
-        rhs.tail(2*pbs) -= gamma_0 * stab_rhs.tail(2*pbs);
+        rhs.head(2*cbs) -= coeff_stab * stab_rhs.head(2*cbs);
+        rhs.tail(2*pbs) -= coeff_stab * stab_rhs.tail(2*pbs);
 
         return std::make_pair(lhs, rhs);
     }
@@ -733,7 +736,7 @@ auto make_gradrec_stokes_interface_method(const cuthho_mesh<T, ET>& msh, const T
 
 
 ////////////////////////  GRADREC INTERFACE METHOD BIS (same with kappa_1 > kappa_2)
-
+// the roles of kappa_1 and kappa_2 are reversed
 
 template<typename T, size_t ET, typename testType>
 class gradrec_stokes_interface_method_bis : public stokes_interface_method<T, ET, testType>
@@ -805,12 +808,15 @@ public:
 
 
         // stokes stabilization terms
+        T coeff_stab = gamma_0 / parms.kappa_1;
         auto stokes_stab = make_stokes_interface_stabilization(msh, cl, hdi, level_set_function);
-        lhs.block(0, 0, 2*cbs, 2*cbs) -= gamma_0 * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
-        lhs.block(0, lc.rows(), 2*cbs, 2*pbs) -= gamma_0 * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
-        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs) -= gamma_0 * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
+        lhs.block(0, 0, 2*cbs, 2*cbs) -= coeff_stab * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
+        lhs.block(0, lc.rows(), 2*cbs, 2*pbs)
+            -= coeff_stab * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
+        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs)
+            -= coeff_stab * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
         lhs.block(lc.rows(), lc.rows(), 2*pbs, 2*pbs)
-            -= gamma_0 * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
+            -= coeff_stab * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
 
 
         ////////////////    RHS
@@ -834,8 +840,8 @@ public:
         auto stab_rhs = make_stokes_interface_stabilization_RHS
             (msh, cl, hdi, level_set_function, test_case.neumann_jump);
 
-        rhs.head(2*cbs) -= gamma_0 * stab_rhs.head(2*cbs);
-        rhs.tail(2*pbs) -= gamma_0 * stab_rhs.tail(2*pbs);
+        rhs.head(2*cbs) -= coeff_stab * stab_rhs.head(2*cbs);
+        rhs.tail(2*pbs) -= coeff_stab * stab_rhs.tail(2*pbs);
 
         return std::make_pair(lhs, rhs);
     }
