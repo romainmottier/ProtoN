@@ -822,7 +822,7 @@ auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k)
 //                 -u(r) cos(theta) in the whole domain for vel_component 2
 //         with u(r) = r^6 / kappa_1 in Omega_1
 //              u(r) = (r^6 - R^6)/kappa_2 + R^6/kappa_1 in Omega_2
-//                 p(r) = r^4     in the whole domain for p
+//                 p(r) = r^4 - 7/180    in the whole domain for p
 // \kappa_1 , \kappa_2 given
 template<typename T, typename Mesh>
 class test_case_kink_velocity: public test_case_stokes<T, circle_level_set<T>, Mesh>
