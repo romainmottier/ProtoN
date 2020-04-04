@@ -1,6 +1,6 @@
 /*
- *       /\        Matteo Cicuttin (C) 2017,2018
- *      /__\       matteo.cicuttin@enpc.fr
+ *       /\        Matteo Cicuttin (C) 2017,2018;  Guillaume Delay 2018,2019
+ *      /__\       matteo.cicuttin@enpc.fr         guillaume.delay@enpc.fr
  *     /_\/_\      École Nationale des Ponts et Chaussées - CERMICS
  *    /\    /\
  *   /__\  /__\    This is ProtoN, a library for fast Prototyping of
@@ -418,4 +418,141 @@ void dump_sparse_matrix(typename Eigen::SparseMatrix<T>& M, const std::string& f
 }
 
 
+
+/******************************************************************************************/
+/*******************                                               ************************/
+/*******************               VECTOR  LAPLACIAN               ************************/
+/*******************                                               ************************/
+/******************************************************************************************/
+
+//////////////////////////    PRODUCTS    ////////////////////////////////
+
+template<typename T, int N>
+Matrix<T, Dynamic, N>
+outer_product(const std::vector<Matrix<T, N, N>>& a, const Matrix<T, N, 1>& b)
+{
+    Matrix<T, Dynamic, N> ret(a.size(), N);
+    for (size_t i = 0; i < a.size(); i++)
+    {
+        Matrix<T, N, 1> t = a[i] * b;
+        ret.row(i)        = t.transpose();
+    }
+    return ret;
+}
+
+
+template<typename T, int N>
+T
+inner_product(const Matrix<T, N, N>& b, const Matrix<T, N, N>& a)
+{
+    return a.cwiseProduct(b).sum();
+}
+
+
+template<typename T, int N>
+Matrix<T, Dynamic, Dynamic>
+inner_product(const std::vector<Matrix<T, N, N>>& a, const std::vector<Matrix<T, N, N>>& b)
+{
+    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero( a.size(), b.size() );
+    for(size_t i = 0; i < a.size(); i++)
+    {
+        for(size_t j = 0; j < b.size(); j++)
+        {
+            ret(i,j) = inner_product(a[i],b[j]);
+        }
+    }
+    return ret;
+}
+
+///////////////////////  ASSEMBLY METHODS  /////////////////////////////
+
+
+// vector_assembly
+// assembles vector functions by using the associated scalar function
+template<typename T>
+Matrix<T, Dynamic, Dynamic>
+vector_assembly(const Matrix<T, Dynamic, Dynamic>& scalar_mat)
+{
+    size_t scalar_cols = scalar_mat.cols();
+    size_t scalar_rows = scalar_mat.rows();
+    size_t dimension = 2;
+
+    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(dimension * scalar_rows,
+                                                                        dimension * scalar_cols);
+    size_t row, col;
+    for(size_t i = 0; i < scalar_rows; i++)
+    {
+        row = i * dimension;
+        for(size_t j = 0; j < scalar_cols; j++)
+        {
+            col = j * dimension;
+            for(size_t k = 0; k < dimension; k++)
+            {
+                ret(row + k, col + k) = scalar_mat(i, j);
+            }
+        }
+    }
+
+    return ret;
+}
+
+//////  RHS
+template<typename Mesh, typename Function>
+Matrix<typename Mesh::coordinate_type, Dynamic, 1>
+make_vector_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
+                size_t degree, const Function& f, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;
+
+    vector_cell_basis<Mesh,T> cb(msh, cl, degree);
+    auto cbs = cb.size();
+
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+
+    auto qps = integrate(msh, cl, 2*(degree+di));
+
+    for (auto& qp : qps)
+    {
+        auto phi = cb.eval_basis(qp.first);
+        ret += qp.second * phi * f(qp.first);
+    }
+
+    return ret;
+}
+
+
+// make_vector_rhs on faces
+template<typename Mesh, typename Function>
+Matrix<typename Mesh::coordinate_type, Dynamic, 1>
+make_vector_rhs(const Mesh& msh, const typename Mesh::face_type& fc,
+         size_t degree, const Function& f, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;
+
+    vector_face_basis<Mesh,T> fb(msh, fc, degree);
+    auto fbs = fb.size();
+
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(fbs);
+
+    auto qps = integrate(msh, fc, 2*(degree+di));
+
+    for (auto& qp : qps)
+    {
+        auto phi = fb.eval_basis(qp.first);
+        ret += qp.second * phi * f(qp.first);
+    }
+
+    return ret;
+}
+
+/////////  MASS MATRIX
+
+template<typename Mesh, typename T = typename Mesh::coordinate_type>
+Matrix<T, Dynamic, Dynamic>
+make_vector_mass_matrix(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree, size_t di = 0)
+{
+    auto scalar_matrix = make_mass_matrix(msh, fc, degree, di);
+
+    return vector_assembly(scalar_matrix);
+}
 

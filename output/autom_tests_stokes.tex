@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{datatool}
+\usepackage{latexsym}
+\usepackage{tikz}
+\usepackage{geometry}
+\geometry{hmargin=2.5cm,vmargin=1.5cm}
+\DTLsettabseparator
+\DTLloaddb{Test0}{./output/test_k0.txt}
+\DTLloaddb{Test1}{./output/test_k1.txt}
+\DTLloaddb{Test2}{./output/test_k2.txt}
+\DTLloaddb{Test3}{./output/test_k3.txt}
+\pagestyle{empty}
+
+\begin{document}
+\begin{center}
+  DATE : \today
+\end{center}
+
+\foreach \n in{0,...,3}
+{
+  \begin{tabular}{|| c || c | c || c | c || c | c || c ||}
+  \hline
+  \hline
+  \multicolumn{8}{|| c ||}{$k=\n$}
+  \\
+  \hline
+  \hline
+   $N$ & $H^1$-vel & order & $L^2$-vel & order & $L^2$-p & order & condition number
+   %\cmidrule(lr){2-2}\cmidrule(lr){3-3}
+  \DTLforeach{Test\n}{%
+  \raf=N,\Her=H1,\ordre=ordre1,\Ler=L2,\ordreL=ordre2,\Lp=Lp,\ordrep=ordre3,\cond=cond}{%
+    \\
+    \raf &  \Her &  \ordre & \Ler & \ordreL & \Lp & \ordrep & \cond}
+    \\
+  \hline
+\end{tabular}
+
+}
+
+\begin{figure}
+\input{./output/figH1.tex}
+\caption{Convergence rates for $H^1$-vel errors}
+\end{figure}
+
+
+\begin{figure}
+\input{./output/figL2.tex}
+\caption{Convergence rates for $L^2$-vel errors}
+\end{figure}
+
+
+\begin{figure}
+\input{./output/figL2_p.tex}
+\caption{Convergence rates for $L^2$-pressure errors}
+\end{figure}
+
+
+\begin{figure}
+\input{./output/figCond.tex}
+\caption{Condition number}
+\end{figure}
+
+\end{document}

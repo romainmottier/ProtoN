@@ -621,7 +621,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, testType test_case)
     hho_degree_info hdi(degree+1, degree);
 
     tc.tic();
-    auto assembler = make_interface_assembler(msh, hdi);
+    auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
     for (auto& cl : msh.cells)
     {
         if (location(msh, cl) != element_location::ON_INTERFACE)
@@ -637,7 +637,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, testType test_case)
             Matrix<RealType, Dynamic, Dynamic> lc = kappa * ( gr.second + stab );
             Matrix<RealType, Dynamic, 1> f = Matrix<RealType, Dynamic, 1>::Zero(lc.rows());
             f = make_rhs(msh, cl, hdi.cell_degree(), rhs_fun);
-            assembler.assemble(msh, cl, lc, f, bcs_fun);
+            assembler.assemble(msh, cl, lc, f);
         }
         else
         {
@@ -674,8 +674,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, testType test_case)
             f.tail(cbs) += parms.kappa_1 * make_Dirichlet_jump(msh, cl, hdi.cell_degree(), element_location::IN_POSITIVE_SIDE, level_set_function, dirichlet_jump, cell_eta(msh, cl) );
             f.tail(cbs) += make_flux_jump(msh, cl, hdi.cell_degree(), element_location::IN_POSITIVE_SIDE, neumann_jump);
 
-            
-            assembler.assemble_cut(msh, cl, lc, f);
+            assembler.assemble(msh, cl, lc, f);
         }
     }
 
@@ -739,8 +738,8 @@ run_cuthho_interface(const Mesh& msh, size_t degree, testType test_case)
 
         if (location(msh, cl) == element_location::ON_INTERFACE)
         {
-            locdata_n = assembler.take_local_data(msh, cl, sol, bcs_fun, element_location::IN_NEGATIVE_SIDE);
-            locdata_p = assembler.take_local_data(msh, cl, sol, bcs_fun, element_location::IN_POSITIVE_SIDE);
+            locdata_n = assembler.take_local_data(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+            locdata_p = assembler.take_local_data(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
             
             Matrix<RealType, Dynamic, 1> locdata_tot = Matrix<RealType, Dynamic, 1>::Zero(2*cbs + 2*num_faces*fbs);
             locdata_tot.head(cbs) = locdata_n.head(cbs);
@@ -825,7 +824,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, testType test_case)
         }
         else
         {
-            locdata = assembler.take_local_data(msh, cl, sol, bcs_fun, element_location::IN_POSITIVE_SIDE);
+            locdata = assembler.take_local_data(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
             cell_dofs = locdata.head(cbs);
 
             auto gr = make_hho_laplacian(msh, cl, hdi);

@@ -263,3 +263,21 @@ public:
     T L2; // L2-error
     T cond; // condition number
 };
+
+
+/////// stokes_test_info -> for stokes problem
+template<typename T>
+class stokes_test_info {
+public:
+    stokes_test_info()
+        {
+            H1_vel = 0.0;
+            L2_vel = 0.0;
+            L2_p = 0.0;
+            cond = 0.0;
+        }
+    T H1_vel; // H1-error for velocity
+    T L2_vel; // L2-error for velocity
+    T L2_p;   // L2-error for pressure
+    T cond;   // condition number
+};

@@ -1,6 +1,6 @@
 /*
- *       /\        Matteo Cicuttin (C) 2017,2018
- *      /__\       matteo.cicuttin@enpc.fr
+ *       /\        Matteo Cicuttin (C) 2017,2018; Guillaume Delay 2018,2019
+ *      /__\       matteo.cicuttin@enpc.fr        guillaume.delay@enpc.fr
  *     /_\/_\      École Nationale des Ponts et Chaussées - CERMICS
  *    /\    /\
  *   /__\  /__\    This is ProtoN, a library for fast Prototyping of
@@ -862,4 +862,180 @@ template<typename Mesh>
 auto make_obstacle_assembler(const Mesh& msh, const std::vector<bool>& in_A, hho_degree_info hdi)
 {
     return obstacle_assembler<Mesh>(msh, in_A, hdi);
+}
+
+
+
+/******************************************************************************************/
+/*******************                                               ************************/
+/*******************               VECTOR  LAPLACIAN               ************************/
+/*******************                                               ************************/
+/******************************************************************************************/
+
+
+template<typename Mesh>
+std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
+             Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
+make_hho_gradrec_matrix(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
+{
+    auto gradrec_vector = make_hho_gradrec_vector(msh, cl, di);
+    auto oper = vector_assembly(gradrec_vector.first);
+    auto data = vector_assembly(gradrec_vector.second);
+
+    return std::make_pair(oper, data);
+}
+
+
+
+template<typename Mesh>
+Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
+make_hho_vector_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
+{
+    auto scalar_stab = make_hho_naive_stabilization(msh, cl, di);
+
+    return vector_assembly(scalar_stab);
+}
+
+
+/******************************************************************************************/
+/*******************                                               ************************/
+/*******************                STOKES PROBLEM                 ************************/
+/*******************                                               ************************/
+/******************************************************************************************/
+
+template<typename Mesh>
+std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
+             Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
+make_hho_divergence_reconstruction(const Mesh& msh, const typename Mesh::cell_type& cl,
+                                   const hho_degree_info& di)
+{
+    using T = typename Mesh::coordinate_type;
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+
+    const auto celdeg = di.cell_degree();
+    const auto facdeg = di.face_degree();
+    const auto pdeg = di.face_degree();
+
+    cell_basis<Mesh,T>                   pb(msh, cl, pdeg);
+    vector_cell_basis<Mesh,T>            cb(msh, cl, celdeg);
+
+    auto pbs = cell_basis<Mesh,T>::size(pdeg);
+    auto fbs = vector_face_basis<Mesh,T>::size(facdeg);
+    auto cbs = vector_cell_basis<Mesh,T>::size(celdeg);
+
+    const auto fcs = faces(msh, cl);
+    const auto num_faces = fcs.size();
+    const auto ns = normals(msh, cl);
+
+    matrix_type dr_lhs = matrix_type::Zero(pbs, pbs);
+    matrix_type dr_rhs = matrix_type::Zero(pbs, cbs + num_faces*fbs);
+
+
+    const auto qps = integrate(msh, cl, celdeg + pdeg - 1);
+    for (auto& qp : qps)
+    {
+        const auto s_phi  = pb.eval_basis(qp.first);
+        const auto s_dphi = pb.eval_gradients(qp.first);
+        const auto v_phi  = cb.eval_basis(qp.first);
+
+        dr_lhs += qp.second * s_phi * s_phi.transpose();
+        dr_rhs.block(0, 0, pbs, cbs) -= qp.second * s_dphi * v_phi.transpose();
+    }
+
+
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        const auto fc     = fcs[i];
+        const auto n      = ns[i];
+        vector_face_basis<Mesh,T>            fb(msh, fc, facdeg);
+
+        const auto qps_f = integrate(msh, fc, facdeg + pdeg);
+        for (auto& qp : qps_f)
+        {
+            const auto p_phi = pb.eval_basis(qp.first);
+            const auto f_phi = fb.eval_basis(qp.first);
+
+            const Matrix<T, Dynamic, 2> p_phi_n = (p_phi * n.transpose());
+            dr_rhs.block(0, cbs + i * fbs, pbs, fbs) += qp.second * p_phi_n * f_phi.transpose();
+        }
+    }
+
+
+    assert(dr_lhs.rows() == pbs && dr_lhs.cols() == pbs);
+    assert(dr_rhs.rows() == pbs && dr_rhs.cols() == cbs + num_faces * fbs);
+
+    matrix_type oper = dr_lhs.ldlt().solve(dr_rhs);
+    matrix_type data = dr_rhs;
+
+    return std::make_pair(oper, data);
+}
+
+///////  SYMMETRICAL GRADIENT RECONSTRUCTIONS
+
+
+template<typename Mesh>
+std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
+             Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
+make_hho_gradrec_sym_matrix
+(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
+{
+    using T = typename Mesh::coordinate_type;
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+    typedef Matrix<T, Dynamic, 1>       vector_type;
+
+    const auto celdeg  = di.cell_degree();
+    const auto facdeg  = di.face_degree();
+    const auto graddeg = di.grad_degree();
+
+    vector_cell_basis<Mesh,T>     cb(msh, cl, celdeg);
+    sym_matrix_cell_basis<Mesh,T>     gb(msh, cl, graddeg);
+
+    auto cbs = vector_cell_basis<Mesh,T>::size(celdeg);
+    auto fbs = vector_face_basis<Mesh,T>::size(facdeg);
+    auto gbs = sym_matrix_cell_basis<Mesh,T>::size(graddeg);
+
+    const auto num_faces = faces(msh, cl).size();
+
+    matrix_type         gr_lhs = matrix_type::Zero(gbs, gbs);
+    matrix_type         gr_rhs = matrix_type::Zero(gbs, cbs + num_faces * fbs);
+
+    if(celdeg > 0)
+    {
+        const auto qps = integrate(msh, cl, celdeg - 1 + facdeg);
+        for (auto& qp : qps)
+        {
+            const auto c_dphi = cb.eval_gradients(qp.first);
+            const auto g_phi  = gb.eval_basis(qp.first);
+
+            gr_lhs.block(0, 0, gbs, gbs) += qp.second * inner_product(g_phi, g_phi);
+            // we use here the symmetry of the basis gb
+            gr_rhs.block(0, 0, gbs, cbs) += qp.second * inner_product(g_phi, c_dphi);
+        }
+    }
+
+    const auto fcs = faces(msh, cl);
+    const auto ns = normals(msh, cl);
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        const auto fc = fcs[i];
+        const auto n  = ns[i];
+        vector_face_basis<Mesh,T> fb(msh, fc, facdeg);
+
+        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg));
+        for (auto& qp : qps_f)
+        {
+            const matrix_type c_phi      = cb.eval_basis(qp.first);
+            const matrix_type f_phi      = fb.eval_basis(qp.first);
+            const auto        g_phi      = gb.eval_basis(qp.first);
+            const matrix_type qp_g_phi_n = qp.second * outer_product(g_phi, n);
+
+            gr_rhs.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
+            gr_rhs.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+        }
+    }
+
+    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
+    matrix_type data = 2.0 * gr_rhs.transpose() * oper;
+
+    return std::make_pair(oper, data);
 }
