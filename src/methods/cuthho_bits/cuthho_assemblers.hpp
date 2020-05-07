@@ -105,6 +105,10 @@ public:
     assembly_index(size_t i, bool as)
         : idx(i), assem(as)
         {}
+    
+    assembly_index(std::pair<size_t,bool>& value)
+    : idx(value.first), assem(value.second)
+    {}
 
     operator size_t() const
         {
