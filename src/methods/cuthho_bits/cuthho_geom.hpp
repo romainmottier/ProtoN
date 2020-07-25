@@ -423,8 +423,24 @@ points(const cuthho_mesh<T, ET>& msh,
         pts[1] = fc.user_data.intersection_point;
     else if ( location(msh, nds[0]) != where && location(msh, nds[1]) == where )
         pts[0] = fc.user_data.intersection_point;
-    else
+    else{
+        if(location(msh, nds[0]) == element_location::ON_INTERFACE)
+            std::cout<<"IN INTERFACE POINT nds[0] = "<<nds[0] <<" , fc.user_data.intersection_point = "<<fc.user_data.intersection_point<<std::endl;
+        if(location(msh, nds[1]) == element_location::ON_INTERFACE)
+            std::cout<<"IN INTERFACE POINT nds[1] = "<<nds[1] <<" , fc.user_data.intersection_point = "<<fc.user_data.intersection_point<<std::endl;
+        
+        if(location(msh, nds[0]) == element_location::IN_POSITIVE_SIDE)
+            std::cout<<"IN POSITIVE POINT nds[0] = "<<nds[0] <<" , fc.user_data.intersection_point = "<<fc.user_data.intersection_point<<std::endl;
+        if(location(msh, nds[1]) == element_location::IN_POSITIVE_SIDE)
+            std::cout<<"IN POSITIVE POINT nds[1] = "<<nds[1] <<" , fc.user_data.intersection_point = "<<fc.user_data.intersection_point<<std::endl;
+        
+        if(location(msh, nds[0]) == element_location::IN_NEGATIVE_SIDE)
+            std::cout<<"IN NEGATIVE POINT nds[0] = "<<nds[0] <<" , fc.user_data.intersection_point = "<<fc.user_data.intersection_point<<std::endl;
+        if(location(msh, nds[1]) == element_location::IN_NEGATIVE_SIDE)
+            std::cout<<"IN NEGATIVE POINT nds[1] = "<<nds[1] <<" , fc.user_data.intersection_point = "<<fc.user_data.intersection_point<<std::endl;
+        std::cout<<"STOP SINCE ONE OF THE NODES OF THE CELL IS AN INTERFACE POINT!"<<std::endl;
         throw std::logic_error("Invalid point configuration");
+    }
 
     return pts;
 }
@@ -723,7 +739,8 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 
     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
         return integrate(msh, cl, degree);
-
+    
+  
     auto tris = triangulate(msh, cl, where);
    // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
     for (auto& tri : tris)
@@ -746,7 +763,7 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
         auto qpts = triangle_quadrature(tri.pts[0], tri.pts[1], tri.pts[2], degree);
         ret.insert(ret.end(), qpts.begin(), qpts.end());
     }
-
+    
     return ret;
 }
 
@@ -811,6 +828,8 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
 
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
+    
+   
     std::vector< std::pair<point<T,2>, T> > ret;
 
     auto pa = cl.user_data.interface.at(0);
@@ -844,7 +863,7 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
             ret.push_back( std::make_pair(p, w) );
         }
     }
-
+    
     return ret;
 }
 

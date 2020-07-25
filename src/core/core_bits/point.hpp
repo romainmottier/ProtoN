@@ -53,6 +53,14 @@ public:
         m_coords = other.m_coords;
         return *this;
     }
+    
+    bool operator==(const point& other)
+    {
+        if ( m_coords == other.m_coords )
+            return 1 ;
+        else
+            return 0 ;
+    }
 
     template<typename U = T>
     point(const typename std::enable_if<DIM == 1, U>::type& x)

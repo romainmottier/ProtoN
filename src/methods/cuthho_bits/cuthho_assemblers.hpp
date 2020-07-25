@@ -331,7 +331,7 @@ void set_dir_func(const Function& f) {
                 if ( asm_map[j].assemble() )
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
                 else
-                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
+                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
             }
         }
 
@@ -341,7 +341,7 @@ void set_dir_func(const Function& f) {
             if (!asm_map[i].assemble())
                 continue;
 
-            RHS[asm_map[i]] += rhs(i);
+            RHS(asm_map[i]) += rhs(i);
         }
     }
 
@@ -963,8 +963,9 @@ stokes_full_static_condensation_compute
 (const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
  const Matrix<T, Dynamic, Dynamic> lhs_C,
  const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
- const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
- const size_t cell_size, const size_t face_size)
+ //const Matrix<T, Dynamic, 1> mult, const size_t cell_size, const size_t face_size)
+const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
+const size_t cell_size, const size_t face_size)
 {
     using matrix = Matrix<T, Dynamic, Dynamic>;
     using vector = Matrix<T, Dynamic, 1>;
@@ -1002,26 +1003,45 @@ stokes_full_static_condensation_compute
     }
 
     // compute the new matrices
-    matrix ttB_PT = K_PT.block(0, 0, 1, cell_size);
-    matrix ttB_PF = K_PF.block(0, 0, 1, face_size);
-    matrix tB_PT = (1.0+coeff_cell) * ttB_PT;
-    matrix tB_PF = (1.0+coeff_cell) * ttB_PF;
+    //matrix tB_PT = K_PT.block(0, 0, 1, cell_size);
+    //matrix tB_PF = K_PF.block(0, 0, 1, face_size);
+    matrix ttB_PT = K_PT.block(0, 0, 1, cell_size); // ADD NEW
+    matrix ttB_PF = K_PF.block(0, 0, 1, face_size); // ADD NEW
+    matrix tB_PT = (1.0+coeff_cell) * ttB_PT; // ADD NEW
+    matrix tB_PF = (1.0+coeff_cell) * ttB_PF; // ADD NEW
+    
     matrix temp_B_PT = K_PT.block(1, 0, p_size-1, cell_size);
     matrix temp_B_PF = K_PF.block(1, 0, p_size-1, face_size);
-    matrix hB_PT = mult * ttB_PT + temp_B_PT;
-    matrix hB_PF = mult * ttB_PF + temp_B_PF;
+    /*
+    matrix hB_PT = mult * tB_PT + temp_B_PT;
+    matrix hB_PF = mult * tB_PF + temp_B_PF;
 
-    matrix ttC_pp = (1.0+coeff_cell) * lhs_C.block(0, 0, 1, p_size).transpose();
-    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + lhs_C.block(0, 0, 1, p_size).transpose() * mult.transpose();
-    matrix C_tptp = (1.0/(1.0+coeff_cell)) * ttC_pp.block(0, 0, 1, 1);
-    matrix C_tphp = (1.0/(1.0+coeff_cell)) * hhC_pp.block(0, 0, 1, p_size - 1);
-    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * ttC_pp.block(0, 0, 1, 1);
-    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * hhC_pp.block(0, 0, 1, p_size - 1);
+    matrix ttC_pp = lhs_C.block(0, 0, 1, p_size).transpose();
+    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + ttC_pp * mult.transpose();
+    matrix C_tptp = ttC_pp.block(0, 0, 1, 1);
+    matrix C_tphp = hhC_pp.block(0, 0, 1, p_size - 1);
+    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * C_tptp;
+    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * C_tphp;
 
-    vector rhs_ttp = rhs_B.block(0,0,1,1);
-    vector rhs_tp = (1.0/(1.0+coeff_cell)) * rhs_ttp;
+    vector rhs_tp = rhs_B.block(0,0,1,1);
+    */
+    
+    matrix hB_PT = mult * ttB_PT + temp_B_PT;// ADD NEW
+    matrix hB_PF = mult * ttB_PF + temp_B_PF;// ADD NEW
+
+    matrix ttC_pp = (1.0+coeff_cell) * lhs_C.block(0, 0, 1, p_size).transpose();// ADD NEW
+    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + lhs_C.block(0, 0, 1, p_size).transpose() * mult.transpose();// ADD NEW
+    matrix C_tptp = (1.0/(1.0+coeff_cell)) * ttC_pp.block(0, 0, 1, 1);// ADD NEW
+    matrix C_tphp = (1.0/(1.0+coeff_cell)) * hhC_pp.block(0, 0, 1, p_size - 1);// ADD NEW
+    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * ttC_pp.block(0, 0, 1, 1);// ADD NEW
+    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * hhC_pp.block(0, 0, 1, p_size - 1);// ADD NEW
+
+    vector rhs_ttp = rhs_B.block(0,0,1,1); // ADD NEW
+    vector rhs_tp = (1.0/(1.0+coeff_cell)) * rhs_ttp; // ADD NEW
+    
     vector rhs_temp = rhs_B.block(1,0,p_size-1,1);
-    vector rhs_hp = rhs_temp + mult * rhs_ttp;
+    //vector rhs_hp = rhs_temp + mult * rhs_tp;
+    vector rhs_hp = rhs_temp + mult * rhs_ttp;  // ADD NEW
 
 
     ////////////// static condensation
@@ -1086,14 +1106,16 @@ std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
 stokes_full_static_condensation_compute
 (const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
  const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
- const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
- const size_t cell_size, const size_t face_size)
+ //const Matrix<T, Dynamic, 1> mult, const size_t cell_size, const size_t face_size)
+const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
+const size_t cell_size, const size_t face_size)
 {
     size_t p_size = lhs_B.rows();
     Matrix<T, Dynamic, Dynamic> lhs_C = Matrix<T, Dynamic, Dynamic>::Zero(p_size, p_size);
 
     return stokes_full_static_condensation_compute
-        (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, coeff_cell, cell_size, face_size);
+        (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, coeff_cell, cell_size, face_size); //ADD NEW
+        //(lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, cell_size, face_size);
 }
 
 
@@ -1104,6 +1126,7 @@ stokes_full_static_condensation_recover_v
 (const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
  const Matrix<T, Dynamic, Dynamic> lhs_C,
  const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+ //const Matrix<T, Dynamic, 1> mult,
  const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
  const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
 {
@@ -1133,26 +1156,47 @@ stokes_full_static_condensation_recover_v
     cell_rhs = rhs_A.head(cell_size);
 
     // compute the new matrices
-    matrix ttB_PT = K_PT.block(0, 0, 1, cell_size);
-    matrix ttB_PF = K_PF.block(0, 0, 1, face_size);
-    matrix tB_PT = (1.0+coeff_cell) * ttB_PT;
-    matrix tB_PF = (1.0+coeff_cell) * ttB_PF;
+    //matrix tB_PT = K_PT.block(0, 0, 1, cell_size);
+    //matrix tB_PF = K_PF.block(0, 0, 1, face_size);
+    matrix ttB_PT = K_PT.block(0, 0, 1, cell_size); // ADD NEW
+    matrix ttB_PF = K_PF.block(0, 0, 1, face_size); // ADD NEW
+    matrix tB_PT = (1.0+coeff_cell) * ttB_PT; // ADD NEW
+    matrix tB_PF = (1.0+coeff_cell) * ttB_PF; // ADD NEW
+    
+    
     matrix temp_B_PT = K_PT.block(1, 0, p_size-1, cell_size);
     matrix temp_B_PF = K_PF.block(1, 0, p_size-1, face_size);
-    matrix hB_PT = mult * ttB_PT + temp_B_PT;
-    matrix hB_PF = mult * ttB_PF + temp_B_PF;
+    
+    /*
+    matrix hB_PT = mult * tB_PT + temp_B_PT;
+    matrix hB_PF = mult * tB_PF + temp_B_PF;
 
-    matrix ttC_pp = (1.0+coeff_cell) * lhs_C.block(0, 0, 1, p_size).transpose();
-    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + lhs_C.block(0, 0, 1, p_size).transpose() * mult.transpose();
-    matrix C_tptp = (1.0/(1.0+coeff_cell)) * ttC_pp.block(0, 0, 1, 1);
-    matrix C_tphp = (1.0/(1.0+coeff_cell)) * hhC_pp.block(0, 0, 1, p_size - 1);
-    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * ttC_pp.block(0, 0, 1, 1);
-    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * hhC_pp.block(0, 0, 1, p_size - 1);
+    matrix ttC_pp = lhs_C.block(0, 0, 1, p_size).transpose();
+    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + ttC_pp * mult.transpose();
+    matrix C_tptp = ttC_pp.block(0, 0, 1, 1);
+    matrix C_tphp = hhC_pp.block(0, 0, 1, p_size - 1);
+    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * C_tptp;
+    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * C_tphp;
 
-    vector rhs_ttp = rhs_B.block(0,0,1,1);
-    vector rhs_tp = (1.0/(1.0+coeff_cell)) * rhs_ttp;
+    vector rhs_tp = rhs_B.block(0,0,1,1);
+    */
+    matrix hB_PT = mult * ttB_PT + temp_B_PT; // ADD NEW
+    matrix hB_PF = mult * ttB_PF + temp_B_PF; // ADD NEW
+
+    matrix ttC_pp = (1.0+coeff_cell) * lhs_C.block(0, 0, 1, p_size).transpose(); // ADD NEW
+    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + lhs_C.block(0, 0, 1, p_size).transpose() * mult.transpose(); // ADD NEW
+    matrix C_tptp = (1.0/(1.0+coeff_cell)) * ttC_pp.block(0, 0, 1, 1); // ADD NEW
+    matrix C_tphp = (1.0/(1.0+coeff_cell)) * hhC_pp.block(0, 0, 1, p_size - 1); // ADD NEW
+    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * ttC_pp.block(0, 0, 1, 1); // ADD NEW
+    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * hhC_pp.block(0, 0, 1, p_size - 1); // ADD NEW
+
+    vector rhs_ttp = rhs_B.block(0,0,1,1); // ADD NEW
+    vector rhs_tp = (1.0/(1.0+coeff_cell)) * rhs_ttp; // ADD NEW
+    
     vector rhs_temp = rhs_B.block(1,0,p_size-1,1);
-    vector rhs_hp = rhs_temp + mult * rhs_ttp;
+    
+    //vector rhs_hp = rhs_temp + mult * rhs_tp;
+    vector rhs_hp = rhs_temp + mult * rhs_ttp; // ADD NEW
 
     // recover velocity cell solution
     auto K_TT_ldlt = K_TT.ldlt();
@@ -1190,6 +1234,7 @@ Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_v
 (const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
  const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+ //const Matrix<T, Dynamic, 1> mult,
  const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
  const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
 {
@@ -1198,6 +1243,7 @@ stokes_full_static_condensation_recover_v
 
     return stokes_full_static_condensation_recover_v
         (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, coeff_cell, cell_size, face_size, sol_sc);
+        //(lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, cell_size, face_size, sol_sc);
 }
 
 
@@ -1207,6 +1253,7 @@ stokes_full_static_condensation_recover_p
 (const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
  const Matrix<T, Dynamic, Dynamic> lhs_C,
  const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+ //const Matrix<T, Dynamic, 1> mult,
  const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
  const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
 {
@@ -1235,26 +1282,45 @@ stokes_full_static_condensation_recover_p
     cell_rhs = rhs_A.head(cell_size);
 
     // compute the new matrices
-    matrix ttB_PT = K_PT.block(0, 0, 1, cell_size);
-    matrix ttB_PF = K_PF.block(0, 0, 1, face_size);
-    matrix tB_PT = (1.0+coeff_cell) * ttB_PT;
-    matrix tB_PF = (1.0+coeff_cell) * ttB_PF;
+    //matrix tB_PT = K_PT.block(0, 0, 1, cell_size);
+    //matrix tB_PF = K_PF.block(0, 0, 1, face_size);
+    matrix ttB_PT = K_PT.block(0, 0, 1, cell_size); // ADD NEW
+    matrix ttB_PF = K_PF.block(0, 0, 1, face_size); // ADD NEW
+    matrix tB_PT = (1.0+coeff_cell) * ttB_PT; // ADD NEW
+    matrix tB_PF = (1.0+coeff_cell) * ttB_PF; // ADD NEW
+    
     matrix temp_B_PT = K_PT.block(1, 0, p_size-1, cell_size);
     matrix temp_B_PF = K_PF.block(1, 0, p_size-1, face_size);
-    matrix hB_PT = mult * ttB_PT + temp_B_PT;
-    matrix hB_PF = mult * ttB_PF + temp_B_PF;
+    /*
+    matrix hB_PT = mult * tB_PT + temp_B_PT;
+    matrix hB_PF = mult * tB_PF + temp_B_PF;
 
-    matrix ttC_pp = (1.0+coeff_cell) * lhs_C.block(0, 0, 1, p_size).transpose();
-    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + lhs_C.block(0, 0, 1, p_size).transpose() * mult.transpose();
-    matrix C_tptp = (1.0/(1.0+coeff_cell)) * ttC_pp.block(0, 0, 1, 1);
-    matrix C_tphp = (1.0/(1.0+coeff_cell)) * hhC_pp.block(0, 0, 1, p_size - 1);
-    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * ttC_pp.block(0, 0, 1, 1);
-    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * hhC_pp.block(0, 0, 1, p_size - 1);
+    matrix ttC_pp = lhs_C.block(0, 0, 1, p_size).transpose();
+    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + ttC_pp * mult.transpose();
+    matrix C_tptp = ttC_pp.block(0, 0, 1, 1);
+    matrix C_tphp = hhC_pp.block(0, 0, 1, p_size - 1);
+    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * C_tptp;
+    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * C_tphp;
 
-    vector rhs_ttp = rhs_B.block(0,0,1,1);
-    vector rhs_tp = (1.0/(1.0+coeff_cell)) * rhs_ttp;
+    vector rhs_tp = rhs_B.block(0,0,1,1);
+    */
+    matrix hB_PT = mult * ttB_PT + temp_B_PT;  // ADD NEW
+    matrix hB_PF = mult * ttB_PF + temp_B_PF;  // ADD NEW
+
+    matrix ttC_pp = (1.0+coeff_cell) * lhs_C.block(0, 0, 1, p_size).transpose();  // ADD NEW
+    matrix hhC_pp = lhs_C.block(1, 0, p_size - 1, p_size).transpose() + lhs_C.block(0, 0, 1, p_size).transpose() * mult.transpose();  // ADD NEW
+    matrix C_tptp = (1.0/(1.0+coeff_cell)) * ttC_pp.block(0, 0, 1, 1);  // ADD NEW
+    matrix C_tphp = (1.0/(1.0+coeff_cell)) * hhC_pp.block(0, 0, 1, p_size - 1);  // ADD NEW
+    matrix C_hptp = ttC_pp.block(1, 0, p_size - 1, 1) + mult * ttC_pp.block(0, 0, 1, 1);  // ADD NEW
+    matrix C_hphp = hhC_pp.block(1, 0, p_size - 1, p_size - 1) + mult * hhC_pp.block(0, 0, 1, p_size - 1);  // ADD NEW
+
+    vector rhs_ttp = rhs_B.block(0,0,1,1);  // ADD NEW
+    vector rhs_tp = (1.0/(1.0+coeff_cell)) * rhs_ttp;  // ADD NEW
+    
+    
     vector rhs_temp = rhs_B.block(1,0,p_size-1,1);
-    vector rhs_hp = rhs_temp + mult * rhs_ttp;
+    //vector rhs_hp = rhs_temp + mult * rhs_tp;
+    vector rhs_hp = rhs_temp + mult * rhs_ttp; // ADD NEW
 
     // pressure solution
     auto K_TT_ldlt = K_TT.ldlt();
@@ -1282,6 +1348,7 @@ stokes_full_static_condensation_recover_p
     vector p_6 = iBAB_B_PT * iA_rhs_T;
     vector hP = p_1 + p_2 + p_3 + p_4 + p_5 + p_6;
 
+    //ret(0) = solP(0) + mult.dot(hP);
     ret(0) = (1 + coeff_cell) * solP(0) + mult.dot(hP);
     ret.tail(p_size-1) = hP;
     return ret;
@@ -1293,6 +1360,7 @@ Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_p
 (const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
  const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+ //const Matrix<T, Dynamic, 1> mult,
  const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
  const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
 {
@@ -1301,6 +1369,7 @@ stokes_full_static_condensation_recover_p
 
     return stokes_full_static_condensation_recover_p
         (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, coeff_cell, cell_size, face_size, sol_sc);
+        //(lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, cell_size, face_size, sol_sc);
 }
 
 
@@ -1581,7 +1650,7 @@ public:
                 if ( asm_map[j].assemble() )
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
                 else
-                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
+                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
             }
         }
 
@@ -1591,7 +1660,7 @@ public:
             if (!asm_map[i].assemble())
                 continue;
 
-            RHS[asm_map[i]] += rhs(i);
+            RHS(asm_map[i]) += rhs(i);
         }
 
 
@@ -1937,7 +2006,8 @@ public:
         {
             auto mult_C = this->compute_mult_C(msh, cl, pdeg);
             auto mat_sc = stokes_full_static_condensation_compute
-                (lhs_A, lhs_B, rhs_A, rhs_B, mult_C, 0.0, cbs, f_dofs);
+                (lhs_A, lhs_B, rhs_A, rhs_B, mult_C, 0.0, cbs, f_dofs); // ADD NEW
+               // (lhs_A, lhs_B, rhs_A, rhs_B, mult_C, cbs, f_dofs);
             lhs_sc = mat_sc.first;
             rhs_sc = mat_sc.second;
         }
@@ -1986,7 +2056,8 @@ public:
 
         auto mult_C = this->compute_mult_C(msh, cl, this->di.face_degree() );
         return stokes_full_static_condensation_recover_v
-            (loc_mat_A, loc_mat_B, loc_rhs_A, loc_rhs_B, mult_C, 0.0, cbs, f_dofs, sol_sc);
+            (loc_mat_A, loc_mat_B, loc_rhs_A, loc_rhs_B, mult_C, 0.0, cbs, f_dofs, sol_sc); // ADD NEW
+            //(loc_mat_A, loc_mat_B, loc_rhs_A, loc_rhs_B, mult_C, cbs, f_dofs, sol_sc);
     }
 
 
@@ -2018,6 +2089,7 @@ public:
         auto cbs = vector_cell_basis<Mesh,T>::size( this->di.cell_degree() );
         return stokes_full_static_condensation_recover_p
             (loc_LHS_A.at(cell_offset), loc_LHS_B.at(cell_offset),
+             //loc_RHS_A.at(cell_offset), loc_RHS_B.at(cell_offset), mult_C,
              loc_RHS_A.at(cell_offset), loc_RHS_B.at(cell_offset), mult_C, 0.0,
              cbs, f_dofs, sol_sc);
     }
@@ -2331,15 +2403,17 @@ public:
         {
             auto mult_C = this->compute_mult_C(msh, cl, pdeg);
 
-            T coeff_cell = 0.0;
-            if( double_unknowns )
+            T coeff_cell = 0.0; // ADD NEW
+            if( double_unknowns ) // ADD NEW
             {
                 coeff_cell = measure(msh,cl,element_location::IN_POSITIVE_SIDE)
                     / measure(msh,cl,element_location::IN_NEGATIVE_SIDE);
             }
 
+           
             auto mat_sc = stokes_full_static_condensation_compute
-                (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, coeff_cell, cbs, f_dofs);
+                (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, coeff_cell, cbs, f_dofs); // ADD NEW
+               // (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, cbs, f_dofs);
             lhs_sc = mat_sc.first;
             rhs_sc = mat_sc.second;
         }
@@ -2404,16 +2478,18 @@ public:
         sol_sc.head( solF.size() ) = solF;
         sol_sc( solF.size() ) = solution( this->P_SOL_offset(msh, cl) );
 
-        T coeff_cell = 0.0;
-        if( location(msh, cl) == element_location::ON_INTERFACE )
+        T coeff_cell = 0.0; // ADD NEW
+        if( location(msh, cl) == element_location::ON_INTERFACE ) // ADD NEW
         {
             coeff_cell = measure(msh,cl,element_location::IN_POSITIVE_SIDE)
                 / measure(msh,cl,element_location::IN_NEGATIVE_SIDE);
         }
-
+        
         auto mult_C = this->compute_mult_C(msh, cl, pdeg);
         auto loc_sol = stokes_full_static_condensation_recover_v
             (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, coeff_cell, cbs2, f_dofs2, sol_sc);
+        // ADD NEW
+           // (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, cbs2, f_dofs2, sol_sc);
 
         if( location(msh, cl) != element_location::ON_INTERFACE )
             return loc_sol;
@@ -2483,16 +2559,17 @@ public:
         sol_sc.head( solF.size() ) = solF;
         sol_sc( solF.size() ) = sol(P_LHS_offset);
 
-        T coeff_cell = 0.0;
-        if( location(msh, cl) == element_location::ON_INTERFACE )
+        T coeff_cell = 0.0; // ADD NEW
+        if( location(msh, cl) == element_location::ON_INTERFACE ) // ADD NEW
         {
             coeff_cell = measure(msh,cl,element_location::IN_POSITIVE_SIDE)
                 / measure(msh,cl,element_location::IN_NEGATIVE_SIDE);
         }
-
+        
         auto mult_C = this->compute_mult_C(msh, cl, pdeg);
         auto loc_sol = stokes_full_static_condensation_recover_p
-            (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, coeff_cell, cbs, f_dofs, sol_sc);
+            (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, coeff_cell, cbs, f_dofs, sol_sc); // ADD NEW
+           // (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult_C, cbs, f_dofs, sol_sc);
 
         if( location(msh, cl) != element_location::ON_INTERFACE )
             return loc_sol;

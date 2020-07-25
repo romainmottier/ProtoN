@@ -1,0 +1,3 @@
+add_executable(high_order_interface_new high_order_interface_new.cpp)
+target_link_libraries(high_order_interface_new ${LINK_LIBS})
+install(TARGETS high_order_interface_new RUNTIME DESTINATION bin)

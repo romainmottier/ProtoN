@@ -69,6 +69,157 @@ struct circle_level_set: public level_set<T>
     }
 };
 
+
+template<typename T>
+struct circle_distance_ls: public level_set<T>
+{
+    T radius, alpha, beta;
+    T eps ;
+    circle_distance_ls(T r, T a, T b , T eps)
+        : radius(r), alpha(a), beta(b) , eps(eps)
+    {}
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+        //auto val = sqrt((x-alpha)*(x-alpha) + (y-beta)*(y-beta)) - radius ;
+        auto val = (x-alpha)*(x-alpha) + (y-beta)*(y-beta) - radius*radius ;
+        return 0.5 * ( 1.0 + tanh(val/(2.0*eps)) ) ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+        T val = 1.0/( sqrt( (x-alpha)*(x-alpha) + (y-beta)*(y-beta) ) ) ;
+        ret(0) = val * (x-alpha) ;
+        ret(1) = val * (y-beta) ;
+        return ret;
+    }
+};
+
+template<typename T>
+struct elliptic_distance_ls: public level_set<T>
+{
+    T radius_a, radius_b, alpha, beta;
+    T eps ;
+    elliptic_distance_ls(T r_a, T r_b , T a, T b , T eps)
+        : radius_a(r_a), radius_b(r_b), alpha(a), beta(b) , eps(eps)
+    {}
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+        return 1.0/( 1.0 + exp( ( ((x-alpha)*(x-alpha))/(radius_a*radius_a) + ((y-beta)*(y-beta))/(radius_b*radius_b) -1.0 )/eps ) ) ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+        T val = 1.0/( 1.0 + exp( ( ((x-alpha)*(x-alpha))/(radius_a*radius_a) + ((y-beta)*(y-beta))/(radius_b*radius_b) -1.0 )/eps ) ) ;
+        T val_grad = 1.0/(4.0*eps)*( 1.0-tanh(val/(2.0*eps))*tanh(val/(2.0*eps) ) ) ;
+        ret(0) = val_grad * 2.0 / pow(radius_a,2) * (x-alpha) ;
+        ret(1) = val_grad * 2.0 / pow(radius_b,2) * (y-beta) ;
+        return ret;
+    }
+};
+
+
+template<typename T>
+struct circle_level_set_new: public level_set<T>
+{
+    T radius, alpha, beta;
+    T gamma = 1.0/16.0;
+    circle_level_set_new(T r, T a, T b , T gamma)
+        : radius(r), alpha(a), beta(b) , gamma(gamma)
+    {}
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+
+        return tanh( (sqrt( (x-alpha)*(x-alpha) + (y-beta)*(y-beta) ) - radius)/gamma ) ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+        T val = 1.0/(pow( (cosh( (sqrt( (x-alpha)*(x-alpha) + (y-beta)*(y-beta) ) - radius)/gamma)),2) * gamma * sqrt( (x-alpha)*(x-alpha) + (y-beta)*(y-beta) ) );
+        ret(0) = val * (x-alpha) ;
+        ret(1) = val * (y-beta) ;
+       
+        return ret;
+    }
+};
+
+
+
+template<typename T>
+struct elliptic_level_set: public level_set<T>
+{
+    T radius_a, radius_b, alpha, beta;
+
+    elliptic_level_set(T r_a, T r_b , T a, T b)
+        : radius_a(r_a), radius_b(r_b), alpha(a), beta(b)
+    {}
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+
+        return radius_b*radius_b*(x-alpha)*(x-alpha) + radius_a*radius_a*(y-beta)*(y-beta) - radius_a*radius_a*radius_b*radius_b ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        ret(0) = 2*radius_b*radius_b*(pt.x() - alpha);
+        ret(1) = 2*radius_a*radius_a*(pt.y() - beta);
+        return ret;
+    }
+};
+
+template<typename T>
+struct elliptic_level_set_new: public level_set<T>
+{
+    T radius_a, radius_b, alpha, beta;
+    T gamma = 1.0/16.0;
+    elliptic_level_set_new(T r_a, T r_b , T a, T b , T gamma)
+        : radius_a(r_a), radius_b(r_b), alpha(a), beta(b) , gamma(gamma)
+    {}
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+
+        return tanh( ( (x-alpha)*(x-alpha)/(radius_a*radius_a) + (y-beta)*(y-beta)/(radius_b*radius_b)  - 1.0 )/gamma ) ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+        T val = 1.0/(pow( ( ( (x-alpha)*(x-alpha)/(radius_a*radius_a) + (y-beta)*(y-beta)/(radius_b*radius_b)  - 1.0 )/gamma ),2) * gamma );
+        ret(0) = 2.0 * val / ( radius_a * radius_a ) * (x-alpha) ;
+        ret(1) = 2.0 * val / ( radius_b * radius_b ) * (y-beta) ;
+       
+        return ret;
+    }
+};
+
+
+
 template<typename T>
 class line_level_set: public level_set<T>
 {

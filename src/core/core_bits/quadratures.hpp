@@ -250,8 +250,9 @@ triangle_quadrature(const point<T,2>& p0, const point<T,2>& p1, const point<T,2>
     auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
     // the area is negative when the points are sorted clockwise
     if(area < 0){
+        //std::cout << "negative weights !! -> p0 = "<<p0 <<" , p1 = "<<p1 <<" , p2 = " <<p2 << std::endl;
+        //std::cout << "v0 = "<<v0 <<" , v1 = "<<v1 <<" , area = " <<area << std::endl;
         std::cout << "negative weights !!" << std::endl;
-
     }
   
 
@@ -387,7 +388,7 @@ integrate(const poly_mesh<T,CU,FU,NU>& msh,
 {
     auto bar = barycenter(msh, cl);
     auto pts = points(msh, cl);
-
+   
     auto num_points = pts.size();
 
     std::vector< std::pair<point<T,2>, T> > ret;
@@ -402,7 +403,7 @@ integrate(const poly_mesh<T,CU,FU,NU>& msh,
 
         ret.insert( ret.end(), qps.begin(), qps.end() );
     }
-
+ 
     return ret;
 }
 
@@ -413,7 +414,7 @@ integrate(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree)
     using T = typename Mesh::coordinate_type;
 
     typedef typename Mesh::point_type    point_type;
-
+  
     auto qps = edge_quadrature<T>(degree);
     auto pts = points(msh, fc);
 
@@ -432,7 +433,7 @@ integrate(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree)
 
         ret.push_back( std::make_pair(p, w) );
     }
-
+   
     return ret;
 }
 

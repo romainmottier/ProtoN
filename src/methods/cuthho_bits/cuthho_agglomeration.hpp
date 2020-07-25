@@ -714,8 +714,32 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
             cl.user_data.p0 = cl1.user_data.p0;
             cl.user_data.p1 = cl2.user_data.p1;
         }
-        else
+        else{
+            std::cout<<"cl1 = "<<offset(msh,cl1)<<" , cl2 = "<<offset(msh,cl2)<<std::endl;
+            size_t counter = 0;
+            for (auto& nd :  nodes(msh,cl) )
+            {
+                
+                if( nd.user_data.location == element_location::IN_NEGATIVE_SIDE ){
+                    std::cout<<"NEGATIVE -> nd = "<<nd.ptid << " --> pt = "<<points(msh,cl)[counter] << std::endl;
+                }
+                else{
+                    std::cout<<"POSITIVE -> nd = "<<nd.ptid << " --> pt = "<<points(msh,cl)[counter] << std::endl;
+                }
+                counter++;
+                //std::cout<<"nd = "<<nd.ptid<<std::endl;
+            }
+            std::cout<<"POINT INTERFACE_0 = "<<cl.user_data.p0 << " , INTERFACE_1 = "<<cl.user_data.p1 << std::endl;
+            
+            std::cout<<"cl1 = "<<offset(msh,cl1)<<" , cl2 = "<<offset(msh,cl2)<<std::endl;
+            std::cout<<"cl2.user_data.p0[0] = "<<cl2.user_data.p0[0]<<" , cl2.user_data.p0[1] = "<<cl2.user_data.p0[1]<<std::endl;
+            std::cout<<"cl2.user_data.p1[0] = "<<cl2.user_data.p1[0]<<" , cl2.user_data.p1[1] = "<<cl2.user_data.p1[1]<<std::endl;
+            
+            std::cout<<"cl1.user_data.p0[0] = "<<cl1.user_data.p0[0]<<" , cl1.user_data.p0[1] = "<<cl1.user_data.p0[1]<<std::endl;
+            std::cout<<"cl1.user_data.p1[0] = "<<cl1.user_data.p1[0]<<" , cl1.user_data.p1[1] = "<<cl1.user_data.p1[1]<<std::endl;
+            std::cout<<"cut1 = "<<cut1<<" , cut2 = "<<cut2<<std::endl;
             throw std::logic_error("we shouldn't arrive here (interface) !!!");
+        }
     }
     // distorted -> has to be updated for more general merges (if a node is withdrawn)
     if(cl1.user_data.distorted || cl2.user_data.distorted )
@@ -727,6 +751,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
 
 
     // integration -> save composite quadrature
+    std::cout<<"----------> SONO IN AGGLO in cell"<<offset(msh,cl)<<std::endl;
     size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
   //   std::cout << bold << yellow << "Before integrate 1" << reset << std::endl;
     auto integration1_n = integrate(msh, cl1, degree_max, element_location::IN_NEGATIVE_SIDE);
@@ -736,7 +761,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     auto integration2_n = integrate(msh, cl2, degree_max, element_location::IN_NEGATIVE_SIDE);
  //   std::cout << bold << yellow << "Before integrate 4" << reset << std::endl;
     auto integration2_p = integrate(msh, cl2, degree_max, element_location::IN_POSITIVE_SIDE);
-
+    std::cout<<"SONO IN AGGLO FINE <----------"<<std::endl;
     cl.user_data.integration_n = integration1_n;
     cl.user_data.integration_p = integration1_p;
     for(size_t i = 0; i < integration2_n.size(); i++)

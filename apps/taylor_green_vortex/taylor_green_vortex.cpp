@@ -246,7 +246,7 @@ output_mesh_info2_pre_FEM(const Mesh& msh, const Function& level_set_function)
 
     /************** OPEN SILO DATABASE **************/
     silo_database silo;
-    silo.create("cuthho_meshinfo.silo");
+    silo.create("cuthho_meshinfo_vortex.silo");
     silo.add_mesh(msh, "mesh");
 
     /************** MAKE A SILO VARIABLE FOR CELL POSITIONING **************/
@@ -375,7 +375,7 @@ output_mesh_info2_pre_FEM(const Mesh& msh, const Function& level_set_function)
         }
     }
     std::ofstream interface_file_preFEM("interface_pre_FEM_vortex.3D", std::ios::out | std::ios::trunc);
-    std::cout<<"sono qua 3------>>>>>>>>>>>>>"<<std::endl;
+    //std::cout<<"sono qua 3------>>>>>>>>>>>>>"<<std::endl;
     if(interface_file_preFEM)
     {
         // instructions
@@ -385,7 +385,7 @@ output_mesh_info2_pre_FEM(const Mesh& msh, const Function& level_set_function)
         {
             interface_file_preFEM << int_x[i] << "   " <<  int_y[i]
                         << "   0.0     0.0" << std::endl;
-            std::cout<<"X = "<<int_x[i] <<" , Y = "<<int_y[i] <<std::endl;
+            //std::cout<<"X = "<<int_x[i] <<" , Y = "<<int_y[i] <<std::endl;
         }
 
         interface_file_preFEM.close();
@@ -406,7 +406,7 @@ output_mesh_info2_time(const Mesh& msh, const Function& level_set_function , T t
 
     /************** OPEN SILO DATABASE **************/
     silo_database silo;
-    silo.create("cuthho_meshinfo.silo");
+    silo.create("cuthho_meshinfo_vorted_final.silo");
     silo.add_mesh(msh, "mesh");
 
     /************** MAKE A SILO VARIABLE FOR CELL POSITIONING **************/
@@ -714,11 +714,442 @@ output_mesh_info2(const Mesh& msh, const Function& level_set_function)
 
 
 
+template<typename Mesh, typename Function>
+void
+output_mesh_info_0(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
 
 
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_A_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+template<typename Mesh, typename Function>
+void
+output_mesh_info_1(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
 
 
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_B_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+template<typename Mesh, typename Function>
+void
+output_mesh_info_2(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_C_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+
+template<typename Mesh, typename Function>
+void
+output_mesh_info_3(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_D_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+template<typename Mesh, typename Function>
+void
+output_mesh_info_4(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_E_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+
+template<typename Mesh, typename Function>
+void
+output_mesh_info_5(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_F_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+
+template<typename Mesh, typename Function>
+void
+output_mesh_info_6(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_G_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
 // in cuthho_geom.hpp
+template<typename Mesh, typename Function>
+void
+output_mesh_info_7(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_H_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+
+template<typename Mesh, typename Function>
+void
+output_mesh_info_8(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_I_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
+
+template<typename Mesh, typename Function>
+void
+output_mesh_info_9(const Mesh& msh, const Function& level_set_function)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+
+    /*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+    std::vector<RealType> int_x;
+    std::vector<RealType> int_y;
+
+    for (auto& cl : msh.cells)
+    {
+        if( cl.user_data.location != element_location::ON_INTERFACE ) continue;
+
+        for(size_t i = 0; i < cl.user_data.interface.size(); i++)
+        {
+            RealType x = cl.user_data.interface.at(i).x();
+            RealType y = cl.user_data.interface.at(i).y();
+
+            int_x.push_back(x);
+            int_y.push_back(y);
+        }
+    }
+    std::ofstream interface_file("interface_L_vortex.3D", std::ios::out | std::ios::trunc);
+
+    if(interface_file)
+    {
+        // instructions
+        interface_file << "X   Y   Z   val" << std::endl;
+
+        for( size_t i = 0; i<int_x.size(); i++)
+        {
+            interface_file << int_x[i] << "   " <<  int_y[i]
+                        << "   0.0     0.0" << std::endl;
+        }
+
+        interface_file.close();
+    }
+
+    else
+        std::cerr << "Interface_file has not been opened" << std::endl;
+}
 
 template<typename T, typename Function, typename Mesh>
 point<T, 2>
@@ -976,6 +1407,277 @@ detect_cut_cells2(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         cell_i++;
     }
 }
+
+
+template<typename T, size_t ET ,typename Function >
+typename cuthho_mesh<T, ET>::point_type
+search_boundary( cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type& cl, typename cuthho_mesh<T, ET>::point_type& p_init ,T m , T q , T lm , const Function& level_set )
+{
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+    auto pts = points(msh,cl);
+    
+    point_type pt_tmp0 = point_type( pts[0].x() , m* pts[0].x() + q ) ;
+    point_type pt_tmp1 = point_type( pts[1].x() , m* pts[1].x() + q ) ;
+    point_type pt_tmp2 = point_type( (pts[1].y()-q)/m , pts[1].y() ) ;
+    point_type pt_tmp3 = point_type( (pts[2].y()-q)/m , pts[2].y() ) ;
+    /*
+    if( offset(msh,cl) == 1029 || offset(msh,cl) == 1082 )
+    {
+        std::cout<<yellow<<bold<<"search_boundary"<<reset<<std::endl;
+        std::cout<<"pt_tmp0 = "<<pt_tmp0<<std::endl;
+        std::cout<<"pt_tmp1 = "<<pt_tmp1<<std::endl;
+        std::cout<<"pt_tmp2 = "<<pt_tmp2<<std::endl;
+        std::cout<<"pt_tmp3 = "<<pt_tmp3<<std::endl;
+    }
+    */
+    auto ls0 = level_set(pt_tmp0,msh,cl);
+    auto ls1 = level_set(pt_tmp1,msh,cl);
+    auto ls2 = level_set(pt_tmp2,msh,cl);
+    auto ls3 = level_set(pt_tmp3,msh,cl);
+    
+    if ( pt_in_cell(msh , pt_tmp0 , cl) && ( !((lm >= 0 && ls0 >= 0) || (lm < 0 && ls0 < 0)) ) )
+        return pt_tmp0 ;
+    if ( pt_in_cell(msh , pt_tmp1 , cl) && ( !((lm >= 0 && ls1 >= 0) || (lm < 0 && ls1 < 0)) ) )
+    return pt_tmp1 ;
+    if ( pt_in_cell(msh , pt_tmp2 , cl) && ( !((lm >= 0 && ls2 >= 0) || (lm < 0 && ls2 < 0)) ) )
+    return pt_tmp2 ;
+    if ( pt_in_cell(msh , pt_tmp3 , cl) && ( !((lm >= 0 && ls3 >= 0) || (lm < 0 && ls3 < 0)) ) )
+    return pt_tmp3 ;
+    else{
+        std::cout<<"In cell = "<<offset(msh,cl)<<" points(msh,cl)[0] = "<<points(msh,cl)[0]<<" points(msh,cl)[1] = "<<points(msh,cl)[1]<<" points(msh,cl)[2] = "<<points(msh,cl)[2]<<" points(msh,cl)[3] = "<<points(msh,cl)[3] <<std::endl;
+        
+        std::cout<<"p_init = "<<p_init<<" --> pt_tmp0 = "<<pt_tmp0<<" , pt_tmp1 = "<<pt_tmp1<<" , pt_tmp2 = "<<pt_tmp2<<" , pt_tmp3 = "<<pt_tmp3<<std::endl;
+        std::cout<<"ls0 = "<<ls0<<" , ls1 = "<<ls1<<" , ls2 = "<<ls2<<" , ls3 = "<<ls3<<" AND lm = "<<lm<<std::endl;
+        std::cout<<"pt_in_cell( pt_tmp0 ) = "<<pt_in_cell(msh , pt_tmp0 , cl)<<" , pt_in_cell( pt_tmp1 ) = "<<pt_in_cell(msh , pt_tmp1 , cl)<<" , pt_in_cell( pt_tmp2 ) = "<<pt_in_cell(msh , pt_tmp2 , cl)<<" , pt_in_cel( pt_tmp3 ) = "<<pt_in_cell(msh , pt_tmp3 , cl)<<std::endl;
+        T pp = pts[0].x();
+        T dist = std::abs( pp - p_init.x() )/10.0;
+        std::cout<<"DIST = "<<dist<< " and pp = "<<pp<< " and p_init.x() = "<<p_init.x() <<std::endl;
+        point_type p0 = point_type( pp + dist , m* (pp-dist) + q ) ;
+        point_type p1 = point_type( pp + (dist*2) , m* (pp+(dist*2)) + q ) ;
+        point_type p2 = point_type( pp + (dist*3) , m* (pp+(dist*3)) + q ) ;
+        point_type p3 = point_type( pp + (dist*4) , m* (pp+(dist*4)) + q ) ;
+        point_type p4 = point_type( pp + (dist*5) , m* (pp+(dist*5)) + q ) ;
+        point_type p5 = point_type( pp + (dist*6) , m* (pp+(dist*6)) + q ) ;
+        point_type p6 = point_type( pp + (dist*7) , m* (pp+(dist*7)) + q ) ;
+        point_type p7 = point_type( pp + (dist*8) , m* (pp+(dist*8)) + q ) ;
+        point_type p8 = point_type( pp + (dist*9) , m* (pp+(dist*9)) + q ) ;
+        std::cout<<"p0 = "<<p0<<" , level_set = "<<level_set(p0,msh,cl)<<" , p1 = "<<p1<<" , level_set = "<<level_set(p1,msh,cl)<<" , p2 = "<<p2<<" , level_set = "<<level_set(p2,msh,cl)<<" , p3 = "<<p3<<" , level_set = "<<level_set(p3,msh,cl)<<" ,p4 = "<<p4<<" , level_set = "<<level_set(p4,msh,cl)<<" ,p5 = "<<p5<<" , level_set = "<<level_set(p5,msh,cl)<<" , p6 = "<<p6<<" , level_set = "<<level_set(p6,msh,cl)<<", p7 = "<<p7<<" , level_set = "<<level_set(p7,msh,cl)<<" , p8 = "<<p8<<" , level_set = "<<level_set(p8,msh,cl)<<std::endl;
+        
+        //throw std::logic_error("search_boundary not find -> Stefano");
+        //return p_init ;
+        
+        point_type ret ;
+        T val_min = 1e10;
+        if( pt_in_cell(msh , pt_tmp0 , cl) && std::abs(ls0) < val_min )
+        {
+            val_min = std::abs(ls0) ;
+            ret = pt_tmp0 ;
+            
+        }
+        if( pt_in_cell(msh , pt_tmp1 , cl) && std::abs(ls1) < val_min )
+        {
+            val_min = std::abs(ls1) ;
+            ret = pt_tmp1 ;
+                
+        }
+        if( pt_in_cell(msh , pt_tmp2 , cl) && std::abs(ls2) < val_min )
+        {
+            val_min = std::abs(ls2) ;
+            ret = pt_tmp2 ;
+                
+        }
+        if( pt_in_cell(msh , pt_tmp3 , cl) && std::abs(ls3) < val_min )
+        {
+            val_min = std::abs(ls3) ;
+            ret = pt_tmp3 ;
+                
+        }
+        return ret;
+            
+    }
+    
+  
+
+}
+
+
+
+template<typename T, size_t ET, typename Function>
+void
+refine_interface_pro(cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type& cl,
+                 const Function& level_set_function, size_t min, size_t max)
+{
+    if ( (max-min) < 2 )
+        return;
+
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+
+    size_t mid = (max+min)/2;
+    auto p0 = cl.user_data.interface.at(min);
+    auto p1 = cl.user_data.interface.at(max);
+    auto pm = (p0+p1)/2.0;
+    auto pt = p1 - p0;
+    auto pn = point_type(-pt.y(), pt.x());
+    auto ps1 = pm + pn;
+    auto ps2 = pm - pn;
+    
+    
+    auto lm = level_set_function(pm,msh,cl);
+    auto ls1 = level_set_function(ps1,msh,cl);
+    auto ls2 = level_set_function(ps2,msh,cl);
+    
+    // CASE  MAX PT on the boudary
+    T m_half = ( ps1.y() - pm.y() )/( ps1.x() - pm.x() );
+    T q = pm.y() - m_half * pm.x() ;
+    /*
+    if( offset(msh,cl) == 118 )
+    {
+        T m_half_bis = ( ps2.y() - pm.y() )/( ps2.x() - pm.x() );
+        T q_bis = pm.y() - m_half * pm.x() ;
+        std::cout<<yellow<<bold<<"CELL 118"<<reset<<std::endl;
+        std::cout<<"p0 = "<<p0 << " , p1 = "<<p1<<std::endl;
+        std::cout<<"m_half = "<<m_half << " , m_half_bis = "<<m_half_bis<<std::endl;
+        std::cout<<"q = "<<q << " , q_bis = "<<q_bis<<std::endl;
+        
+        std::cout<<"pm = "<<pm << " , level_set_function(pm) = "<<lm<<std::endl;
+        std::cout<<"ps1 = "<<ps1 << " , level_set_function(ps1) = "<<ls1<<std::endl;
+        std::cout<<"ps2 = "<<ps2 << " , level_set_function(ps2) = "<<ls2<<std::endl;
+    }
+    */
+    auto pt_bdry = search_boundary( msh , cl , pm , m_half , q , lm , level_set_function ) ;
+    auto lm_bdry = level_set_function( pt_bdry , msh , cl );
+    /*
+    if( offset(msh,cl) == 118 )
+        std::cout<<"pt_bdry = "<<pt_bdry << " , level_set_function(lm_bdry) = "<<lm_bdry<<std::endl;
+    */
+    //std::cout<<"pm = "<<pm << " , level_set_function(pm) = "<<lm<<std::endl;
+    //std::cout<<"ps1 = "<<ps1 << " , level_set_function(ps1) = "<<ls1<<std::endl;
+    //std::cout<<"ps2 = "<<ps2 << " , level_set_function(ps2) = "<<ls2<<std::endl;
+    
+   
+    point_type ip;
+   // std::cout<<"the node of interface are "<<p0<<" and "<<p1<<". I search pm= "<<pm<<" in which phi = "<<lm<<" and ps1 e ps2 "<<ps1<<" and "<<ps2<<"equal to "<<ls1<<" , "<<ls2<<std::endl;
+    if ( pt_in_cell(msh, ps1, cl) && ( !((lm >= 0 && ls1 >= 0) || (lm < 0 && ls1 < 0)) ) )
+    {
+        auto threshold = diameter(msh, cl) / 1e20;
+        //auto threshold = diameter(msh, cl) / 1e10;
+        ip = find_zero_crossing_in_cell(pm, ps1, level_set_function, threshold,msh,cl);
+        //std::cout<<"OLD 1"<<std::endl;
+    }
+    else if ( pt_in_cell(msh, ps2, cl) && ( !((lm >= 0 && ls2 >= 0) || (lm < 0 && ls2 < 0)) ) )
+    {
+        auto threshold = diameter(msh, cl) / 1e20;
+        //auto threshold = diameter(msh, cl) / 1e10;
+        ip = find_zero_crossing_in_cell(pm, ps2, level_set_function, threshold,msh,cl);
+        //std::cout<<"OLD 2"<<std::endl;
+    }
+    else if ( pt_in_cell(msh, pt_bdry, cl) && ( !((lm >= 0 && lm_bdry >= 0) || (lm < 0 && lm_bdry < 0)) ) )
+    {
+        auto threshold = diameter(msh, cl) / 1e20;
+        //auto threshold = diameter(msh, cl) / 1e10;
+        ip = find_zero_crossing_in_cell(pm, pt_bdry , level_set_function, threshold,msh,cl);
+        //std::cout<<"BDRY NEW"<<std::endl;
+    }
+    else
+    {
+        //throw std::logic_error("interface not found in search range");
+        //std::cout<<yellow<<bold<< "In cell "<<offset(msh,cl)<<" ---> implementing linear approximation. INTERFACE NOT FOUND."<<reset<<std::endl;
+        //ip = pm;
+        std::cout<<yellow<<bold<< "In cell "<<offset(msh,cl)<<" ---> implementing MINIMISATION ERROR APPROXIMATION. INTERFACE NOT FOUND."<<reset<<std::endl;
+        point_type ret ;
+        T val_min = 1e10;
+        if( pt_in_cell(msh , ps1 , cl) && std::abs(ls1) < val_min )
+        {
+            val_min = std::abs(ls1) ;
+            ret = ps1 ;
+            std::cout<<"ps1 = "<<ps1 << " , ls1 = "<< ls1 <<std::endl;
+            
+        }
+        if( pt_in_cell(msh , ps2 , cl) && std::abs(ls2) < val_min )
+        {
+            val_min = std::abs(ls2) ;
+            ret = ps2 ;
+            std::cout<<"ps2 = "<<ps2 << " , ls2 = "<< ls2 <<std::endl;
+        }
+        if( pt_in_cell(msh , pt_bdry , cl) && std::abs(lm_bdry) < val_min )
+        {
+            val_min = std::abs(lm_bdry) ;
+            ret = pt_bdry ;
+            std::cout<<"ppt_bdrys1 = "<<pt_bdry << " , lm_bdry = "<<lm_bdry<<std::endl;
+        }
+        if( pt_in_cell(msh , pm , cl) && std::abs(lm) < val_min )
+        {
+            val_min = std::abs(lm) ;
+            ret = pm ;
+            std::cout<<"pm = "<<ps1 << " , lm = "<<ls1<<std::endl;
+        }
+        std::cout<<"ret = "<<ret << std::endl;
+        ip = ret;
+        
+    }
+    /*
+    if( offset(msh,cl) == 118 )
+        std::cout<<"POINT INTERFACE Ip = "<<ip <<  " in pos = "<<mid<<std::endl;
+    */
+    cl.user_data.interface.at(mid) = ip;
+
+    refine_interface_pro(msh, cl, level_set_function, min, mid);
+    refine_interface_pro(msh, cl, level_set_function, mid, max);
+}
+
+template<typename T, size_t ET, typename Function>
+void
+refine_interface_pro(cuthho_mesh<T, ET>& msh, const Function& level_set_function, size_t levels)
+{
+    if (levels == 0)
+        return;
+
+    
+    
+    size_t interface_points = iexp_pow(2, levels);
+
+    for (auto& cl : msh.cells)
+    {
+        if ( !is_cut(msh, cl) )
+            continue;
+
+        /*
+        if( offset(msh,cl) == 118 )
+        {
+        std::cout<<yellow<<bold<<"--------------------> CELL = "<<offset(msh,cl)<<" <--------------------"<<reset<<std::endl;
+        size_t counter = 0;
+        for (auto& nd :  nodes(msh,cl) )
+        {
+            
+            if( nd.user_data.location == element_location::IN_NEGATIVE_SIDE ){
+                std::cout<<"NEGATIVE -> nd = "<<nd.ptid << " --> pt = "<<points(msh,cl)[counter] << std::endl;
+            }
+            else{
+                std::cout<<"POSITIVE -> nd = "<<nd.ptid << " --> pt = "<<points(msh,cl)[counter] << std::endl;
+            }
+            counter++;
+            //std::cout<<"nd = "<<nd.ptid<<std::endl;
+        }
+        std::cout<<"INTERFACE_0 = "<<cl.user_data.p0 << " , INTERFACE_1 = "<<cl.user_data.p1 << std::endl;
+        }
+        */
+        cl.user_data.interface.resize(interface_points+1);
+        cl.user_data.interface.at(0)                = cl.user_data.p0;
+        cl.user_data.interface.at(interface_points) = cl.user_data.p1;
+
+        refine_interface_pro(msh, cl, level_set_function, 0, interface_points);
+        /*
+        if( offset(msh,cl) == 118 )
+        {
+        for(size_t i_int = 0 ; i_int < interface_points + 1 ; i_int++ )
+            std::cout<<"refined points are p = "<<cl.user_data.interface.at(i_int)<<std::endl;
+            
+        std::cout<<"--------------------> FINE CELL <--------------------"<<std::endl;
+        }
+        */
+    }
+}
+
 
 
 template<typename T, size_t ET, typename Function>
@@ -1371,14 +2073,14 @@ testing_level_set(const Mesh msh , const FonctionD& level_set_disc , const Fonct
     size_t N, M;
     N = 40;
     M = 40;
-    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc.dat");
-    auto test_anal = std::make_shared< gnuplot_output_object<double> >("testing_interface_anal.dat");
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc_vortex.dat");
+    auto test_anal = std::make_shared< gnuplot_output_object<double> >("testing_interface_anal_vortex.dat");
     
-    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX.dat");
-    auto test_anal_gradX = std::make_shared< gnuplot_output_object<double> >("testing_der_analX.dat");
+    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX_vortex.dat");
+    auto test_anal_gradX = std::make_shared< gnuplot_output_object<double> >("testing_der_analX_vortex.dat");
     
-    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY.dat");
-    auto test_anal_gradY = std::make_shared< gnuplot_output_object<double> >("testing_der_analY.dat");
+    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY_vortex.dat");
+    auto test_anal_gradY = std::make_shared< gnuplot_output_object<double> >("testing_der_analY_vortex.dat");
     
     for(size_t i = 0 ; i<= N ; i++ )
     {
@@ -1449,8 +2151,8 @@ testing_level_set2(const Mesh msh , const FonctionD& level_set_disc ,const Fonct
     size_t N, M;
     N = 40;
     M = 40;
-    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_fin_disc.dat");
-    auto test_anal = std::make_shared< gnuplot_output_object<double> >("testing_interface_fin_anal.dat");
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_fin_disc_vortex.dat");
+    auto test_anal = std::make_shared< gnuplot_output_object<double> >("testing_interface_fin_anal_vortex.dat");
     /*
     auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX.dat");
     auto test_anal_gradX = std::make_shared< gnuplot_output_object<double> >("testing_der_analX.dat");
@@ -9036,666 +9738,977 @@ struct analytic_tg_vortex_function: public level_set<T>
 
 
 
- template< typename Mesh , typename Fonction , typename FiniteSpace , typename T = typename Mesh::coordinate_type  >
-struct L2projected_level_set_high_order: public level_set<T>
-{
-     
-    T phi_max , phi_min ;
-    size_t  last_row_init, last_row_end, number_faces_one_row;
-    
-    Mesh msh; // Original mesh, NOT agglomerated.
-    mesh_init_params<T> params; // mesh parameter
-       
-    size_t degree_FEM ; // FEM degree
-    size_t n_cls ; // #cells
-    size_t local_dim; // Local Dimension (degree_FEM+1)*(degree_FEM+1)
-    size_t n_vertices ; // #vertices
-    size_t      Nx, Ny ; // Number of cells in x and y direciton
-    
-    // connectivity matrix : for each cell, it stores the global numbering
-    std::vector< std::vector<std::pair<size_t,bool>>> connectivity_matrix ;
-    std::vector<std::set<size_t>> S_i;
-    //std::vector<std::vector<size_t>> connectivity_matrix ;
-       
-    size_t dim_HHO; // Global dimension Discontinuous framework = Local dimension * #cells
-    size_t ndof_FE; // Global dimension FE continuous = #nodes
-       
-    int mapped = 0 ; // = 0 not mapped ; = 1 mapped ; = 2 inverse mapping
-    
-    SparseMatrix<T>                 Global_Mass; // Global mass, saved for FEM problem
-       
-    Eigen::Matrix<T, Dynamic, Dynamic> sol_HHO ; // projection saved in HHO format: cell by cell
-    Matrix<T, Dynamic, 1> sol_FEM ; // projection saved in Continuos FE format: global nodes
-    Eigen::Matrix<T, Dynamic, 1> vertices; // saving level_set on vertices mesh
-
-    // Local Vandermonde Matrix for interpolation
-    Matrix<T, Dynamic, Dynamic> local_vandermonde ;
-       
-       
-    // Assembling into global matrix
-    SparseMatrix<T>                 Global_c_term_x; // Global mass, saved for FEM problem
-    SparseMatrix<T>                 Global_c_term_y; // Global mass, saved for FEM problem
-    std::vector< Triplet<T> >       triplets_c_term_x; // Position elements: Sparse Matrix Notation
-    std::vector< Triplet<T> >       triplets_c_term_y; // Position elements: Sparse Matrix Notation
-    Matrix<T, Dynamic, 1>      Global_Mass_Lumped; // Global mass, saved for FEM problem
-
-    L2projected_level_set_high_order(const FiniteSpace& fe_data , const Fonction & level_set, const Mesh & msh)
-        : degree_FEM(fe_data.order) , local_dim(fe_data.local_ndof), msh(msh), Nx(fe_data.Nx),Ny(fe_data.Ny), params(fe_data.params) , dim_HHO(fe_data.ndof_disc) , n_cls(fe_data.n_cls) ,n_vertices(fe_data.n_vertices) , connectivity_matrix(fe_data.connectivity_matrix) , ndof_FE(fe_data.ndof_FE)
-    {
-        
-        Matrix<T, Dynamic, 1>           RHS;    // Known term
-        std::vector< Triplet<T> >       triplets; // Position elements: Sparse Matrix Notation
-        
-        last_row_init = Ny*(2*Nx+1); // There are 2 faces for each row of cells + Ny
-        last_row_end = last_row_init + Nx-1;
-        number_faces_one_row = 2*Nx+1; // for each cell I count only the low and sx faces, respectevely 0-1 2-3 4-5 6-7 8 + the last on the right boundary
-        
-        Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
-       
-        Global_Mass = SparseMatrix<T>( ndof_FE, ndof_FE ); //(b_i,b_j)_ij , b_i Lagrange basis fx
-        RHS = Matrix<T, Dynamic, 1>::Zero( ndof_FE ); // Known term (f,b_i)_i , b_i Lagrange basis fx
-        
-        Global_c_term_x = SparseMatrix<T>( ndof_FE, ndof_FE ); //(b_i,b_j)_ij , b_i Lagrange basis fx
-        Global_c_term_y = SparseMatrix<T>( ndof_FE, ndof_FE ); //(b_i,b_j)_ij , b_i Lagrange basis fx
-         
-        Global_Mass_Lumped = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_FE , 1 );
-         
-        local_vandermonde = Matrix<T, Dynamic, Dynamic>::Zero ( local_dim , local_dim ) ;
-        
-        
-        // Saving the projection in HHO discontinuous format (MATRIX NOTATION)
-        sol_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls );
-
-        
-        //Eigen::Matrix<T, Dynamic, Dynamic> sol_HHO_vandermonde =  Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls ) ;
-        
-        
-        CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod;
-        
-        std::cout<<yellow<<bold<<"-----> IN 'L2projected_level_set_high_order': L2 projection of the level set over BERNSTEIN basis. -----"<<reset<<std::endl;
+  template< typename Mesh , typename Fonction , typename FiniteSpace , typename T = typename Mesh::coordinate_type  >
+ struct L2projected_level_set_high_order: public level_set<T>
+ {
       
-        for( const auto& cl : msh.cells )
-        {
-            size_t cell_offset = offset(msh, cl) ;
-            size_t cell_LHS_offset = cell_offset * degree_FEM ;
-            std::vector<std::pair<size_t , bool >> asm_map(local_dim) ;
-            
-            if(cell_offset == 0)
-            {
-                auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree_FEM);
-                cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
-                for (size_t i = 0; i < local_dim; i++)
-                {
-                    // Local vandermonde matrix
-                    local_vandermonde.block(i,0,1,local_dim) = (cb.eval_basis(pts[i])).transpose() ;
-                }
-                
-                cod.compute(local_vandermonde);
-            }
-            
-            // Adding assembly_index for cl
-            for (size_t i = 0; i < local_dim; i++)
-            {
-                asm_map[i] =   std::make_pair( connectivity_matrix[cell_offset][i].first, connectivity_matrix[cell_offset][i].second ) ;
-            }
+     bool analytic_check = FALSE ;
+     
+     T phi_max , phi_min ;
+     size_t  last_row_init, last_row_end, number_faces_one_row;
+     
+     Mesh msh; // Original mesh, NOT agglomerated.
+     mesh_init_params<T> params; // mesh parameter
+        
+     size_t degree_FEM ; // FEM degree
+     size_t n_cls ; // #cells
+     size_t local_dim; // Local Dimension (degree_FEM+1)*(degree_FEM+1)
+     size_t n_vertices ; // #vertices
+     size_t      Nx, Ny ; // Number of cells in x and y direciton
+     
+     // connectivity matrix : for each cell, it stores the global numbering
+     std::vector< std::vector<std::pair<size_t,bool>>> connectivity_matrix ;
+     std::vector<std::set<size_t>> S_i;
+     //std::vector<std::vector<size_t>> connectivity_matrix ;
+        
+     size_t dim_HHO; // Global dimension Discontinuous framework = Local dimension * #cells
+     size_t ndof_FE; // Global dimension FE continuous = #nodes
+        
+     int mapped = 0 ; // = 0 not mapped ; = 1 mapped ; = 2 inverse mapping
+     
+     SparseMatrix<T>                 Global_Mass; // Global mass, saved for FEM problem
+        
+     Eigen::Matrix<T, Dynamic, Dynamic> sol_HHO ; // projection saved in HHO format: cell by cell
+     Matrix<T, Dynamic, 1> sol_FEM ; // projection saved in Continuos FE format: global nodes
+     Eigen::Matrix<T, Dynamic, 1> vertices; // saving level_set on vertices mesh
+
+     // Local Vandermonde Matrix for interpolation
+     Matrix<T, Dynamic, Dynamic> local_vandermonde ;
+        
+        
+     // Assembling into global matrix
+     SparseMatrix<T>                 Global_c_term_x; // Global mass, saved for FEM problem
+     SparseMatrix<T>                 Global_c_term_y; // Global mass, saved for FEM problem
+     std::vector< Triplet<T> >       triplets_c_term_x; // Position elements: Sparse Matrix Notation
+     std::vector< Triplet<T> >       triplets_c_term_y; // Position elements: Sparse Matrix Notation
+     Matrix<T, Dynamic, 1>      Global_Mass_Lumped; // Global mass, saved for FEM problem
+
+     SparseMatrix<T>         cij_norm , nij0 , nij1 ;
+     SparseMatrix<T>         cji_norm , nji0 , nji1 ;
+     
+     
+     
+     
+     L2projected_level_set_high_order(const FiniteSpace& fe_data , const Fonction & level_set, const Mesh & msh , bool analytic_check = FALSE )
+         : degree_FEM(fe_data.order) , local_dim(fe_data.local_ndof), msh(msh), Nx(fe_data.Nx),Ny(fe_data.Ny), params(fe_data.params) , dim_HHO(fe_data.ndof_disc) , n_cls(fe_data.n_cls) ,n_vertices(fe_data.n_vertices) , connectivity_matrix(fe_data.connectivity_matrix) , ndof_FE(fe_data.ndof_FE) , analytic_check(analytic_check)
+     {
+         if(!analytic_check)
+         {
+             timecounter tc_level_set;
+             tc_level_set.tic();
+             Matrix<T, Dynamic, 1>           RHS;    // Known term
+             std::vector< Triplet<T> >       triplets; // Position elements: Sparse Matrix Notation
+               
+             last_row_init = Ny*(2*Nx+1); // There are 2 faces for each row of cells + Ny
+             last_row_end = last_row_init + Nx-1;
+             number_faces_one_row = 2*Nx+1; // for each cell I count only the low and sx faces, respectevely 0-1 2-3 4-5 6-7 8 + the last on the right boundary
+               
+             Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero(local_dim);
               
-       
-       
-            auto local_mass = make_bernstein_local_mass_matrix( msh, cl , degree_FEM );
-            
-            //auto local_RHS = make_bernstein_local_RHS( msh , cl , degree_FEM , level_set );
-            // Local c_ij = b_i nabla(b_j) -> USEFUL FOR TRANSPORT PROBLEM
-            auto local_cij = make_bernstein_local_cij_matrix (msh, cl, degree_FEM);
+             Global_Mass = SparseMatrix<T>( ndof_FE, ndof_FE ); //(b_i,b_j)_ij , b_i Lagrange basis fx
+             RHS = Matrix<T, Dynamic, 1>::Zero( ndof_FE ); // Known term (f,b_i)_i , b_i Lagrange basis fx
+               
+             Global_c_term_x = SparseMatrix<T>( ndof_FE, ndof_FE ); //(b_i,b_j)_ij , b_i Lagrange basis fx
+             Global_c_term_y = SparseMatrix<T>( ndof_FE, ndof_FE ); //(b_i,b_j)_ij , b_i Lagrange basis fx
                 
-            auto local_mass_lumped = make_bernstein_local_mass_matrix_lumped( msh , cl , degree_FEM ) ;
-           
-            
-            // Costruction of the coefficients of the Bernstein basis
-            auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
-            
-            
-            // Assembling triplets for global problem
-            for (size_t i = 0; i < local_dim; i++)
-            {
-                for (size_t j = 0; j < local_dim; j++)
-                {
-                    triplets.push_back( Triplet<T>(asm_map[i].first, asm_map[j].first, local_mass(i,j) ) );
+             Global_Mass_Lumped = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_FE , 1 );
                 
-                    triplets_c_term_x.push_back( Triplet<T>(asm_map[i].first, asm_map[j].first, local_cij.first(i,j) ) );
-                    triplets_c_term_y.push_back( Triplet<T>(asm_map[i].first, asm_map[j].first, local_cij.second(i,j) ) );
-                        
-                }
-                Global_Mass_Lumped(asm_map[i].first) += local_mass_lumped(i);
-                //RHS(asm_map[i].first) += local_RHS(i) ;
-                RHS_vandermonde(i) = level_set( qps[i]) ;
-            }
-            
-            
-            sol_HHO.col(cell_offset) = cod.solve(RHS_vandermonde) ;
-                
-        } // end of cl loop
-            
-        // Finalisation global assembling
-        Global_Mass.setFromTriplets( triplets.begin(), triplets.end() );
-        triplets.clear();
-            
-            
-        // Finalisation global assembling
-        Global_c_term_x.setFromTriplets( triplets_c_term_x.begin(), triplets_c_term_x.end() );
-        triplets_c_term_x.clear();
-        Global_c_term_y.setFromTriplets( triplets_c_term_y.begin(), triplets_c_term_y.end() );
-        triplets_c_term_y.clear();
-            
-            
-        
-        // CALCULATION OF THE SIZE + PLOTTING
-        /*
-        size_t size_supp_nodes = 0;
-        std::cout<<"Supporting nodes IN L2:"<<std::endl;
-        size_t jjjj = 0;
-        for (auto& i: S_i) {
-            size_supp_nodes+=i.size();
-            std::cout <<"Node "<<jjjj<<":";
-            for (auto it=i.begin(); it != i.end(); ++it)
-                std::cout << ' ' << *it;
-                // std::cout<<ii;
-            std::cout<<'\n';
-            jjjj++;
-        }
-        std::cout<<std::endl;
-        std::cout<<"Supporting nodes size:"<<size_supp_nodes<<std::endl;
-        */
-        
-            
-        // Resolution L2-projection over a Bernstein basis
-        sol_FEM = Matrix<T, Dynamic, 1>::Zero(RHS.rows());
-            
-        //Matrix<T, Dynamic, 1> sol_FEM_vandermonde  = Matrix<T, Dynamic, 1>::Zero(RHS.rows()); ;
-        
-        std::cout<<"sol_FEM size "<<sol_FEM.size()<<std::endl;
-        std::cout<<"local_dim size "<<local_dim<<std::endl;
-        std::cout<<"n_cls "<<n_cls<<std::endl;
-            
-        // Global solution saved as discontinuous HHO approach
-        // Also saved min & max coefficients + position in HHO notation
-       
-        /*
-        ConjugateGradient<SparseMatrix<T> > solver_global_mass;
-        //SparseLU<SparseMatrix<T>, COLAMDOrdering<int> >solver_global_mass;
-        //Notice: for this step the numerical values of A are not used
-        //solver_global_mass.analyzePattern(Global_Mass);
-        //solver_global_mass.factorize(Global_Mass);
-         
-        solver_global_mass.compute(Global_Mass); // SAVE INVERSE OF GLOBAL MASS
-        if(solver_global_mass.info()!=Success) {
-            std::cout<<"FAILED SOLVER 0"<<std::endl;
-            return;
-        }
-       
-        sol_FEM = solver_global_mass.solve(RHS);
-       */
-        for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
-        {
-            for (size_t i = 0; i < local_dim; i++)
-            {
-                size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
-                //sol_HHO(i,counter_bis) = sol_FEM( asm_map ) ;
-                sol_FEM( asm_map ) = sol_HHO(i,counter_bis) ;
-            }
-        }
-       
-        //std::cout<<"CHECK L2 proj vs Vandermonde interpolation for phi^0"<<'\n'<<sol_FEM-sol_FEM_vandermonde<<std::endl;
-        
-        
-        //sol_FEM = sol_FEM_vandermonde ;
-        //sol_HHO = sol_HHO_vandermonde ;
-        //std::cout<<"CHECK L2 proj vs Vandermonde interpolation for phi^0"<<'\n'<<sol_FEM-sol_FEM_vandermonde<<std::endl;
-        // Set of maximum and minimum
-        set_max_min();
-        
-        vertices = Eigen::Matrix<T, Dynamic, 1>::Zero( n_vertices , 1 );
-      
-        for( size_t i_global = 0; i_global < n_cls; i_global++)
-        {
-            size_t i_vertex = i_global+floor(i_global/Nx);
-            vertices(i_vertex) = sol_HHO(0,i_global) ;
-            vertices(i_vertex+1) = sol_HHO(1,i_global) ;
-            vertices(i_vertex+Nx+2) = sol_HHO(2,i_global) ;
-            vertices(i_vertex+Nx+1) = sol_HHO(3,i_global) ;
-        }
-    
-       
-    }
-            
-            
+             local_vandermonde = Matrix<T, Dynamic, Dynamic>::Zero ( local_dim,local_dim );
+             
+             cij_norm = SparseMatrix<T>( ndof_FE, ndof_FE );
+             cji_norm = SparseMatrix<T>( ndof_FE, ndof_FE );
+             nij0 = SparseMatrix<T>( ndof_FE, ndof_FE );
+             nij1 = SparseMatrix<T>( ndof_FE, ndof_FE );
+             nji0 = SparseMatrix<T>( ndof_FE, ndof_FE );
+             nji1 = SparseMatrix<T>( ndof_FE, ndof_FE );
+             /*
+             std::vector< Triplet<T> >       triplets_norm;
+             std::vector< Triplet<T> >       triplets_norm_adj;
+             std::vector< Triplet<T> >       triplets_nij0;
+             std::vector< Triplet<T> >       triplets_nij1;
+             std::vector< Triplet<T> >       triplets_nji0;
+             std::vector< Triplet<T> >       triplets_nji1;
+             */
+               
+             // Saving the projection in HHO discontinuous format (MATRIX NOTATION)
+             sol_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls );
+             sol_FEM = Matrix<T, Dynamic, 1>::Zero(ndof_FE);
+             vertices = Eigen::Matrix<T, Dynamic, 1>::Zero( n_vertices , 1 );
+               
+             //Eigen::Matrix<T, Dynamic, Dynamic> sol_HHO_vandermonde =  Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls ) ;
+               
+               
+             CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod;
+             //FullPivLU<Matrix<T, Dynamic, Dynamic > > cod_2;
+               
+               
+             std::cout<<"----> In 'L2projected_level_set_high_order': Vandermonde interpolation of the level set with BERNSTEIN basis."<<std::endl;
+             
+             //std::cout<<"CHECK INVERSION LOCAL VANDERMONDE"<<std::endl;
+             for( const auto& cl : msh.cells )
+             {
+                 size_t cell_offset = offset(msh, cl) ;
+                 
+                 if(cell_offset == 0)
+                 {
+                     auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree_FEM);
+                     cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+                     for (size_t i = 0; i < local_dim; i++)
+                     {
+                         // Local vandermonde matrix
+                         local_vandermonde.block(i,0,1,local_dim) = (cb.eval_basis(pts[i])).transpose() ;
+                     }
+                       
+                     cod.compute(local_vandermonde);
+                     //cod_2.compute(local_vandermonde);
+                 }
+                 
+              
+                 auto local_mass = make_bernstein_local_mass_matrix( msh, cl , degree_FEM );
+                   
+                 //auto local_RHS = make_bernstein_local_RHS( msh , cl , degree_FEM , level_set );
+                 // Local c_ij = b_i nabla(b_j) -> USEFUL FOR TRANSPORT PROBLEM
+                 auto local_cij = make_bernstein_local_cij_matrix (msh, cl, degree_FEM);
+                       
+                 auto local_mass_lumped = make_bernstein_local_mass_matrix_lumped( msh , cl , degree_FEM ) ;
+                  
+                   
+                 // Costruction of the coefficients of the Bernstein basis
+                 auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
+                   
+                   
+                 // Assembling triplets for global problem
+                 for (size_t i = 0; i < local_dim; i++)
+                 {
+                     size_t asm_map_i = connectivity_matrix[cell_offset][i].first ;
+                     for (size_t j = 0; j < local_dim; j++)
+                     {
+                         /*
+                         T c_ij0 = local_cij.first(i,j) ;
+                         T c_ij1 = local_cij.second(i,j) ;
+                         
+                         T c_ji0 = local_cij.first(j,i) ;
+                         T c_ji1 = local_cij.second(j,i) ;
+                         */
+                         size_t asm_map_j = connectivity_matrix[cell_offset][j].first ;
+                           
+                         triplets.push_back(Triplet<T>(asm_map_i,asm_map_j, local_mass(i,j)));
+                         triplets_c_term_x.push_back( Triplet<T>(asm_map_i, asm_map_j , local_cij.first(i,j) ) );
+                         triplets_c_term_y.push_back( Triplet<T>( asm_map_i , asm_map_j , local_cij.second(i,j) ) );
+                         
+                         /*
+                         T val_norm = sqrt( c_ij0*c_ij0 + c_ij1*c_ij1 );
+                         T val_norm_adj = sqrt( c_ji0 *c_ji0 + c_ji1*c_ji1 );
+                         T val_nij0 = c_ij0/val_norm ;
+                         T val_nij1 = c_ij1/val_norm ;
+                         T val_nji0 = c_ji0/val_norm_adj ;
+                         T val_nji1 = c_ji1/val_norm_adj ;
+                         
+                         triplets_norm.push_back(Triplet<T>(asm_map_i,asm_map_j, val_norm));
+                         triplets_norm_adj.push_back(Triplet<T>(asm_map_i,asm_map_j, val_norm_adj));
+                         triplets_nij0.push_back(Triplet<T>(asm_map_i,asm_map_j, val_nij0));
+                         triplets_nij1.push_back(Triplet<T>(asm_map_i,asm_map_j, val_nij1));
+                         triplets_nji0.push_back(Triplet<T>(asm_map_i,asm_map_j, val_nji0));
+                         triplets_nji1.push_back(Triplet<T>(asm_map_i,asm_map_j, val_nji1));
+                         */
+                     }
+                     Global_Mass_Lumped(asm_map_i) += local_mass_lumped(i);
+                     //Global_Mass_Lumped(asm_map[i].first) += local_mass_lumped(i);
+                     //RHS(asm_map[i].first) += local_RHS(i) ;
+                     RHS_vandermonde(i) = level_set( qps[i]) ;
+                 }
+                   
+                   
+                 auto sol_tmp = cod.solve(RHS_vandermonde) ;
+                   
+                 //auto sol_tmp_2 = cod_2.solve(RHS_vandermonde) ;
+                   
+                 sol_HHO.col(cell_offset) = sol_tmp ;
+                 for (size_t i = 0; i < local_dim; i++)
+                 {
+                       
+                     size_t asm_map =  connectivity_matrix[cell_offset][i].first ;
+                     sol_FEM( asm_map ) = sol_HHO(i,cell_offset) ;
+                       
+                     //if( std::abs( sol_tmp(i) - sol_tmp_2(i) )>1e-14 )
+                     //    std::cout<< std::abs(sol_tmp(i) - sol_tmp_2(i) ) <<std::endl;
+                       
+                 }
+                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
+                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
+                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
+                 vertices(i_vertex+Nx+2) = sol_HHO(2,cell_offset) ;
+                 vertices(i_vertex+Nx+1) = sol_HHO(3,cell_offset) ;
+                   
+                   
+             } // end of cl loop
+                 
+             //std::cout<<"FINE CHECK INVERSION LOCAL VANDERMONDE"<<std::endl;
+             // Finalisation global assembling
+             Global_Mass.setFromTriplets( triplets.begin(), triplets.end() );
+             triplets.clear();
+                   
+                   
+             // Finalisation global assembling
+             Global_c_term_x.setFromTriplets( triplets_c_term_x.begin(), triplets_c_term_x.end() );
+             triplets_c_term_x.clear();
+             Global_c_term_y.setFromTriplets( triplets_c_term_y.begin(), triplets_c_term_y.end() );
+             triplets_c_term_y.clear();
+                 
+             /*
+             cij_norm.setFromTriplets( triplets_norm.begin(), triplets_norm.end() );
+             triplets_norm.clear();
+             cji_norm.setFromTriplets( triplets_norm_adj.begin(), triplets_norm_adj.end() );
+             triplets_norm_adj.clear();
+             
+             nij0.setFromTriplets( triplets_nij0.begin(), triplets_nij0.end() );
+             triplets_nij0.clear();
+             nij1.setFromTriplets( triplets_nij1.begin(), triplets_nij1.end() );
+             triplets_nij1.clear();
+             
+             nji0.setFromTriplets( triplets_nji0.begin(), triplets_nji0.end() );
+             triplets_nji0.clear();
+             nji1.setFromTriplets( triplets_nji1.begin(), triplets_nji1.end() );
+             triplets_nji1.clear();
+             */
+             
+             // NORM of c_ij
+             
+             cij_norm = ( Global_c_term_x.cwiseProduct(Global_c_term_x) + Global_c_term_y.cwiseProduct(Global_c_term_y) ).cwiseSqrt() ;
+             //std::cout<<"cij norm "<<'\n'<<cij_norm<<std::endl;
+             
+             // MATRIX n_ij
+             nij0 = Global_c_term_x.cwiseQuotient( cij_norm );
+             nij1 = Global_c_term_y.cwiseQuotient( cij_norm );
+             
+             //std::cout<<"nij1  "<<'\n'<<nij1<<std::endl;
+             
 
+             // MATRIX c_ji
+             SparseMatrix<T> cji_x = Global_c_term_x.adjoint() ;
+             SparseMatrix<T> cji_y = Global_c_term_y.adjoint() ;
+              
+             // NORM of c_ji -> i.e. c_ij transposed
+             cji_norm = (cji_x.cwiseProduct(cji_x)+cji_y.cwiseProduct(cji_y)).cwiseSqrt();
+             
+             // MATRIX n_ij (TRANSPOSED)
+             nji0 = cji_x.cwiseQuotient( cji_norm );
+             nji1 = cji_y.cwiseQuotient( cji_norm );
+             
+
+             
+               
+             //std::cout<<"local_vandermonde"<<'\n'<<local_vandermonde<<std::endl;
+                   
+               
+               // CALCULATION OF THE SIZE + PLOTTING
+               /*
+               size_t size_supp_nodes = 0;
+               std::cout<<"Supporting nodes IN L2:"<<std::endl;
+               size_t jjjj = 0;
+               for (auto& i: S_i) {
+                   size_supp_nodes+=i.size();
+                   std::cout <<"Node "<<jjjj<<":";
+                   for (auto it=i.begin(); it != i.end(); ++it)
+                       std::cout << ' ' << *it;
+                       // std::cout<<ii;
+                   std::cout<<'\n';
+                   jjjj++;
+               }
+               std::cout<<std::endl;
+               std::cout<<"Supporting nodes size:"<<size_supp_nodes<<std::endl;
+               */
+               
+                   
+               
+                   
+               //Matrix<T, Dynamic, 1> sol_FEM_vandermonde  = Matrix<T, Dynamic, 1>::Zero(RHS.rows()); ;
+               
+             std::cout<<"sol_FEM size "<<sol_FEM.size()<<std::endl;
+             std::cout<<"local_dim size "<<local_dim<<std::endl;
+             std::cout<<"n_cls "<<n_cls<<std::endl;
+                   
+               // Global solution saved as discontinuous HHO approach
+               // Also saved min & max coefficients + position in HHO notation
+               
+               /*
+               ConjugateGradient<SparseMatrix<T> > solver_global_mass;
+               //SparseLU<SparseMatrix<T>, COLAMDOrdering<int> >solver_global_mass;
+               //Notice: for this step the numerical values of A are not used
+               //solver_global_mass.analyzePattern(Global_Mass);
+               //solver_global_mass.factorize(Global_Mass);
+                
+               solver_global_mass.compute(Global_Mass); // SAVE INVERSE OF GLOBAL MASS
+               if(solver_global_mass.info()!=Success) {
+                   std::cout<<"FAILED SOLVER 0"<<std::endl;
+                   return;
+               }
+               
+               sol_FEM = solver_global_mass.solve(RHS);
+               */
+               
+               /*
+               for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
+               {
+                   for (size_t i = 0; i < local_dim; i++)
+                   {
+                       size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
+                       //sol_HHO(i,counter_bis) = sol_FEM( asm_map ) ;
+                       sol_FEM( asm_map ) = sol_HHO(i,counter_bis) ;
+                   }
+               }
+               */
+               
+               
+               //std::cout<<"CHECK L2 proj vs Vandermonde interpolation for phi^0"<<'\n'<<sol_FEM-sol_FEM_vandermonde<<std::endl;
+               
+               
+               //sol_FEM = sol_FEM_vandermonde ;
+               //sol_HHO = sol_HHO_vandermonde ;
+               //std::cout<<"CHECK L2 proj vs Vandermonde interpolation for phi^0"<<'\n'<<sol_FEM-sol_FEM_vandermonde<<std::endl;
+               // Set of maximum and minimum
+               
+             set_max_min();
+               
+               
+               /*
+               for( size_t i_global = 0; i_global < n_cls; i_global++)
+               {
+                   size_t i_vertex = i_global+floor(i_global/Nx);
+                   vertices(i_vertex) = sol_HHO(0,i_global) ;
+                   vertices(i_vertex+1) = sol_HHO(1,i_global) ;
+                   vertices(i_vertex+Nx+2) = sol_HHO(2,i_global) ;
+                   vertices(i_vertex+Nx+1) = sol_HHO(3,i_global) ;
+               }
+               */
+              
+             tc_level_set.toc();
+             std::cout << bold << yellow << "INITIALISATION LEVEL SET: t = " << tc_level_set << " seconds" << reset << std::endl;
+
+         }
+         else
+         {
+             timecounter tc_level_set;
+             tc_level_set.tic();
+             
+             Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero(local_dim);
+             local_vandermonde = Matrix<T, Dynamic, Dynamic>::Zero ( local_dim,local_dim );
+               
+               
+             // Saving the projection in HHO discontinuous format (MATRIX NOTATION)
+             sol_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls );
+             
+             CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod;
+             
+             std::cout<<"----> FOR ANALYTIC CHECK 'L2projected_level_set_high_order': Vandermonde interpolation of the level set with BERNSTEIN basis."<<std::endl;
+             
+         
+             for( const auto& cl : msh.cells )
+             {
+                 size_t cell_offset = offset(msh, cl) ;
+                 
+                 if(cell_offset == 0)
+                 {
+                     auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree_FEM);
+                     cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+                     for (size_t i = 0; i < local_dim; i++)
+                     {
+                         // Local vandermonde matrix
+                         local_vandermonde.block(i,0,1,local_dim) = (cb.eval_basis(pts[i])).transpose() ;
+                     }
+                       
+                     cod.compute(local_vandermonde);
+                 }
+                   
+             
+                 
+                 // Assembling triplets for global problem
+                 auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
+                 for (size_t i = 0; i < local_dim; i++)
+                     RHS_vandermonde(i) = level_set( qps[i]) ;
+             
+                   
+                 auto sol_tmp = cod.solve(RHS_vandermonde) ;
+                 sol_HHO.col(cell_offset) = sol_tmp ;
+                 
+                 
+                   
+             } // end of cl loop
+                 
+             tc_level_set.toc();
+             std::cout << bold << yellow << "INITIALISATION LEVEL SET: t = " << tc_level_set << " seconds" << reset << std::endl;
+
+         }
    
-    L2projected_level_set_high_order()=default;
-    
-    
-    void
-    coefficients_mapping( )
-    {
+     
+     }
+             
+             
 
-        
-        Matrix<T, Dynamic, 1> mapped_phi = Matrix<T, Dynamic, 1>::Zero( ndof_FE );
-        
-        CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
-        Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
-        Matrix<T, Dynamic, 1> sol_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
-        
-        for( const auto& cl : msh.cells )
-        {
-            size_t cell_offset = offset(msh, cl) ;
-            cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-            auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh , cl , degree_FEM);
-            size_t ct = 0;
-            for (auto& pt : nodes )
-            {
-                RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl ) - phi_min )/( phi_max - phi_min );
-                ct++;
-            }
-            
-            sol_vandermonde = vandermonde_interpolant.solve(RHS_vandermonde);
-         
-            for (size_t i = 0; i < local_dim; i++)
-            {
-                auto asm_map = connectivity_matrix[cell_offset][i].first ;
-                mapped_phi(asm_map) = sol_vandermonde(i) ;
-            }
-             
-        } // end of cl loop
-       
-        sol_FEM = mapped_phi ;
-        converting_into_HHO_formulation( sol_FEM );
-        
-    }
     
-    void
-    coefficients_inverse_mapping( )
-    {
-        
-        Matrix<T, Dynamic, 1> mapped_phi = Matrix<T, Dynamic, 1>::Zero( ndof_FE );
-        
-        CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
-        Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
-        Matrix<T, Dynamic, 1> sol_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
-        
-        for( const auto& cl : msh.cells )
-        {
-            size_t cell_offset = offset(msh, cl) ;
-            
-            cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-            auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh , cl , degree_FEM);
-            size_t ct = 0;
-            for (auto& pt : nodes )
-            {
-                RHS_vandermonde(ct) = phi_min + (*this)(pt , msh , cl )*( phi_max - phi_min );
-                ct++;
-            }
-            sol_vandermonde = vandermonde_interpolant.solve(RHS_vandermonde);
-            
-            for (size_t i = 0; i < local_dim; i++)
-            {
-                auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                mapped_phi(asm_map) = sol_vandermonde(i) ;
-            }
+     L2projected_level_set_high_order()=default;
+     
+     
+     void
+     coefficients_mapping( )
+     {
+
+         
+         Matrix<T, Dynamic, 1> mapped_phi = Matrix<T, Dynamic, 1>::Zero( ndof_FE );
+         
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         Matrix<T, Dynamic, 1> sol_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         
+         for( const auto& cl : msh.cells )
+         {
+             size_t cell_offset = offset(msh, cl) ;
+             cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh , cl , degree_FEM);
+             size_t ct = 0;
+             for (auto& pt : nodes )
+             {
+                 RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl ) - phi_min )/( phi_max - phi_min );
+                 ct++;
+             }
              
-            
-        } // end of cl loop
-        
-        sol_FEM = mapped_phi ;
-        converting_into_HHO_formulation( sol_FEM );
-           
-    }
-        
-        
-        
-        
-        
-    void  set_discrete_points( Eigen::Matrix<T, Dynamic, Dynamic>& values_new)
-    {
-        sol_HHO = values_new ;
-        std::cout<<" Using set_discrete_points check that sol_FEM already uploaded!"<<std::endl;
-        
-    }
-        
-        
-    void converting_into_HHO_formulation( const Eigen::Matrix<T, Dynamic, 1>& values_new )
-    {
-        // SAVE BOTH SOL_HHO AND VERTICES
-        for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
-        {
-            for (size_t i = 0; i < local_dim; i++){
-                size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
-                sol_HHO(i,counter_bis) = values_new( asm_map );
-                
-            }
-            size_t i_vertex = counter_bis+floor(counter_bis/Nx);
-            vertices(i_vertex) = sol_HHO(0,counter_bis) ;
-            vertices(i_vertex+1) = sol_HHO(1,counter_bis) ;
-            vertices(i_vertex+Nx+2) = sol_HHO(2,counter_bis) ;
-            vertices(i_vertex+Nx+1) = sol_HHO(3,counter_bis) ;
-                
-        }
-        std::cout<<" Using converting_into_HHO_formulation. TO BE CHECKED that sol_FEM already uploaded!"<<std::endl;
-        
-    }
-        
-    void converting_into_FE_formulation( const Eigen::Matrix<T, Dynamic, Dynamic>& values_new )
-    {
+             sol_vandermonde = vandermonde_interpolant.solve(RHS_vandermonde);
           
-        for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
-        {
-            for (size_t i = 0; i < local_dim; i++){
-                size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
-                sol_FEM( asm_map ) = values_new(i,counter_bis) ;
-            }
-            size_t i_vertex = counter_bis+floor(counter_bis/Nx);
-            vertices(i_vertex) = values_new(0,counter_bis) ;
-            vertices(i_vertex+1) = values_new(1,counter_bis) ;
-            vertices(i_vertex+Nx+2) = values_new(2,counter_bis) ;
-            vertices(i_vertex+Nx+1) = values_new(3,counter_bis) ;
-
-        }
-        std::cout<<" Using converting_into_FE_formulation. TO BE CHECKED that sol_HHO already uploaded!"<<std::endl;
-       
-    }
-    
-    
-    
-           
-    void set_max_min()
-    {
+             for (size_t i = 0; i < local_dim; i++)
+             {
+                 auto asm_map = connectivity_matrix[cell_offset][i].first ;
+                 mapped_phi(asm_map) = sol_vandermonde(i) ;
+             }
+              
+         } // end of cl loop
         
-        T ret0 = -10.0;
-        T ret1 = 10.0;
-        size_t counter_ret0 = 0;
-        
-        for(auto& cl:msh.cells)
-        {
-            cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
-            auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl , degree_FEM);
-            
-            for(auto& nd : nodes ){
-                auto phi_tmp = cb.eval_basis(nd);
-                auto values_cell = (sol_HHO.block(0,counter_ret0,local_dim,1)).col(0);
-                auto new_ret = values_cell.dot(phi_tmp) ;
-                ret0 = std::max( new_ret , ret0 ) ;
-                ret1 = std::min( new_ret , ret1);
-            }
-            counter_ret0++;
-        }
-        
-        phi_max = ret0;
-        phi_min = ret1;
-            
-    }
-        
-       
-    // OK FINE, IT WORKS ALSO FOR AGGLOMERATED MESHES
-    // It should work also for Bernstein Basis
-    T operator()( const typename Mesh::node_type& node ) const
-    {
-        return vertices(node.ptid);
-            
-    }
-        
-     
-    // OK FINE, IT WORKS ALSO FOR AGGLOMERATED MESHES -> BUT SLOW
-    T operator()(const point<T,2>& pt) const
-    {
-        //std::cout<<"I AM IN OPERATOR() SLOW !!!!"<<std::endl;
-        size_t counter=0;
-            
-        // It looks for in what cell the point is
-        for( const auto& cl:msh.cells)
-        {
-            if( pt_in_cell<T,Mesh>(msh,pt,cl) )
-            {
-                //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
-                cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-                    
-                auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
-               
-                return values_cell.dot( cb.eval_basis(pt) );
-                
-            }
-            counter+=1;
-        }
-        std::cout<<"IF HERE, THERE IS A PROBLEM IN projected_level_set::operator()!!!"<<std::endl;
-        return 1e10; //to check if doesn't enter in the loop
-    }
-
-        
-    // IT WORKS ONLY FOR NOT-AGGLOMERATED MESHES --> FAST
-    T operator()( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
-    {
-            
-        size_t counter = offset(msh,cl) ;
-        cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-        //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
-        auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
-        T tmp = values_cell.dot( cb.eval_basis(pt) );
-           
-        return tmp;
-                
-    }
-        
-    // IT WORKS ONLY FOR NOT-AGGLOMERATED MESHES --> FAST
-    T operator()( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::face_type& fc ) const
-    {
-        auto counter_face = offset(msh,fc);
-        size_t counter_cell;
-        // ATTENTION, ALL THIS WORKS IN STRUCTURED QUADRANGULAR MESHES
-               
-        // Check if I am in the last row, upper faces (ordered differently)
-        if(counter_face>=last_row_init && counter_face<=last_row_end)
-        {
-            counter_cell = (Ny-1)*Nx + counter_face%(last_row_init);
-        }
-        else
-        {
-            // Find in what row the face is
-            auto  num_cell_row = floor(counter_face/(number_faces_one_row));
-            if ( counter_face!= ( (2*Nx)*(num_cell_row+1)+num_cell_row ) )
-            {
-                // Faces not on the right boudary, to know in what cell are, it is sufficient to analyse the low and left face of each quadrangular cell.
-                counter_cell = floor( (counter_face-num_cell_row)/2.0 );
-            }
-            else
-            {
-                // Face on the right boudary,
-                counter_cell = ( num_cell_row+1 )*Nx -1;
-            }
-            
-        }
-        //std::cout<<"Face->Cell number "<<counter_cell<<std::endl;
-        auto cl = msh.cells.at(counter_cell);
-        cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-        //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
-        auto values_cell = (sol_HHO.block(0,counter_cell,local_dim,1)).col(0);
-        T tmp = values_cell.dot( cb.eval_basis(pt) );
-        return tmp;
-
-               
-    }
-        
-        
-    // IT WORKS FOR ALL THE MESHES --> SLOW
-    Eigen::Matrix<T,2,1> normal(const point<T,2>& pt) const
-    {
-        Eigen::Matrix<T,2,1> ret;
-
-        ret = gradient(pt);
-        return ret/ret.norm();
-    }
-        
+         sol_FEM = mapped_phi ;
+         converting_into_HHO_formulation( sol_FEM );
          
-    // IT WORKS FOR ALL THE MESHES --> SLOW
-    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
-    {
-        size_t counter=0;
-        //std::cout<<"I AM IN GRADIENT SLOW !!!!"<<std::endl;
-        Eigen::Matrix<T,2,1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        for( const auto& cl:msh.cells)
-        {
-            if(pt_in_cell<T,Mesh>(msh,pt,cl))
-            {
-                cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-                //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
-                    
-                auto values_cell = sol_HHO.col(counter);
-                auto grad_eval =  cb.eval_gradients(pt);
-                ret(0) = values_cell.dot( grad_eval.col(0) );
-                // std::cout<<"Value of derivative new along x"<<ret(0)<<std::endl;
-                ret(1) = values_cell.dot( grad_eval.col(1) );
-
-                return ret;
-            }
-            counter+=1;
-
-        }
-        std::cout<<"Se compare questo problema in gradient()"<<std::endl;
-        ret(0)+=1e10;
-        ret(1)+=1e10;
-        return ret; //to check if doesn't enter in the loop
-
-    }
+         std::cout<<"IN COEFFICIENT_MAPPING, CHECKING phi = 0, after mappin becomes --> "<< ( 0.0 - phi_min )/( phi_max - phi_min )<<std::endl;
+         std::cout<<"It should be close to 1/2, error = "<< 1./2. - ( 0.0 - phi_min )/( phi_max - phi_min ) <<std::endl;
+         
+         // CHECK MAX AND MIN AFTER OPERATIONS
+         T ret0 = -10.0;
+         T ret1 = 10.0;
+         size_t counter_ret0 = 0;
+         
+         for(auto& cl:msh.cells)
+         {
+             cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl , degree_FEM);
+             
+             for(auto& nd : nodes ){
+                 auto phi_tmp = cb.eval_basis(nd);
+                 auto values_cell = (sol_HHO.block(0,counter_ret0,local_dim,1)).col(0);
+                 auto new_ret = values_cell.dot(phi_tmp) ;
+                 ret0 = std::max( new_ret , ret0 ) ;
+                 ret1 = std::min( new_ret , ret1);
+             }
+             counter_ret0++;
+         }
+         
+         std::cout<<"LEVEL_SET: CHECK VALUES AFTER MAPPING: MAX = "<<ret0<< " , MIN = "<<ret1<<std::endl;
+         
+     }
+     
+     
+     void
+     coefficients_mapping_MAX_MAX( )
+     {
 
          
-        // IT WORKS FOR NOT-AGGLOMERATED MESHES --> FAST
-    Eigen::Matrix<T,2,1> gradient( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
-    {
+         Matrix<T, Dynamic, 1> mapped_phi = Matrix<T, Dynamic, 1>::Zero( ndof_FE );
+         
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         Matrix<T, Dynamic, 1> sol_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         
+         for( const auto& cl : msh.cells )
+         {
+             size_t cell_offset = offset(msh, cl) ;
+             cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh , cl , degree_FEM);
+             size_t ct = 0;
+             for (auto& pt : nodes )
+             {
+                 if( std::abs(phi_max) >= std::abs(phi_min))
+                     RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl )+ phi_max) /( 2.0*phi_max );
+                 else
+                     RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl )-phi_min ) /( -2.0*phi_min );
+                 
+                 ct++;
+             }
+             
+             sol_vandermonde = vandermonde_interpolant.solve(RHS_vandermonde);
+          
+             for (size_t i = 0; i < local_dim; i++)
+             {
+                 auto asm_map = connectivity_matrix[cell_offset][i].first ;
+                 mapped_phi(asm_map) = sol_vandermonde(i) ;
+             }
+              
+         } // end of cl loop
         
-        // MATRIX NOTATION
-        size_t counter = offset(msh,cl);
-        Eigen::Matrix<T,2,1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-        //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
-        auto values_cell = sol_HHO.col(counter);
-        auto grad_eval =  cb.eval_gradients(pt);
-        ret(0) = values_cell.dot( grad_eval.col(0) );
-        // std::cout<<"Value of derivative new along x"<<ret(0)<<std::endl;
-        ret(1) = values_cell.dot( grad_eval.col(1) );
-        //values_cell.dot( grad_eval.col(1) );
-        // std::cout<<"Value of derivative new along y"<<ret(1)<<std::endl;
-        return ret;
+         sol_FEM = mapped_phi ;
+         converting_into_HHO_formulation( sol_FEM );
+         
+         std::cout<<"IN COEFFICIENT_MAPPING MAX MAX, CHECKING phi = 0, after mappin becomes --> "<< ( 0.0 +phi_max )/( 2.0*phi_max )<<std::endl;
+         std::cout<<"It should be close to 1/2, error = "<< 1./2. - ( 0.0 + phi_max )/( 2.0*phi_max  ) <<std::endl;
+         
+         // CHECK MAX AND MIN AFTER OPERATIONS
+         T ret0 = -10.0;
+         T ret1 = 10.0;
+         size_t counter_ret0 = 0;
+         
+         for(auto& cl:msh.cells)
+         {
+             cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl , degree_FEM);
+             
+             for(auto& nd : nodes ){
+                 auto phi_tmp = cb.eval_basis(nd);
+                 auto values_cell = (sol_HHO.block(0,counter_ret0,local_dim,1)).col(0);
+                 auto new_ret = values_cell.dot(phi_tmp) ;
+                 ret0 = std::max( new_ret , ret0 ) ;
+                 ret1 = std::min( new_ret , ret1);
+             }
+             counter_ret0++;
+         }
+         
+         std::cout<<"LEVEL_SET: CHECK VALUES AFTER MAPPING_MAX_MAX: MAX = "<<ret0<< " , MIN = "<<ret1<<std::endl;
+         
+     }
+     
+     
+     
+     void
+     coefficients_inverse_mapping( )
+     {
+         
+         Matrix<T, Dynamic, 1> mapped_phi = Matrix<T, Dynamic, 1>::Zero( ndof_FE );
+         
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         Matrix<T, Dynamic, 1> sol_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         
+         for( const auto& cl : msh.cells )
+         {
+             size_t cell_offset = offset(msh, cl) ;
+             
+             cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh , cl , degree_FEM);
+             size_t ct = 0;
+             for (auto& pt : nodes )
+             {
+                 RHS_vandermonde(ct) = phi_min + (*this)(pt , msh , cl )*( phi_max - phi_min );
+                 ct++;
+             }
+             sol_vandermonde = vandermonde_interpolant.solve(RHS_vandermonde);
+             
+             for (size_t i = 0; i < local_dim; i++)
+             {
+                 auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                 mapped_phi(asm_map) = sol_vandermonde(i) ;
+             }
+              
+             
+         } // end of cl loop
+         
+         sol_FEM = mapped_phi ;
+         converting_into_HHO_formulation( sol_FEM );
+         
+         // CHECK MAX AND MIN AFTER OPERATIONS
+         T ret0 = -10.0;
+         T ret1 = 10.0;
+         size_t counter_ret0 = 0;
+         
+         for(auto& cl:msh.cells)
+         {
+             cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl , degree_FEM);
+             
+             for(auto& nd : nodes ){
+                 auto phi_tmp = cb.eval_basis(nd);
+                 auto values_cell = (sol_HHO.block(0,counter_ret0,local_dim,1)).col(0);
+                 auto new_ret = values_cell.dot(phi_tmp) ;
+                 ret0 = std::max( new_ret , ret0 ) ;
+                 ret1 = std::min( new_ret , ret1);
+             }
+             counter_ret0++;
+         }
+         
+         std::cout<<"LEVEL_SET: CHECK VALUES AFTER MAPPING: MAX = "<<ret0<< " , MIN = "<<ret1<<std::endl;
             
-    }
+     }
+         
+      
+     void
+     coefficients_inverse_mapping_MAX_MAX( )
+     {
+         
+         Matrix<T, Dynamic, 1> mapped_phi = Matrix<T, Dynamic, 1>::Zero( ndof_FE );
+         
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         Matrix<T, Dynamic, 1> RHS_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         Matrix<T, Dynamic, 1> sol_vandermonde = Matrix<T, Dynamic, 1>::Zero( local_dim );
+         
+         for( const auto& cl : msh.cells )
+         {
+             size_t cell_offset = offset(msh, cl) ;
+             
+             cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh , cl , degree_FEM);
+             size_t ct = 0;
+             for (auto& pt : nodes )
+             {
+                 if( std::abs(phi_max) >= std::abs(phi_min))
+                     RHS_vandermonde(ct) = -phi_max + (*this)(pt , msh , cl )* ( 2.0 * phi_max );
+                 else
+                     RHS_vandermonde(ct) = phi_min - (*this)(pt , msh , cl )* ( 2.0 * phi_min );
+                 
+                 ct++;
+             }
+             sol_vandermonde = vandermonde_interpolant.solve(RHS_vandermonde);
+             
+             for (size_t i = 0; i < local_dim; i++)
+             {
+                 auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                 mapped_phi(asm_map) = sol_vandermonde(i) ;
+             }
+              
+             
+         } // end of cl loop
+         
+         sol_FEM = mapped_phi ;
+         converting_into_HHO_formulation( sol_FEM );
+         
+         // CHECK MAX AND MIN AFTER OPERATIONS
+         T ret0 = -10.0;
+         T ret1 = 10.0;
+         size_t counter_ret0 = 0;
+         
+         for(auto& cl:msh.cells)
+         {
+             cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl , degree_FEM);
+             
+             for(auto& nd : nodes ){
+                 auto phi_tmp = cb.eval_basis(nd);
+                 auto values_cell = (sol_HHO.block(0,counter_ret0,local_dim,1)).col(0);
+                 auto new_ret = values_cell.dot(phi_tmp) ;
+                 ret0 = std::max( new_ret , ret0 ) ;
+                 ret1 = std::min( new_ret , ret1);
+             }
+             counter_ret0++;
+         }
+         
+         std::cout<<"LEVEL_SET: CHECK VALUES AFTER INVERSE_MAPPING_MAX_MAX: MAX = "<<ret0<< " , MIN = "<<ret1<<std::endl;
+            
+     }
+         
+         
+         
+     void  set_discrete_points( Eigen::Matrix<T, Dynamic, Dynamic>& values_new)
+     {
+         sol_HHO = values_new ;
+         std::cout<<" Using set_discrete_points check that sol_FEM already uploaded!"<<std::endl;
+         
+     }
+         
+         
+     void converting_into_HHO_formulation( const Eigen::Matrix<T, Dynamic, 1>& values_new )
+     {
+         // SAVE BOTH SOL_HHO AND VERTICES
+         for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
+         {
+             for (size_t i = 0; i < local_dim; i++){
+                 size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
+                 sol_HHO(i,counter_bis) = values_new( asm_map );
+                 
+             }
+             size_t i_vertex = counter_bis+floor(counter_bis/Nx);
+             vertices(i_vertex) = sol_HHO(0,counter_bis) ;
+             vertices(i_vertex+1) = sol_HHO(1,counter_bis) ;
+             vertices(i_vertex+Nx+2) = sol_HHO(2,counter_bis) ;
+             vertices(i_vertex+Nx+1) = sol_HHO(3,counter_bis) ;
+                 
+         }
+         std::cout<<" Using converting_into_HHO_formulation. TO BE CHECKED that sol_FEM already uploaded!"<<std::endl;
+         
+     }
+         
+     void converting_into_FE_formulation( const Eigen::Matrix<T, Dynamic, Dynamic>& values_new )
+     {
+           
+         for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
+         {
+             for (size_t i = 0; i < local_dim; i++){
+                 size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
+                 sol_FEM( asm_map ) = values_new(i,counter_bis) ;
+             }
+             size_t i_vertex = counter_bis+floor(counter_bis/Nx);
+             vertices(i_vertex) = values_new(0,counter_bis) ;
+             vertices(i_vertex+1) = values_new(1,counter_bis) ;
+             vertices(i_vertex+Nx+2) = values_new(2,counter_bis) ;
+             vertices(i_vertex+Nx+1) = values_new(3,counter_bis) ;
+
+         }
+         std::cout<<" Using converting_into_FE_formulation. TO BE CHECKED that sol_HHO already uploaded!"<<std::endl;
+        
+     }
+     
+     
+     
+            
+     void set_max_min()
+     {
+         
+         T ret0 = -10.0;
+         T ret1 = 10.0;
+         size_t counter_ret0 = 0;
+         
+         for(auto& cl:msh.cells)
+         {
+             cell_basis_Bernstein<Mesh,T> cb(msh, cl, degree_FEM);
+             auto nodes = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl , degree_FEM);
+             
+             for(auto& nd : nodes ){
+                 auto phi_tmp = cb.eval_basis(nd);
+                 auto values_cell = (sol_HHO.block(0,counter_ret0,local_dim,1)).col(0);
+                 auto new_ret = values_cell.dot(phi_tmp) ;
+                 ret0 = std::max( new_ret , ret0 ) ;
+                 ret1 = std::min( new_ret , ret1);
+             }
+             counter_ret0++;
+         }
+         
+         phi_max = ret0;
+         phi_min = ret1;
+         std::cout<<"LEVEL_SET: MAX IS "<<phi_max<< " , MIN IS "<<phi_min<<std::endl;
+     }
+         
+        
+     // OK FINE, IT WORKS ALSO FOR AGGLOMERATED MESHES
+     // It should work also for Bernstein Basis
+     T operator()( const typename Mesh::node_type& node ) const
+     {
+         return vertices(node.ptid);
+             
+     }
+         
+      
+     // OK FINE, IT WORKS ALSO FOR AGGLOMERATED MESHES -> BUT SLOW
+     T operator()(const point<T,2>& pt) const
+     {
+         //std::cout<<"I AM IN OPERATOR() SLOW !!!!"<<std::endl;
+         size_t counter=0;
+             
+         // It looks for in what cell the point is
+         for( const auto& cl:msh.cells)
+         {
+             if( pt_in_cell<T,Mesh>(msh,pt,cl) )
+             {
+                 //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
+                 cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+                     
+                 auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
+                
+                 return values_cell.dot( cb.eval_basis(pt) );
+                 
+             }
+             counter+=1;
+         }
+         std::cout<<"IF HERE, THERE IS A PROBLEM IN projected_level_set::operator()!!!"<<std::endl;
+         return 1e10; //to check if doesn't enter in the loop
+     }
+
+         
+     // IT WORKS ONLY FOR NOT-AGGLOMERATED MESHES --> FAST
+     T operator()( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
+     {
+             
+         size_t counter = offset(msh,cl) ;
+         cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+         //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
+         auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
+         T tmp = values_cell.dot( cb.eval_basis(pt) );
+            
+         return tmp;
+                 
+     }
+         
+     // IT WORKS ONLY FOR NOT-AGGLOMERATED MESHES --> FAST
+     T operator()( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::face_type& fc ) const
+     {
+         auto counter_face = offset(msh,fc);
+         size_t counter_cell;
+         // ATTENTION, ALL THIS WORKS IN STRUCTURED QUADRANGULAR MESHES
+                
+         // Check if I am in the last row, upper faces (ordered differently)
+         if(counter_face>=last_row_init && counter_face<=last_row_end)
+         {
+             counter_cell = (Ny-1)*Nx + counter_face%(last_row_init);
+         }
+         else
+         {
+             // Find in what row the face is
+             auto  num_cell_row = floor(counter_face/(number_faces_one_row));
+             if ( counter_face!= ( (2*Nx)*(num_cell_row+1)+num_cell_row ) )
+             {
+                 // Faces not on the right boudary, to know in what cell are, it is sufficient to analyse the low and left face of each quadrangular cell.
+                 counter_cell = floor( (counter_face-num_cell_row)/2.0 );
+             }
+             else
+             {
+                 // Face on the right boudary,
+                 counter_cell = ( num_cell_row+1 )*Nx -1;
+             }
+             
+         }
+         //std::cout<<"Face->Cell number "<<counter_cell<<std::endl;
+         auto cl = msh.cells.at(counter_cell);
+         cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+         //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
+         auto values_cell = (sol_HHO.block(0,counter_cell,local_dim,1)).col(0);
+         T tmp = values_cell.dot( cb.eval_basis(pt) );
+         return tmp;
+
+                
+     }
+         
+         
+     // IT WORKS FOR ALL THE MESHES --> SLOW
+     Eigen::Matrix<T,2,1> normal(const point<T,2>& pt) const
+     {
+         Eigen::Matrix<T,2,1> ret;
+
+         ret = gradient(pt);
+         return ret/ret.norm();
+     }
+         
+          
+     // IT WORKS FOR ALL THE MESHES --> SLOW
+     Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+     {
+         size_t counter=0;
+         //std::cout<<"I AM IN GRADIENT SLOW !!!!"<<std::endl;
+         Eigen::Matrix<T,2,1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+         for( const auto& cl:msh.cells)
+         {
+             if(pt_in_cell<T,Mesh>(msh,pt,cl))
+             {
+                 cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+                 //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
+                     
+                 auto values_cell = sol_HHO.col(counter);
+                 auto grad_eval =  cb.eval_gradients(pt);
+                 ret(0) = values_cell.dot( grad_eval.col(0) );
+                 // std::cout<<"Value of derivative new along x"<<ret(0)<<std::endl;
+                 ret(1) = values_cell.dot( grad_eval.col(1) );
+
+                 return ret;
+             }
+             counter+=1;
+
+         }
+         std::cout<<"Se compare questo problema in gradient()"<<std::endl;
+         ret(0)+=1e10;
+         ret(1)+=1e10;
+         return ret; //to check if doesn't enter in the loop
+
+     }
+
+          
+         // IT WORKS FOR NOT-AGGLOMERATED MESHES --> FAST
+     Eigen::Matrix<T,2,1> gradient( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
+     {
+         
+         // MATRIX NOTATION
+         size_t counter = offset(msh,cl);
+         Eigen::Matrix<T,2,1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+         cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+         //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
+         auto values_cell = sol_HHO.col(counter);
+         auto grad_eval =  cb.eval_gradients(pt);
+         ret(0) = values_cell.dot( grad_eval.col(0) );
+         // std::cout<<"Value of derivative new along x"<<ret(0)<<std::endl;
+         ret(1) = values_cell.dot( grad_eval.col(1) );
+         //values_cell.dot( grad_eval.col(1) );
+         // std::cout<<"Value of derivative new along y"<<ret(1)<<std::endl;
+         return ret;
+             
+     }
+
+      
+     // IT WORKS FOR NOT-AGGLOMERATED MESHES --> FAST
+     Eigen::Matrix<T,2,1> normal(const point<T,2>& pt, const Mesh& msh, const typename Mesh::cell_type& cl) const
+     {
+         Eigen::Matrix<T,2,1> ret;
+         ret = gradient(pt,msh,cl);
+         return ret/ret.norm();
+             
+     }
+     
+     T divergence( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
+     {
+             
+         size_t counter = offset(msh,cl) ;
+         cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
+         //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
+         auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
+         
+         T grad_norm = (this->gradient( pt , msh , cl )).norm() ;
+     
+         //std::cout<<"grad norm is "<<grad_norm<<std::endl;
+         //std::cout<<"values_cell is "<<'\n'<<values_cell<<std::endl;
+         //std::cout<<"cb.eval_divergence(pt) is "<<'\n'<<cb.eval_divergence(pt)<<std::endl;
+         //std::cout<<"( values_cell.dot(cb.eval_divergence(pt)) ) is "<<( values_cell.dot(cb.eval_divergence(pt)) )<<std::endl;
+            
+         return -( values_cell.dot(cb.eval_divergence(pt)) ) / (2 * grad_norm) ;
+                 
+     }
 
      
-    // IT WORKS FOR NOT-AGGLOMERATED MESHES --> FAST
-    Eigen::Matrix<T,2,1> normal(const point<T,2>& pt, const Mesh& msh, const typename Mesh::cell_type& cl) const
-    {
-        Eigen::Matrix<T,2,1> ret;
-        ret = gradient(pt,msh,cl);
-        return ret/ret.norm();
-            
-    }
-    
-    T divergence( const point<T,2>& pt, const Mesh & msh,  const typename Mesh::cell_type& cl ) const
-    {
-            
-        size_t counter = offset(msh,cl) ;
-        cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
-        //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
-        auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
-        
-        T grad_norm = (this->gradient( pt , msh , cl )).norm() ;
-    
-        //std::cout<<"grad norm is "<<grad_norm<<std::endl;
-        //std::cout<<"values_cell is "<<'\n'<<values_cell<<std::endl;
-        //std::cout<<"cb.eval_divergence(pt) is "<<'\n'<<cb.eval_divergence(pt)<<std::endl;
-        //std::cout<<"( values_cell.dot(cb.eval_divergence(pt)) ) is "<<( values_cell.dot(cb.eval_divergence(pt)) )<<std::endl;
-           
-        return -( values_cell.dot(cb.eval_divergence(pt)) ) / (2 * grad_norm) ;
-                
-    }
-
-    
-    void smooth_cut_off( T C , T x_centre , T y_centre , T radius )
-    {
-        
-        Matrix<T, Dynamic,1> local_RHS = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
-        //Matrix<T, Dynamic, 1> RHS = Matrix<T, Dynamic, 1>::Zero( ndof_FE , 1 );
-        Matrix<T, Dynamic,1> sol_loc = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
-        CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
-        
-        T hx = params.hx();
-        T hy = params.hy();
-        T pos_r0 = 0.45; //std::min(x_centre , 1 - x_centre );
-        T dist = pos_r0 - radius + 2*0.0625;
-        T r0 = radius + dist/2.0;
-        T delta = r0/8.0;
-        std::cout<<"radius = "<<radius<<" , r0 = "<<r0<<" , delta = "<<delta<<" , hx = hy = "<<hx<<std::endl;
-        std::cout<<"value in alfa in r_int = "<<(radius-r0)/delta<<std::endl;
-        std::cout<<"value in alfa in R = "<<(pos_r0-r0)/delta<<std::endl;
-        
-        // Lambda function to define smooth function
-        auto alfa = [=](const point<T,2>& pt)
-        { // sol
-            return (1.0 - tanh( (sqrt( pow((pt.x()-x_centre),2) + pow((pt.y()-y_centre),2) ) - r0 ) / delta ))/2.0;};
-        
-        
-        
-            
-        for( const auto& cl : msh.cells )
-        {
-            size_t cell_offset = offset(msh, cl) ;
+     void smooth_cut_off( T C , T r0 , T delta , T x_centre , T y_centre )
+     {
+         
+         Matrix<T, Dynamic,1> local_RHS = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
+         //Matrix<T, Dynamic, 1> RHS = Matrix<T, Dynamic, 1>::Zero( ndof_FE , 1 );
+         Matrix<T, Dynamic,1> sol_loc = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         
+         
+         /*
+         T hx = params.hx();
+         T hy = params.hy();
+         T pos_r0 = 0.5; //std::min(x_centre , 1 - x_centre );
+         T r_max = std::max( radius_a , radius_b ) ;
+         T h = std::max( hx , hy ) ;
+         T r0 = r_max + 2*h*sqrt(2.0);
+         C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
+          //T dist = pos_r0 - radius + 2.0*0.0625;
+          //T dist = pos_r0 - radius + 2.0*0.07;
+          //T r0 = radius + dist/2.0;
+          
+          T delta = r0/8.0; // FIRST CHOICE
+         //T delta = r0/20.0;
+         */
+         
+         
+         
+         
+         
+         // Lambda function to define smooth function
+         auto alfa = [=](const point<T,2>& pt)
+         { // sol
+             return (1 - tanh( (sqrt( pow((pt.x()-x_centre),2) + pow((pt.y()-y_centre),2) ) - r0 ) / delta ))/2;};
+         
+         
+         
              
-            auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
-            for(size_t i = 0 ; i<local_dim ; i++)
-            {
-                auto pt = qps[i];
-                auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                local_RHS(i) =  ( 1.0 - alfa(pt)  ) * C + alfa(pt) * (*this)(pt,msh,cl) ;
-            }
-            
-            sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
-            
-            for (size_t i = 0; i < local_dim; i++)
-            {
-                auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                sol_FEM(asm_map) = sol_loc(i) ;
-            }
-            
-            
-            
-        } // end of cl loop
-             
-            
-            
-        converting_into_HHO_formulation(sol_FEM);
-
-        set_max_min();
-        
-        postprocess_output<double> postoutput00;
-        typedef typename Mesh::point_type       point_type;
-        point<double,2> node;
-        auto alfa_values = std::make_shared< gnuplot_output_object<double> >("alfa.dat");
-        //auto interface_pos = std::make_shared< gnuplot_output_object<double> >("interface_alfa.dat");
-        for(auto& pt:msh.points )
-        {
-            alfa_values->add_data(pt,alfa(pt));
-        }
-        postoutput00.add_object(alfa_values);
-        postoutput00.write();
-    }
-    
-    
-    void cut_off( T d )
-    {
-        
-        Matrix<T, Dynamic,1> local_RHS = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
-        Matrix<T, Dynamic,1> sol_loc = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
-        
-        CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
-        
-        
-        // Known term (f,b_i)_i , b_i Bernstein basis fx
-        for( const auto& cl : msh.cells )
-        {
+         for( const auto& cl : msh.cells )
+         {
              size_t cell_offset = offset(msh, cl) ;
               
              auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
@@ -9703,39 +10716,195 @@ struct L2projected_level_set_high_order: public level_set<T>
              {
                  auto pt = qps[i];
                  auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                 
+                 local_RHS(i) =  ( 1.0 - alfa(pt)  ) * C + alfa(pt) * (*this)(pt,msh,cl) ;
+             }
+             sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
+             sol_HHO.col(cell_offset) = sol_loc ; // SAVE Vandermonde
+             
+             if(!analytic_check)
+             {
+                 for (size_t i = 0; i < local_dim; i++)
+                 {
+                     auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                     sol_FEM(asm_map) = sol_loc(i) ;
+                 }
+                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
+                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
+                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
+                 vertices(i_vertex+Nx+2) = sol_HHO(2,cell_offset) ;
+                 vertices(i_vertex+Nx+1) = sol_HHO(3,cell_offset) ;
+             }
+             
+         } // end of cl loop
+              
+     
+             
+         //converting_into_HHO_formulation(sol_FEM);
+         if(!analytic_check)
+             set_max_min();
+         
+
+         /*
+         postprocess_output<double> postoutput00;
+         typedef typename Mesh::point_type       point_type;
+         point<double,2> node;
+         auto alfa_values = std::make_shared< gnuplot_output_object<double> >("alfa.dat");
+         //auto interface_pos = std::make_shared< gnuplot_output_object<double> >("interface_alfa.dat");
+         for(auto& pt:msh.points )
+         {
+             alfa_values->add_data(pt,alfa(pt));
+         }
+         postoutput00.add_object(alfa_values);
+         postoutput00.write();
+         
+         */
+     }
+     
+     
+     
+     
+     void smooth_cut_off( T C , T x_centre , T y_centre , T radius )
+     {
+         
+         Matrix<T, Dynamic,1> local_RHS = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
+         //Matrix<T, Dynamic, 1> RHS = Matrix<T, Dynamic, 1>::Zero( ndof_FE , 1 );
+         Matrix<T, Dynamic,1> sol_loc = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         
+         T hx = params.hx();
+         T hy = params.hy();
+         T pos_r0 = 0.45; //std::min(x_centre , 1 - x_centre );
+         T dist = pos_r0 - radius + 2.0*0.0625;
+         //T dist = pos_r0 - radius + 2.0*0.07;
+         T r0 = radius + dist/2.0;
+         T delta = r0/8.0; // FIRST CHOICE
+         //T delta = r0/20.0;
+         std::cout<<"radius = "<<radius<<" , r0 = "<<r0<<" , delta = "<<delta<<" , hx = hy = "<<hx<<std::endl;
+         std::cout<<"value in alfa in r_int = "<<(radius-r0)/delta<<std::endl;
+         std::cout<<"value in alfa in R = "<<(pos_r0-r0)/delta<<std::endl;
+         
+         // Lambda function to define smooth function
+         auto alfa = [=](const point<T,2>& pt)
+         { // sol
+             return (1 - tanh( (sqrt( pow((pt.x()-x_centre),2) + pow((pt.y()-y_centre),2) ) - r0 ) / delta ))/2;};
+         
+         
+         
+             
+         for( const auto& cl : msh.cells )
+         {
+             size_t cell_offset = offset(msh, cl) ;
+              
+             auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
+             for(size_t i = 0 ; i<local_dim ; i++)
+             {
+                 auto pt = qps[i];
+                 auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                 local_RHS(i) =  ( 1.0 - alfa(pt)  ) * C + alfa(pt) * (*this)(pt,msh,cl) ;
+             }
+             sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
+             sol_HHO.col(cell_offset) = sol_loc ; // SAVE Vandermonde
+             
+             if(!analytic_check)
+             {
+                 for (size_t i = 0; i < local_dim; i++)
+                 {
+                     auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                     sol_FEM(asm_map) = sol_loc(i) ;
+                 }
+                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
+                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
+                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
+                 vertices(i_vertex+Nx+2) = sol_HHO(2,cell_offset) ;
+                 vertices(i_vertex+Nx+1) = sol_HHO(3,cell_offset) ;
+             }
+             
+         } // end of cl loop
+              
+     
+             
+         //converting_into_HHO_formulation(sol_FEM);
+         if(!analytic_check)
+             set_max_min();
+         
+
+         /*
+         postprocess_output<double> postoutput00;
+         typedef typename Mesh::point_type       point_type;
+         point<double,2> node;
+         auto alfa_values = std::make_shared< gnuplot_output_object<double> >("alfa.dat");
+         //auto interface_pos = std::make_shared< gnuplot_output_object<double> >("interface_alfa.dat");
+         for(auto& pt:msh.points )
+         {
+             alfa_values->add_data(pt,alfa(pt));
+         }
+         postoutput00.add_object(alfa_values);
+         postoutput00.write();
+         
+         */
+     }
+     
+     
+     void cut_off( T d )
+     {
+         
+         Matrix<T, Dynamic,1> local_RHS = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
+         Matrix<T, Dynamic,1> sol_loc = Matrix<T, Dynamic, 1>::Zero( local_dim , 1);
+         
+         CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > vandermonde_interpolant( local_vandermonde );
+         
+         
+         // Known term (f,b_i)_i , b_i Bernstein basis fx
+         for( const auto& cl : msh.cells )
+         {
+             size_t cell_offset = offset(msh, cl) ;
+               
+             auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree_FEM);
+             for(size_t i = 0 ; i<local_dim ; i++)
+             {
+                 auto pt = qps[i];
+                 auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                  
                  if( (*this)(pt,msh,cl)>= d )
                      local_RHS(i) =  d ;
                  else if( (*this)(pt,msh,cl)<= -d )
                      local_RHS(i) =  -d ;
                  else
                      local_RHS(i) =  (*this)(pt,msh,cl) ;
-        
+         
              }
-            
+             
              sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
-            
-            for (size_t i = 0; i < local_dim; i++)
+             sol_HHO.col(cell_offset) = sol_loc ; // SAVE Vandermonde
+             if(!analytic_check)
              {
-                 auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                 sol_FEM(asm_map) = sol_loc(i) ;
+                 for (size_t i = 0; i < local_dim; i++)
+                 {
+                     auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                     sol_FEM(asm_map) = sol_loc(i) ;
+                 }
+             
+                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
+                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
+                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
+                 vertices(i_vertex+Nx+2) = sol_HHO(2,cell_offset) ;
+                 vertices(i_vertex+Nx+1) = sol_HHO(3,cell_offset) ;
              }
-                  
          } // end of cl loop
-              
-       
+               
         
-        
-        converting_into_HHO_formulation(sol_FEM);
-
-        set_max_min();
-        
-        
+         
+         
+         //converting_into_HHO_formulation(sol_FEM);
+         if(!analytic_check)
+             set_max_min();
+         
+         
      }
-    
-        
-        
-};
+     
+         
+         
+ };
 
 
 
@@ -14635,7 +15804,8 @@ void convergence_test(void)
                 detect_cut_cells(msh, level_set_function);
                 detect_cell_agglo_set(msh, level_set_function);
                 make_neighbors_info_cartesian(msh);
-                refine_interface2(msh, level_set_function, int_refsteps);
+                //refine_interface2(msh, level_set_function, int_refsteps);
+                refine_interface_pro(msh, level_set_function, int_refsteps);
                 make_agglomeration(msh, level_set_function);
             }
             else  // NODE DISPLACEMENT
@@ -14643,7 +15813,8 @@ void convergence_test(void)
                 move_nodes(msh, level_set_function);
                 detect_cut_faces2(msh, level_set_function); //do it again to update intersection points
                 detect_cut_cells(msh, level_set_function);
-                refine_interface2(msh, level_set_function, int_refsteps);
+                //refine_interface2(msh, level_set_function, int_refsteps);
+                refine_interface_pro(msh, level_set_function, int_refsteps);
             }
 
             // compute solution/errors
@@ -15046,6 +16217,7 @@ int main(int argc, char **argv)
         make_neighbors_info_cartesian(msh); // Non serve modificarla, in cuthho_agglomeration
     
         refine_interface2(msh, level_set_function, int_refsteps); // IN cuthho_geom->da modificare operator() ->problema se esco da cella
+        refine_interface_pro(msh, level_set_function, int_refsteps);
         std::cout << bold << yellow << "after refine_interface2"<< reset << std::endl;
         //for (auto& cl : msh.cells)
           //     {
@@ -15061,7 +16233,8 @@ int main(int argc, char **argv)
         move_nodes(msh, level_set_function);
         detect_cut_faces2(msh, level_set_function); //do it again to update intersection points
         detect_cut_cells2(msh, level_set_function);
-        refine_interface2(msh, level_set_function, int_refsteps);
+        //refine_interface2(msh, level_set_function, int_refsteps);
+        refine_interface_pro(msh, level_set_function, int_refsteps);
     }
     
     tc.toc();
@@ -15586,6 +16759,43 @@ public:
 };
 
 template<typename T , typename Fonction , typename Mesh>
+struct non_linear_entropy_new: public entropy<T,Mesh>
+{
+    const T eps;
+    Fonction phi;
+    T phi_max , phi_min ;
+    Mesh msh;
+    Eigen::Matrix<T, Dynamic, 1 > E_values ;
+    
+    non_linear_entropy_new(const T eps , const Fonction& phi ,const Mesh& msh): eps(eps),phi(phi),msh(msh)
+    {
+        phi_max = phi.phi_max;
+        phi_min = phi.phi_min;
+        E_values = Matrix<T, Dynamic, 1 >::Zero(phi.ndof_FE , 1 );
+        Eigen::Matrix<T, Dynamic, 1 > One = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        E_values = -(( ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).cwiseAbs() + eps*One ).array().log10() );
+        
+    }
+    
+    T operator()(const Fonction& f, const point<T,2>& pt, const typename Mesh::cell_type& cl) const
+    {
+        return -std::log10( std::abs( f(pt,msh,cl)*(1-f(pt,msh,cl)) ) + eps );
+    }
+    
+    T operator()(const point<T,2>& pt , const typename Mesh::cell_type& cl) const
+    {
+        return -std::log10( std::abs( phi(pt,msh,cl)*(1-phi(pt,msh,cl)) ) + eps );
+    }
+    
+    T derivative(const point<T,2>& pt, const typename Mesh::cell_type& cl) const
+    {
+       // std::cout<<"il segno di "<<((phi_max-phi(pt,msh,cl))*(phi(pt,msh,cl)-phi_min ))<<" is "<< sgn( (phi_max-phi(pt,msh,cl))*(phi(pt,msh,cl)-phi_min ) )<<std::endl;
+        return -1./( ( std::abs( (1-phi(pt,msh,cl))*phi(pt,msh,cl)  ) +eps )*std::log(10) ) * sgn( (1-phi(pt,msh,cl))*phi(pt,msh,cl)  ) * ( 1 - 2*phi(pt,msh,cl)  ) ;
+    }
+   
+};
+
+template<typename T , typename Fonction , typename Mesh>
 struct non_linear_entropy: public entropy<T,Mesh>
 {
     const T eps;
@@ -15725,17 +16935,26 @@ struct taylor_green_vortex: public velocity_field<T>
     T viscosity = 2.0 ;
     T time = 0.0 ;
     T F = std::exp( -2*viscosity * time ) ;
+    bool old_tgv = true;
     
-    taylor_green_vortex(T a ): viscosity(a){};
+    taylor_green_vortex(T a , bool old_tgv): viscosity(a), old_tgv(old_tgv){};
     taylor_green_vortex(){};
-
+    taylor_green_vortex(T a ): viscosity(a){};
+    
     Eigen::Matrix<T,2,1> operator()(const point<T,2>& pt) const
     {
         Eigen::Matrix<T,2,1> ret;
-    
-        ret(0) =  std::cos( 2*M_PI*pt.x() ) * std::sin( 2*M_PI*pt.y() ) * F ;
-        ret(1) = -std::sin( 2*M_PI*pt.x() ) * std::cos( 2*M_PI*pt.y() ) * F ;
-       
+        
+        if( old_tgv )
+        {
+            ret(0) =  std::cos( 2*M_PI*pt.x() ) * std::sin( 2*M_PI*pt.y() ) * F ;
+            ret(1) = -std::sin( 2*M_PI*pt.x() ) * std::cos( 2*M_PI*pt.y() ) * F ;
+        }
+        else
+        {
+            ret(0) =  std::sin( 2*M_PI*pt.x() ) * std::cos( 2*M_PI*pt.y() ) * F ;
+            ret(1) = -std::cos( 2*M_PI*pt.x() ) * std::sin( 2*M_PI*pt.y() ) * F ;
+        }
         return ret;
     }
     
@@ -20728,6 +21947,782 @@ run_FEM_SPARSE_first_order_LAGRANGE(const Mesh & msh, const FiniteSpace& fe_data
     
 }
 
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM LOW ORDER -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
+    
+    timecounter tc;
+    tc.tic();
+    
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+    
+   
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+  
+    
+  
+    // SAVING OF USEFUL MATRICES
+    Matrix<T, Dynamic, 1> global_lumped_mass = phi.Global_Mass_Lumped;
+    
+    auto global_cij_x = phi.Global_c_term_x ;
+    auto global_cij_y = phi.Global_c_term_y ;
+    auto local_vandermonde = phi.local_vandermonde ;
+    
+    auto cij_norm = phi.cij_norm ;
+    auto nij0 = phi.nij0 ;
+    auto nij1 = phi.nij1 ;
+    
+    auto cji_norm = phi.cij_norm ;
+    auto nji0 = phi.nji0 ;
+    auto nji1 = phi.nji1 ;
+    
+    
+    
+    
+    
+    // VANDERMONDE MATRIX INTERPOLATION
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+    
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            
+        }
+        
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+            
+        }
+        
+        
+        i_fl++;
+    }
+    
+
+    tc_solver2.toc();
+    std::cout << bold << yellow << "DIRECT INVERSION OF VANDERMONDE MATRIX LOCAL, t = " << tc_solver2 << " seconds" << reset << std::endl;
+    
+    
+    
+    timecounter tc_case00;
+    tc_case00.tic();
+    
+    
+    
+    // CONVOLUTION TERM
+    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    
+    
+    
+    // TERM d_ij
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        for(auto& elem:row_i)
+        {
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+            
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+               
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+            
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+            
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+            
+            sum_row += val_dij ;
+            
+            
+            if( counter_row != elem ){
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+                term_dij_no_entropy(counter_row) += val_dij*(phi_FEM(elem)-phi_FEM(counter_row));
+            }
+      
+            
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        counter_row++;
+        
+    }
+    
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+    
+    
+    
+    tc_case00.toc();
+    std::cout << bold << yellow << "RESOLUTION OF LOW ORDER TRANSPORT, t = " << tc_case00 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case01;
+    tc_case01.tic();
+    
+    // CHECK TIME STEP dt
+    T dt_old = dt ;
+    std::cout<<bold<<yellow<<"---> COND IN TEMPO CFL, ALEXANDRE BOOK"<<reset<<std::endl;
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+    auto u_max = u.sol_FEM.first.template lpNorm<Infinity>() + u.sol_FEM.second.template lpNorm<Infinity>() ;
+    T nu_max = CFL_numb/fe_data.hx*u_max;
+    T nu0 = dt_old/fe_data.hx*u_max;
+    T nu1 = dt/fe_data.hx*u_max;
+    
+     std::cout<<"NOTICE: nu_max = "<<nu_max<<" AND nu(dt_old) = "<<nu0<< " AND nu(dt_CFL) "<<nu1<<std::endl;
+    
+    if(dt_old != dt )
+    {
+        std::cout<<"dt is "<<dt_old<<" and dt CFL is "<<dt<<" . STOP!"<<std::endl;
+        exit(10);
+    }
+    
+    tc_case01.toc();
+    std::cout << bold << yellow << "TIME CHECKING, t = " << tc_case01 << " seconds" << reset << std::endl;
+    
+ 
+  
+    
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+   
+    
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+  
+    
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+    size_t counter_dir = 0 ;
+    for (const auto& dir_elem : fe_data.Dirichlet_boundary )
+    {
+        if(dir_elem){
+            phi_L(counter_dir) = phi_FEM(counter_dir) ;
+        }
+        counter_dir++ ;
+    }
+     
+    
+    
+    
+    
+   
+    
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_L ;
+    phi.converting_into_HHO_formulation(phi_L);
+   
+    
+    
+    tc.toc();
+    std::cout << bold << yellow << "FEM method, time resolution: " << tc << " seconds" << reset << std::endl;
+       
+       
+    
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_L = std::make_shared< gnuplot_output_object<double> >("phi_L.dat");
+    
+    
+    
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            test_phi_L->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_L);
+    postoutput5.write();
+    */
+  
+    
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    
+    
+
+    //return phi_tilde;
+    
+}
+
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
+    
+    timecounter tc;
+    tc.tic();
+    
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+    
+    
+    phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+   
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+  
+    
+    // NON LINEAR ENTROPY INITIALISATION
+    const T eps = 1e-14 ; //constant into entropy
+    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+   
+    
+    // PHI TILDE INITIALISATION --> (FOR HIGH ORDER METHOD)
+    auto phi_tilde = L2_projection< T, Mesh , FiniteSpace> ( fe_data , msh );
+    
+    
+    // SAVING OF USEFUL MATRICES
+    auto global_mass = phi.Global_Mass ;
+    Matrix<T, Dynamic, 1> global_lumped_mass = phi.Global_Mass_Lumped;
+    
+    auto global_cij_x = phi.Global_c_term_x ;
+    auto global_cij_y = phi.Global_c_term_y ;
+    auto local_vandermonde = phi.local_vandermonde ;
+    
+    auto cij_norm = phi.cij_norm ;
+    auto nij0 = phi.nij0 ;
+    auto nij1 = phi.nij1 ;
+    
+    auto cji_norm = phi.cij_norm ;
+    auto nji0 = phi.nji0 ;
+    auto nji1 = phi.nji1 ;
+    
+    
+    
+    // INITIALISATION OF THE SOLVER (CONJUGATE GRADIENT)
+    /*
+    ConjugateGradient<SparseMatrix<T> > solver_prova;
+    solver_prova.compute(global_mass);
+    if(solver_prova.info()!=Success){
+           std::cout<<"FAILED SOLVER PROVA."<<std::endl;
+           exit(1);
+       }
+    */
+    timecounter tc_solver;
+    tc_solver.tic();
+    
+    SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+    solver_global_mass.compute(global_mass); // use solver_global_mass to solve M^-1
+    
+    if(solver_global_mass.info()!=Success){
+        std::cout<<"FAILED SOLVER LLT."<<std::endl;
+        exit(1);
+    }
+    
+    tc_solver.toc();
+    std::cout << bold << yellow << "INVERSION WITH CHOLESKY METHOD, t = " << tc_solver << " seconds" << reset << std::endl;
+       
+    
+    /*
+    timecounter tc_solver1_bis;
+    tc_solver1_bis.tic();
+    ConjugateGradient<SparseMatrix<double>, Lower|Upper> solver2_bis;
+    solver2_bis.compute(global_mass);
+    if(solver2_bis.info()!=Success) {
+        std::cout<<"FAILED SOLVER2 PROVA ->phi_tilde"<<std::endl;
+        return;
+    }
+       
+    tc_solver1_bis.toc();
+    std::cout << bold << yellow << "INVERSION WITH ITERATIVE CG METHOD, t = " << tc_solver1_bis << " seconds" << reset << std::endl;
+    
+    */
+    
+   
+    
+    
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+    
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            
+        }
+        
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+            
+        }
+        
+        
+        i_fl++;
+    }
+    
+
+    tc_solver2.toc();
+    std::cout << bold << yellow << "DIRECT INVERSION OF VANDERMONDE MATRIX LOCAL, t = " << tc_solver2 << " seconds" << reset << std::endl;
+    
+    
+    
+    timecounter tc_case00;
+    tc_case00.tic();
+    
+    // RESOLUTION OF phi_tilde (GLOBALLY)    ( with cij(phi_j) )
+    Matrix<T, Dynamic, 1> mass_phi_old = global_mass * phi_FEM ;
+    //std::cout<<"vec1  "<<'\n'<<mass_phi_old<<std::endl;
+    
+    // CONVOLUTION TERM
+    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    
+    
+    
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+    
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    Emax_global *= -1e20;
+    Emin_global *= 1e20;
+    
+    
+    
+    
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        for(auto& elem:row_i)
+        {
+            
+            Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            
+            
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+            
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+               
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+            
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+            
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+            
+            sum_row += val_dij ;
+            
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+      
+            
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        counter_row++;
+        
+    }
+    
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+    
+    
+    
+    tc_case00.toc();
+    std::cout << bold << yellow << "RESOLUTION OF LOW ORDER TRANSPORT, t = " << tc_case00 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case01;
+    tc_case01.tic();
+    
+    // CHECK TIME STEP dt
+    T dt_old = dt ;
+    std::cout<<bold<<yellow<<"---> COND IN TEMPO CFL, ALEXANDRE BOOK"<<reset<<std::endl;
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+    auto u_max = u.sol_FEM.first.template lpNorm<Infinity>() + u.sol_FEM.second.template lpNorm<Infinity>() ;
+    T nu_max = CFL_numb/fe_data.hx*u_max;
+    T nu0 = dt_old/fe_data.hx*u_max;
+    T nu1 = dt/fe_data.hx*u_max;
+    
+    std::cout<<"NOTICE: nu_max = "<<nu_max<<" AND nu(dt_old) = "<<nu0<< " AND nu(dt_CFL) "<<nu1<<std::endl;
+    
+    if(dt_old != dt )
+    {
+        std::cout<<"dt is "<<dt_old<<" and dt CFL is "<<dt<<" . STOP!"<<std::endl;
+        exit(10);
+    }
+    
+    tc_case01.toc();
+    std::cout << bold << yellow << "TIME CHECKING, t = " << tc_case01 << " seconds" << reset << std::endl;
+    
+    
+    
+    
+    // CONSTANT TERM (PHI TILDE PROBLEM)
+    Matrix<T, Dynamic, 1> b = mass_phi_old - dt*conv_global.cwiseQuotient(global_lumped_mass);
+    //std::cout<<"TERMINE NOTO:b  "<<'\n'<<b<<std::endl;
+    
+    
+    timecounter tc_solver3;
+    tc_solver3.tic();
+    
+    // RESOLUTION OF PHI_TILDE
+    phi_tilde.sol_FEM = solver_global_mass.solve(b); // SAVE THE L2 projection
+    //auto prova0 = solver_prova.solve(b); // SAVE THE L2 projection
+    // norm() is L2 norm
+    T relative_error0 = (global_mass*phi_tilde.sol_FEM - b).norm() / b.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b norm =  " << b.norm() << " , (global_mass*phi_tilde.sol_FEM - b).norm() =  "<< (global_mass*phi_tilde.sol_FEM - b).norm() << std::endl;
+    
+    //T error0_prova = (global_mass*prova0 - b).norm() / b.norm();
+    
+    //std::cout << "The PROVA error is: " << error0_prova << std::endl;
+    //std::cout << "b norm =  " << b.norm() << " , (global_mass*prova0 - b).norm() =  "<< (global_mass*prova0 - b).norm() << std::endl;
+    /*
+    auto prova_phi_tilde_2 = solver2_bis.solve(b);
+    T relative_error2 = (global_mass*prova_phi_tilde_2 - b).norm() / b.norm();
+    std::cout << "The relative error is: " << relative_error2 << std::endl;
+    
+    
+    if(solver_global_mass.info()!=Success) {
+        std::cout<<"FAILED SOLVER 1->phi_tilde"<<std::endl;
+        exit(1);
+    }
+    */
+    tc_solver3.toc();
+    std::cout << bold << yellow << "INVERSION OF phi_tilde, t = " << tc_solver3 << " seconds" << reset << std::endl;
+    
+    // SAVING BOTH SOL_HHO AND VERTICES OF PHI_TILDE
+    std::cout<<"CONVERTING phi_tilde"<<std::endl;
+    timecounter tc_solver4;
+    tc_solver4.tic();
+    phi_tilde.converting_into_HHO_formulation( phi_tilde.sol_FEM );
+    tc_solver4.toc();
+    std::cout << bold << yellow << "CONVERTING phi_tilde, t = " << tc_solver4 << " seconds" << reset << std::endl;
+    
+    
+    
+    
+    timecounter tc_case02;
+    tc_case02.tic();
+    
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    for( auto& cl: msh.cells )
+    {
+        size_t di = 1;
+        size_t offset_cell = offset(msh,cl) ;
+        cell_basis_Bernstein<Mesh,T> cb(msh, cl, phi.degree_FEM);
+        auto cbs = cb.size();
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+        //auto qps = integrate(msh, cl, 2*(phi.degree_FEM+di));
+        //auto qps = integrate(msh, cl, (phi.degree_FEM)+di);
+        auto qps = integrate(msh, cl, di);
+        
+        for (auto& qp : qps)
+        {
+            auto bi = cb.eval_basis(qp.first);
+            auto phi_grad0 = phi.gradient(qp.first,msh,cl)(0);
+            auto phi_grad1 = phi.gradient(qp.first,msh,cl)(1);
+            
+            auto f = ( ( ( phi_tilde(qp.first,msh,cl)-phi(qp.first,msh,cl) )/dt + u(qp.first,msh,cl).first * phi_grad0 + u(qp.first,msh,cl).second * phi_grad1 ) * E.derivative(qp.first,cl) );
+            ret += qp.second * bi * f;
+        }
+        for (size_t i = 0; i < phi.local_dim; i++)
+        {
+            size_t asm_map =  phi.connectivity_matrix[offset_cell][i].first ;
+            R_i(asm_map) += ret(i) ;
+        }
+
+    }
+    
+    
+    // R_i FINALISATION:
+    //std::cout<<"Emax_global: "<<'\n'<<Emax_global<<std::endl;
+    //std::cout<<"Emin_global: "<<'\n'<<Emin_global<<std::endl;
+    //R_i = R_i.cwiseQuotient( Emax_global - Emin_global );
+    //std::cout<<"Emax_global - Emin_global = "<<'\n'<<Emax_global-Emin_global<<std::endl;
+    //std::cout<<"Ri = "<<'\n'<<R_i<<std::endl;
+    
+    tc_case02.toc();
+    std::cout << bold << yellow << "R_i PROCESS, t = " << tc_case02 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case03;
+    tc_case03.tic();
+    
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    T c_e = 1.0;
+    T c_comp = 1.0;
+    
+    
+    SparseMatrix<T> dC_ij =  SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dC_ij;
+    
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    
+    size_t counter = 0;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+            
+            if(elem!=counter)
+            {
+                
+                auto R_i_j = c_e * std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) );
+                auto value_E = std::min( dij.coeff( counter , elem ) , R_i_j );
+                //triplets_dE_ij.push_back( Triplet<T>(counter, elem, value_E ) );
+                
+                auto value_1 = 0.5*( phi_FEM(counter) + phi_FEM(elem) );
+                auto value_2 = std::max( value_1*(1.0 -value_1) , 0.0 );
+                //triplets_phi_ij.push_back( Triplet<T>(counter, elem, value_bis ) );
+                //T value = 0.0;
+                bool check_else = FALSE;
+                T value = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                /*
+                if( (std::abs(phi_FEM(counter) - phi_FEM(elem))>1e-15) && (std::abs(value_2)>1e-15) ){
+                    value = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                }
+                */
+                if( (std::abs(phi_FEM(counter) - phi_FEM(elem))<1e-20) && (std::abs(value_2)<1e-20) ){
+                    std::cout<<"SONO IN ELSE: std::abs(phi_FEM(counter) - phi_FEM(elem)) = "<<std::abs(phi_FEM(counter) - phi_FEM(elem))<< " and value_2 = "<<value_2<<std::endl;
+                    std::cout<<"elem = "<<elem << " and counter = "<<counter<<std::endl;
+                    auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                    std::cout<<"1.0 - c_comp * value = "<<(1.0 - c_comp * value) << " and value_C = "<<value_C<<std::endl;
+                    check_else = TRUE;
+                }
+                /*
+                else{
+                    std::cout<<"SONO IN ELSE: std::abs(phi_FEM(counter) - phi_FEM(elem)) = "<<std::abs(phi_FEM(counter) - phi_FEM(elem))<< " and value_2 = "<<value_2<<std::endl;
+                    std::cout<<"elem = "<<elem << " and counter = "<<counter<<std::endl;
+                    auto value_prova = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) ) ;
+                    auto value_C = std::max( 1.0 - c_comp * value_prova , 0.0 ) ;
+                    std::cout<<"1.0 - c_comp * value = "<<(1.0 - c_comp * value_prova) << " and value_C = "<<value_C<<std::endl;
+                    check_else = TRUE;
+                }
+                */
+                auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                if(check_else){
+                    std::cout<<"value_C GIUSTO = "<<value_C <<std::endl;
+                    value = (value_2 + 1e-18)/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                    value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                    //value_C = 1.0;
+                    std::cout<<"Se NaN-> metto dC = 0!!! -> value_C CORRETTO = "<<value_C<<'\n' <<std::endl;
+                } // CONTROLLA QUAAAAA
+                
+                auto value_dC_ij = value_E * value_C ;
+                triplets_dC_ij.push_back( Triplet<T>(counter, elem, value_dC_ij ) );
+                
+                term_dij_no_entropy(counter) += dij.coeff(counter,elem)*(phi_FEM(elem)-phi_FEM(counter));
+                
+                term_dij(counter) += value_dC_ij*(phi_FEM(elem)-phi_FEM(counter));
+            
+        
+            }
+            
+            
+        }
+        counter++;
+    }
+    
+    dC_ij.setFromTriplets( triplets_dC_ij.begin(), triplets_dC_ij.end() );
+    triplets_dC_ij.clear();
+
+    
+    tc_case03.toc();
+    std::cout << bold << yellow << "ENTROPIC and HO PROCESS, t = " << tc_case03 << " seconds" << reset << std::endl;
+    
+  
+    
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+   
+    
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+  
+
+    timecounter tc_solver5;
+    tc_solver5.tic();
+    // RESOLUTION HIGH ORDER -> NO MIN MAX PRINCIPLE PRESERVING
+    Matrix<T, Dynamic, 1> b_phiH = mass_phi_old - dt * conv_global + dt * term_dij ;
+    Matrix<T, Dynamic, 1> phi_H = solver_global_mass.solve(b_phiH);
+    
+    //auto prova1 = solver_prova.solve(b_phiH); // SAVE THE L2 projection
+    
+    tc_solver5.toc();
+    std::cout << bold << yellow << "SOLUTION phi_H, t = " << tc_solver5 << " seconds" << reset << std::endl;
+    
+    //std::cout << "mass_phi_old =  " << mass_phi_old << " , conv_global =  "<< conv_global << " , term_dij = "<< term_dij << " , dt = "<< dt << std::endl;
+    
+    relative_error0 = (global_mass*phi_H - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b_phiH.norm() =  " <<b_phiH.norm() << " , (global_mass*phi_H - b_phiH).norm() =  "<< (global_mass*phi_H - b_phiH).norm() << std::endl;
+    
+    //T error1_prova = (global_mass*prova1 - b_phiH).norm() / b_phiH.norm();
+    
+    //std::cout << "The PROVA error is: " << error1_prova << std::endl;
+    //std::cout << "b_phiH norm =  " << b_phiH.norm() << " , (global_mass*prova1 - b_phiH).norm() =  "<< (global_mass*prova1 - b_phiH).norm() << std::endl;
+    
+    /*
+    auto phi_H_prova2 = solver2_bis.solve(b_phiH);
+    relative_error2 = (global_mass*phi_H_prova2 - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error2 << std::endl;
+   */
+    
+    timecounter tc_case06;
+    tc_case06.tic();
+    
+    // EXTENSION: MAXIMUM PRINCIPLE PRESERVING
+    
+    Matrix<T, Dynamic, 1> delta_phi = phi_H - phi_FEM;
+   
+    Matrix<T, Dynamic, 1> f_i = f_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , dt , dij , dC_ij , phi_FEM , S_i );
+    
+    // CORRECTION TERM
+    Matrix<T, Dynamic, 1> correction_fi = alfaf_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , phi_L , dt , dij , dC_ij , phi_FEM , S_i );
+    Matrix<T, Dynamic, 1>  phi_new = phi_L + correction_fi.cwiseQuotient(global_lumped_mass);
+    
+    
+    
+    
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+    size_t counter_dir = 0 ;
+    for (const auto& dir_elem : fe_data.Dirichlet_boundary )
+    {
+        if(dir_elem){
+            phi_L(counter_dir) = phi_FEM(counter_dir) ;
+            phi_H(counter_dir) = phi_FEM(counter_dir) ;
+            phi_new(counter_dir) = phi_FEM(counter_dir) ;
+        }
+        counter_dir++ ;
+    }
+     
+    tc_case06.toc();
+    std::cout << bold << yellow << "EXTENSION HO, t = " << tc_case06 << " seconds" << reset << std::endl;
+    
+    
+    
+   
+    
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_new ;
+    phi.converting_into_HHO_formulation(phi_new);
+    phi.coefficients_inverse_mapping();
+    
+    tc.toc();
+    std::cout << bold << yellow << "FEM method, time resolution: " << tc << " seconds" << reset << std::endl;
+       
+       
+    
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_new = std::make_shared< gnuplot_output_object<double> >("phi_new.dat");
+    
+    
+    
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            //std::cout<<pt<<std::endl;
+            //test_phi_h->add_data( pt , phi.sol_HHO(iii , counter_cl ) );
+            test_phi_new->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_new);
+    postoutput5.write();
+    */
+  
+    
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    
+    
+
+    //return phi_tilde;
+    
+}
 
 template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
 void
@@ -24025,7 +26020,8 @@ int main(int argc, char **argv)
              }
              */
            
-        refine_interface2(msh, level_set_function, int_refsteps); // IN cuthho_geom->da modificare operator() ->problema se esco da cella
+        //refine_interface2(msh, level_set_function, int_refsteps); // IN cuthho_geom->da modificare operator() ->problema se esco da cella
+        refine_interface_pro(msh, level_set_function, int_refsteps);
             //std::cout << bold << yellow << "after refine_interface2"<< reset << std::endl;
             //for (auto& cl : msh.cells)
             //     {
@@ -24089,8 +26085,8 @@ int main(int argc, char **argv)
            
         make_neighbors_info_cartesian(msh); // Non serve modificarla
            
-        refine_interface2(msh, level_set_function, int_refsteps);
-        
+        //refine_interface2(msh, level_set_function, int_refsteps);
+        refine_interface_pro(msh, level_set_function, int_refsteps);
         
         
         
@@ -24147,7 +26143,8 @@ int main(int argc, char **argv)
         move_nodes(msh, level_set_function);
         detect_cut_faces2(msh, level_set_function); //do it again to update intersection points
         detect_cut_cells2(msh, level_set_function);
-        refine_interface2(msh, level_set_function, int_refsteps);
+        //refine_interface2(msh, level_set_function, int_refsteps);
+        refine_interface_pro(msh, level_set_function, int_refsteps);
     }
        
     tc.toc();
@@ -24886,7 +26883,8 @@ files.push_back("./prescribed_vel_analysis_VORTEX/goal_oriented_analysis_VORTEX.
                     detect_node_position2(msh_i, level_set_function); // In cuthho_geom
                     detect_cut_faces2(msh_i, level_set_function); // In cuthho_geom
                     detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
-                    refine_interface2(msh_i, level_set_function, int_refsteps);
+                    //refine_interface2(msh_i, level_set_function, int_refsteps);
+                    refine_interface_pro(msh_i, level_set_function, int_refsteps);
                     output_mesh_info2_pre_FEM(msh_i, level_set_function);
                    
                     ls_cell.agglo_msh = msh_i;
@@ -24960,8 +26958,8 @@ files.push_back("./prescribed_vel_analysis_VORTEX/goal_oriented_analysis_VORTEX.
                 detect_node_position2(msh_i2, level_set_function); // In cuthho_geom
                 detect_cut_faces2(msh_i2, level_set_function); // In cuthho_geom
                 detect_cut_cells2(msh_i2, level_set_function);
-                refine_interface2(msh_i2, level_set_function, int_refsteps);
-                
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
                 output_mesh_info2_time(msh_i2, level_set_function , time );
                 
                 // UPLOADING LS_CELL -> LEVEL SET AND MESH
@@ -25112,6 +27110,7 @@ files.push_back("./prescribed_vel_analysis_VORTEX/goal_oriented_analysis_VORTEX.
             detect_cut_faces2(msh_i, level_set_function); // In cuthho_geom
             detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
             refine_interface2(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             output_mesh_info2_pre_FEM(msh_i, level_set_function);
             
             auto ls_cell = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
@@ -25623,7 +27622,8 @@ int main(int argc, char **argv)
             detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
             detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             make_agglomeration(msh_i, level_set_function); // Non serve modificarla
         }
         else
@@ -25631,7 +27631,8 @@ int main(int argc, char **argv)
             move_nodes(msh_i, level_set_function);
             detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
             detect_cut_cells2(msh_i, level_set_function);
-            refine_interface2(msh_i, level_set_function, int_refsteps);
+            //refine_interface2(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
         }
        
         tc.toc();
@@ -25854,7 +27855,8 @@ int main(int argc, char **argv)
                 detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
            
                 make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
-                refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                //refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
                 make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
             }
             else
@@ -25862,7 +27864,8 @@ int main(int argc, char **argv)
                 move_nodes(msh_i2, level_set_function);
                 detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
                 detect_cut_cells2(msh_i2, level_set_function);
-                refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
             }
         
             tc.toc();
@@ -26411,7 +28414,8 @@ int main(int argc, char **argv)
             detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
             detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             make_agglomeration(msh_i, level_set_function); // Non serve modificarla
         }
         else
@@ -26419,7 +28423,8 @@ int main(int argc, char **argv)
             move_nodes(msh_i, level_set_function);
             detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
             detect_cut_cells2(msh_i, level_set_function);
-            refine_interface2(msh_i, level_set_function, int_refsteps);
+            //refine_interface2(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
         }
        
         tc.toc();
@@ -26743,7 +28748,8 @@ int main(int argc, char **argv)
                 detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
            
                 make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
-                refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                //refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
                 make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
             }
             else
@@ -26751,7 +28757,8 @@ int main(int argc, char **argv)
                 move_nodes(msh_i2, level_set_function);
                 detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
                 detect_cut_cells2(msh_i2, level_set_function);
-                refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
             }
         
             tc.toc();
@@ -27346,7 +29353,8 @@ int main(int argc, char **argv)
             detect_cut_cells2(msh_i, level_set_function_OLD); // In cuthho_geom
             detect_cell_agglo_set(msh_i, level_set_function_OLD); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            refine_interface2(msh_i, level_set_function_OLD, int_refsteps); // IN cuthho_geom
+            //refine_interface2(msh_i, level_set_function_OLD, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i, level_set_function_OLD, int_refsteps);
             make_agglomeration(msh_i, level_set_function_OLD); // Non serve modificarla
         }
         else
@@ -27354,7 +29362,8 @@ int main(int argc, char **argv)
             move_nodes(msh_i, level_set_function_OLD);
             detect_cut_faces2(msh_i, level_set_function_OLD); //do it again to update intersection points
             detect_cut_cells2(msh_i, level_set_function_OLD);
-            refine_interface2(msh_i, level_set_function_OLD, int_refsteps);
+            //refine_interface2(msh_i, level_set_function_OLD, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function_OLD, int_refsteps);
         }
        
         tc.toc();
@@ -28326,7 +30335,8 @@ int main(int argc, char **argv)
             detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
             detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             make_agglomeration(msh_i, level_set_function); // Non serve modificarla
             }
             else
@@ -28334,7 +30344,8 @@ int main(int argc, char **argv)
             move_nodes(msh_i, level_set_function);
             detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
             detect_cut_cells2(msh_i, level_set_function);
-            refine_interface2(msh_i, level_set_function, int_refsteps);
+            //refine_interface2(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             }
        
             tc.toc();
@@ -28699,7 +30710,8 @@ int main(int argc, char **argv)
                 detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
                
                 make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
-                refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                //refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
                 make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
             }
             else
@@ -28707,7 +30719,8 @@ int main(int argc, char **argv)
                 move_nodes(msh_i2, level_set_function);
                 detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
                 detect_cut_cells2(msh_i2, level_set_function);
-                refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
             }
             
             tc.toc();
@@ -28999,6 +31012,11 @@ int main(int argc, char **argv)
     bool solve_fictdom      = false;
     bool agglomeration      = false;
 
+    
+    bool high_order = FALSE ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool cut_off_active = FALSE ; // IF FALSE IS SMOOTH, IF TRUE  CUT OFF
+
+    
     mesh_init_params<RealType> mip;
     mip.Nx = 5;
     mip.Ny = 5;
@@ -29020,7 +31038,7 @@ int main(int argc, char **argv)
      */
 
     int ch;
-    while ( (ch = getopt(argc, argv, "k:q:c:M:N:r:T:ifDAd")) != -1 )
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:ifDAdhc")) != -1 )
     {
         switch(ch)
         {
@@ -29030,10 +31048,6 @@ int main(int argc, char **argv)
 
             case 'q':
                 degree_FEM = atoi(optarg);
-                break;
-                
-            case 'c':
-                d = 1./atoi(optarg);
                 break;
 
             case 'M':
@@ -29072,6 +31086,13 @@ int main(int argc, char **argv)
                 dump_debug = true;
                 break;
             
+            case 'h':
+                high_order = true;
+                break;
+                                  
+            case 'c':
+                cut_off_active = true;
+                break;
             
 
             case '?':
@@ -29106,8 +31127,8 @@ int main(int argc, char **argv)
     
     /************** ANALYTIC LEVEL SET FUNCTION  **************/
     RealType radius = 1.0/9.0; // I PUT 6.0, IT WAS 1.0/3.0
-    RealType x_centre = 0.45; // con 0.6 da entrambe le parti su muove di più!
-    RealType y_centre = 0.45;
+    RealType x_centre = 0.5; // con 0.6 da entrambe le parti su muove di più!
+    RealType y_centre = 0.25;//0.4; // era (0.45 , 0.45)
     
     auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre);
     std::cout << bold << yellow << "Initial Analytic Area Circle: "<< M_PI*radius*radius << " , and circonference: "<< 2*M_PI*radius << reset << std::endl;
@@ -29125,8 +31146,8 @@ int main(int argc, char **argv)
    
 
     /************** ANALYTIC VELOCITY FIELD   **************/
-    T u_0 = 1.00 ; // For rotational field u_0 = 0., else u_0 = 1 for right movemenent
-    T u_1 = 0.00 ;
+    //T u_0 = 1.00 ; // For rotational field u_0 = 0., else u_0 = 1 for right movemenent
+    //T u_1 = 0.00 ;
     //auto u = linear_velocity_field<RealType>(0,u_0,0,u_1); // analytic velocity (0,0,0,0)
     //typedef linear_velocity_field<RealType> Velocity;
     //auto u = rotational_velocity_field<RealType>( x_centre , y_centre , 1.0);
@@ -29135,7 +31156,7 @@ int main(int argc, char **argv)
     //auto u = stokes_field<RealType>(4.0,2.0);
     //auto u = stokes_field<RealType>(4.0,2.0,2.0);
     //typedef stokes_field<RealType> Velocity;
-    auto u = taylor_green_vortex<RealType>( 1.0 );
+    auto u = taylor_green_vortex<RealType>( 1.0, false );
     typedef taylor_green_vortex<RealType> Velocity;
     //std::cout<<"prob here 0  "<<std::endl;
     std::cout<<"F is "<<u.F<<" and time is "<<u.time<<std::endl;
@@ -29159,26 +31180,7 @@ int main(int argc, char **argv)
     
     
     /************** LEVEL SET FUNCTION L2-PROJECTION **************/
-   
-    T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-    T C = r0*r0 - radius*radius ;
-    //T C = 0.2;  // Imposed max value at the boundary
-    
-    
-    
-    //std::cout<<"Smoothed solution, C  max value is "<< C <<std::endl;
-    std::cout<<"CUT OFF solution to check OLD RESULTS, C  max value is "<< C <<std::endl;
-    // Creation of analytic level set smoothed (close to the boundary)
-    //auto level_set_anal_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , level_set_function_anal ) ;
-    
-    //typedef analytic_level_set_smoothness< T , Fonction >  Fonction_smooth;
-    // L2 projection of the analytic smooth level set
-    //auto level_set_function = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth , msh);
-    // Plot of initial level set
-    //mapping_phi_SPARSE(level_set_function);
-    //testing_level_set_Bernstein(msh,level_set_function,level_set_anal_smooth);
-    //inverse_mapping_phi_SPARSE(level_set_function);
-    
+
     testing_divergence( msh , degree_FEM );
     
    
@@ -29187,12 +31189,64 @@ int main(int argc, char **argv)
     
     auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
     
-    //level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
-    level_set_function.cut_off( C );
     
+    
+     T r0 , rad_max ;
+     T h = std::max( fe_data.hx , fe_data.hy) ;
+     r0 = radius + h*sqrt(2.0);
+     T C = r0*r0 - radius*radius ;
+     T delta ;
+     T C_bis = std::abs(level_set_function.phi_min) ;
+     if( C_bis > C)
+         C = C_bis;
+
+     if(cut_off_active)
+     {
+         level_set_function.cut_off( C );
+         std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+         std::cout<<"r0 = "<<r0<<" , max (hx,hy) = "<< h <<std::endl;
+         
+         std::cout<<"C = "<<C<<std::endl;
+     }
+     else
+     {
+         //C = 0.2;  // Imposed max value at the boundary
+         delta = r0/8.0;
+         std::cout<<"r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
+         
+         std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
+         T pos_bdry = std::min(x_centre , y_centre) ;
+         std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                
+         
+              
+         level_set_function.smooth_cut_off( C , r0 , delta, x_centre , y_centre );
+         std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+         std::cout<<"C = "<<C<<std::endl;
+     }
+     
+    /*
+    T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+    T C = r0*r0 - radius*radius ;
+    //T C = 0.2;  // Imposed max value at the boundary
+       
+    if(cut_off_active){
+           level_set_function.cut_off( C );
+           std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+    }
+    else{
+        level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
+        std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+    }
+    */
     //testing_divergence_bis( msh , degree_FEM , level_set_function );
     testing_level_set(msh,level_set_function,level_set_function_anal);
   
+    if(high_order)
+        std::cout<<bold<<yellow<<"----> USING phi_HP HIGH order!!!!! "<<reset<<std::endl;
+    else
+        std::cout<<bold<<yellow<<"----> USING phi_L LOW order!!!!! "<<reset<<std::endl;
+    
    
     // Initiliatisation data for time routine
     auto crr_mesh =  Current_Mesh<Mesh>(msh); // current meshg
@@ -29202,25 +31256,12 @@ int main(int argc, char **argv)
     T area_previous_time = 0. , mass_previous_time = 0. , dt = 0. ;
    
     
-    std::cout<<yellow<<bold<<"check if operator(node) work for Bernstein basis"<<reset<<std::endl;
    
-    
-    // ERROR DATA INITIALISATION
-    T l1_L1_error = 0. , l2_L1_error = 0. , linf_L1_error = 0.;
-    T l1_L2_error = 0. ,  l2_L2_error = 0. , linf_L2_error = 0.;
-    T l1_Linf_error = 0. ,  l2_Linf_error = 0. , linf_Linf_error = 0.;
-    
-    T l1_W11_error = 0. , l2_W11_error = 0. , linf_W11_error = 0.;
-    T l1_W12_error = 0. ,  l2_W12_error = 0. , linf_W12_error = 0.;
-    T l1_W1inf_error = 0. ,  l2_W1inf_error = 0. , linf_W1inf_error = 0.;
-    
     // DATA CHECK INITIALISATION
     T d_a = 0. ; // It is related to area-> calculated just first and last time
-    T error_normal_global = 0. ;
-    T error_normal_local = 0. ;
     T perimeter0 = 0. ;
     T centre_mass0_x = 0. , centre_mass0_y = 0. ;
-    
+    T l1_area_error = 0. , l1_mass_error = 0. ;
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
         
@@ -29231,16 +31272,10 @@ int main(int argc, char **argv)
         typedef L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > Level_Set;
         auto ls_cell = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
         
-        //auto ls_cell = LS_cell_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
-         
         // DATA CHECK INITIALISATION
-        T area0 = 0. , mass0 = 0. , global_mass0 = 0. ;
+        T area0 = 0. , mass0 = 0. ;
         
         
-        T error_normal_global0 = 0. ;
-        T diff_interface_normal = 0. ;
-        size_t counter_interface_pts = 0;
-        //T perimeter0 = 0. ;
         if(time_step == 0)
         {
         //************ DO cutHHO MESH PROCESSING **************
@@ -29254,7 +31289,8 @@ int main(int argc, char **argv)
             detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
             detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             make_agglomeration(msh_i, level_set_function); // Non serve modificarla
             }
             else
@@ -29262,7 +31298,8 @@ int main(int argc, char **argv)
             //move_nodes(msh_i, level_set_function);
             //detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
             detect_cut_cells2(msh_i, level_set_function);
-            refine_interface2(msh_i, level_set_function, int_refsteps);
+            //refine_interface2(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             }
        
             tc.toc();
@@ -29292,7 +31329,7 @@ int main(int argc, char **argv)
                 if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
                 {
                     T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
-                    std::cout<<"Partial area is "<<partial_area<<std::endl;
+                    //std::cout<<"Partial area is "<<partial_area<<std::endl;
                     area0 += partial_area;
                     
                     auto qps = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_NEGATIVE_SIDE);
@@ -29302,24 +31339,14 @@ int main(int argc, char **argv)
                         centre_mass0_x += qp.second * qp.first.x() ;
                         centre_mass0_y += qp.second * qp.first.y() ;
                     }
-                    if( location(msh_i, cl) == element_location::ON_INTERFACE )
-                    {
-                        auto qps1 = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                        for(auto& qp1:qps1)
-                            global_mass0 += qp1.second * ls_cell(qp1.first);
-                    }
+                    
                 }
-                else
-                {
-                    auto qps2 = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                    for(auto& qp2:qps2)
-                        global_mass0 += qp2.second * ls_cell(qp2.first);
-                }
+                
             }
-            global_mass0 += mass0;
+            
             std::cout << bold << yellow << "Area at time step: "<<time_step*dt<<" is "<<reset<< area0  << reset << std::endl;
             std::cout << bold << yellow << "Internal mass at time step: "<<time_step*dt<<" is "<<reset<< mass0  << reset << std::endl;
-            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<time_step<<" is "<<reset<<global_mass0<< reset << std::endl;
+            
             std::cout << bold << yellow << "CENTRE OF MASS at time step: " <<reset <<time_step*dt<<" is "<<" ( "<< centre_mass0_x/area0  << " , "<< centre_mass0_y/area0 <<" ). " << reset << std::endl;
         
             d_a = sqrt(4.0*area0/M_PI) ;
@@ -29327,41 +31354,6 @@ int main(int argc, char **argv)
             initial_area  = area0 ;
             initial_mass = mass0 ;
         
-    
-            /// CHECKING ERROR OF THE NORMAL ( --> SI PUO TOGLIERE PER VELOCIZZARE CODICE )
-    
-            // In time = 0 -> has to be 0
-            T x_deviation = u_0*(time_step)*dt;
-            T y_deviation = u_1*(time_step)*dt;
-        
-            //auto analytic_level_set_final = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
-            //auto level_set_anal_smooth_final = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final ) ;
-            // L2 projection of the analytic smooth level set
-            
-        
-    
-            /// VECCHIA IMPLEMENTAZIONE CON PROJECT LAGRANGIAN
-    
-            auto analytic_level_set_final = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-            
-            auto level_set_exact = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final , msh);
-            level_set_exact.cut_off( C );
-            //level_set_exact.smooth_cut_off( C , x_centre + x_deviation , y_centre +y_deviation,radius );
-            
-            auto ls_cell_exact = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction ,FiniteSpace >(level_set_exact,msh_i);
-            //auto ls_cell_exact = LS_cell_high_order< T , Mesh , Level_Set, Fonction ,FiniteSpace >(level_set_exact,msh_i);
-      
-            // PLOTTING OF NORMAL
-            postprocess_output<double> postoutput_vec;
-            auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
-            auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
-            
-            postprocess_output<double> postoutput_div;
-            auto test_interface_divergence  = std::make_shared< gnuplot_output_object<double> >("divergence_interface.dat");
-            
-
-        
-      
             
         
             for(const auto & cl:msh_i.cells)
@@ -29370,43 +31362,6 @@ int main(int argc, char **argv)
             if(cl.user_data.location == element_location::ON_INTERFACE)
             {
           
-
-                ls_cell.cell_assignment(cl);
-            
-                ls_cell_exact.cell_assignment(cl);
-            /*
-                auto qps=integrate(msh_i,cl,2*degree_FEM+1);
-                for(auto& qp:qps)
-                {
-                Eigen::Matrix<T,2,1> diff_global_normal = (ls_cell.normal(qp.first) - ls_cell_exact.normal(qp.first) ).cwiseAbs();
-                error_normal_global0 += qp.second * (pow(diff_global_normal(0),2));
-                error_normal_global0 += qp.second * (pow(diff_global_normal(1),2));
-                
-                }
-                
-                // NORMAL ERROR ON THE INTERFACE POINTS: diff_interface_normal
-            */
-                for(auto& interface_point : cl.user_data.interface)
-                {
-           
-                Eigen::Matrix<T,2,1> normal = ls_cell.normal(interface_point);
-                Eigen::Matrix<T,2,1> normal_exact = ls_cell_exact.normal(interface_point);
-                    
-                diff_interface_normal += (pow((normal(0)-normal_exact(0)),2) + pow((normal(1)-normal_exact(1)),2));
-                    
-                std::pair<T,T> normal_vec = std::make_pair(normal(0),normal(1));
-                vec_normal->add_data(interface_point,normal_vec);
-                std::pair<T,T> normal_vec_exact = std::make_pair(normal(0),normal(1));
-                vec_normal_exact->add_data(interface_point,normal_vec_exact);
-                    
-                counter_interface_pts++;
-            
-                    T val = ls_cell.divergence( interface_point );
-                    std::cout<<"Divergence value in pt = "<<interface_point<<" is "<<val<<std::endl;
-                    test_interface_divergence->add_data(interface_point,val);
-                    
-                }
-      
                 for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
                 {
                     perimeter0 += ( *(interface_point+1) - *interface_point ).to_vector().norm();
@@ -29419,94 +31374,12 @@ int main(int argc, char **argv)
             
     
         } // End of the loop over the cells
-    
-        postoutput_div.add_object(test_interface_divergence);
-        postoutput_div.write();
-            
-        postoutput_vec.add_object(vec_normal);
-        postoutput_vec.add_object(vec_normal_exact);
-        postoutput_vec.write();
-        // SQRT OF NORMAL ERROR ON CUT CELLS
-        error_normal_global0 = sqrt(error_normal_global0);
-        
-        std::cout<<"number of interface points is "<<counter_interface_pts<<std::endl;
-        diff_interface_normal /= counter_interface_pts;
-        diff_interface_normal = sqrt(diff_interface_normal);
-        
-        std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*time_step <<" is " << error_normal_global0 <<std::endl;
-        std::cout<<yellow<<bold<<"The l2 error of normal N over the INTERFACE, at time "<<reset<< dt*time_step <<" is " << diff_interface_normal <<std::endl;
-        
+  
         std::cout<<yellow<<bold<<"The PERIMETER, at time "<<reset<< dt*time_step <<" is " << perimeter0 <<std::endl;
         
         std::cout<<yellow<<bold<<"The CIRCULARITY, at time "<<reset<< dt*time_step <<" is " << M_PI*d_a/perimeter0 <<std::endl;
         
-        
-        // ERROR IN TIME
-        error_normal_global += error_normal_global0*dt;
-        error_normal_local += diff_interface_normal*dt;
-       
-        // To add only if I calculate Area and Mass in all the times.
-        //area_previous_time = area0 ;
-        //mass_previous_time = mass0 ;
-           
         }
-                    
-        /// THE NEXT PART IS FOR ALL THE TIME STEPS
-        
-        
-        
-        
-        
-    
-        
-        
-        // CUT CELL PLOTTING
-        /*
-        postprocess_output<double> postoutput3;
-        auto cut_cell_disegno = std::make_shared< gnuplot_output_object<double> >("cut_cell_disegno.dat");
-        for (auto cl:msh_i.cells) {
-            if( is_cut(msh_i,cl) )
-            {
-            // std::cout<<" the cell in the new mesh num "<<offset(msh,cl)<<" is cut."<<std::endl;
-                // std::cout<<" EQuivalent to the old cells numero: ";
-                auto pts = points(msh_i,cl) ;
-                for (auto pt:pts) {
-                    T value = 1.;
-                    cut_cell_disegno->add_data(pt,value);
-                }
-            }
-        }
-        postoutput3.add_object(cut_cell_disegno);
-        postoutput3.write();
-        */
-    
-        
-/// RESOLUTION OF THE HHO PROBLEM
-        
-        // jumps sin_sin -> exp_cos
-        // auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function);
-        // jumps3 sin_sin -> sin_sin + pol
-    
-/*
-        //auto test_case = make_test_case_laplacian_jumps_3bis(msh_i, ls_cell,current_cell);
-        auto test_case = make_test_case_laplacian_jumps_3(msh_i, ls_cell);
-        // 2 possibilità.. 1) creo 3bis 2) anzichè passarle level_set_function le passo LS_cell
-
-        // auto method = make_Nitsche_interface_method(msh, 1.0, test_case);
-        // auto method = make_sym_gradrec_interface_method(msh, 1.0, test_case);
-        // auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-        auto method = make_Nitsche_interface_method_2(msh_i, 1.0, test_case);
-        //Matrix<RealType, Dynamic, 1> sol;
-        if(solve_interface){
-            run_cuthho_interface2(msh_i, degree, method,test_case, ls_cell);
-        //run_cuthho_interface(msh, degree, method, test_case);
-        }
-        if (solve_fictdom)
-            run_cuthho_fictdom(msh_i, degree, test_case);
-        
-*/
-        
-        
         
         /************** FEM -  PROCESSING **************/
          
@@ -29519,7 +31392,7 @@ int main(int argc, char **argv)
         //T dt1 = time_step_CFL_L2_velocity( u_L2_projected , mip , eps );
         T dt1 = time_step_CFL_new( u_projected , mip , eps );
         //std::cout<<"dt1 is "<<dt1<<std::endl;
-        T dt2 = 2*1e-3;
+        T dt2 = 1*1e-3;
         dt = std::min(dt1 , dt2);
         std::cout<<"I USE dt = "<<dt<<" AND CFL IS "<<dt1<<std::endl;
         
@@ -29528,431 +31401,173 @@ int main(int argc, char **argv)
         
         
         /// TRANSPORT PROBLEM:
-        
-        // FIRST ORDER PB (LAGRANGIAN BASIS) WITH LAGRANGIAN VELOCITY
-        //assert(degree_FEM==1);
-        //std::cout<<"LAGRANGIAN VELOCITY AND LAGRANGIAN BASIS FOR ALL. ONLY FIRST ORDER ALLOWED!!!"<<std::endl;
-        /*
-        std::cout<<"PRE FEM è"<<std::endl;
-        for(auto& cl : msh.cells)
-            for(auto& pt : points(msh,cl)){
-                std::cout.precision(15);
-                std::cout<<level_set_function(pt,msh,cl)<<std::endl;
-            }
-        
-        //for(auto& pt : msh.points)
-         //   std::cout<<level_set_function(pt)<<std::endl;
-        std::cout<<"FINE FEM"<<std::endl;
-        */
-        
-        
-        //auto analytic_tg_vortex = analytic_tg_vortex_function<  Mesh , Velocity , Level_Set , FiniteSpace , T > ( fe_data , u , msh , level_set_function , dt , time);
-        
-       
-        run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+      
+        if(high_order)
+            run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+        else
+            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+             
         
         time += dt ;
         u.set_time( time );
         u_projected = projection_velocity_high_order < Mesh,Velocity,FiniteSpace,T > ( fe_data , u , msh );
         
         std::cout<<"F is "<<u.F<<" and time is "<<u.time<<std::endl;
-        
+        std::cout<<"t is "<<time<<std::endl;
         testing_velocity( msh , u_projected , u );
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        /*
-        std::cout<<"LA SOL è"<<std::endl;
-        for(auto& cl : msh.cells)
-            for(auto& pt : points(msh,cl)){
-                std::cout.precision(15);
-                std::cout<<level_set_function(pt,msh,cl)<<std::endl;
-            }
-         */
-        //for(auto& pt : msh.points)
-        //     std::cout<<level_set_function(pt)<<std::endl;
-        //std::cout<<"FINE SOL"<<std::endl;
-        
-        // FIRST ORDER PB WITH CONSTANT VELOCITY FIELD
-        //run_FEM_first_order_u_const( level_set_function.msh , fe_data , level_set_function , dt , u_0 , u_1);
-        
-        // HIGH ORDER PB WITH CONSTANT VELOCITY FIELD
-        //run_FEM_SPARSE_u_const( level_set_function.msh , fe_data , level_set_function , dt , u_0 , u_1);
-        
-        // GENERAL CASE WITH LAGRANGIAN VELOCITY
-        //run_FEM_SPARSE_high_order_u_Lagrangian( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-       
-        // GENERAL CASE WITH BERNSTEIN BASIS VELOCITY
-        //run_FEM_SPARSE_high_order( level_set_function.msh , fe_data , level_set_function , u_L2_projected , dt);
-        
-        
-        // Uploading mesh data to check out differences in mass and areas at LAST TIME
-        
-        
-        
-  /*
-        
-        // testing_level_set(msh,level_set_function,level_set_function_anal);
-  
-        T x_deviation = u_0*(time_step+1)*dt;
-        T y_deviation = u_1*(time_step+1)*dt;
-        
-        
-        //auto analytic_level_set_final_bis = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
-        //auto analytic_level_set_final_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final_bis ) ;
-        // L2 projection of the analytic smooth level set
-        //auto level_set_final = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , analytic_level_set_final_smooth , msh);
-        
-        // VECCHIA IMPLEMENTAZIONE LAGRANGIAN BASIS
-        auto analytic_level_set_post_FE = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-        
-        
-        auto level_set_final = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_post_FE , msh);
-        //level_set_final.cut_off( C );
-        level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
-        //level_set_final.cut_off(d);
-        
-        testing_level_set2(msh,level_set_function,level_set_final);
-        //testing_level_set(msh,level_set_function,analytic_level_set_final);
-        
-        
-        
-        T L1_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM,1.0);
-        
-        T L2_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM,2.0);
-         
-        T Linf_err_par = Linf_error_FEM( level_set_final , level_set_function , msh,degree_FEM);
-         
-        std::cout << bold << yellow << "L1-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L1_err_par << std::endl;
-        std::cout << bold << yellow << "L2-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L2_err_par << std::endl;
-        std::cout << bold << yellow << "Linf-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< Linf_err_par << std::endl;
-        
-        T W11_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 1.0);
-        T W12_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 2.0);
-        T W1inf_err_par = W1inf_error_FEM(level_set_final , level_set_function , msh,degree_FEM);
-        
-        // l^q in time: norm in time
-        l1_L1_error += dt*L1_err_par;
-        l2_L1_error += dt*L1_err_par*L1_err_par;
-        linf_L1_error = std::max( L1_err_par , linf_L1_error );
-        l1_L2_error += dt*L2_err_par;
-        l2_L2_error += dt*L2_err_par*L2_err_par;
-        linf_L2_error = std::max( L2_err_par , linf_L2_error );
-        l1_Linf_error += dt*Linf_err_par;
-        l2_Linf_error += dt*Linf_err_par*Linf_err_par;
-        linf_Linf_error = std::max( Linf_err_par , linf_Linf_error );
-        
-        l1_W11_error += dt*W11_err_par ;
-        l2_W11_error += dt*W11_err_par*W11_err_par ;
-        linf_W11_error = std::max( W11_err_par , linf_W11_error );
-        l1_W12_error += dt*W12_err_par ;
-        l2_W12_error += dt*W12_err_par*W12_err_par ;
-        linf_W12_error = std::max( W12_err_par , linf_W12_error );
-        l1_W1inf_error += dt*W1inf_err_par;
-        l2_W1inf_error += dt*W1inf_err_par*W1inf_err_par;
-        linf_W1inf_error = std::max( W1inf_err_par , linf_W1inf_error );
-        
-        std::cout << bold << yellow << "W_1,1 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W11_err_par << std::endl;
-        std::cout << bold << yellow << "W_1,2 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W12_err_par << std::endl;
-        std::cout << bold << yellow << "W_1,inf error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W1inf_err_par << std::endl;
-     */
-      //  if( (T_N - time_step)==0 )
-      //  {
-            crr_mesh.current_mesh = msh;
-            Mesh msh_i2 =  crr_mesh.current_mesh;
-            offset_definition(msh_i2);
-            tc.tic();
-            detect_node_position2(msh_i2, level_set_function); // In cuthho_geom
-            detect_cut_faces2(msh_i2, level_set_function); // In cuthho_geom
+        crr_mesh.current_mesh = msh;
+        Mesh msh_i2 =  crr_mesh.current_mesh;
+        offset_definition(msh_i2);
+        tc.tic();
+        detect_node_position2(msh_i2, level_set_function); // In cuthho_geom
+        detect_cut_faces2(msh_i2, level_set_function); // In cuthho_geom
             
            
-            if (agglomeration)
-            {
+        if (agglomeration)
+        {
             // std::cout<<"i m here 1"<<std::endl;
-                detect_cut_cells2(msh_i2, level_set_function); // In cuthho_geom
+            detect_cut_cells2(msh_i2, level_set_function); // In cuthho_geom
                
-                detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
+            detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
                
-                make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
-                refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
-                make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
-            }
-            else
-            {
-                //move_nodes(msh_i2, level_set_function);
-                //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
-                detect_cut_cells2(msh_i2, level_set_function);
-                refine_interface2(msh_i2, level_set_function, int_refsteps);
-            }
+            make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
+            //refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i2, level_set_function, int_refsteps);
+            make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
+        }
+        else
+        {
+            //move_nodes(msh_i2, level_set_function);
+            //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
+            detect_cut_cells2(msh_i2, level_set_function);
+            //refine_interface2(msh_i2, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i2, level_set_function, int_refsteps);
+        }
             
-            tc.toc();
-            std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
+        tc.toc();
+        std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
 
-            if (dump_debug)
-            {
-                dump_mesh(msh_i2);
-                output_mesh_info(msh_i2, level_set_function);
-                test_projection(msh_i2, level_set_function, degree);
-            }
+        if (dump_debug)
+        {
+            dump_mesh(msh_i2);
+            output_mesh_info(msh_i2, level_set_function);
+            test_projection(msh_i2, level_set_function, degree);
+        }
         
-            
-            output_mesh_info2_time(msh_i2, level_set_function , time ); // IN cuthho_export..Points/Nodes don't change
+        
+        if( (time_step+1) == 50 ){
+            std::cout<<"SAVE INTERFACE TIME 0.05"<<std::endl;
+            output_mesh_info_0(msh_i2, level_set_function );
+        }
+        if( (time_step+1) == 100 ){
+            std::cout<<"SAVE INTERFACE TIME 0.1"<<std::endl;
+            output_mesh_info_1(msh_i2, level_set_function  );
+        }
+        if( (time_step+1) == 150 )
+            output_mesh_info_2(msh_i2, level_set_function  );
+        if( (time_step+1) == 200 )
+            output_mesh_info_3(msh_i2, level_set_function  );
+        if( (time_step+1) == 250 )
+            output_mesh_info_4(msh_i2, level_set_function  );
+        if( (time_step+1) == 300 )
+            output_mesh_info_5(msh_i2, level_set_function  );
+        if( (time_step+1) == 350 )
+            output_mesh_info_6(msh_i2, level_set_function  );
+        if( (time_step+1) == 400 )
+            output_mesh_info_7(msh_i2, level_set_function  );
+        if( (time_step+1) == 450 )
+            output_mesh_info_8(msh_i2, level_set_function  );
+        if( (time_step+1) == 500 )
+            output_mesh_info_9(msh_i2, level_set_function  );
+        
+        
+        
+        //output_mesh_info2_time(msh_i2, level_set_function , time ); // IN cuthho_export..Points/Nodes don't change
            
-            // UPLOADING LS_CELL -> LEVEL SET AND MESH
-            ls_cell.level_set = level_set_function;
-            ls_cell.agglo_msh = msh_i2;
+        // UPLOADING LS_CELL -> LEVEL SET AND MESH
+        ls_cell.level_set = level_set_function;
+        ls_cell.agglo_msh = msh_i2;
             
            
-            // DATA CHECK INITIALISATION
-            T  mass_fin = 0. , global_mass1 = 0. , area_fin = 0. ;
-            T centre_mass_x = 0. , centre_mass_y = 0. ;
+        // DATA CHECK INITIALISATION
+        T  mass_fin = 0. , global_mass1 = 0. , area_fin = 0. ;
+        T centre_mass_x = 0. , centre_mass_y = 0. ;
                 
-            for(auto& cl : msh_i2.cells)
+        for(auto& cl : msh_i2.cells)
+        {
+            ls_cell.cell_assignment(cl);
+            if( location(msh_i2, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i2, cl) == element_location::ON_INTERFACE )
             {
-                ls_cell.cell_assignment(cl);
-                if( location(msh_i2, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i2, cl) == element_location::ON_INTERFACE )
+                T partial_area = measure( msh_i2, cl, element_location::IN_NEGATIVE_SIDE);
+                area_fin += partial_area;
+                   
+                auto qps = integrate ( msh_i2 , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
+                   
+                for(auto& qp:qps)
                 {
-                    T partial_area = measure( msh_i2, cl, element_location::IN_NEGATIVE_SIDE);
-                    area_fin += partial_area;
-                   
-                    auto qps = integrate ( msh_i2 , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
-                   
-                    for(auto& qp:qps){
-                        mass_fin += qp.second * ls_cell(qp.first);
+                    mass_fin += qp.second * ls_cell(qp.first);
                      
-                        centre_mass_x += qp.second * qp.first.x() ;
-                        centre_mass_y += qp.second * qp.first.y() ;
-                    }
-                    /*
-                    if( location(msh_i2, cl) == element_location::ON_INTERFACE )
-                    {
-                        auto qps1 = integrate (msh_i2,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                        for(auto& qp1:qps1)
-                            global_mass1 += qp1.second * ls_cell(qp1.first);
-                    }
-                    */
+                    centre_mass_x += qp.second * qp.first.x() ;
+                    centre_mass_y += qp.second * qp.first.y() ;
                 }
-                /*
-                else
-                {
-                    auto qps2 = integrate (msh_i2,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                    for(auto& qp2:qps2)
-                        global_mass1 += qp2.second * ls_cell(qp2.first);
-                }
-                */
+                    
             }
-            //global_mass1 += mass_fin;
-                
-            d_a = sqrt(4.0*area_fin/M_PI) ;
-            std::cout << bold << yellow << "Area at time step: " <<(time_step+1)*dt<<" is "<< reset<< area_fin   << std::endl;
-            std::cout << bold << yellow << "Internal mass at time step: "<<(time_step+1)*dt<<" is "<<reset<< mass_fin  << reset << std::endl;
-                
-            std::cout << bold << yellow << "CENTRE OF MASS at time step: "<<(time_step+1)*dt<<" is "<<reset<<" ( " << centre_mass_x/area_fin <<" , " << centre_mass_y/area_fin<<" ). " << std::endl;
-            std::cout << bold << yellow << "TRANSLATION OF THE CENTRE OF MASS at time step: " <<reset <<(time_step+1)*dt<<" is "<<" ( " << centre_mass_x/area_fin - centre_mass0_x/initial_area <<" , " << centre_mass_y/area_fin - centre_mass0_y/initial_area<<" ). " << std::endl;
-            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<(time_step+1)<<" is "<<reset<<global_mass1<< reset << std::endl;
-            std::cout << bold << yellow << "Difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)  << std::endl;
-            std::cout << bold << yellow << "Difference in INTERNAL MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass) << std::endl;
-            
-                
-            std::cout << bold << yellow << "NORMALISED difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)/(std::abs(initial_area))  << std::endl;
-            std::cout << bold << yellow << "NORMALISED difference in MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass)/(std::abs(initial_mass)) << std::endl;
-                
-            //std::cout << bold << yellow << "Difference in GLOBAL MASS: "<< reset<< global_mass1 - global_mass0 << std::endl;
-                
-                
-                
-            /// CHECKING NORMAL VELOCITY
-        /*
-            x_deviation = u_0*(time_step+1)*dt;
-            y_deviation = u_1*(time_step+1)*dt;
-                
-            //auto analytic_level_set_final_exact = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
-            //auto level_set_anal_smooth_final_exact = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final_exact ) ;
-            // L2 projection of the analytic smooth level set
-            //auto level_set_exact_fin = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth_final_exact , msh);
-                
-            // VECCHIA IMPLEMENTAZIONE CON BASE LAGRANGIANA
-            auto analytic_level_set_final_exact = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-            
-            auto level_set_exact_fin = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final_exact , msh);
-            
-            //level_set_exact_fin.cut_off( C );
-            level_set_exact_fin.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
-            
-            
-            auto ls_cell_exact_fin = LS_cell_L2proj_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
-            //auto ls_cell_exact_fin = LS_cell_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
-                
-        
-            postprocess_output<double> postoutput_vec;
-            auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
-            auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
-            */
-        
-            postprocess_output<double> postoutput_div;
-            auto test_interface_divergence_fin  = std::make_shared< gnuplot_output_object<double> >("divergence_interface_fin.dat");
-                       
-            error_normal_global0 = 0. ;
-            diff_interface_normal = 0. ;
-            counter_interface_pts = 0;
-            T perimeter = 0. ;
-            T divergence_error_fin = 0. ;
-            for(const auto & cl:msh_i2.cells)
-            {
-                if(cl.user_data.location == element_location::ON_INTERFACE)
-                {
-                
-                    ls_cell.cell_assignment(cl);
-                    /*
-                    ls_cell_exact_fin.cell_assignment(cl);
-                    auto qps=integrate(msh_i2,cl,2*degree_FEM+1);
-                    for(auto& qp:qps){
-                        Eigen::Matrix<T,2,1> diff_global_normal = (ls_cell.normal(qp.first) - ls_cell_exact_fin.normal(qp.first) ).cwiseAbs();
-                        error_normal_global0 += qp.second * (pow(diff_global_normal(0),2));
-                        error_normal_global0 += qp.second * (pow(diff_global_normal(1),2));
-                        
-                    }
-                 */
-                    for(auto& interface_point : cl.user_data.interface)
-                    {
-                        /*
-                        Eigen::Matrix<T,2,1> normal = ls_cell.normal(interface_point);
-                        Eigen::Matrix<T,2,1> normal_exact = ls_cell_exact_fin.normal(interface_point);
-                                    
-                        diff_interface_normal += (pow((normal(0)-normal_exact(0)),2) + pow((normal(1)-normal_exact(1)),2));
-                                    
-                        std::pair<T,T> normal_vec = std::make_pair(normal(0),normal(1));
-                        vec_normal->add_data(interface_point,normal_vec);
-                        std::pair<T,T> normal_vec_exact = std::make_pair(normal(0),normal(1));
-                        vec_normal_exact->add_data(interface_point,normal_vec_exact);
-                        */
-                        counter_interface_pts++;
-                       
-                        T val = ls_cell.divergence( interface_point );
-                        std::cout<<"Divergence value in pt = "<<interface_point<<" is "<<val<<std::endl;
-                        divergence_error_fin += pow((std::abs(val) - 1.0/radius),2);
-                        test_interface_divergence_fin->add_data(interface_point,val);
-                    }
                
-                    for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
-                    {
-                        perimeter += ( *(interface_point+1) - *interface_point ).to_vector().norm();
-                            
-                    }
-                    //perimeter += ( *(cl.user_data.interface.begin()) - *(cl.user_data.interface.end() -1) ).to_vector().norm();
-                    //std::cout<<std::endl;
-                }
-            }
-        /*
-            postoutput_vec.add_object(vec_normal);
-            postoutput_vec.add_object(vec_normal_exact);
-            postoutput_vec.write();
-         */
-            postoutput_div.add_object(test_interface_divergence_fin);
-            postoutput_div.write();
-        
-            error_normal_global0 = sqrt(error_normal_global0);
-        
-            divergence_error_fin /= counter_interface_pts;
-            divergence_error_fin = sqrt(divergence_error_fin);
-            std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*(time_step+1) <<" is " << divergence_error_fin <<std::endl;
-                    
-            std::cout<<"number of interface points is "<<counter_interface_pts<<std::endl;
-                        
-            diff_interface_normal /= counter_interface_pts;
-            std::cout<<"diff_interface_normal = "<<diff_interface_normal<<std::endl;
-            diff_interface_normal = sqrt(diff_interface_normal);
-                    
-            std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*(time_step+1) <<" is " << error_normal_global0 <<std::endl;
-            std::cout<<"The l2 error of normal N over the INTERFACE, at time "<< dt*(time_step+1) <<" is " << diff_interface_normal <<std::endl;
-                        
-                        
-            std::cout<< bold << yellow<<"The PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << perimeter <<std::endl;
+        }
+           
                 
-            std::cout<<"perimeter = "<< perimeter << " AND  perimeter0 =  "<<perimeter0<<std::endl;
-            std::cout<< bold << yellow<<"NORMALISED DIFFERENCE PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << (perimeter - perimeter0)/perimeter0 <<std::endl;
+        d_a = sqrt(4.0*area_fin/M_PI) ;
+        std::cout << "Area at time step: " <<(time_step+1)*dt<<" is "<< area_fin   << std::endl;
+        std::cout << "Internal mass at time step: "<<(time_step+1)*dt<<" is " << mass_fin  << reset << std::endl;
                 
-            std::cout<< bold << yellow<<"The CIRCULARITY, at time "<< dt*(time_step+1)<<reset <<" is " << M_PI*d_a/perimeter <<std::endl;
-                        
-            error_normal_global += error_normal_global0*dt;
-            error_normal_local += diff_interface_normal*dt;
-                        
-                    
-            std::cout << bold << yellow << "Error l1(L2) of the normal in the CUT CELLS: "<< reset<< error_normal_global  << std::endl;
-                
-            std::cout << bold << yellow << "Error l1(l2) of the normal in the INTERFACE POINTS: "<< reset<< error_normal_local  << std::endl;
+        std::cout << "CENTRE OF MASS at time step: "<<(time_step+1)*dt<<" is "<<" ( " << centre_mass_x/area_fin <<" , " << centre_mass_y/area_fin<<" ). " << std::endl;
+        std::cout << "TRANSLATION OF THE CENTRE OF MASS at time step: "  <<(time_step+1)*dt<<" is "<<" ( " << centre_mass_x/area_fin - centre_mass0_x/initial_area <<" , " << centre_mass_y/area_fin - centre_mass0_y/initial_area<<" ). " << std::endl;
             
+        std::cout << "Difference in AREA between initial state and final TIME "<<dt*(time_step+1)<<" IS "<< (area_fin - initial_area)  << std::endl;
+        std::cout << "Difference in INTERNAL MASS between initial state and final TIME "<<dt*(time_step+1)<<" IS "<< (mass_fin - initial_mass) << std::endl;
+            
+        T diff_area_err = (area_fin - initial_area)/(std::abs(initial_area));
+        T diff_mass_err = (std::abs(mass_fin) - std::abs(initial_mass) ) / (std::abs(initial_mass));
         
-      // } // END OF T = FINAL TIME
+        std::cout << bold << yellow << "NORMALISED difference in AREA between initial state and final TIME "<<dt*(time_step+1)<<" IS "<< reset<< diff_area_err  << std::endl;
+        std::cout << bold << yellow << "NORMALISED difference in MASS between initial state and final TIME "<<dt*(time_step+1)<<" IS "<< reset<< diff_mass_err << std::endl;
+                
+                
+        l1_area_error += dt*std::abs(diff_area_err) ;
+        l1_mass_error += dt*std::abs(diff_mass_err) ;
         
+        T perimeter = 0. ;
+          
+        for(const auto & cl:msh_i2.cells)
+        {
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+               
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                {
+                    perimeter += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                            
+                }
+                  
+            }
+        }
+        
+        std::cout<<"The PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << perimeter <<std::endl;
+                
+        std::cout<<"NORMALISED DIFFERENCE PERIMETER, at time "<< dt*(time_step+1) <<" is " << (perimeter - perimeter0)/perimeter0 <<std::endl;
+                
+        std::cout<< bold << yellow<<"The CIRCULARITY, at time "<< dt*(time_step+1)<<reset <<" is " << M_PI*d_a/perimeter <<std::endl;
+                        
+             
+         
         
         
         
     } // End of the temporal loop
-/*
-    l2_L1_error = sqrt(l2_L1_error);
-    l2_L2_error = sqrt(l2_L2_error);
-    l2_Linf_error = sqrt(l2_Linf_error);
-    
-    l2_W11_error = sqrt(l2_W11_error);
-    l2_W12_error = sqrt(l2_W12_error);
-    l2_W1inf_error = sqrt(l2_W1inf_error);
-    std::cout<<'\n';
-    std::cout << bold << yellow << "l1(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L1_error << std::endl;
-    std::cout << bold << yellow << "l2(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_L1_error << std::endl;
-    std::cout << bold << yellow << "linf(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L1_error << std::endl;
-    std::cout<<'\n';
-    
-    std::cout << bold << yellow << "l1(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L2_error << std::endl;
-    std::cout << bold << yellow << "l2(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_L2_error << std::endl;
-    std::cout << bold << yellow << "linf(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L2_error << std::endl;
-    std::cout<<'\n';
-    std::cout << bold << yellow << "l1(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_Linf_error << std::endl;
-    std::cout << bold << yellow << "l2(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_Linf_error << std::endl;
-    std::cout << bold << yellow << "linf(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_Linf_error << std::endl;
-    std::cout<<'\n';
-    
-    std::cout << bold << yellow << "Seminorm l1(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W11_error << std::endl;
-   
-    std::cout << bold << yellow << "Seminorm l2(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W11_error << std::endl;
-    std::cout << bold << yellow << "Seminorm linf(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W11_error << std::endl;
-   
-    std::cout<<'\n';
-    std::cout << bold << yellow << "Seminorm l1(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W12_error << std::endl;
-    
-    std::cout << bold << yellow << "Seminorm l2(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W12_error << std::endl;
-    std::cout << bold << yellow << "Seminorm linf(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W12_error << std::endl;
-    
-    std::cout<<'\n';
-    std::cout << bold << yellow << "Seminorm l1(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W1inf_error << std::endl;
-    
-    std::cout << bold << yellow << "Seminorm l2(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W1inf_error << std::endl;
-    std::cout << bold << yellow << "Seminorm linf(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W1inf_error << std::endl;
-    std::cout<<'\n';
-    
-*/
-    // ************** ANALYTIC SOLUTION FOR FINAL TIME LINEAR VELOCITY FIELD   **************
-    /*
-    T x_deviation = u_0*(T_N+1)*dt;
-    T y_deviation = u_1*(T_N+1)*dt;
-    auto analytic_level_set_final = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-    auto level_set_final = projected_level_set< T, Mesh,Fonction>(analytic_level_set_final, msh, degree_FEM , mip);
-    
 
-    level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
-    //level_set_final.cut_off(d);
-    testing_level_set2(msh,level_set_function,level_set_final);
-    //testing_level_set(msh,level_set_function,analytic_level_set_final);
-    Lp_space_Tfin_error_FEM( level_set_final , level_set_function , msh ,degree_FEM ,1.0 );
-    Lp_space_Tfin_error_FEM( level_set_final , level_set_function , msh ,degree_FEM ,2.0 );
-    */
+    std::cout<< bold << yellow<<"l^1 area error ="<<reset << l1_area_error <<std::endl;
+    std::cout<< bold << yellow<<"l^1 mass error ="<<reset << l1_mass_error <<std::endl;
     
     return 0;
 }
@@ -29976,6 +31591,10 @@ int main(int argc, char **argv)
     bool solve_fictdom      = false;
     bool agglomeration      = false;
 
+    bool high_order = FALSE ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool cut_off_active = FALSE ; // IF FALSE IS SMOOTH, IF TRUE  CUT OFF
+
+    
     mesh_init_params<RealType> mip;
     mip.Nx = 5;
     mip.Ny = 5;
@@ -29997,7 +31616,7 @@ int main(int argc, char **argv)
      */
 
     int ch;
-    while ( (ch = getopt(argc, argv, "k:q:c:M:N:r:T:ifDAd")) != -1 )
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:ifDAdhc")) != -1 )
     {
         switch(ch)
         {
@@ -30009,9 +31628,6 @@ int main(int argc, char **argv)
                 degree_FEM = atoi(optarg);
                 break;
                 
-            case 'c':
-                d = 1./atoi(optarg);
-                break;
 
             case 'M':
                 mip.Nx = atoi(optarg);
@@ -30049,6 +31665,13 @@ int main(int argc, char **argv)
                 dump_debug = true;
                 break;
             
+            case 'h':
+                high_order = true;
+                break;
+                                  
+            case 'c':
+                cut_off_active = true;
+                break;
             
 
             case '?':
@@ -30083,8 +31706,8 @@ int main(int argc, char **argv)
     
     /************** ANALYTIC LEVEL SET FUNCTION  **************/
     RealType radius = 1.0/9.0; // I PUT 6.0, IT WAS 1.0/3.0
-    RealType x_centre = 0.45;
-    RealType y_centre = 0.5;
+    RealType x_centre = 0.3; // 0.3
+    RealType y_centre = 0.8;  // 0.8
     
     auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre);
     std::cout << bold << yellow << "Initial Analytic Area Circle: "<< M_PI*radius*radius << " , and circonference: "<< 2*M_PI*radius << reset << std::endl;
@@ -30133,33 +31756,65 @@ int main(int argc, char **argv)
     //auto u_L2_projected = L2_projection_velocity<Mesh,Velocity,FiniteSpace,T>(fe_data , u , msh);
     //testing_velocity( msh , u_L2_projected , u );
     
-    
-    
-    /************** LEVEL SET FUNCTION L2-PROJECTION **************/
-   
-    //T C = 0.2;  // Imposed max value at the boundary
-    T C = 0.2;  // Imposed max value at the boundary
-    //std::cout<<"Smoothed solution, C  max value is "<< C <<std::endl;
-    std::cout<<"CUT OFF solution to check OLD RESULTS, C  max value is "<< C <<std::endl;
-    // Creation of analytic level set smoothed (close to the boundary)
-    //auto level_set_anal_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , level_set_function_anal ) ;
-    
-    //typedef analytic_level_set_smoothness< T , Fonction >  Fonction_smooth;
-    // L2 projection of the analytic smooth level set
-    //auto level_set_function = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth , msh);
-    // Plot of initial level set
-    //mapping_phi_SPARSE(level_set_function);
-    //testing_level_set_Bernstein(msh,level_set_function,level_set_anal_smooth);
-    //inverse_mapping_phi_SPARSE(level_set_function);
-    
    
     /************** LEVEL SET FUNCTION: LAGRANGIAN HIGH ORDER DISCRETISATION **************/
     
     
     auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
     
-    level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
-    //level_set_function.cut_off( C );
+    
+    T r0 , rad_max ;
+    T h = std::max( fe_data.hx , fe_data.hy) ;
+    r0 = radius + h*sqrt(2.0);
+    T C = r0*r0 - radius*radius ;
+    
+    T C_bis = std::abs(level_set_function.phi_min) ;
+    if( C_bis > C)
+        C = C_bis;
+
+    if(cut_off_active)
+    {
+        level_set_function.cut_off( C );
+        std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+        std::cout<<"r0 = "<<r0<<" , max (hx,hy) = "<< h <<std::endl;
+        
+        std::cout<<"C = "<<C<<std::endl;
+    }
+    else
+    {
+        //C = 0.2;  // Imposed max value at the boundary
+        T delta = r0/8.0;
+        std::cout<<"r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
+        
+        std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
+        T pos_bdry = std::min(x_centre , y_centre) ;
+        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+               
+        
+             
+        level_set_function.smooth_cut_off( C , r0 , delta, x_centre , y_centre );
+        std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+        std::cout<<"C = "<<C<<std::endl;
+    }
+              
+    
+     
+    
+    /*
+    T C = 0.2;  // Imposed max value at the boundary
+    if(cut_off_active){
+           level_set_function.cut_off( C );
+           std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+    }
+    else{
+        level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
+        std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+    }
+    */
+    if(high_order)
+        std::cout<<bold<<yellow<<"----> USING phi_HP HIGH order!!!!! "<<reset<<std::endl;
+    else
+        std::cout<<bold<<yellow<<"----> USING phi_L LOW order!!!!! "<<reset<<std::endl;
     
     
     testing_level_set(msh,level_set_function,level_set_function_anal);
@@ -30225,7 +31880,8 @@ int main(int argc, char **argv)
             detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
             detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             make_agglomeration(msh_i, level_set_function); // Non serve modificarla
             }
             else
@@ -30233,7 +31889,8 @@ int main(int argc, char **argv)
             //move_nodes(msh_i, level_set_function);
             //detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
             detect_cut_cells2(msh_i, level_set_function);
-            refine_interface2(msh_i, level_set_function, int_refsteps);
+            //refine_interface2(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
             }
        
             tc.toc();
@@ -30260,7 +31917,7 @@ int main(int argc, char **argv)
                 if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
                 {
                     T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
-                    std::cout<<"Partial area is "<<partial_area<<std::endl;
+                    //std::cout<<"Partial area is "<<partial_area<<std::endl;
                     area0 += partial_area;
                     
                     auto qps = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_NEGATIVE_SIDE);
@@ -30287,7 +31944,7 @@ int main(int argc, char **argv)
             global_mass0 += mass0;
             std::cout << bold << yellow << "Area at time step: "<<time_step*dt<<" is "<<reset<< area0  << reset << std::endl;
             std::cout << bold << yellow << "Internal mass at time step: "<<time_step*dt<<" is "<<reset<< mass0  << reset << std::endl;
-            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<time_step<<" is "<<reset<<global_mass0<< reset << std::endl;
+            std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<time_step<<" is "<<reset<<global_mass0<< reset << std::endl;
             std::cout << bold << yellow << "CENTRE OF MASS at time step: " <<reset <<time_step*dt<<" is "<<" ( "<< centre_mass0_x/area0  << " , "<< centre_mass0_y/area0 <<" ). " << reset << std::endl;
         
             d_a = sqrt(4.0*area0/M_PI) ;
@@ -30320,11 +31977,12 @@ int main(int argc, char **argv)
             //auto ls_cell_exact = LS_cell_high_order< T , Mesh , Level_Set, Fonction ,FiniteSpace >(level_set_exact,msh_i);
        */
             // PLOTTING OF NORMAL
+            /*
             postprocess_output<double> postoutput_vec;
             auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
             auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
            
-        
+        */
       
             
         
@@ -30369,7 +32027,7 @@ int main(int argc, char **argv)
             } // End of the ( IF I'm into a cut cell)
     
         } // End of the loop over the cells
-    
+            /*
         postoutput_vec.add_object(vec_normal);
         postoutput_vec.add_object(vec_normal_exact);
         postoutput_vec.write();
@@ -30382,15 +32040,15 @@ int main(int argc, char **argv)
         
         std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*time_step <<" is " << error_normal_global0 <<std::endl;
         std::cout<<yellow<<bold<<"The l2 error of normal N over the INTERFACE, at time "<<reset<< dt*time_step <<" is " << diff_interface_normal <<std::endl;
-        
+        */
         std::cout<<yellow<<bold<<"The PERIMETER, at time "<<reset<< dt*time_step <<" is " << perimeter0 <<std::endl;
         
         std::cout<<yellow<<bold<<"The CIRCULARITY, at time "<<reset<< dt*time_step <<" is " << M_PI*d_a/perimeter0 <<std::endl;
         
         
         // ERROR IN TIME
-        error_normal_global += error_normal_global0*dt;
-        error_normal_local += diff_interface_normal*dt;
+       // error_normal_global += error_normal_global0*dt;
+     //   error_normal_local += diff_interface_normal*dt;
        
         // To add only if I calculate Area and Mass in all the times.
         //area_previous_time = area0 ;
@@ -30466,7 +32124,7 @@ int main(int argc, char **argv)
         //T dt1 = time_step_CFL_L2_velocity( u_L2_projected , mip , eps );
         T dt1 = time_step_CFL_new( u_projected , mip , eps );
         //std::cout<<"dt1 is "<<dt1<<std::endl;
-        T dt2 = 1*1e-2;
+        T dt2 = 1*1e-3;
         dt = std::min(dt1 , dt2);
         std::cout<<"I USE dt = "<<dt<<" AND CFL IS "<<dt1<<std::endl;
         
@@ -30491,9 +32149,15 @@ int main(int argc, char **argv)
          //   std::cout<<level_set_function(pt)<<std::endl;
         std::cout<<"FINE FEM"<<std::endl;
         */
-        
+        if(high_order)
+            run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+        //run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+        //run_FEM_BERNSTEIN_CORRECT_FAST_PROVA( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+        else
+            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+               
        
-        run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+      
         
         time += dt ;
         u.set_time( time );
@@ -30616,7 +32280,8 @@ int main(int argc, char **argv)
                 detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
                
                 make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
-                refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                //refine_interface2(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
                 make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
             }
             else
@@ -30624,7 +32289,8 @@ int main(int argc, char **argv)
                 //move_nodes(msh_i2, level_set_function);
                 //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
                 detect_cut_cells2(msh_i2, level_set_function);
-                refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
             }
             
             tc.toc();
@@ -30683,7 +32349,7 @@ int main(int argc, char **argv)
                 
             std::cout << bold << yellow << "CENTRE OF MASS at time step: "<<(time_step+1)*dt<<" is "<<reset<<" ( " << centre_mass_x/area_fin <<" , " << centre_mass_y/area_fin<<" ). " << std::endl;
             std::cout << bold << yellow << "TRANSLATION OF THE CENTRE OF MASS at time step: " <<reset <<(time_step+1)*dt<<" is "<<" ( " << centre_mass_x/area_fin - centre_mass0_x/initial_area <<" , " << centre_mass_y/area_fin - centre_mass0_y/initial_area<<" ). " << std::endl;
-            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<(time_step+1)<<" is "<<reset<<global_mass1<< reset << std::endl;
+            std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<(time_step+1)<<" is "<<reset<<global_mass1<< reset << std::endl;
             std::cout << bold << yellow << "Difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)  << std::endl;
             std::cout << bold << yellow << "Difference in INTERNAL MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass) << std::endl;
             
@@ -30691,7 +32357,7 @@ int main(int argc, char **argv)
             std::cout << bold << yellow << "NORMALISED difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)/(std::abs(initial_area))  << std::endl;
             std::cout << bold << yellow << "NORMALISED difference in MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass)/(std::abs(initial_mass)) << std::endl;
                 
-            //std::cout << bold << yellow << "Difference in GLOBAL MASS: "<< reset<< global_mass1 - global_mass0 << std::endl;
+            std::cout << bold << yellow << "Difference in GLOBAL MASS: "<< reset<< global_mass1 - global_mass0 << std::endl;
                 
                 
                 
@@ -30718,10 +32384,11 @@ int main(int argc, char **argv)
             //auto ls_cell_exact_fin = LS_cell_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
                 
          */
+            /*
             postprocess_output<double> postoutput_vec;
             auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
             auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
-                
+            */
             error_normal_global0 = 0. ;
             diff_interface_normal = 0. ;
             counter_interface_pts = 0;
@@ -30766,6 +32433,7 @@ int main(int argc, char **argv)
                     //std::cout<<std::endl;
                 }
             }
+            /*
             postoutput_vec.add_object(vec_normal);
             postoutput_vec.add_object(vec_normal_exact);
             postoutput_vec.write();
@@ -30780,7 +32448,7 @@ int main(int argc, char **argv)
                     
             std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*(time_step+1) <<" is " << error_normal_global0 <<std::endl;
             std::cout<<"The l2 error of normal N over the INTERFACE, at time "<< dt*(time_step+1) <<" is " << diff_interface_normal <<std::endl;
-                        
+            */
                         
             std::cout<< bold << yellow<<"The PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << perimeter <<std::endl;
                 
@@ -30793,9 +32461,9 @@ int main(int argc, char **argv)
             error_normal_local += diff_interface_normal*dt;
                         
                     
-            std::cout << bold << yellow << "Error l1(L2) of the normal in the CUT CELLS: "<< reset<< error_normal_global  << std::endl;
+            //std::cout << bold << yellow << "Error l1(L2) of the normal in the CUT CELLS: "<< reset<< error_normal_global  << std::endl;
                 
-            std::cout << bold << yellow << "Error l1(l2) of the normal in the INTERFACE POINTS: "<< reset<< error_normal_local  << std::endl;
+            //std::cout << bold << yellow << "Error l1(l2) of the normal in the INTERFACE POINTS: "<< reset<< error_normal_local  << std::endl;
             
         
         } // END OF T = FINAL TIME
