@@ -506,7 +506,7 @@ public:
     Sym_gradrec_stokes_interface_method(T eta_, T gamma_, bool sym)
         : stokes_interface_method<T,ET,testType>(sym), eta(eta_), gamma_0(gamma_) {}
 
-    std::pair<Mat, Vect>
+    virtual std::pair<Mat, Vect>
     make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
                      const testType test_case, const hho_degree_info hdi)
     {

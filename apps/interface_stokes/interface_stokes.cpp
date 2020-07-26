@@ -24514,7 +24514,7 @@ public:
 
     std::pair<Mat, Vect>
     make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                     const testType& test_case, const hho_degree_info hdi)
+                     const testType test_case, const hho_degree_info hdi)
     {
         auto parms = test_case.parms;
         auto level_set_function = test_case.level_set_;
@@ -25731,7 +25731,6 @@ run_cuthho_interface_velocity_prova(const Mesh& msh, size_t degree, meth method,
     assembler_sc.set_dir_func( bcs_vel);
     test_case.test_case_mesh_assignment(msh) ;
     
-    
     for (auto& cl : msh.cells)
     {
         // ADD BY STE
@@ -25745,10 +25744,11 @@ run_cuthho_interface_velocity_prova(const Mesh& msh, size_t degree, meth method,
         //prm.kappa_2 = 1.0;
         //auto test_case_cell = make_test_case_eshelby_2(msh, level_set_function, prm, sym_grad);
         std::cout<<"PRE CELL = "<<offset(msh,cl) <<std::endl;
-        test_case.test_case_cell_assignment(msh , cl) ;
+        test_case.test_case_cell_assignment(cl);
+        test_case.refresh_lambdas(level_set_function, parms, sym_grad);
        
-        std::cout<<"test_case.cl = "<<offset(msh,test_case.cl)<<std::endl;
-         std::cout<<"test_case.i = "<<test_case.i <<std::endl;
+//        std::cout<<"test_case.cl = "<<offset(msh,test_case.cl)<<std::endl;
+//         std::cout<<"test_case.i = "<<test_case.i <<std::endl;
          std::cout<<"POST CELL = "<<offset(msh,cl) <<std::endl;
         tc_bis.toc();
         std::cout<<"-------> TIME STOKES 0 , time = "<<tc_bis<<std::endl;
@@ -27295,14 +27295,14 @@ class test_case_eshelby_2_prova: public test_case_stokes<T, Function , Mesh>
   
 public:
     
-    Mesh msh  ;
-    typename Mesh::cell_type cl ;
-    Mesh* msh_pt ;
-    typename Mesh::cell_type* cl_pt ;
-    size_t i = 2;
+    Mesh m_msh  ;
+    typename Mesh::cell_type m_cl ;
+//    Mesh* msh_pt ;
+//    typename Mesh::cell_type* cl_pt ;
+//    size_t i = 2;
     //std::shared_ptr<typename Mesh::cell_type> cl_pointer;
     
-    test_case_eshelby_2_prova( Function & level_set__, params<T> parms_, bool sym_grad)
+    explicit test_case_eshelby_2_prova( Function & level_set__, params<T> parms_, bool sym_grad)
        : test_case_stokes<T, Function , Mesh>
        (level_set__, parms_,
         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {
@@ -27342,7 +27342,7 @@ public:
             ret(0) = 0.0;
             ret(1) = 0.0;
             return ret;},
-        [level_set__,parms_,sym_grad,&cl = this->cl,&i = this->i , &msh = this->msh,  this ](const typename Mesh::point_type& pt) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
+        [level_set__,parms_,sym_grad,this](const typename Mesh::point_type& pt) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
             Matrix<T, 2, 1> ret;
             if(sym_grad)
             {
@@ -27351,18 +27351,18 @@ public:
                 //T R = 1.0/3.0;
                 //cl = cl_pointer.get() ;
                 std::cout<<"SONO  IN NEUMANN CONDITION."<<std::endl;
-                std::cout<<"i = "<<i<<std::endl;
+//                std::cout<<"i = "<<i<<std::endl;
                 //auto cl_uploaded = this->cl ;
-                i++;
-                std::cout<<"i = "<<i<<std::endl;
-                Mesh msh_prova = *msh_pt ;
-                typename Mesh::cell_type cl_prova = *cl_pt ;
+//                i++;
+//                std::cout<<"i = "<<i<<std::endl;
+//                Mesh msh_prova = *msh_pt ;
+//                typename Mesh::cell_type cl_prova = *cl_pt ;
                 
                 
-                std::cout<<"-----> test_case_eshelby_2_prova : CELL PROVA = "<<offset(msh_prova,cl_prova)<<std::endl;
+//                std::cout<<"-----> test_case_eshelby_2_prova : CELL PROVA = "<<offset(msh_prova,cl_prova)<<std::endl;
                 //if(i==3)
                 //   this->cl = msh.cells[227];
-                std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(msh,cl)<<std::endl;
+                std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(m_msh,m_cl)<<std::endl;
                 /*
                 auto cl_new = this->cl ;
                 std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(msh,cl_new)<<std::endl;
@@ -27373,7 +27373,7 @@ public:
                 auto cl_new3 = upload_cl2();
                 std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(msh,cl_new3)<<std::endl;
                 */
-                level_set__.cell_assignment(cl_prova);
+                level_set__.cell_assignment(m_cl);
                 //T H = level_set__.normal(pt)
                 
                 ret(0) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(0);
@@ -27387,47 +27387,113 @@ public:
             else
             {
                 T gamma = 1.0;
-                level_set__.cell_assignment(cl);
+                level_set__.cell_assignment(m_cl);
                 ret(0) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(0);
                 ret(1) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(1);
             }
             return ret;})
        {}
     
-    void test_case_cell_assignment(const Mesh& msh , const typename Mesh::cell_type& cl_new )
+    test_case_eshelby_2_prova(const test_case_eshelby_2_prova & other) : test_case_stokes<T, Function , Mesh>(other) {
+        m_msh = other.m_msh;
+        m_cl = other.m_cl;
+    }
+    
+//    void test_case_cell_assignment(const Mesh& msh , const typename Mesh::cell_type& cl_new )
+//    {
+//        std::cout<<"sono qua 0"<<std::endl;
+//        std::cout<<"-----> test_case_cell_assignment : CELL OLD = "<<offset(msh,cl)<<std::endl;
+//        std::cout<<"sono qua 1"<<std::endl;
+//        std::cout<<"-----> test_case_cell_assignment : CELL NEW = "<<offset(msh,cl_new)<<std::endl;
+//        cl = cl_new ;
+//        cl_pt = & cl;
+//        //msh = msh ;
+//        std::cout<<"----------------> test_case_cell_assignment : CELL NEW = "<<offset(msh,cl_new)<< " and CELL UPLOADED = "<<offset(msh,cl)<<std::endl;
+//        std::cout<<"----------------> test_case_cell_assignment : CELL NEW PUNTATORE = "<<offset(msh,*cl_pt)<<std::endl;
+//        i+=8;
+//        //cl_pointer = std::make_shared<typename Mesh::cell_type>(cl_new);
+//        //std::cout<<"----------------> test_case_cell_assignment : CELL POINTER = "<<offset(msh, cl_pointer.get())<< " and CELL UPLOADED = "<<offset(msh,cl)<<std::endl;
+//        //level_set__.cell_assignment(cl_new);
+//    }
+    
+    void test_case_cell_assignment(const typename Mesh::cell_type& cl_new )
     {
-        std::cout<<"sono qua 0"<<std::endl;
-        std::cout<<"-----> test_case_cell_assignment : CELL OLD = "<<offset(msh,cl)<<std::endl;
-        std::cout<<"sono qua 1"<<std::endl;
-        std::cout<<"-----> test_case_cell_assignment : CELL NEW = "<<offset(msh,cl_new)<<std::endl;
-        cl = cl_new ;
-        cl_pt = & cl;
-        //msh = msh ;
-        std::cout<<"----------------> test_case_cell_assignment : CELL NEW = "<<offset(msh,cl_new)<< " and CELL UPLOADED = "<<offset(msh,cl)<<std::endl;
-        std::cout<<"----------------> test_case_cell_assignment : CELL NEW PUNTATORE = "<<offset(msh,*cl_pt)<<std::endl;
-        i+=8;
-        //cl_pointer = std::make_shared<typename Mesh::cell_type>(cl_new);
-        //std::cout<<"----------------> test_case_cell_assignment : CELL POINTER = "<<offset(msh, cl_pointer.get())<< " and CELL UPLOADED = "<<offset(msh,cl)<<std::endl;
-        //level_set__.cell_assignment(cl_new);
+        m_cl = cl_new ;
+    }
+    
+    void refresh_lambdas(Function & level_set__, params<T> parms_, bool sym_grad){
+        
+       this->neumann_jump = [level_set__,parms_,sym_grad,this](const typename Mesh::point_type& pt) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
+                    Matrix<T, 2, 1> ret;
+                    if(sym_grad)
+                    {
+                        T gamma = 1.0;
+                        //T k = 1.0;
+                        //T R = 1.0/3.0;
+                        //cl = cl_pointer.get() ;
+                        std::cout<<"SONO  IN NEUMANN CONDITION."<<std::endl;
+        //                std::cout<<"i = "<<i<<std::endl;
+                        //auto cl_uploaded = this->cl ;
+        //                i++;
+        //                std::cout<<"i = "<<i<<std::endl;
+        //                Mesh msh_prova = *msh_pt ;
+        //                typename Mesh::cell_type cl_prova = *cl_pt ;
+                        
+                        
+        //                std::cout<<"-----> test_case_eshelby_2_prova : CELL PROVA = "<<offset(msh_prova,cl_prova)<<std::endl;
+                        //if(i==3)
+                        //   this->cl = msh.cells[227];
+                        std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(m_msh,m_cl)<<std::endl;
+                        /*
+                        auto cl_new = this->cl ;
+                        std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(msh,cl_new)<<std::endl;
+                        
+                        auto cl_new2 = upload_cl();
+                        std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(msh,cl_new2)<<std::endl;
+                        
+                        auto cl_new3 = upload_cl2();
+                        std::cout<<"-----> test_case_eshelby_2_prova : CELL = "<<offset(msh,cl_new3)<<std::endl;
+                        */
+                        level_set__.cell_assignment(m_cl);
+                        //T H = level_set__.normal(pt)
+                        
+                        ret(0) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(0);
+                        ret(1) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(1);
+                       
+                        
+                        //ret(0) = - k / R * level_set__.normal(pt)(0);
+                        //ret(1) = - k / R * level_set__.normal(pt)(1);
+                        
+                    }
+                    else
+                    {
+                        T gamma = 1.0;
+                        level_set__.cell_assignment(m_cl);
+                        ret(0) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(0);
+                        ret(1) = 2.0 * gamma * level_set__.divergence(pt) * level_set__.normal(pt)(1);
+                    }
+           return ret;
+       };
+        
     }
     
     void test_case_mesh_assignment(const Mesh& msh_new )
     {
        
         std::cout<<"-----> test_case_mesh_assignment "<<std::endl;
-        msh = msh_new ;
-        msh_pt = & msh ;
+        m_msh = msh_new ;
+//        msh_pt = & msh ;
         
     }
     
     typename Mesh::cell_type& upload_cl()
     {
-        return cl ;
+        return m_cl ;
     }
     
     typename Mesh::cell_type upload_cl2()
     {
-        return cl ;
+        return m_cl ;
     }
     
 
