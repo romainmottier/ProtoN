@@ -981,7 +981,7 @@ make_hho_gradrec_sym_matrix
 {
     using T = typename Mesh::coordinate_type;
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
+    //typedef Matrix<T, Dynamic, 1>       vector_type;
 
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();

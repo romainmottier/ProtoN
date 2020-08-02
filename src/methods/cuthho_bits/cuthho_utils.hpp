@@ -402,7 +402,7 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
 
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
 
-    auto hT = diameter(msh, cl);
+    //auto hT = diameter(msh, cl);
 
 
     const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE);
@@ -1627,7 +1627,7 @@ make_hho_divergence_reconstruction_interface
         throw std::invalid_argument("The cell is not cut");
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
+    //typedef Matrix<T, Dynamic, 1>       vector_type;
 
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
@@ -1863,7 +1863,7 @@ make_hho_gradrec_sym_matrix
         return make_hho_gradrec_sym_matrix(msh, cl, di);
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
+    //typedef Matrix<T, Dynamic, 1>       vector_type;
 
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
@@ -1951,7 +1951,7 @@ make_hho_gradrec_sym_matrix_interface
         throw std::invalid_argument("The cell is not cut");
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
+    //typedef Matrix<T, Dynamic, 1>       vector_type;
 
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();

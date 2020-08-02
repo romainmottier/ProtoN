@@ -413,7 +413,7 @@ integrate(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree)
 {
     using T = typename Mesh::coordinate_type;
 
-    typedef typename Mesh::point_type    point_type;
+    //typedef typename Mesh::point_type    point_type;
   
     auto qps = edge_quadrature<T>(degree);
     auto pts = points(msh, fc);

@@ -27,8 +27,8 @@ template<typename T, size_t ET, typename Function>
 void
 detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 {
-    typedef typename cuthho_mesh<T, ET>::face_type  face_type;
-    typedef typename cuthho_mesh<T, ET>::point_type point_type;
+    //typedef typename cuthho_mesh<T, ET>::face_type  face_type;
+    //typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
     const T threshold = 0.3;
     const T threshold_cells = 0.3;
@@ -1131,8 +1131,8 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
     ///////////////////////   LOOK FOR NEIGHBORS  ////////////////
     size_t nb_step1 = 0;
     size_t nb_step2 = 0;
-    size_t nb_ko_neg_cls = 0;
-    size_t nb_ko_pos_cls = 0;
+    //size_t nb_ko_neg_cls = 0;
+    //size_t nb_ko_pos_cls = 0;
     // start the process for domain 1, and then domain 2
     for(size_t domain=1; domain < 3; domain++)
     {
@@ -1343,7 +1343,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
         {
             //std::cout<<"The cell number "<<offset(msh,cl)<<" is aggloremated with the cell num "<<offset(msh,neigh)<<std::endl;
             typename Mesh::cell_type cl1, cl2;
-            size_t offset_cl2, agglo_offset;
+            size_t offset_cl2 , agglo_offset ;
             if(already_agglo_cl)
             {
                 removed_cells.push_back(neigh);

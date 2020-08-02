@@ -86,7 +86,7 @@ find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& l
     size_t max_iter = 50;
 
     do {
-        auto la = level_set_function(pa);
+        //auto la = level_set_function(pa);
         auto lb = level_set_function(pb);
         auto lm = level_set_function(pm);
 
@@ -172,9 +172,9 @@ template<typename T, size_t ET, typename Function>
 void
 detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 {
-    typedef typename cuthho_mesh<T, ET>::face_type  face_type;
+    //typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
-     typedef typename cuthho_mesh<T, ET>::cell_type cell_type;
+     //typedef typename cuthho_mesh<T, ET>::cell_type cell_type;
 
     size_t cell_i = 0;
     for (auto& cl : msh.cells)
@@ -328,8 +328,8 @@ template<typename T, size_t ET, typename Function>
 void
 move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 {
-    typedef typename cuthho_mesh<T, ET>::face_type  face_type;
-    typedef typename cuthho_mesh<T, ET>::point_type point_type;
+    //typedef typename cuthho_mesh<T, ET>::face_type  face_type;
+    //typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
     T closeness_thresh = 0.4;
 

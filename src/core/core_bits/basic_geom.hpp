@@ -352,7 +352,7 @@ std::array< Matrix<typename mesh<T, N, CellUD, FaceUD, NodeUD>::coordinate_type,
 normals(const mesh<T, N, CellUD, FaceUD, NodeUD>& msh,
         const typename mesh<T, N, CellUD, FaceUD, NodeUD>::cell_type& cl)
 {
-    using Mesh = mesh<T, N, CellUD, FaceUD, NodeUD>;
+    //using Mesh = mesh<T, N, CellUD, FaceUD, NodeUD>;
     std::array< Matrix<T,2,1>, N >  ret;
 
     auto pts = points(msh, cl);
@@ -378,7 +378,7 @@ std::vector< Matrix<typename mesh<T, 0, CellUD, FaceUD, NodeUD>::coordinate_type
 normals(const mesh<T, 0, CellUD, FaceUD, NodeUD>& msh,
         const typename mesh<T, 0, CellUD, FaceUD, NodeUD>::cell_type& cl)
 {
-    using Mesh = mesh<T, 0, CellUD, FaceUD, NodeUD>;
+    //using Mesh = mesh<T, 0, CellUD, FaceUD, NodeUD>;
     std::vector< Matrix<T,2,1> > ret;
 
     auto pts = points(msh, cl);

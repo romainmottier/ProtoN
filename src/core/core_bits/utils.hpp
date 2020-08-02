@@ -326,6 +326,31 @@ operator<<(std::ostream& os, const timecounter& tc)
  * stay there.
  */
 
+/* COLOR ANSI */
+namespace ansi {
+ template < class CharT, class Traits >
+ constexpr
+ std::basic_ostream< CharT, Traits > & reset( std::basic_ostream< CharT, Traits > &os )
+ {
+    return os << "\033[0m";
+ }
+
+ template < class CharT, class Traits >
+ constexpr
+ std::basic_ostream< CharT, Traits > & foreground_black( std::basic_ostream< CharT, Traits > &os )
+ {
+    return os << "\033[30m";
+ }
+
+ template < class CharT, class Traits >
+ constexpr
+ std::basic_ostream< CharT, Traits > & foreground_red( std::basic_ostream< CharT, Traits > &os )
+ {
+    return os << "\033[31m";
+ }
+
+} // ansi
+
 /* COLORS */
 std::ostream& red(std::ostream& os) { os << "\x1b[31m"; return os; }
 std::ostream& green(std::ostream& os) { os << "\x1b[32m"; return os; }

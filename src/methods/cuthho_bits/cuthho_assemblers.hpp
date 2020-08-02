@@ -280,7 +280,7 @@ void set_dir_func(const Function& f) {
             if( loc_zone != element_location::ON_INTERFACE );
             {
                 element_location loc_fc = location(msh, fc);
-                bool in_dom = (loc_fc == element_location::ON_INTERFACE ||
+                in_dom = (loc_fc == element_location::ON_INTERFACE ||
                                loc_fc == loc_zone);
             }
 
@@ -1541,13 +1541,13 @@ public:
         for (size_t face_i = 0; face_i < num_faces; face_i++)
         {
             auto fc = fcs[face_i];
-            auto face_LHS_offset = face_SOL_offset(msh, fc);
+            //auto face_LHS_offset = face_SOL_offset(msh, fc);
 
             bool in_dom = true;
             if( loc_zone != element_location::ON_INTERFACE );
             {
                 element_location loc_fc = location(msh, fc);
-                bool in_dom = (loc_fc == element_location::ON_INTERFACE ||
+                in_dom = (loc_fc == element_location::ON_INTERFACE ||
                                loc_fc == loc_zone);
             }
 
@@ -1983,14 +1983,14 @@ public:
 
         auto cbs = vector_cell_basis<Mesh,T>::size(celdeg);
         auto fbs = vector_face_basis<Mesh,T>::size(facdeg);
-        auto pbs = cell_basis<Mesh,T>::size(pdeg);
+        //auto pbs = cell_basis<Mesh,T>::size(pdeg);
 
         auto fcs = faces(msh, cl);
         auto num_faces = fcs.size();
         auto f_dofs = num_faces * fbs;
 
-        auto v_size = cbs + f_dofs;
-        auto loc_size = v_size + pbs;
+        //auto v_size = cbs + f_dofs;
+        //auto loc_size = v_size + pbs;
 
         // static condensation
         Matrix<T, Dynamic, Dynamic> lhs_sc;
@@ -2335,9 +2335,9 @@ public:
         loc_LHS.resize( msh.cells.size() );
         loc_RHS.resize( msh.cells.size() );
 
-        auto celdeg = this->di.cell_degree();
+        //auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();
-        auto pdeg = facdeg;
+        //auto pdeg = facdeg;
 
         this->loc_cbs = 0;
         this->loc_pbs = 1;
@@ -2392,7 +2392,7 @@ public:
 
         Matrix<T, Dynamic, Dynamic> lhs_sc;
         Matrix<T, Dynamic, 1> rhs_sc;
-        if( facdeg == 0 & !double_unknowns ) // condensate only cell velocity dofs
+        if( (facdeg == 0) & (!double_unknowns) ) // condensate only cell velocity dofs
         {
             auto mat_sc = stokes_static_condensation_compute(lhs_A, lhs_B, rhs_A, rhs_B,
                                                              cbs, f_dofs);

@@ -328,11 +328,11 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
         size_t numpoints = (parms.Nx + 1) * (parms.Ny + 1);
         points.reserve(numpoints);
 
-        std::default_random_engine generator;
-        std::uniform_real_distribution<double> dist_x(-hx/10.0, hx/10.0);
-        std::uniform_real_distribution<double> dist_y(-hy/10.0, hy/10.0);
-        auto disp_x = std::bind( dist_x, generator );
-        auto disp_y = std::bind( dist_y, generator );
+        //std::default_random_engine generator;
+        //std::uniform_real_distribution<double> dist_x(-hx/10.0, hx/10.0);
+        //std::uniform_real_distribution<double> dist_y(-hy/10.0, hy/10.0);
+        //auto disp_x = std::bind( dist_x, generator );
+        //auto disp_y = std::bind( dist_y, generator );
 
         size_t point_num = 0;
         for (size_t j = 0; j < parms.Ny+1; j++)
