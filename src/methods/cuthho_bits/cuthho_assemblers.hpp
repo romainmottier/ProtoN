@@ -141,6 +141,7 @@ class virt_scalar_assembler
 
 protected:
     std::vector< Triplet<T> >           triplets;
+    std::vector< Triplet<T> >           triplets_mass;
     std::vector<size_t>                 face_table;
     std::vector<size_t>                 cell_table;
 
@@ -154,6 +155,7 @@ protected:
 public:
 
     SparseMatrix<T>         LHS;
+    SparseMatrix<T>         MASS;
     Matrix<T, Dynamic, 1>   RHS;
 
 
@@ -242,6 +244,26 @@ public:
         }
 
         return asm_map;
+    }
+            
+    size_t
+    n_dof(const Mesh& msh, const typename Mesh::cell_type& cl)
+    {
+        bool double_unknowns = ( location(msh, cl) == element_location::ON_INTERFACE
+                                 && loc_zone == element_location::ON_INTERFACE );
+
+        auto facdeg = di.face_degree();
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+
+        auto fcs = faces(msh, cl);
+        auto num_faces = fcs.size();
+        auto f_dofs = num_faces * fbs;
+        auto cbs = loc_cbs;
+        auto loc_size = cbs + f_dofs;
+        if( double_unknowns )
+            loc_size = 2 * loc_size;
+        return loc_size;
+
     }
 
     Matrix<T, Dynamic, 1>
@@ -339,6 +361,34 @@ public:
         }
     }
 
+    void
+    assemble_bis_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
+                 const Matrix<T, Dynamic, Dynamic>& mass)
+    {
+        if( !(location(msh, cl) == loc_zone
+              || location(msh, cl) == element_location::ON_INTERFACE
+              || loc_zone == element_location::ON_INTERFACE ) )
+            return;
+
+        auto asm_map = init_asm_map(msh, cl);
+        auto dirichlet_data = get_dirichlet_data(msh, cl);
+
+        assert( asm_map.size() == mass.rows() && asm_map.size() == mass.cols() );
+
+        // MASS
+        for (size_t i = 0; i < mass.rows(); i++)
+        {
+            if (!asm_map[i].assemble())
+                continue;
+
+            for (size_t j = 0; j < mass.cols(); j++)
+            {
+                if ( asm_map[j].assemble() )
+                    triplets_mass.push_back( Triplet<T>(asm_map[i], asm_map[j], mass(i,j)) );
+            }
+        }
+    }
+            
     Matrix<T, Dynamic, 1>
     get_solF(const Mesh& msh, const typename Mesh::cell_type& cl,
              const Matrix<T, Dynamic, 1>& solution)
@@ -404,6 +454,8 @@ public:
     {
         LHS.setFromTriplets( triplets.begin(), triplets.end() );
         triplets.clear();
+        MASS.setFromTriplets( triplets_mass.begin(), triplets_mass.end() );
+        triplets_mass.clear();
     }
 };
 
@@ -752,12 +804,146 @@ public:
         return ret;
     }
 };
-
-
+            
 template<typename Mesh, typename Function>
 auto make_interface_assembler(const Mesh& msh, Function dirichlet_bf, hho_degree_info hdi)
 {
     return interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
+}
+
+template<typename Mesh, typename Function>
+class newmark_interface_assembler : public virt_interface_assembler<Mesh, Function>
+{
+    using T = typename Mesh::coordinate_type;
+
+public:
+            
+    newmark_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
+        : virt_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
+    {
+        auto celdeg = this->di.cell_degree();
+        auto facdeg = this->di.face_degree();
+
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+
+        this->loc_cbs = cbs;
+        auto system_size = cbs * this->num_cells + fbs * this->num_other_faces;
+
+        this->LHS = SparseMatrix<T>( system_size, system_size );
+        this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size );
+        this->MASS = SparseMatrix<T>( system_size, system_size );
+    }
+
+    void
+    assemble(const Mesh& msh, const typename Mesh::cell_type& cl,
+             const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs)
+    {
+        this->assemble_bis(msh, cl, lhs, rhs);
+    }
+            
+    void
+    assemble_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
+             const Matrix<T, Dynamic, Dynamic>& mass)
+    {
+        this->assemble_bis_mass(msh, cl, mass);
+    }
+
+
+    Matrix<T, Dynamic, 1>
+    take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl,
+                    const Matrix<T, Dynamic, 1>& solution,
+                    element_location where)
+    {
+        auto celdeg = this->di.cell_degree();
+        auto facdeg = this->di.face_degree();
+
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+
+        auto cell_offset        = offset(msh, cl);
+        size_t cell_SOL_offset;
+        if ( location(msh, cl) == element_location::ON_INTERFACE )
+        {
+            if (where == element_location::IN_NEGATIVE_SIDE)
+                cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
+            else if (where == element_location::IN_POSITIVE_SIDE)
+                cell_SOL_offset = this->cell_table.at(cell_offset) * cbs + cbs;
+            else
+                throw std::invalid_argument("Invalid location");
+        }
+        else
+        {
+            cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
+        }
+
+        auto fcs = faces(msh, cl);
+        auto num_faces = fcs.size();
+
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs + num_faces*fbs);
+        ret.block(0, 0, cbs, 1) = solution.block(cell_SOL_offset, 0, cbs, 1);
+
+
+        auto solF = this->get_solF(msh, cl, solution);
+        if(where == element_location::IN_NEGATIVE_SIDE)
+            ret.tail(num_faces * fbs) = solF.head(num_faces * fbs);
+        else
+            ret.tail(num_faces * fbs) = solF.tail(num_faces * fbs);
+
+        return ret;
+    }
+            
+    void project_over_cells(const Mesh& msh, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
+        
+        for (auto& cl : msh.cells)
+        {
+            if( location(msh, cl) != element_location::ON_INTERFACE ){
+                project_over_uncutcells(msh, cl, hho_di, x_glob, scal_fun);
+            } else{ // on interface
+                project_over_cutcells(msh, cl, hho_di, x_glob, scal_fun);
+            }
+        }
+    }
+            
+    void project_over_uncutcells(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
+            
+        Matrix<T, Dynamic, 1> x_proj_dof = project_function(msh, cl, hho_di, scal_fun);
+            
+        auto celdeg = this->di.cell_degree();
+        auto facdeg = this->di.face_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+        auto cell_offset        = offset(msh, cl);
+        size_t cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
+        x_glob.block(cell_SOL_offset, 0, cbs, 1) = x_proj_dof.block(0, 0, cbs, 1);
+    }
+            
+    void project_over_cutcells(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
+            
+        Matrix<T, Dynamic, 1> x_neg_proj_dof = project_function(msh, cl, hho_di, element_location::IN_NEGATIVE_SIDE, scal_fun);
+            
+        Matrix<T, Dynamic, 1> x_pos_proj_dof = project_function(msh, cl, hho_di, element_location::IN_POSITIVE_SIDE, scal_fun);
+            
+//        std::cout << "neg = " << x_neg_proj_dof << std::endl;
+//        std::cout << "pos = " << x_pos_proj_dof << std::endl;
+            
+        auto celdeg = this->di.cell_degree();
+        auto facdeg = this->di.face_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+        auto cell_offset        = offset(msh, cl);
+        size_t cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
+        x_glob.block(cell_SOL_offset, 0, cbs, 1) = x_neg_proj_dof.block(0, 0, cbs, 1);
+        x_glob.block(cell_SOL_offset+cbs, 0, cbs, 1) = x_pos_proj_dof.block(0, 0, cbs, 1);
+    
+    }
+            
+};
+
+template<typename Mesh, typename Function>
+auto make_newmark_interface_assembler(const Mesh& msh, Function dirichlet_bf, hho_degree_info hdi)
+{
+    return newmark_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
 
 
@@ -1573,7 +1759,7 @@ public:
 
         // null mean pressure condition -> done in each assemble routines
     }
-
+            
     Matrix<T, Dynamic, 1>
     get_solF(const Mesh& msh, const typename Mesh::cell_type& cl,
              const Matrix<T, Dynamic, 1>& solution)

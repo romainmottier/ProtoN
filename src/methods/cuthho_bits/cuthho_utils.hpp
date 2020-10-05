@@ -951,7 +951,8 @@ project_function(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
         return ret;
 
     Matrix<T, Dynamic, Dynamic> cell_mm = make_mass_matrix(msh, cl, hdi.cell_degree(), where);
-    Matrix<T, Dynamic, 1> cell_rhs = make_rhs(msh, cl, hdi.cell_degree(), where, f);
+    Matrix<T, Dynamic, 1> cell_rhs = make_rhs(msh, cl, hdi.cell_degree(), f, where);
+    
     ret.block(0, 0, cbs, 1) = cell_mm.llt().solve(cell_rhs);
 
     for (size_t i = 0; i < num_faces; i++)

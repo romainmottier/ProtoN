@@ -230,6 +230,32 @@ make_cell_mass_matrix(const Mesh& msh, const typename Mesh::cell_type& cl,
     return mass_mat;
 }
 
+template<typename Mesh>
+Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
+make_flux_cell_mass_matrix(const Mesh& msh, const typename Mesh::cell_type& cl,
+                 hho_degree_info hdi, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;
+
+    auto recdeg = hdi.reconstruction_degree();
+
+    cell_basis<Mesh,T>     cb(msh, cl, recdeg);
+
+    auto rbs = cell_basis<Mesh,T>::size(recdeg);
+    auto fcs = faces(msh, cl);
+
+    Matrix<T, Dynamic, Dynamic> stiff = Matrix<T, Dynamic, Dynamic>::Zero(rbs, rbs);
+    Matrix<T, Dynamic, Dynamic> mass_mat = Matrix<T, Dynamic, Dynamic>::Zero(rbs-1, rbs-1);
+    auto qps = integrate(msh, cl, 2*recdeg);
+    for (auto& qp : qps)
+    {
+        auto dphi = cb.eval_gradients(qp.first);
+        stiff += qp.second * dphi * dphi.transpose();
+    }
+    mass_mat = stiff.block(1, 1, rbs-1, rbs-1);
+    return mass_mat;
+}
+
 template<typename Mesh, typename Function>
 Matrix<typename Mesh::coordinate_type, Dynamic, 1>
 make_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
@@ -250,6 +276,33 @@ make_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
         ret += qp.second * phi * f(qp.first);
     }
 
+    return ret;
+}
+
+template<typename Mesh, typename Function>
+Matrix<typename Mesh::coordinate_type, Dynamic, 1>
+make_mixed_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
+         size_t degree, const Function& f, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;
+
+    cell_basis<Mesh,T> cb(msh, cl, degree);
+    cell_basis<Mesh,T> recb(msh, cl, degree+1);
+    auto rbc = recb.size()-1;
+    auto cbs = cb.size()+rbc;
+
+    Matrix<T, Dynamic, 1> ret_loc = Matrix<T, Dynamic, 1>::Zero(cb.size());
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+
+    auto qps = integrate(msh, cl, 2*(degree+di));
+
+    for (auto& qp : qps)
+    {
+        auto phi = cb.eval_basis(qp.first);
+        ret_loc += qp.second * phi * f(qp.first);
+    }
+
+    ret.block(rbc,0,cb.size(),1) = ret_loc;
     return ret;
 }
 
@@ -565,6 +618,33 @@ make_vector_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
         ret += qp.second * phi * f(qp.first);
     }
 
+    return ret;
+}
+    
+    
+template<typename Mesh, typename Function>
+Matrix<typename Mesh::coordinate_type, Dynamic, 1>
+make_vector_variable_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
+                size_t degree, const Function& f, size_t di = 0)
+{
+    using T = typename Mesh::coordinate_type;    
+    cell_basis<Mesh,T>     cb(msh, cl, degree);
+    auto rbs = cell_basis<Mesh,T>::size(degree);
+
+    Matrix<T, Dynamic, Dynamic> stiff = Matrix<T, Dynamic, Dynamic>::Zero(rbs, rbs);
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(rbs-1);
+    Matrix<T, 1, 2> f_vec = Matrix<T, Dynamic, Dynamic>::Zero(1, 2);
+    auto qps = integrate(msh, cl, 2*degree);
+    for (auto& qp : qps)
+    {
+        auto dphi = cb.eval_gradients(qp.first);
+        f_vec(0,0) = f(qp.first)[0];
+        f_vec(0,1) = f(qp.first)[1];
+        for (size_t i = 0; i < rbs-1; i++){
+        Matrix<T, 2, 1> phi_i = dphi.block(i+1, 0, 1, 2).transpose();
+            ret(i,0) = ret(i,0) + (qp.second * f_vec*phi_i)(0,0);
+        }
+    }
     return ret;
 }
 
