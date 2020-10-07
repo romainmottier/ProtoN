@@ -304,7 +304,7 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, t
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_silo_Q = false);
+newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_error_Q = false);
 
 ///// test_case_laplacian_waves
 // exact solution : t*t*sin(\pi x) sin(\pi y)               in \Omega_1
@@ -418,11 +418,11 @@ void ICutHHOSecondOrder(int argc, char **argv){
     argv += optind;
 
     mip.Nx = 2;
+    mip.Ny = 2;
     for (unsigned int i = 0; i < l_divs; i++) {
         mip.Nx *= 2;
+        mip.Ny *= 2;
     }
-    mip.Ny = mip.Nx;
-    
 
   
     timecounter tc;
@@ -435,6 +435,9 @@ void ICutHHOSecondOrder(int argc, char **argv){
     /************** LEVEL SET FUNCTION **************/
     RealType radius = 1.0/3.0;
     auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+    RealType cy = 1.0/3.0;
+//    auto level_set_function = line_level_set<RealType>(cy);
+    
 
     tc.tic();
     detect_node_position(msh, level_set_function);
@@ -497,18 +500,18 @@ void ICutHHOSecondOrder(int argc, char **argv){
     
     
     
-    bool write_silo_Q  = true;
+    bool write_error_Q  = false;
     for(size_t it = 1; it <= nt; it++){ // for each time step
         // Manufactured solution
         std::cout << std::endl;
-        std::cout << " time step number: " <<  it << std::endl;
+        std::cout << "Time step number: " <<  it << std::endl;
         RealType t = dt*it+ti;
         auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
         auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-//        if (it == nt) {
-//            write_silo_Q = true;
-//        }
-        newmark_step_cuthho_interface(it, dt, beta, gamma, msh, degree, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, write_silo_Q);
+        if (it == nt) {
+            write_error_Q = true;
+        }
+        newmark_step_cuthho_interface(it, dt, beta, gamma, msh, degree, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, write_error_Q);
     }
     RealType hx = 1.0/mip.Nx;
     RealType hy = 1.0/mip.Ny;
@@ -581,10 +584,10 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, t
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_silo_Q)
+newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_error_Q)
 {
     using RealType = typename Mesh::coordinate_type;
-
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -621,7 +624,7 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
         it = 0;
         if(write_silo_Q){
             std::string silo_file_name = "cut_hho_one_field_";
-            postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, true);
+            postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, false);
         }
     }
     
@@ -663,10 +666,10 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
     
     if(write_silo_Q){
         std::string silo_file_name = "cut_hho_one_field_";
-        postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, true);
+        postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, false);
     }
     
-    if(false){
+    if(write_error_Q){
 
         Matrix<RealType, Dynamic, 1> sol = u_dof_n;
 
@@ -772,16 +775,18 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
             cell_i++;
         }
 
-        std::cout << bold << green << "Energy-norm absolute error:           " << std::sqrt(H1_error) << std::endl;
         std::cout << bold << green << "L2-norm absolute error:           " << std::sqrt(L2_error) << std::endl;
+        std::cout << bold << green << "Energy-norm absolute error:           " << std::sqrt(H1_error) << std::endl;
+        
+        tc.toc();
+        std::cout << bold << yellow << "Error completed: " << tc << " seconds" << reset << std::endl;
     }
     
     test_info<RealType> TI;
     TI.H1 = std::sqrt(H1_error);
     TI.L2 = std::sqrt(L2_error);
 
-    tc.toc();
-    std::cout << bold << yellow << "Postprocessing: " << tc << " seconds" << reset << std::endl;
+
 
     return TI;
 }

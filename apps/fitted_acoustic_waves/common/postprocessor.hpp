@@ -79,36 +79,63 @@ public:
             approx_u.reserve( num_points );
 
             // scan for selected cells, common cells are discardable
-            std::map<size_t, size_t> point_to_cell;
+            std::map<size_t, size_t> node_to_cell;
             size_t cell_i = 0;
-//            for (auto& cell : msh.cells)
-//            {
-//                auto points = cell.point_ids();
-//                size_t n_p = points.size();
-//                for (size_t l = 0; l < n_p; l++)
-//                {
-//                    auto pt_id = points[l];
-//                    point_to_cell[pt_id] = cell_i;
-//                }
-//                cell_i++;
-//            }
+            for (auto& cell : msh.cells)
+            {
+                auto cell_nodes = nodes(msh,cell);
+                size_t n_p = cell_nodes.size();
+                for (size_t l = 0; l < n_p; l++)
+                {
+                    auto node = cell_nodes[l];
+                    node_to_cell[node.ptid] = cell_i;
+                }
+                cell_i++;
+            }
+            
 
-//            for (auto& pt_id : point_to_cell)
-//            {
-//                auto bar = *std::next(msh.points().begin(), pt_id.first);
-//                exact_u.push_back( scal_fun(bar) );
-//
-//                cell_i = pt_id.second;
-//                auto cell = *std::next(msh.cells_begin(), cell_i);
-//                // scalar evaluation
-//                {
-//                    auto cell_basis = make_scalar_monomial_basis(msh, cell, hho_di.cell_degree());
-//                    Matrix<RealType, Dynamic, 1> scalar_cell_dof = x_dof.block(cell_i*cell_dof, 0, cell_dof, 1);
-//                    auto t_phi = cell_basis.eval_functions( bar );
-//                    RealType uh = scalar_cell_dof.dot( t_phi );
-//                    approx_u.push_back(uh);
-//                }
-//            }
+            for (auto& node_id : node_to_cell)
+            {
+                auto bar = msh.points.at(node_id.first);
+                exact_u.push_back( scal_fun(bar) );
+
+                cell_i = node_id.second;
+                auto cell = msh.cells.at(cell_i);
+
+                // scalar evaluation
+                {
+                    cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
+                    if ( location(msh, cell) == element_location::ON_INTERFACE )
+                    {
+                        auto node = msh.nodes.at(node_id.first);
+                        
+                        if (location(msh, node) == element_location::IN_NEGATIVE_SIDE)
+                        // negative side
+                        {
+                            Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh,cell,x_dof,element_location::IN_NEGATIVE_SIDE);
+                            auto t_phi = cell_basis.eval_basis( bar );
+                            RealType uh = scalar_cell_dof.dot( t_phi );
+                            approx_u.push_back(uh);
+                        }else
+                        // positive side
+                        {
+                            Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh,cell,x_dof,element_location::IN_POSITIVE_SIDE);
+                            auto t_phi = cell_basis.eval_basis( bar );
+                            RealType uh = scalar_cell_dof.dot( t_phi );
+                            approx_u.push_back(uh);
+                        }
+
+                    }else{
+                        Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh,cell,x_dof,location(msh, cell));
+                        auto t_phi = cell_basis.eval_basis( bar );
+                        RealType uh = scalar_cell_dof.dot( t_phi );
+                        approx_u.push_back(uh);
+                    }
+
+
+                }
+
+            }
 
         }
 
@@ -120,10 +147,8 @@ public:
             silo.add_variable("mesh", "v", exact_u.data(), exact_u.size(), zonal_variable_t);
             silo.add_variable("mesh", "vh", approx_u.data(), approx_u.size(), zonal_variable_t);
         }else{
-//            silo_nodal_variable<double> v_silo("v", exact_u);
-//            silo_nodal_variable<double> vh_silo("vh", approx_u);
-//            silo.add_variable("mesh", v_silo);
-//            silo.add_variable("mesh", vh_silo);
+            silo.add_variable("mesh", "v", exact_u.data(), exact_u.size(), nodal_variable_t);
+            silo.add_variable("mesh", "vh", approx_u.data(), approx_u.size(), nodal_variable_t);
         }
 
         silo.close();
