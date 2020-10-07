@@ -49,6 +49,7 @@ using namespace Eigen;
 
 
 #include "../common/preprocessor.hpp"
+#include "../common/postprocessor.hpp"
 #include "../common/newmark_hho_scheme.hpp"
 #include "../common/analytical_functions.hpp"
 
@@ -303,7 +304,7 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, t
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, const Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_silo_Q = false);
+newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_silo_Q = false);
 
 ///// test_case_laplacian_waves
 // exact solution : t*t*sin(\pi x) sin(\pi y)               in \Omega_1
@@ -496,7 +497,7 @@ void ICutHHOSecondOrder(int argc, char **argv){
     
     
     
-    bool write_silo_Q  = false;
+    bool write_silo_Q  = true;
     for(size_t it = 1; it <= nt; it++){ // for each time step
         // Manufactured solution
         std::cout << std::endl;
@@ -504,10 +505,10 @@ void ICutHHOSecondOrder(int argc, char **argv){
         RealType t = dt*it+ti;
         auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
         auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-        if (it == nt) {
-            write_silo_Q = true;
-        }
-        newmark_step_cuthho_interface(dt, beta, gamma, msh, degree, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, write_silo_Q);
+//        if (it == nt) {
+//            write_silo_Q = true;
+//        }
+        newmark_step_cuthho_interface(it, dt, beta, gamma, msh, degree, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, write_silo_Q);
     }
     RealType hx = 1.0/mip.Nx;
     RealType hy = 1.0/mip.Ny;
@@ -580,7 +581,7 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, t
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, const Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_silo_Q)
+newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_silo_Q)
 {
     using RealType = typename Mesh::coordinate_type;
 
@@ -593,11 +594,6 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
     auto dirichlet_jump = test_case.dirichlet_jump;
     auto neumann_jump = test_case.neumann_jump;
     struct params<RealType> parms = test_case.parms;
-
-    typename Mesh::point_type pt(0.5,0.5);
-    auto uv = sol_fun(pt);
-    auto ubcv = bcs_fun(pt);
-    auto fv = rhs_fun(pt);
     
     timecounter tc;
 
@@ -621,6 +617,12 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
         };
         
         assembler.project_over_cells(msh, hdi, a_dof_n, a_fun);
+        
+        it = 0;
+        if(write_silo_Q){
+            std::string silo_file_name = "cut_hho_one_field_";
+            postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, true);
+        }
     }
     
     assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
@@ -660,14 +662,13 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
     RealType    L2_error = 0.0;
     
     if(write_silo_Q){
-        
-        postprocess_output<RealType>  postoutput;
-
-        auto uT_gp  = std::make_shared< gnuplot_output_object<RealType> >("file_data.dat");
-        auto diff_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_diff.dat");
+        std::string silo_file_name = "cut_hho_one_field_";
+        postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, true);
+    }
+    
+    if(false){
 
         Matrix<RealType, Dynamic, 1> sol = u_dof_n;
-        std::vector<RealType>   solution_uT;
 
         tc.tic();
 
@@ -714,8 +715,6 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
 
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs_n.dot(t_phi);
-                    auto ve = sol_fun(qp.first);
-                    uT_gp->add_data(qp.first, v);
                     
                     /* Compute L2-error */
                     L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
@@ -736,8 +735,6 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
 
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs_p.dot(t_phi);
-                    auto ve = sol_fun(qp.first);
-                    uT_gp->add_data(qp.first, v);
 
                     /* Compute L2-error */
                     L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
@@ -767,9 +764,6 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
 
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
-                    auto ve = sol_fun(qp.first);
-                    uT_gp->add_data(qp.first, v);
-
                     /* Compute L2-error */
                     L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
@@ -780,11 +774,6 @@ newmark_step_cuthho_interface(typename Mesh::coordinate_type dt, typename Mesh::
 
         std::cout << bold << green << "Energy-norm absolute error:           " << std::sqrt(H1_error) << std::endl;
         std::cout << bold << green << "L2-norm absolute error:           " << std::sqrt(L2_error) << std::endl;
-
-        postoutput.add_object(uT_gp);
-        postoutput.add_object(diff_gp);
-        postoutput.write();
-        
     }
     
     test_info<RealType> TI;

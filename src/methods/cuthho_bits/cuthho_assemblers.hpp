@@ -943,6 +943,35 @@ public:
         return ret;
     }
             
+    Matrix<T, Dynamic, 1>
+    gather_cell_dof(const Mesh& msh, const typename Mesh::cell_type& cl,
+                    const Matrix<T, Dynamic, 1>& solution,
+                    element_location where)
+    {
+        auto celdeg = this->di.cell_degree();
+        auto facdeg = this->di.face_degree();
+
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+
+        auto cell_offset        = offset(msh, cl);
+        size_t cell_SOL_offset;
+        if ( location(msh, cl) == element_location::ON_INTERFACE )
+        {
+            if (where == element_location::IN_NEGATIVE_SIDE)
+                cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
+            else if (where == element_location::IN_POSITIVE_SIDE)
+                cell_SOL_offset = this->cell_table.at(cell_offset) * cbs + cbs;
+            else
+                throw std::invalid_argument("Invalid location");
+        }
+        else
+        {
+            cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
+        }
+        return solution.block(cell_SOL_offset, 0, cbs, 1);
+    }
+            
     void project_over_cells(const Mesh& msh, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
         
         for (auto& cl : msh.cells)
