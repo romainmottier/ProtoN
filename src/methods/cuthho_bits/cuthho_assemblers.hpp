@@ -360,6 +360,25 @@ public:
             RHS(asm_map[i]) += rhs(i);
         }
     }
+            
+    void
+    assemble_rhs_bis(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, 1>& rhs)
+    {
+        if( !(location(msh, cl) == loc_zone
+              || location(msh, cl) == element_location::ON_INTERFACE
+              || loc_zone == element_location::ON_INTERFACE ) )
+            return;
+
+        auto asm_map = init_asm_map(msh, cl);
+        // RHS
+        for (size_t i = 0; i < rhs.rows(); i++)
+        {
+            if (!asm_map[i].assemble())
+                continue;
+
+            RHS(asm_map[i]) += rhs(i);
+        }
+    }
 
     void
     assemble_bis_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
@@ -815,7 +834,7 @@ template<typename Mesh, typename Function>
 class newmark_interface_assembler : public virt_interface_assembler<Mesh, Function>
 {
     using T = typename Mesh::coordinate_type;
-
+    std::vector< size_t > m_elements_with_bc_eges;
 public:
             
     newmark_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
@@ -833,6 +852,8 @@ public:
         this->LHS = SparseMatrix<T>( system_size, system_size );
         this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size );
         this->MASS = SparseMatrix<T>( system_size, system_size );
+        
+        classify_cells(msh);
     }
 
     void
@@ -843,12 +864,41 @@ public:
     }
             
     void
+    assemble_rhs(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, 1>& rhs)
+    {
+        this->assemble_rhs_bis(msh, cl, rhs);
+    }
+            
+    void
     assemble_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
              const Matrix<T, Dynamic, Dynamic>& mass)
     {
         this->assemble_bis_mass(msh, cl, mass);
     }
 
+    void classify_cells(const Mesh& msh){
+
+        m_elements_with_bc_eges.clear();
+        size_t cell_ind = 0;
+        for (auto& cell : msh.cells)
+        {
+            auto face_list = faces(msh, cell);
+            for (size_t face_i = 0; face_i < face_list.size(); face_i++)
+            {
+                auto fc = face_list[face_i];
+//                auto fc_id = msh.lookup(fc);
+                bool is_dirichlet_Q = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
+//                && in_dom;
+//                bool is_dirichlet_Q = m_bnd.is_dirichlet_face(fc_id);
+                if (is_dirichlet_Q)
+                {
+                    m_elements_with_bc_eges.push_back(cell_ind);
+                    break;
+                }
+            }
+            cell_ind++;
+        }
+    }
 
     Matrix<T, Dynamic, 1>
     take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl,
