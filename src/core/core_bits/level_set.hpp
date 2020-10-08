@@ -69,7 +69,7 @@ struct circle_level_set: public level_set<T>
 };
 
 template<typename T>
-class line_level_set: public level_set<T>
+struct line_level_set: public level_set<T>
 {
     T cut_y;
 
@@ -97,7 +97,7 @@ class line_level_set: public level_set<T>
 
 
 template<typename T>
-class square_level_set: public level_set<T>
+struct square_level_set: public level_set<T>
 {
     public:
     T y_top, y_bot, x_left, x_right;
