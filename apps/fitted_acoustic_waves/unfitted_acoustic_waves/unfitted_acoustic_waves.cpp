@@ -666,32 +666,32 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
     auto assembler = make_newmark_interface_assembler(msh, bcs_fun, hdi);
     auto assembler_sc = make_interface_condensed_assembler(msh, bcs_fun, hdi);
     
-    if (u_dof_n.rows() == 0) {
-        size_t n_dof = assembler.LHS.rows();
-        u_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
-        v_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
-        a_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
-        auto u_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
-            RealType u,r,r0,dx,dy;
-            r0 = 0.2;
-            dx = pt.x() -0.5;
-            dy = pt.y() -0.5;
-            r = std::sqrt(dx*dx+dy*dy);
-            if(r < r0){
-                u = 1.0 + std::cos(M_PI*r/r0);
-            }else{
-                u = 0.0;
-            }
-            return u;
-        };
-        
-        assembler.project_over_cells(msh, hdi, u_dof_n, u_fun);
-        
-//        auto a_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
-//            return 2.0*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//    if (u_dof_n.rows() == 0) {
+//        size_t n_dof = assembler.LHS.rows();
+//        u_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
+//        v_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
+//        a_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
+//        auto u_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
+//            RealType u,r,r0,dx,dy;
+//            r0 = 0.2;
+//            dx = pt.x() -0.5;
+//            dy = pt.y() -0.5;
+//            r = std::sqrt(dx*dx+dy*dy);
+//            if(r < r0){
+//                u = 1.0 + std::cos(M_PI*r/r0);
+//            }else{
+//                u = 0.0;
+//            }
+//            return u;
 //        };
-//
-//        assembler.project_over_cells(msh, hdi, a_dof_n, a_fun);
+//        
+//        assembler.project_over_cells(msh, hdi, u_dof_n, u_fun);
+        
+        auto a_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
+            return 2.0*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+        };
+
+        assembler.project_over_cells(msh, hdi, a_dof_n, a_fun);
         
         it = 0;
         if(write_silo_Q){
