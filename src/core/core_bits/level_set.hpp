@@ -22,7 +22,7 @@
 
 
 template<typename T>
-class level_set
+struct level_set
 {
    public:
     virtual T operator()(const point<T,2>& pt) const
