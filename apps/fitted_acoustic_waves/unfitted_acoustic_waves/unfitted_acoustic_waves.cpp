@@ -314,21 +314,78 @@ template<typename T, typename Function, typename Mesh>
 class test_case_laplacian_waves: public test_case_laplacian<T, Function, Mesh>
 {
    public:
+//    test_case_laplacian_waves(T t,Function level_set__)
+//        : test_case_laplacian<T, Function, Mesh>
+//        (level_set__, params<T>(),
+//         [level_set__,t](const typename Mesh::point_type& pt) -> T { /* sol */
+//            if(level_set__(pt) > 0)
+//                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+//         [level_set__,t](const typename Mesh::point_type& pt) -> T { /* rhs */
+//             if(level_set__(pt) > 0)
+//                 return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//            else return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+//         [level_set__,t](const typename Mesh::point_type& pt) -> T { // bcs
+//             if(level_set__(pt) > 0)
+//                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+//         [level_set__,t](const typename Mesh::point_type& pt) -> auto { // grad
+//             Matrix<T, 1, 2> ret;
+//             if(level_set__(pt) > 0)
+//             {
+//                 ret(0) = M_PI*t*t*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//                 ret(1) = M_PI*t*t*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y());
+//                 return ret;
+//             }
+//             else {
+//                 ret(0) = M_PI*t*t*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//                 ret(1) = M_PI*t*t*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y());
+//                 return ret;}},
+//         [](const typename Mesh::point_type& pt) -> T {/* Null Dir */
+//             return 0;},
+//         [level_set__](const typename Mesh::point_type& pt) -> T {/* Null Neu */
+//             return 0;})
+//        {}
+    
     test_case_laplacian_waves(T t,Function level_set__)
         : test_case_laplacian<T, Function, Mesh>
         (level_set__, params<T>(),
          [level_set__,t](const typename Mesh::point_type& pt) -> T { /* sol */
             if(level_set__(pt) > 0)
-                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
-            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+            {
+                T u,r,r0,dx,dy;
+                r0 = 0.2;
+                dx = pt.x() -0.5;
+                dy = pt.y() -0.5;
+                r = std::sqrt(dx*dx+dy*dy);
+                if(r < r0){
+                    u = 1.0 + std::cos(M_PI*r/r0);
+                }else{
+                    u = 0.0;
+                }
+                return u;
+            }
+            else {
+                T u,r,r0,dx,dy;
+                r0 = 0.2;
+                dx = pt.x() -0.5;
+                dy = pt.y() -0.5;
+                r = std::sqrt(dx*dx+dy*dy);
+                if(r < r0){
+                    u = 1.0 + std::cos(M_PI*r/r0);
+                }else{
+                    u = 0.0;
+                }
+                return u;
+            }},
          [level_set__,t](const typename Mesh::point_type& pt) -> T { /* rhs */
              if(level_set__(pt) > 0)
-                 return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
-            else return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+                 return 0.0;
+            else return 0.0;},
          [level_set__,t](const typename Mesh::point_type& pt) -> T { // bcs
              if(level_set__(pt) > 0)
-                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
-            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+                return 0.0;
+            else return 0.0;},
          [level_set__,t](const typename Mesh::point_type& pt) -> auto { // grad
              Matrix<T, 1, 2> ret;
              if(level_set__(pt) > 0)
@@ -346,6 +403,7 @@ class test_case_laplacian_waves: public test_case_laplacian<T, Function, Mesh>
          [level_set__](const typename Mesh::point_type& pt) -> T {/* Null Neu */
              return 0;})
         {}
+    
 };
 
 template<typename Mesh, typename Function>
@@ -464,7 +522,7 @@ void ICutHHOSecondOrder(int argc, char **argv){
 
     // Time controls : Final time value 1.0
     size_t nt = 10;
-    size_t nt_divs = 5;
+    size_t nt_divs = 7;
     for (unsigned int i = 0; i < nt_divs; i++) {
         nt *= 2;
     }
@@ -497,8 +555,6 @@ void ICutHHOSecondOrder(int argc, char **argv){
     
     // Projecting initial scalar, velocity and acceleration
     Matrix<RealType, Dynamic, 1> u_dof_n, v_dof_n, a_dof_n;
-    
-    
     
     bool write_error_Q  = false;
     for(size_t it = 1; it <= nt; it++){ // for each time step
@@ -615,11 +671,27 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
         u_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
         v_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
         a_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
-        auto a_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
-            return 2.0*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+        auto u_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
+            RealType u,r,r0,dx,dy;
+            r0 = 0.2;
+            dx = pt.x() -0.5;
+            dy = pt.y() -0.5;
+            r = std::sqrt(dx*dx+dy*dy);
+            if(r < r0){
+                u = 1.0 + std::cos(M_PI*r/r0);
+            }else{
+                u = 0.0;
+            }
+            return u;
         };
         
-        assembler.project_over_cells(msh, hdi, a_dof_n, a_fun);
+        assembler.project_over_cells(msh, hdi, u_dof_n, u_fun);
+        
+//        auto a_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
+//            return 2.0*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+//        };
+//
+//        assembler.project_over_cells(msh, hdi, a_dof_n, a_fun);
         
         it = 0;
         if(write_silo_Q){
