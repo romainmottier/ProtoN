@@ -1,0 +1,3 @@
+add_executable(unsteady_interface_stokes unsteady_interface_stokes.cpp)
+target_link_libraries(unsteady_interface_stokes ${LINK_LIBS})
+install(TARGETS unsteady_interface_stokes RUNTIME DESTINATION bin)

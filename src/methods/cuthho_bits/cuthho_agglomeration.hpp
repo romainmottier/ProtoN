@@ -751,7 +751,8 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
 
 
     // integration -> save composite quadrature
-    std::cout<<"----------> SONO IN AGGLO in cell"<<offset(msh,cl)<<std::endl;
+   //  std::cout<<"WARNING: in agglomerated cells the integrations points are saved at priori (for a high degree). COMPUTATIONALLY USELESS."<<std::endl;
+    //std::cout<<"----------> SONO IN AGGLO in cell"<<offset(msh,cl)<<std::endl;
     size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
   //   std::cout << bold << yellow << "Before integrate 1" << reset << std::endl;
     auto integration1_n = integrate(msh, cl1, degree_max, element_location::IN_NEGATIVE_SIDE);
@@ -761,7 +762,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     auto integration2_n = integrate(msh, cl2, degree_max, element_location::IN_NEGATIVE_SIDE);
  //   std::cout << bold << yellow << "Before integrate 4" << reset << std::endl;
     auto integration2_p = integrate(msh, cl2, degree_max, element_location::IN_POSITIVE_SIDE);
-    std::cout<<"SONO IN AGGLO FINE <----------"<<std::endl;
+    //std::cout<<"SONO IN AGGLO FINE <----------"<<std::endl;
     cl.user_data.integration_n = integration1_n;
     cl.user_data.integration_p = integration1_p;
     for(size_t i = 0; i < integration2_n.size(); i++)
@@ -1434,7 +1435,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
     for(auto&cl:msh.cells)
     {
         //if(cl.user_data.offset_subcells.size()>1){
-            std::cout<<"The subcell of "<<offset(msh,cl)<<" are: ";
+            std::cout<<"The subcells of "<<offset(msh,cl)<<" are: ";
             for(auto& i: cl.user_data.offset_subcells)
                 std::cout<<i<<", ";
             std::cout<<std::endl;

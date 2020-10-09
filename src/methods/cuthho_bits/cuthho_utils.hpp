@@ -1492,9 +1492,22 @@ make_vector_flux_jump(const cuthho_mesh<T, ET>& msh,
 
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
-
-    auto qpsi = integrate_interface(msh, cl, 2*degree, element_location::IN_NEGATIVE_SIDE);
-
+    
+    /*
+    std::cout<<"cl = "<<offset(msh,cl)<<" points = "<<'\n';
+    for(auto& pt : points(msh,cl) )
+        std::cout<<pt<<" , ";
+    std::cout<<'\n'<<std::endl;
+    */
+    
+    //std::cout<<"WARNING: interface integration points made by linear approximation. Integration error h^2 order. To be developped higher order integration."<<std::endl;
+    //std::cout<<"WARNING: check integration points: it seems there is a repetition in agglomerated cells."<<std::endl;
+    auto qpsi = integrate_interface(msh, cl, 2*degree , element_location::IN_NEGATIVE_SIDE); 
+    /*
+    for(auto& qp : qpsi )
+        std::cout<<qp.first<<" , ";
+    std::cout<<'\n'<<std::endl;
+    */
     for (auto& qp : qpsi)
     {
         auto phi = cb.eval_basis(qp.first);

@@ -1,0 +1,3 @@
+add_executable(stefano_interface_stokes stefano_interface_stokes.cpp)
+target_link_libraries(stefano_interface_stokes ${LINK_LIBS})
+install(TARGETS stefano_interface_stokes RUNTIME DESTINATION bin)

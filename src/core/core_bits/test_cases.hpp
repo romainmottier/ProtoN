@@ -928,7 +928,7 @@ auto make_test_case_stokes_2(const Mesh& msh, Function level_set_function)
 }
 
 
-///// test_case_static_bubble
+///// test_case_static_bubble ANALYTICAL LEVEL SET
 // !! available for circle_level_set only !!
 // exact solution : 0 in the whole domain for vel_component 1
 //                  0 in the whole domain for vel_component 2
@@ -1035,6 +1035,134 @@ template<typename Mesh, typename T>
 auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k)
 {
     return test_case_static_bubble<typename Mesh::coordinate_type, Mesh>(R,a,b,k);
+}
+
+
+///// test_case_static_bubble NUMERICAL LEVEL SET
+// !! available for circle_level_set only !!
+// exact solution : 0 in the whole domain for vel_component 1
+//                  0 in the whole domain for vel_component 2
+//                  k/R - \pi k R         in Omega_1 for p
+//                  - \pi k R             in Omega_2 for p
+// \kappa_1 = \kappa_2 = 1
+template<typename T, typename Function, typename Mesh>
+class test_case_static_bubble_numerical_ls: public test_case_stokes<T, Function, Mesh>
+{
+    Mesh m_msh  ;
+    typename Mesh::cell_type m_cl ;
+
+public:
+    explicit test_case_static_bubble_numerical_ls(Function& level_set__, params<T> parms_)
+        : test_case_stokes<T, Function, Mesh>
+        (level_set__, parms_,
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+           Matrix<T, 2, 1> ret;
+           ret(0) = 0.0;
+           ret(1) = 0.0;
+           return ret;},
+        [level_set__,this](const typename Mesh::point_type& pt) mutable ->  T { // p
+            T k = 0.05 ;
+            level_set__.cell_assignment(m_cl);
+            T R = level_set__.radius ;
+            if( level_set__(pt) < 0 )
+                return k / R - M_PI * R * k;
+            else
+                return -M_PI * R * k;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+           Matrix<T, 2, 1> ret;
+           ret(0) = 0.0;
+           ret(1) = 0.0;
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 2, 2> ret;
+            ret(0,0) = 0.0;
+            ret(0,1) = 0.0;
+            ret(1,0) = 0.0;
+            ret(1,1) = 0.0;
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+        [this, level_set__](const typename Mesh::point_type& pt) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
+            Matrix<T, 2, 1> ret;
+            T k = 0.05 ;
+            level_set__.cell_assignment(m_cl);
+            T R = level_set__.radius ;
+            Matrix<T, 1, 2> normal = level_set__.normal(pt);
+            ret(0) = - k / R * normal(0);
+            ret(1) = - k / R * normal(1);
+            return ret;})
+       {}
+    
+    test_case_static_bubble_numerical_ls(const test_case_static_bubble_numerical_ls & other) : test_case_stokes<T, Function , Mesh>(other) {
+        m_msh = other.m_msh;
+        m_cl = other.m_cl;
+    }
+    
+    void test_case_cell_assignment(const typename Mesh::cell_type& cl_new )
+    {
+        m_cl = cl_new ;
+    }
+        
+    void refresh_lambdas(Function & level_set__, params<T> parms_ , bool sym_grad ){
+            
+           
+        this->neumann_jump = [this,level_set__](const typename Mesh::point_type& pt) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
+            Matrix<T, 2, 1> ret;
+            T k = 0.05;
+            T R = level_set__.radius ;
+            level_set__.cell_assignment(m_cl);
+            Matrix<T, 1, 2> normal = level_set__.normal(pt);
+            ret(0) = - k / R * normal(0);
+            ret(1) = - k / R * normal(1);
+            return ret;
+           };
+            
+            
+        this->sol_p = [level_set__,this](const typename Mesh::point_type& pt) mutable -> T {/* Pressure */
+            T k = 0.05;
+            level_set__.cell_assignment(m_cl);
+            T R = level_set__.radius ;
+            //---> ATTENTION, THE LEVEL SET GAMMA COULD BE DIFFERENT FROM ZERO!
+             if( level_set__(pt) < 0 )
+                return k / R - M_PI * R * k;
+            else
+                return -M_PI * R * k;
+            };
+            
+        }
+        
+        void test_case_mesh_assignment(const Mesh& msh_new )
+        {
+           
+            std::cout<<"-----> test_case_mesh_assignment "<<std::endl;
+            m_msh = msh_new ;
+            
+        }
+        
+        typename Mesh::cell_type& upload_cl()
+        {
+            return m_cl ;
+        }
+        
+  
+        
+
+
+    
+};
+
+template<typename Mesh ,typename T , typename Function>
+auto make_test_case_static_bubble_numerical_ls(const Mesh& msh, Function& level_set_function, params<T> parms_ )
+{
+    return test_case_static_bubble_numerical_ls<typename Mesh::coordinate_type , Function, Mesh>(level_set_function,parms_);
 }
 
 

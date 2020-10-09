@@ -478,6 +478,11 @@ barycenter(const cuthho_mesh<T, ET>& msh,
         return barycenter(msh, cl);
 
     auto tp = collect_triangulation_points(msh, cl, where);
+    /*
+    for(auto& t : tp)
+        std::cout<<t<<" , ";
+    std::cout<<std::endl;
+    */
     auto bar = barycenter(tp);
 
     return bar;

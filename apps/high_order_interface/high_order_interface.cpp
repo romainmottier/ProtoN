@@ -35398,1318 +35398,6 @@ int main(int argc, char **argv)
 
 
 
-// VAAAAAAAAA!!!!!
-// BERNSTEIN BASIS HIGH ORDER FOR PHI PLUS L2 PROJECTION -> Velocity is Lagrangian
-// UTILE PER FARE ANALISI SU INTERFACE VARI CASI QUAAAAA
-#if 1 // QQQUUUUAAA
-int main(int argc, char **argv)
-{
-    using RealType = double;
-
-    size_t degree           = 0;
-    size_t int_refsteps     = 4;
-    size_t degree_FEM       = 0;
-
-    bool dump_debug         = false;
-    bool solve_interface    = false;
-    bool solve_fictdom      = false;
-    bool agglomeration      = false;
-
-    bool high_order = FALSE ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
-    bool cut_off_active = FALSE ; // IF FALSE IS SMOOTH, IF TRUE  CUT OFF
-
-    
-    mesh_init_params<RealType> mip;
-    mip.Nx = 5;
-    mip.Ny = 5;
-    RealType d = 0.5;
-    size_t T_N = 0;
-    /* k <deg>:     method degree
-     * g<deg>:  method FEM degree
-     * M <num>:     number of cells in x direction
-     * N <num>:     number of cells in y direction
-     * r <num>:     number of interface refinement steps
-     *
-     * i:           solve interface problem
-     * f:           solve fictitious domain problem
-     *
-     * D:           use node displacement to solve bad cuts (default)
-     * A:           use agglomeration to solve bad cuts
-     *
-     * d:           dump debug data
-     */
-
-    int ch;
-    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:ifDAdhc")) != -1 )
-    {
-        switch(ch)
-        {
-            case 'k':
-                degree = atoi(optarg);
-                break;
-
-            case 'q':
-                degree_FEM = atoi(optarg);
-                break;
-        
-
-            case 'M':
-                mip.Nx = atoi(optarg);
-                break;
-
-            case 'N':
-                mip.Ny = atoi(optarg);
-                break;
-
-            case 'r':
-                int_refsteps = atoi(optarg);
-                break;
-            
-            case 'T':
-                T_N = atoi(optarg);
-                break;
-
-            case 'i':
-                solve_interface = true;
-                break;
-
-            case 'f':
-                solve_fictdom = true;
-                break;
-
-            case 'D':
-                agglomeration = false;
-                break;
-
-            case 'A':
-                agglomeration = true;
-                break;
-
-            case 'd':
-                dump_debug = true;
-                break;
-           
-            case 'h':
-                high_order = true;
-            break;
-                       
-            case 'c':
-                cut_off_active = true;
-            break;
-            
-
-            case '?':
-            default:
-                std::cout << "wrong arguments" << std::endl;
-                exit(1);
-        }
-    }
-
-    argc -= optind;
-    argv += optind;
-
-    
-    
-    timecounter tc;
-    std::cout << bold << yellow << "BERNSTEIN BASIS: HIGH ORDER ELLIPTIC INTERFACE PROBLEM." << std::endl;
-       
-    /************** BUILD MESH **************/
-    tc.tic();
-    cuthho_poly_mesh<RealType> msh(mip);
-    typedef cuthho_poly_mesh<RealType> Mesh;
-    offset_definition(msh);
-    tc.toc();
-    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
-       
-    
-    /************** FINITE ELEMENT INITIALIZATION **************/
-    auto fe_data = Finite_Element<RealType,Mesh>( msh , degree_FEM , mip ) ;
-    typedef Finite_Element<RealType,Mesh> FiniteSpace;
-    
-    
-    
-    /************** ANALYTIC LEVEL SET FUNCTION  **************/
-
-    RealType radius = 1.0/9.0; // I PUT 6.0, IT WAS 1.0/3.0
-    RealType x_centre = 0.45;
-    RealType y_centre = 0.5;
-    
-    auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre);
-    std::cout << bold << yellow << "Initial Analytic Area Circle: "<< M_PI*radius*radius << " , and circonference: "<< 2*M_PI*radius << reset << std::endl;
-     //auto level_set_function_anal = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);//(0.11, 0.1, 0.1, 4, 0.04);
-    //  auto level_set_function_anal = square_level_set<RealType>(0.6,0.4,0.4,0.6);
-    
-    typedef RealType T;
-    typedef  circle_level_set<T> Fonction;
-    //typedef  flower_level_set<T> Fonction; //DA RIMETTERE POI PER LA DISCRETA
-    //typedef line_level_set<T> Fonction;
-    // typedef square_level_set<T> Fonction;
-    
-    // ************* CELL BASIS BERNSTEIN PROVA  ************* //
-    //testing_basis(msh , degree_FEM );
-   
-
-    /*
-    typedef RealType T;
-    
-    bool circle_new = true , circle_old = false , ellipse_new = false , ellipse_old = false ;
-    
-    RealType radius_a , radius_b , radius ;
-    RealType x_centre = 0.45;
-    RealType y_centre = 0.5;
-    RealType C ;
-    if(circle_old)
-    {
-        radius = 1.0/9.0;
-    }
-        
-    if(circle_new)
-    {
-        radius = 1.0/9.0;
-    }
-    if(ellipse_old)
-    {
-        radius_a = 1.0/6.0;
-        radius_b = 1.0/12.0;
-        //radius_a = 1.0/9.0;
-        //radius_b = 1.0/9.0;
-        std::cout << bold << yellow << "Initial Analytic Area of the ELLIPSE: "<< M_PI*radius_a*radius_b << std::endl;
-        radius = sqrt( radius_a * radius_b ) ;
-        std::cout << bold << yellow << "Final radius expected of the circle : " << radius <<reset<<std::endl;
-    }
-    if(ellipse_new)
-    {
-        radius_a = 1.0/6.0;
-        radius_b = 1.0/12.0;
-        //radius_a = 1.0/9.0;
-        //radius_b = 1.0/9.0;
-        std::cout << bold << yellow << "Initial Analytic Area of the ELLIPSE: "<< M_PI*radius_a*radius_b << std::endl;
-        radius = sqrt( radius_a * radius_b ) ;
-        std::cout << bold << yellow << "Final radius expected of the circle : " << radius <<reset<<std::endl;
-    }
-    */
-    
-    /************** ANALYTIC VELOCITY FIELD   **************/
-    T u_0 = 1.00 ; // For rotational field u_0 = 0., else u_0 = 1 for right movemenent
-    T u_1 = 0.00 ;
-    auto u = linear_velocity_field<RealType>(0,u_0,0,u_1); // analytic velocity (0,0,0,0)
-    typedef linear_velocity_field<RealType> Velocity;
-    //auto u = rotational_velocity_field<RealType>( x_centre , y_centre , 1.0);
-    //typedef rotational_velocity_field<RealType> Velocity;
-    //auto u = stokes_field<RealType>();
-    //auto u = stokes_field<RealType>(4.0,2.0);
-    //auto u = stokes_field<RealType>(4.0,2.0,2.0);
-    //typedef stokes_field<RealType> Velocity;
-    //std::cout<<"prob here 0  "<<std::endl;
-    
-    
-    /************** VELOCITY INTERPOLATION **************/
-    // Velocity interpolated onto a Lagrangian Basis High Order
-    
-    std::cout<<yellow<<bold<<"--> USING LAGRANGIAN HIGH ORDER VELOCITY FIELD"<<reset<<std::endl;
-    auto u_projected = projection_velocity_high_order< Mesh,Velocity,FiniteSpace,T >(fe_data , u , msh);
-    testing_velocity( msh , u_projected , u );
-    
-    /************** VELOCITY L2-PROJECTION **************/
-    // Velocity projected onto a Bernstein basis
-    
-    //auto u_L2_projected = L2_projection_velocity<Mesh,Velocity,FiniteSpace,T>(fe_data , u , msh);
-    //testing_velocity( msh , u_L2_projected , u );
-    
-    
-    
-    /************** LEVEL SET FUNCTION L2-PROJECTION **************/
-/*
-    //T C = 0.2;  // Imposed max value at the boundary
-    T C = 0.2;  // Imposed max value at the boundary
-    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-    //T C = r0*r0 - radius*radius ;
-    std::cout<<"C new is "<<C<<std::endl;
-    
-    //std::cout<<"Smoothed solution, C  max value is "<< C <<std::endl;
-    std::cout<<"CUT OFF solution to check OLD RESULTS, C  max value is "<< C <<std::endl;
-    // Creation of analytic level set smoothed (close to the boundary)
-    //auto level_set_anal_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , level_set_function_anal ) ;
-    
-    //typedef analytic_level_set_smoothness< T , Fonction >  Fonction_smooth;
-    // L2 projection of the analytic smooth level set
-    //auto level_set_function = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth , msh);
-    // Plot of initial level set
-    //mapping_phi_SPARSE(level_set_function);
-    //testing_level_set_Bernstein(msh,level_set_function,level_set_anal_smooth);
-    //inverse_mapping_phi_SPARSE(level_set_function);
-  
-*/
-    
-     /// PARTE NUOVA ----------> THIS DATA BELOW HAS TO BE UPLOAD DEPENDING ON THE PROBLEM.
-    
-    //auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
-
-    //auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
-    
-    //auto level_set_function_anal = elliptic_level_set_new<RealType>( radius_a, radius_b, x_centre, y_centre , 1.0/16.0 );
-    
-    T h = std::max( fe_data.hx , fe_data.hy) ;
-    //auto level_set_function_anal = circle_level_set_new<RealType>(radius, x_centre, y_centre , 4.0*h );
-    
-    
-    
-    //typedef  elliptic_level_set<T> Fonction;
-    typedef  circle_level_set<T> Fonction;
-    //typedef  circle_level_set_new <T> Fonction;
-    //typedef  elliptic_level_set_new <T> Fonction;
-    
-   
-    /************** LEVEL SET FUNCTION: LAGRANGIAN HIGH ORDER DISCRETISATION **************/
-    
-    
-    auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
-   
-    T C ;  // Imposed max value at the boundary
-    
-    std::cout<<"C new is "<<C<<std::endl;
-    if(cut_off_active){
-        T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-        C = r0*r0 - radius*radius ;
-        level_set_function.cut_off( C );
-        std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
-    }
-    else{
-        C = 0.2;
-        level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
-        std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
-    }
-    
-    
-    /*
-    T r0 , rad_max ;
-       
-    if( circle_old || ellipse_old )
-    {
-           
-        if( circle_old ) // FOR CIRCLE
-        {
-            //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-            r0 = radius + h*sqrt(2.0);
-            C = r0*r0 - radius*radius ;
-        }
-        if( ellipse_old )  // FOR ELLIPSE
-        {
-            rad_max = std::max(radius_a,radius_b) ;
-            //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-            r0 = rad_max + h*sqrt(2.0);
-            C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
-        }
-                
-        T C_bis = std::abs(level_set_function.phi_min) ;
-        if( C_bis > C)
-            C = C_bis;
-                
-        if(cut_off_active)
-        {
-            level_set_function.cut_off( C );
-            std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
-            std::cout<<"C = "<<C<<std::endl;
-        }
-        else
-        {
-            //C = 0.2;  // Imposed max value at the boundary
-            T delta = r0/8.0;
-            std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
-            if( circle_old ) // FOR CIRCLE
-            {
-                std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
-                T pos_bdry = std::min(x_centre , y_centre) ;
-                std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-              
-            }
-            if( ellipse_old ) // FOR CIRCLE
-            {
-                std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
-                std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
-                T pos_bdry = std::min(x_centre , y_centre) ;
-                std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-              
-            }
-               
-            level_set_function.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
-            std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
-            std::cout<<"C = "<<C<<std::endl;
-        }
-                
-    }
-    
-    */
-    
-    if(high_order)
-        std::cout<<bold<<yellow<<"----> USING phi_HP HIGH order!!!!! "<<reset<<std::endl;
-    else
-        std::cout<<bold<<yellow<<"----> USING phi_L LOW order!!!!! "<<reset<<std::endl;
-    
-    
-    testing_level_set(msh,level_set_function,level_set_function_anal);
-  
-   
-    // Initiliatisation data for time routine
-    auto crr_mesh =  Current_Mesh<Mesh>(msh); // current meshg
-   
-    // Initialisation area , mass -> I calculate them just the first and last time step.
-    T initial_area = 0. , initial_mass = 0.;
-    T area_previous_time = 0. , mass_previous_time = 0. , dt = 0. ;
-   
-    
-    std::cout<<yellow<<bold<<"check if operator(node) work for Bernstein basis"<<reset<<std::endl;
-   
-    
-    // ERROR DATA INITIALISATION
-    T l1_L1_error = 0. , l2_L1_error = 0. , linf_L1_error = 0.;
-    T l1_L2_error = 0. ,  l2_L2_error = 0. , linf_L2_error = 0.;
-    T l1_Linf_error = 0. ,  l2_Linf_error = 0. , linf_Linf_error = 0.;
-    
-    T l1_W11_error = 0. , l2_W11_error = 0. , linf_W11_error = 0.;
-    T l1_W12_error = 0. ,  l2_W12_error = 0. , linf_W12_error = 0.;
-    T l1_W1inf_error = 0. ,  l2_W1inf_error = 0. , linf_W1inf_error = 0.;
-    
-    // DATA CHECK INITIALISATION
-    T d_a = 0. ; // It is related to area-> calculated just first and last time
-    T error_normal_global = 0. ;
-    T error_normal_local = 0. ;
-    T perimeter0 = 0. ;
-    T centre_mass0_x = 0. , centre_mass0_y = 0. ;
-    
-    for (size_t time_step = 0; time_step<=T_N; time_step++)
-    {
-        
-        // ************** Re-Initialization mesh **************
-        crr_mesh.current_mesh = msh;
-        Mesh msh_i =  crr_mesh.current_mesh;
-        offset_definition(msh_i);
-        
-        
-        typedef L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > Level_Set;
-        auto ls_cell = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
-        
-        //auto ls_cell = LS_cell_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
-         
-        // DATA CHECK INITIALISATION
-        T area0 = 0. , mass0 = 0. , global_mass0 = 0. ;
-        
-        
-        T error_normal_global0 = 0. ;
-        T diff_interface_normal = 0. ;
-        size_t counter_interface_pts = 0;
-        T divergence_error_inital = 0. ;
-        //T perimeter0 = 0. ;
-        if(time_step == 0)
-        {
-        //************ DO cutHHO MESH PROCESSING **************
-            tc.tic();
-            detect_node_position2(msh_i, level_set_function); // In cuthho_geom
-            detect_cut_faces2(msh_i, level_set_function); // In cuthho_geom
-       
-       
-            if (agglomeration)
-            {
-            detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
-            detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
-            make_neighbors_info_cartesian(msh_i); // Non serve modificarla
-            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
-            //refine_interface_angle(msh_i, level_set_function, int_refsteps);
-            refine_interface_pro(msh_i, level_set_function, int_refsteps);
-            make_agglomeration(msh_i, level_set_function); // Non serve modificarla
-            }
-            else
-            {
-            //move_nodes(msh_i, level_set_function);
-            //detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
-            detect_cut_cells2(msh_i, level_set_function);
-            //refine_interface2(msh_i, level_set_function, int_refsteps);
-            //refine_interface_angle(msh_i, level_set_function, int_refsteps);
-            refine_interface_pro(msh_i, level_set_function, int_refsteps);
-            }
-       
-            tc.toc();
-            std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
-
-            if (dump_debug)
-            {
-            dump_mesh(msh_i);
-            output_mesh_info(msh_i, level_set_function);
-            test_projection(msh_i, level_set_function, degree);
-            }
-            
-            
-            output_mesh_info2_pre_FEM(msh_i, level_set_function); // IN cuthho_export
-            //output_mesh_info2(msh_i, level_set_function); // IN cuthho_export..Points/Nodes don't change
-   
-            ls_cell.agglo_msh = msh_i ;
-        
-            // CALCULATION OF AREA AND MASS AT TIME STEP t^n
-            // CALCULATION ALSO OF CENTRE OF MASS
-            for(auto& cl : msh_i.cells)
-            {
-                ls_cell.cell_assignment(cl);
-                if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
-                {
-                    T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
-                    //std::cout<<"Partial area is "<<partial_area<<std::endl;
-                    area0 += partial_area;
-                    auto qps = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_NEGATIVE_SIDE);
-                    for(auto& qp:qps)
-                    {
-                        mass0 += qp.second * ls_cell(qp.first);
-                        centre_mass0_x += qp.second * qp.first.x() ;
-                        centre_mass0_y += qp.second * qp.first.y() ;
-                    }
-                    if( location(msh_i, cl) == element_location::ON_INTERFACE )
-                    {
-                        auto qps1 = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                        for(auto& qp1:qps1)
-                            global_mass0 += qp1.second * ls_cell(qp1.first);
-                    }
-                }
-                else
-                {
-                    auto qps2 = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                    for(auto& qp2:qps2)
-                        global_mass0 += qp2.second * ls_cell(qp2.first);
-                }
-            }
-            global_mass0 += mass0;
-            std::cout << bold << yellow << "Area at time step: "<<time_step*dt<<" is "<<reset<< area0  << reset << std::endl;
-            std::cout << bold << yellow << "Internal mass at time step: "<<time_step*dt<<" is "<<reset<< mass0  << reset << std::endl;
-            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<time_step<<" is "<<reset<<global_mass0<< reset << std::endl;
-            std::cout << bold << yellow << "CENTRE OF MASS at time step: " <<reset <<time_step*dt<<" is "<<" ( "<< centre_mass0_x/area0  << " , "<< centre_mass0_y/area0 <<" ). " << reset << std::endl;
-        
-            d_a = sqrt(4.0*area0/M_PI) ;
-           
-            initial_area  = area0 ;
-            initial_mass = mass0 ;
-        
-    
-            /// CHECKING ERROR OF THE NORMAL ( --> SI PUO TOGLIERE PER VELOCIZZARE CODICE )
-    
-            T x_deviation = u_0*(time_step)*dt;
-            T y_deviation = u_1*(time_step)*dt;
-        
-            //auto analytic_level_set_final = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
-            //auto level_set_anal_smooth_final = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final ) ;
-            // L2 projection of the analytic smooth level set
-            
-        
-    
-            /// VECCHIA IMPLEMENTAZIONE CON PROJECT LAGRANGIAN
-           
-            auto analytic_level_set_final = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-             /*
-             auto analytic_level_set_final = circle_level_set_new<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation , 4.0*h );
-             */
-
-
-            
-            
-            auto level_set_exact = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final , msh, true);
-            
-            
-            if(cut_off_active){
-                level_set_exact.cut_off( C );
-            }
-            else{
-                level_set_exact.smooth_cut_off( C , x_centre + x_deviation , y_centre +y_deviation,radius );
-            }
-           
-            /*
-            if( circle_old || ellipse_old )
-            {
-                
-                if( circle_old ) // FOR CIRCLE
-                {
-                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-                    r0 = radius + h*sqrt(2.0);
-                    C = r0*r0 - radius*radius ;
-                }
-                if( ellipse_old )  // FOR ELLIPSE
-                {
-                    rad_max = std::max(radius_a,radius_b) ;
-                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-                    r0 = rad_max + h*sqrt(2.0);
-                    C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
-                }
-                     
-                T C_bis = std::abs(level_set_function.phi_min) ;
-                if( C_bis > C)
-                    C = C_bis;
-                     
-                if(cut_off_active)
-                {
-                    level_set_exact.cut_off( C );
-                    std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
-                    std::cout<<"C = "<<C<<std::endl;
-                }
-                else
-                {
-                    //C = 0.2;  // Imposed max value at the boundary
-                    T delta = r0/8.0;
-                    std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
-                    if( circle_old ) // FOR CIRCLE
-                    {
-                        std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
-                        T pos_bdry = std::min(x_centre , y_centre) ;
-                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-                      
-                    }
-                    if( ellipse_old ) // FOR CIRCLE
-                    {
-                        std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
-                        std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
-                        T pos_bdry = std::min(x_centre , y_centre) ;
-                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-                      
-                    }
-                    
-                    level_set_exact.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
-                    std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
-                    std::cout<<"C = "<<C<<std::endl;
-                }
-                     
-            }
-            */
-            auto ls_cell_exact = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction ,FiniteSpace >(level_set_exact,msh_i);
-            
-            // PLOTTING OF NORMAL
-            postprocess_output<double> postoutput_vec;
-            auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
-            auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
-           
-            postprocess_output<double> postoutput_div2;
-            auto test_interface_divergence2  = std::make_shared< gnuplot_output_object<double> >("divergence_interface_initial.dat");
-        
-        
-            
-        
-            for(const auto & cl:msh_i.cells)
-            {
-                // NORMAL ERROR ON THE CUT CELLS: error_normal_global0
-            if(cl.user_data.location == element_location::ON_INTERFACE)
-            {
-                ls_cell.cell_assignment(cl);
-                ls_cell_exact.cell_assignment(cl);
-                auto qps=integrate(msh_i,cl,2*degree_FEM+1);
-                for(auto& qp:qps)
-                {
-                Eigen::Matrix<T,2,1> diff_global_normal = (ls_cell.normal(qp.first) - ls_cell_exact.normal(qp.first) ).cwiseAbs();
-                error_normal_global0 += qp.second * (pow(diff_global_normal(0),2));
-                error_normal_global0 += qp.second * (pow(diff_global_normal(1),2));
-                
-                }
-                
-        // NORMAL ERROR ON THE INTERFACE POINTS: diff_interface_normal
-            
-                for(auto& interface_point : cl.user_data.interface)
-                {
-                Eigen::Matrix<T,2,1> normal = ls_cell.normal(interface_point);
-                Eigen::Matrix<T,2,1> normal_exact = ls_cell_exact.normal(interface_point);
-                    
-                diff_interface_normal += (pow((normal(0)-normal_exact(0)),2) + pow((normal(1)-normal_exact(1)),2));
-                    
-                counter_interface_pts++;
-                T val = ls_cell.divergence( interface_point );
-                divergence_error_inital += pow((std::abs(val) - 1.0/radius),2) ;
-                //std::cout<<"Divergence value in pt = "<<interface_point<<" is "<<val<<std::endl;
-                test_interface_divergence2->add_data(interface_point,val);
-                }
-               
-                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
-                {
-                    perimeter0 += ( *(interface_point+1) - *interface_point ).to_vector().norm();
-                   
-                }
-               
-           
-        
-            } // End of the ( IF I'm into a cut cell)
-    
-        } // End of the loop over the cells
-    
-        
-        postoutput_div2.add_object(test_interface_divergence2);
-        postoutput_div2.write();
-        
-        divergence_error_inital /= counter_interface_pts;
-        divergence_error_inital = sqrt(divergence_error_inital);
-        std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*time_step <<" is " << divergence_error_inital <<std::endl;
-                   
-        
-        postoutput_vec.add_object(vec_normal);
-        postoutput_vec.add_object(vec_normal_exact);
-        postoutput_vec.write();
-            
-        // SQRT OF NORMAL ERROR ON CUT CELLS
-        error_normal_global0 = sqrt(error_normal_global0);
-            
-        //divergence_error_inital /= counter_interface_pts;
-        //divergence_error_inital = sqrt(divergence_error_inital);
-        //std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*time_step <<" is " << divergence_error_inital <<std::endl;
-            
-        std::cout<<"number of interface points is "<<counter_interface_pts<<std::endl;
-        diff_interface_normal /= counter_interface_pts;
-        diff_interface_normal = sqrt(diff_interface_normal);
-        
-            
-        std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*time_step <<" is " << error_normal_global0 <<std::endl;
-        std::cout<<yellow<<bold<<"The l2 error of normal N over the INTERFACE, at time "<<reset<< dt*time_step <<" is " << diff_interface_normal <<std::endl;
-        
-        std::cout<<yellow<<bold<<"The PERIMETER, at time "<<reset<< dt*time_step <<" is " << perimeter0 <<std::endl;
-        
-        std::cout<<yellow<<bold<<"The CIRCULARITY, at time "<<reset<< dt*time_step <<" is " << M_PI*d_a/perimeter0 <<std::endl;
-        
-        
-        // ERROR IN TIME
-        error_normal_global += error_normal_global0*dt;
-        error_normal_local += diff_interface_normal*dt;
-       
-        // To add only if I calculate Area and Mass in all the times.
-        //area_previous_time = area0 ;
-        //mass_previous_time = mass0 ;
-           
-        }
-                    
-        /// THE NEXT PART IS FOR ALL THE TIME STEPS
-        
-        
-        
-        
-        
-    
-        
-        
-        // CUT CELL PLOTTING
-        /*
-        postprocess_output<double> postoutput3;
-        auto cut_cell_disegno = std::make_shared< gnuplot_output_object<double> >("cut_cell_disegno.dat");
-        for (auto cl:msh_i.cells) {
-            if( is_cut(msh_i,cl) )
-            {
-            // std::cout<<" the cell in the new mesh num "<<offset(msh,cl)<<" is cut."<<std::endl;
-                // std::cout<<" EQuivalent to the old cells numero: ";
-                auto pts = points(msh_i,cl) ;
-                for (auto pt:pts) {
-                    T value = 1.;
-                    cut_cell_disegno->add_data(pt,value);
-                }
-            }
-        }
-        postoutput3.add_object(cut_cell_disegno);
-        postoutput3.write();
-        */
-    
-        
-/// RESOLUTION OF THE HHO PROBLEM
-        
-        // jumps sin_sin -> exp_cos
-        // auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function);
-        // jumps3 sin_sin -> sin_sin + pol
-    
-/*
-        //auto test_case = make_test_case_laplacian_jumps_3bis(msh_i, ls_cell,current_cell);
-        auto test_case = make_test_case_laplacian_jumps_3(msh_i, ls_cell);
-        // 2 possibilità.. 1) creo 3bis 2) anzichè passarle level_set_function le passo LS_cell
-
-        // auto method = make_Nitsche_interface_method(msh, 1.0, test_case);
-        // auto method = make_sym_gradrec_interface_method(msh, 1.0, test_case);
-        // auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-        auto method = make_Nitsche_interface_method_2(msh_i, 1.0, test_case);
-        //Matrix<RealType, Dynamic, 1> sol;
-        if(solve_interface){
-            run_cuthho_interface2(msh_i, degree, method,test_case, ls_cell);
-        //run_cuthho_interface(msh, degree, method, test_case);
-        }
-        if (solve_fictdom)
-            run_cuthho_fictdom(msh_i, degree, test_case);
-        
-*/
-        
-        
-        
-        /************** FEM -  PROCESSING **************/
-         
-        // SE VOGLIO CONDIZIONE CON d_ii devo farle dentro run_FEM_SPARSE_high_order !!!
-        
-        
-        T eps = 1.0 ; // factor to be inside CFL stability zone
-
-        //T dt1 = time_step_CFL_L2_velocity_NEW( u_L2_projected , mip , eps );
-        //T dt1 = time_step_CFL_L2_velocity( u_L2_projected , mip , eps );
-        T dt1 = time_step_CFL_new( u_projected , mip , eps );
-        //std::cout<<"dt1 is "<<dt1<<std::endl;
-        T dt2 = 1*1e-3;
-        dt = std::min(dt1 , dt2);
-        std::cout<<"I USE dt = "<<dt<<" AND CFL IS "<<dt1<<std::endl;
-        
-        
-        // CHECKING DIFFERENT PROJECTIONS / INTERPOLATION STRATEGIES
-        //checking_projection( level_set_function.msh , fe_data , level_set_function  ) ;
-        
-        
-        /// TRANSPORT PROBLEM:
-        
-        // FIRST ORDER PB (LAGRANGIAN BASIS) WITH LAGRANGIAN VELOCITY
-        //assert(degree_FEM==1);
-        //std::cout<<"LAGRANGIAN VELOCITY AND LAGRANGIAN BASIS FOR ALL. ONLY FIRST ORDER ALLOWED!!!"<<std::endl;
-        /*
-        std::cout<<"PRE FEM è"<<std::endl;
-        for(auto& cl : msh.cells)
-            for(auto& pt : points(msh,cl)){
-                std::cout.precision(15);
-                std::cout<<level_set_function(pt,msh,cl)<<std::endl;
-            }
-        
-        //for(auto& pt : msh.points)
-         //   std::cout<<level_set_function(pt)<<std::endl;
-        std::cout<<"FINE FEM"<<std::endl;
-        */
-        
-        if(high_order)
-            run_FEM_BERNSTEIN_CORRECT_FAST_PROVA( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-            //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-            //run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-            
-        else
-            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-        
-        /*
-        std::cout<<"LA SOL è"<<std::endl;
-        for(auto& cl : msh.cells)
-            for(auto& pt : points(msh,cl)){
-                std::cout.precision(15);
-                std::cout<<level_set_function(pt,msh,cl)<<std::endl;
-            }
-         */
-        //for(auto& pt : msh.points)
-        //     std::cout<<level_set_function(pt)<<std::endl;
-        //std::cout<<"FINE SOL"<<std::endl;
-        
-        // FIRST ORDER PB WITH CONSTANT VELOCITY FIELD
-        //run_FEM_first_order_u_const( level_set_function.msh , fe_data , level_set_function , dt , u_0 , u_1);
-        
-        // HIGH ORDER PB WITH CONSTANT VELOCITY FIELD
-        //run_FEM_SPARSE_u_const( level_set_function.msh , fe_data , level_set_function , dt , u_0 , u_1);
-        
-        // GENERAL CASE WITH LAGRANGIAN VELOCITY
-        //run_FEM_SPARSE_high_order_u_Lagrangian( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-       
-        // GENERAL CASE WITH BERNSTEIN BASIS VELOCITY
-        //run_FEM_SPARSE_high_order( level_set_function.msh , fe_data , level_set_function , u_L2_projected , dt);
-        
-        
-        // Uploading mesh data to check out differences in mass and areas at LAST TIME
-        
-        
-        
-        
-        
-        // testing_level_set(msh,level_set_function,level_set_function_anal);
-         
-        T x_deviation = u_0*(time_step+1)*dt;
-        T y_deviation = u_1*(time_step+1)*dt;
-        
-        
-        //auto analytic_level_set_final_bis = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
-        //auto analytic_level_set_final_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final_bis ) ;
-        // L2 projection of the analytic smooth level set
-        //auto level_set_final = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , analytic_level_set_final_smooth , msh);
-        
-        // VECCHIA IMPLEMENTAZIONE LAGRANGIAN BASIS
-        
-        auto analytic_level_set_post_FE = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-        /*
-        auto analytic_level_set_post_FE = circle_level_set_new<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation , 4.0*h );
-        */
-        
-        auto level_set_final = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_post_FE , msh,true);
-        
-        
-        if(cut_off_active){
-            level_set_final.cut_off( C );
-        }
-        else{
-            level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
-        }
-        
-        /*
-        if( circle_old || ellipse_old )
-        {
-            
-            if( circle_old ) // FOR CIRCLE
-            {
-                //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-                r0 = radius + h*sqrt(2.0);
-                C = r0*r0 - radius*radius ;
-            }
-            if( ellipse_old )  // FOR ELLIPSE
-            {
-                rad_max = std::max(radius_a,radius_b) ;
-                //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-                r0 = rad_max + h*sqrt(2.0);
-                C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
-            }
-                 
-            T C_bis = std::abs(level_set_function.phi_min) ;
-            if( C_bis > C)
-                C = C_bis;
-                 
-            if(cut_off_active)
-            {
-                level_set_final.cut_off( C );
-                std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
-                std::cout<<"C = "<<C<<std::endl;
-            }
-            else
-            {
-                //C = 0.2;  // Imposed max value at the boundary
-                T delta = r0/8.0;
-                std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
-                if( circle_old ) // FOR CIRCLE
-                {
-                    std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
-                    T pos_bdry = std::min(x_centre , y_centre) ;
-                    std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-                  
-                }
-                if( ellipse_old ) // FOR CIRCLE
-                {
-                    std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
-                    std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
-                    T pos_bdry = std::min(x_centre , y_centre) ;
-                    std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-                  
-                }
-                
-                level_set_final.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
-                std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
-                std::cout<<"C = "<<C<<std::endl;
-            }
-                 
-        }
-        */
-        
-        testing_level_set2(msh,level_set_function,level_set_final);
-        //testing_level_set(msh,level_set_function,analytic_level_set_final);
-        
-        
-        
-        T L1_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM,1.0);
-        
-        //T L2_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM,2.0);
-         
-        T Linf_err_par = Linf_error_FEM_new( level_set_final , level_set_function , msh,degree_FEM);
-         
-        std::cout << bold << yellow << "L1-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L1_err_par << std::endl;
-        //std::cout << bold << yellow << "L2-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L2_err_par << std::endl;
-        std::cout << bold << yellow << "Linf-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< Linf_err_par << std::endl;
-        
-        T W11_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 1.0);
-        //T W12_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 2.0);
-        T W1inf_err_par = W1inf_error_FEM_new(level_set_final , level_set_function , msh,degree_FEM);
-        
-        // l^q in time: norm in time
-        l1_L1_error += dt*L1_err_par;
-        l2_L1_error += dt*L1_err_par*L1_err_par;
-        linf_L1_error = std::max( L1_err_par , linf_L1_error );
-        //l1_L2_error += dt*L2_err_par;
-        //l2_L2_error += dt*L2_err_par*L2_err_par;
-        //linf_L2_error = std::max( L2_err_par , linf_L2_error );
-        l1_Linf_error += dt*Linf_err_par;
-        l2_Linf_error += dt*Linf_err_par*Linf_err_par;
-        linf_Linf_error = std::max( Linf_err_par , linf_Linf_error );
-        
-        l1_W11_error += dt*W11_err_par ;
-        l2_W11_error += dt*W11_err_par*W11_err_par ;
-        linf_W11_error = std::max( W11_err_par , linf_W11_error );
-        //l1_W12_error += dt*W12_err_par ;
-        //l2_W12_error += dt*W12_err_par*W12_err_par ;
-        //linf_W12_error = std::max( W12_err_par , linf_W12_error );
-        l1_W1inf_error += dt*W1inf_err_par;
-        l2_W1inf_error += dt*W1inf_err_par*W1inf_err_par;
-        linf_W1inf_error = std::max( W1inf_err_par , linf_W1inf_error );
-        
-        std::cout << bold << yellow << "W_1,1 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W11_err_par << std::endl;
-        //std::cout << bold << yellow << "W_1,2 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W12_err_par << std::endl;
-        std::cout << bold << yellow << "W_1,inf error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W1inf_err_par << std::endl;
-        
-        if( (T_N - time_step)==0 )
-        {
-            crr_mesh.current_mesh = msh;
-            Mesh msh_i2 =  crr_mesh.current_mesh;
-            offset_definition(msh_i2);
-            tc.tic();
-            detect_node_position2(msh_i2, level_set_function); // In cuthho_geom
-            //detect_node_position3(msh_i2, level_set_function); // In cuthho_geom
-            //detect_cut_faces(msh_i2, level_set_function); // In cuthho_geom
-            
-            // DA MODIFICARE!!!
-            //detect_cut_faces(msh_i2, level_set_function); // In cuthho_geom SLOW VERSION
-            detect_cut_faces2(msh_i2, level_set_function); // In cuthho_geom
-            
-            std::cout<<"SONO QUA 0"<<std::endl;
-           
-            if (agglomeration)
-            {
-            // std::cout<<"i m here 1"<<std::endl;
-                detect_cut_cells2(msh_i2, level_set_function); // In cuthho_geom
-               
-                detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
-               
-                make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
-                // IN cuthho_geom
-                //refine_interface2(msh_i2, level_set_function, int_refsteps);
-                //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
-                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
-                //refine_interface3(msh_i2, level_set_function, int_refsteps);
-                
-                make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
-            }
-            else
-            {
-                //move_nodes(msh_i2, level_set_function);
-                //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
-                
-                // ADD BY STE TO CHANGE refine_interface3
-                make_neighbors_info_cartesian(msh_i2);
-                detect_cut_cells2(msh_i2, level_set_function);
-                std::cout<<"SONO QUA 1"<<std::endl;
-                //refine_interface(msh_i2, level_set_function, int_refsteps);
-                //refine_interface2(msh_i2, level_set_function, int_refsteps);
-                //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
-                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
-                std::cout<<"SONO QUA 2"<<std::endl;
-            }
-            
-            tc.toc();
-            std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
-
-            if (dump_debug)
-            {
-                dump_mesh(msh_i2);
-                output_mesh_info(msh_i2, level_set_function);
-                test_projection(msh_i2, level_set_function, degree);
-            }
-            
-            output_mesh_info2(msh_i2, level_set_function); // IN cuthho_export..Points/Nodes don't change
-            
-            // UPLOADING LS_CELL -> LEVEL SET AND MESH
-            ls_cell.level_set = level_set_function;
-            ls_cell.agglo_msh = msh_i2;
-            
-           
-            // DATA CHECK INITIALISATION
-            T  mass_fin = 0. , global_mass1 = 0. , area_fin = 0. ;
-            T centre_mass_x = 0. , centre_mass_y = 0. ;
-                
-            for(auto& cl : msh_i2.cells)
-            {
-                ls_cell.cell_assignment(cl);
-                if( location(msh_i2, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i2, cl) == element_location::ON_INTERFACE )
-                {
-                    T partial_area = measure( msh_i2, cl, element_location::IN_NEGATIVE_SIDE);
-                    //std::cout<<"Partial area in cell "<< offset(msh_i2,cl) <<" is "<<partial_area<<std::endl;
-                    area_fin += partial_area;
-                    auto qps=integrate(msh_i2,cl,2*degree_FEM+1,element_location::IN_NEGATIVE_SIDE);
-                    for(auto& qp:qps){
-                        mass_fin += qp.second * ls_cell(qp.first);
-                        centre_mass_x += qp.second * qp.first.x() ;
-                        centre_mass_y += qp.second * qp.first.y() ;
-                    }
-                    if( location(msh_i2, cl) == element_location::ON_INTERFACE )
-                    {
-                        auto qps1 = integrate (msh_i2,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                        for(auto& qp1:qps1)
-                            global_mass1 += qp1.second * ls_cell(qp1.first);
-                    }
-                }
-                else
-                {
-                    auto qps2 = integrate (msh_i2,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
-                    for(auto& qp2:qps2)
-                        global_mass1 += qp2.second * ls_cell(qp2.first);
-                }
-            }
-            global_mass1 += mass_fin;
-                
-            d_a = sqrt(4.0*area_fin/M_PI) ;
-            std::cout << bold << yellow << "Area at time step: " <<(time_step+1)*dt<<" is "<< reset<< area_fin   << std::endl;
-            std::cout << bold << yellow << "Internal mass at time step: "<<(time_step+1)*dt<<" is "<<reset<< mass_fin  << reset << std::endl;
-                
-            std::cout << bold << yellow << "CENTRE OF MASS at time step: "<<(time_step+1)*dt<<" is "<<reset<<" ( " << centre_mass_x/area_fin <<" , " << centre_mass_y/area_fin<<" ). " << std::endl;
-            std::cout << bold << yellow << "TRANSLATION OF THE CENTRE OF MASS at time step: " <<reset <<(time_step+1)*dt<<" is "<<" ( " << centre_mass_x/area_fin - centre_mass0_x/initial_area <<" , " << centre_mass_y/area_fin - centre_mass0_y/initial_area<<" ). " << std::endl;
-            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<(time_step+1)<<" is "<<reset<<global_mass1<< reset << std::endl;
-            std::cout << bold << yellow << "Difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)  << std::endl;
-            std::cout << bold << yellow << "Difference in INTERNAL MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass) << std::endl;
-            
-                
-            std::cout << bold << yellow << "NORMALISED difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)/(std::abs(initial_area))  << std::endl;
-            std::cout << bold << yellow << "NORMALISED difference in MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass)/(std::abs(initial_mass)) << std::endl;
-                
-            //std::cout << bold << yellow << "Difference in GLOBAL MASS: "<< reset<< global_mass1 - global_mass0 << std::endl;
-                
-                
-                
-            /// CHECKING NORMAL VELOCITY
-            
-            x_deviation = u_0*(time_step+1)*dt;
-            y_deviation = u_1*(time_step+1)*dt;
-                
-            //auto analytic_level_set_final_exact = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
-            //auto level_set_anal_smooth_final_exact = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final_exact ) ;
-            // L2 projection of the analytic smooth level set
-            //auto level_set_exact_fin = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth_final_exact , msh);
-                
-            // VECCHIA IMPLEMENTAZIONE CON BASE LAGRANGIANA
-           
-            auto analytic_level_set_final_exact = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-            /*
-            auto analytic_level_set_final_exact = circle_level_set_new<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation , 4.0*h );
-           */
-            
-            auto level_set_exact_fin = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final_exact , msh,true);
-            
-           
-            if(cut_off_active){
-                level_set_exact_fin.cut_off( C );
-            }
-            else{
-                level_set_exact_fin.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
-            }
-             /*
-            if( circle_old || ellipse_old )
-            {
-                
-                if( circle_old ) // FOR CIRCLE
-                {
-                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-                    r0 = radius + h*sqrt(2.0);
-                    C = r0*r0 - radius*radius ;
-                }
-                if( ellipse_old )  // FOR ELLIPSE
-                {
-                    rad_max = std::max(radius_a,radius_b) ;
-                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
-                    r0 = rad_max + h*sqrt(2.0);
-                    C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
-                }
-                     
-                T C_bis = std::abs(level_set_function.phi_min) ;
-                if( C_bis > C)
-                    C = C_bis;
-                     
-                if(cut_off_active)
-                {
-                    level_set_exact_fin.cut_off( C );
-                    std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
-                    std::cout<<"C = "<<C<<std::endl;
-                }
-                else
-                {
-                    //C = 0.2;  // Imposed max value at the boundary
-                    T delta = r0/8.0;
-                    std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
-                    if( circle_old ) // FOR CIRCLE
-                    {
-                        std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
-                        T pos_bdry = std::min(x_centre , y_centre) ;
-                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-                      
-                    }
-                    if( ellipse_old ) // FOR CIRCLE
-                    {
-                        std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
-                        std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
-                        T pos_bdry = std::min(x_centre , y_centre) ;
-                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
-                      
-                    }
-                    
-                    level_set_exact_fin.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
-                    std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
-                    std::cout<<"C = "<<C<<std::endl;
-                }
-                     
-            }
-             */
-            
-            auto ls_cell_exact_fin = LS_cell_L2proj_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
-            //auto ls_cell_exact_fin = LS_cell_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
-                
-                
-            postprocess_output<double> postoutput_vec;
-            auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
-            auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
-                
-            postprocess_output<double> postoutput_div;
-            auto test_interface_divergence  = std::make_shared< gnuplot_output_object<double> >("divergence_interface_u_const.dat");
-            
-            error_normal_global0 = 0. ;
-            diff_interface_normal = 0. ;
-            counter_interface_pts = 0;
-            T perimeter = 0. ;
-            T divergence_error_fin = 0. ;
-                
-            for(const auto & cl:msh_i2.cells)
-            {
-                if(cl.user_data.location == element_location::ON_INTERFACE)
-                {
-                    ls_cell.cell_assignment(cl);
-                    ls_cell_exact_fin.cell_assignment(cl);
-                    auto qps=integrate(msh_i2,cl,2*degree_FEM+2);
-                    for(auto& qp:qps){
-                        Eigen::Matrix<T,2,1> diff_global_normal = (ls_cell.normal(qp.first) - ls_cell_exact_fin.normal(qp.first) ).cwiseAbs();
-                        error_normal_global0 += qp.second * (pow(diff_global_normal(0),2));
-                        error_normal_global0 += qp.second * (pow(diff_global_normal(1),2));
-                        
-                    }
-                
-                    T curvature_avg_cell = 0.;
-                    size_t points_cell = 0;
-                    for(auto& interface_point : cl.user_data.interface)
-                    {
-                        Eigen::Matrix<T,2,1> normal = ls_cell.normal(interface_point);
-                        Eigen::Matrix<T,2,1> normal_exact = ls_cell_exact_fin.normal(interface_point);
-                                    
-                        diff_interface_normal += (pow((normal(0)-normal_exact(0)),2) + pow((normal(1)-normal_exact(1)),2));
-                                    
-                        std::pair<T,T> normal_vec = std::make_pair(normal(0),normal(1));
-                        vec_normal->add_data(interface_point,normal_vec);
-                        std::pair<T,T> normal_vec_exact = std::make_pair(normal(0),normal(1));
-                        vec_normal_exact->add_data(interface_point,normal_vec_exact);
-                                    
-                        counter_interface_pts++;
-                        T val = ls_cell.divergence( interface_point );
-                        //std::cout<<"Divergence value in pt = "<<interface_point<<" is "<<val<<std::endl;
-                        divergence_error_fin += pow((std::abs(val) - 1.0/radius),2);
-                        test_interface_divergence->add_data(interface_point,val);
-                        curvature_avg_cell += val;
-                        points_cell++;
-                    }
-                    
-                    curvature_avg_cell/= points_cell ;
-                    std::cout<<"In cell "<<offset(msh,cl)<<" AVG CURVATURE = "<<curvature_avg_cell<<std::endl;
-                    
-                    for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
-                    {
-                        perimeter += ( *(interface_point+1) - *interface_point ).to_vector().norm();
-                            
-                    }
-                    //perimeter += ( *(cl.user_data.interface.begin()) - *(cl.user_data.interface.end() -1) ).to_vector().norm();
-                    //std::cout<<std::endl;
-                }
-            }
-            
-            postoutput_div.add_object(test_interface_divergence);
-            postoutput_div.write();
-            
-            postoutput_vec.add_object(vec_normal);
-            postoutput_vec.add_object(vec_normal_exact);
-            postoutput_vec.write();
-            
-            divergence_error_fin /= counter_interface_pts;
-            divergence_error_fin = sqrt(divergence_error_fin);
-            std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*(time_step+1) <<" is " << divergence_error_fin <<std::endl;
-                            
-            error_normal_global0 = sqrt(error_normal_global0);
-                    
-            std::cout<<"number of interface points is "<<counter_interface_pts<<std::endl;
-                        
-            diff_interface_normal /= (counter_interface_pts);
-            std::cout<<"diff_interface_normal = "<<diff_interface_normal<<std::endl;
-            diff_interface_normal = sqrt(diff_interface_normal);
-                    
-            std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*(time_step+1) <<" is " << error_normal_global0 <<std::endl;
-            std::cout<<"The l2 error of normal N over the INTERFACE, at time "<< dt*(time_step+1) <<" is " << diff_interface_normal <<std::endl;
-                        
-                        
-            std::cout<< bold << yellow<<"The PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << perimeter <<std::endl;
-                
-            std::cout<<"perimeter = "<< perimeter << " AND  perimeter0 =  "<<perimeter0<<std::endl;
-            std::cout<< bold << yellow<<"NORMALISED DIFFERENCE PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << (perimeter - perimeter0)/perimeter0 <<std::endl;
-                
-            std::cout<< bold << yellow<<"The CIRCULARITY, at time "<< dt*(time_step+1)<<reset <<" is " << M_PI*d_a/perimeter <<std::endl;
-                        
-            error_normal_global += error_normal_global0*dt;
-            error_normal_local += diff_interface_normal*dt;
-                        
-                    
-            std::cout << bold << yellow << "Error l1(L2) of the normal in the CUT CELLS: "<< reset<< error_normal_global  << std::endl;
-                
-            std::cout << bold << yellow << "Error l1(l2) of the normal in the INTERFACE POINTS: "<< reset<< error_normal_local  << std::endl;
-            
-        
-        } // END OF T = FINAL TIME
-        
-        
-        
-        
-    } // End of the temporal loop
-    
-    l2_L1_error = sqrt(l2_L1_error);
-    l2_L2_error = sqrt(l2_L2_error);
-    l2_Linf_error = sqrt(l2_Linf_error);
-    
-    l2_W11_error = sqrt(l2_W11_error);
-    l2_W12_error = sqrt(l2_W12_error);
-    l2_W1inf_error = sqrt(l2_W1inf_error);
-    std::cout<<'\n';
-    std::cout << bold << yellow << "l1(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L1_error << std::endl;
-    std::cout << bold << yellow << "l2(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_L1_error << std::endl;
-    std::cout << bold << yellow << "linf(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L1_error << std::endl;
-    std::cout<<'\n';
-    
-    std::cout << bold << yellow << "l1(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L2_error << std::endl;
-    std::cout << bold << yellow << "l2(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_L2_error << std::endl;
-    std::cout << bold << yellow << "linf(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L2_error << std::endl;
-    std::cout<<'\n';
-    std::cout << bold << yellow << "l1(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_Linf_error << std::endl;
-    std::cout << bold << yellow << "l2(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_Linf_error << std::endl;
-    std::cout << bold << yellow << "linf(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_Linf_error << std::endl;
-    std::cout<<'\n';
-    
-    std::cout << bold << yellow << "Seminorm l1(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W11_error << std::endl;
-   
-    std::cout << bold << yellow << "Seminorm l2(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W11_error << std::endl;
-    std::cout << bold << yellow << "Seminorm linf(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W11_error << std::endl;
-   
-    std::cout<<'\n';
-    std::cout << bold << yellow << "Seminorm l1(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W12_error << std::endl;
-    
-    std::cout << bold << yellow << "Seminorm l2(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W12_error << std::endl;
-    std::cout << bold << yellow << "Seminorm linf(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W12_error << std::endl;
-    
-    std::cout<<'\n';
-    std::cout << bold << yellow << "Seminorm l1(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W1inf_error << std::endl;
-    
-    std::cout << bold << yellow << "Seminorm l2(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W1inf_error << std::endl;
-    std::cout << bold << yellow << "Seminorm linf(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W1inf_error << std::endl;
-    std::cout<<'\n';
-    
-    
-    // ************** ANALYTIC SOLUTION FOR FINAL TIME LINEAR VELOCITY FIELD   **************
-    /*
-    T x_deviation = u_0*(T_N+1)*dt;
-    T y_deviation = u_1*(T_N+1)*dt;
-    auto analytic_level_set_final = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
-    auto level_set_final = projected_level_set< T, Mesh,Fonction>(analytic_level_set_final, msh, degree_FEM , mip);
-    
-
-    level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
-    //level_set_final.cut_off(d);
-    testing_level_set2(msh,level_set_function,level_set_final);
-    //testing_level_set(msh,level_set_function,analytic_level_set_final);
-    Lp_space_Tfin_error_FEM( level_set_final , level_set_function , msh ,degree_FEM ,1.0 );
-    Lp_space_Tfin_error_FEM( level_set_final , level_set_function , msh ,degree_FEM ,2.0 );
-    */
-    
-    return 0;
-}
-#endif
 
 
 
@@ -38183,7 +36871,7 @@ void convergence_fast_Bernstein() // I do case entropic!!!
     bool high_order = TRUE ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
     bool case_entropic = FALSE ;
     
-    bool cut_off_active = TRUE ; // IF FALSE IS SMOOTH, IF TRUE  CUTOFF
+    bool cut_off_active = FALSE ; // IF FALSE IS SMOOTH, IF TRUE  CUTOFF
    
     std::vector<size_t> mesh_sizes, pol_orders, FE_orders ;
     std::vector<T> time_steps;
@@ -38217,11 +36905,11 @@ void convergence_fast_Bernstein() // I do case entropic!!!
     
     // Time steps to be analysed // HAS TO be smaller than ||u||/max(h) = 1/32 = 0.03
     //time_steps.push_back(5*1e-3);
-    time_steps.push_back(4*1e-3);
+    //time_steps.push_back(4*1e-3);
     time_steps.push_back(2*1e-3);
-    time_steps.push_back(1*1e-3);
-    time_steps.push_back(5*1e-4);
-    time_steps.push_back(2.5*1e-4);
+    //time_steps.push_back(1*1e-3);
+    //time_steps.push_back(5*1e-4);
+    //time_steps.push_back(2.5*1e-4);
     //time_steps.push_back(1.25*1e-4);
 
     T final_T = 0.1;
@@ -39051,6 +37739,1318 @@ int main(int argc, char **argv)
 }
 #endif
 
+// VAAAAAAAAA!!!!!
+// BERNSTEIN BASIS HIGH ORDER FOR PHI PLUS L2 PROJECTION -> Velocity is Lagrangian
+// UTILE PER FARE ANALISI SU INTERFACE VARI CASI QUAAAAA
+#if 0 // QQQUUUUAAA
+int main(int argc, char **argv)
+{
+    using RealType = double;
+
+    size_t degree           = 0;
+    size_t int_refsteps     = 4;
+    size_t degree_FEM       = 0;
+
+    bool dump_debug         = false;
+    bool solve_interface    = false;
+    bool solve_fictdom      = false;
+    bool agglomeration      = false;
+
+    bool high_order = FALSE ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool cut_off_active = FALSE ; // IF FALSE IS SMOOTH, IF TRUE  CUT OFF
+
+    
+    mesh_init_params<RealType> mip;
+    mip.Nx = 5;
+    mip.Ny = 5;
+    RealType d = 0.5;
+    size_t T_N = 0;
+    /* k <deg>:     method degree
+     * g<deg>:  method FEM degree
+     * M <num>:     number of cells in x direction
+     * N <num>:     number of cells in y direction
+     * r <num>:     number of interface refinement steps
+     *
+     * i:           solve interface problem
+     * f:           solve fictitious domain problem
+     *
+     * D:           use node displacement to solve bad cuts (default)
+     * A:           use agglomeration to solve bad cuts
+     *
+     * d:           dump debug data
+     */
+
+    int ch;
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:ifDAdhc")) != -1 )
+    {
+        switch(ch)
+        {
+            case 'k':
+                degree = atoi(optarg);
+                break;
+
+            case 'q':
+                degree_FEM = atoi(optarg);
+                break;
+        
+
+            case 'M':
+                mip.Nx = atoi(optarg);
+                break;
+
+            case 'N':
+                mip.Ny = atoi(optarg);
+                break;
+
+            case 'r':
+                int_refsteps = atoi(optarg);
+                break;
+            
+            case 'T':
+                T_N = atoi(optarg);
+                break;
+
+            case 'i':
+                solve_interface = true;
+                break;
+
+            case 'f':
+                solve_fictdom = true;
+                break;
+
+            case 'D':
+                agglomeration = false;
+                break;
+
+            case 'A':
+                agglomeration = true;
+                break;
+
+            case 'd':
+                dump_debug = true;
+                break;
+           
+            case 'h':
+                high_order = true;
+            break;
+                       
+            case 'c':
+                cut_off_active = true;
+            break;
+            
+
+            case '?':
+            default:
+                std::cout << "wrong arguments" << std::endl;
+                exit(1);
+        }
+    }
+
+    argc -= optind;
+    argv += optind;
+
+    
+    
+    timecounter tc;
+    std::cout << bold << yellow << "BERNSTEIN BASIS: HIGH ORDER ELLIPTIC INTERFACE PROBLEM." << std::endl;
+       
+    /************** BUILD MESH **************/
+    tc.tic();
+    cuthho_poly_mesh<RealType> msh(mip);
+    typedef cuthho_poly_mesh<RealType> Mesh;
+    offset_definition(msh);
+    tc.toc();
+    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
+       
+    
+    /************** FINITE ELEMENT INITIALIZATION **************/
+    auto fe_data = Finite_Element<RealType,Mesh>( msh , degree_FEM , mip ) ;
+    typedef Finite_Element<RealType,Mesh> FiniteSpace;
+    
+    
+    
+    /************** ANALYTIC LEVEL SET FUNCTION  **************/
+
+    RealType radius = 1.0/9.0; // I PUT 6.0, IT WAS 1.0/3.0
+    RealType x_centre = 0.45;
+    RealType y_centre = 0.5;
+    
+    auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre);
+    std::cout << bold << yellow << "Initial Analytic Area Circle: "<< M_PI*radius*radius << " , and circonference: "<< 2*M_PI*radius << reset << std::endl;
+     //auto level_set_function_anal = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);//(0.11, 0.1, 0.1, 4, 0.04);
+    //  auto level_set_function_anal = square_level_set<RealType>(0.6,0.4,0.4,0.6);
+    
+    typedef RealType T;
+    typedef  circle_level_set<T> Fonction;
+    //typedef  flower_level_set<T> Fonction; //DA RIMETTERE POI PER LA DISCRETA
+    //typedef line_level_set<T> Fonction;
+    // typedef square_level_set<T> Fonction;
+    
+    // ************* CELL BASIS BERNSTEIN PROVA  ************* //
+    //testing_basis(msh , degree_FEM );
+   
+
+    /*
+    typedef RealType T;
+    
+    bool circle_new = true , circle_old = false , ellipse_new = false , ellipse_old = false ;
+    
+    RealType radius_a , radius_b , radius ;
+    RealType x_centre = 0.45;
+    RealType y_centre = 0.5;
+    RealType C ;
+    if(circle_old)
+    {
+        radius = 1.0/9.0;
+    }
+        
+    if(circle_new)
+    {
+        radius = 1.0/9.0;
+    }
+    if(ellipse_old)
+    {
+        radius_a = 1.0/6.0;
+        radius_b = 1.0/12.0;
+        //radius_a = 1.0/9.0;
+        //radius_b = 1.0/9.0;
+        std::cout << bold << yellow << "Initial Analytic Area of the ELLIPSE: "<< M_PI*radius_a*radius_b << std::endl;
+        radius = sqrt( radius_a * radius_b ) ;
+        std::cout << bold << yellow << "Final radius expected of the circle : " << radius <<reset<<std::endl;
+    }
+    if(ellipse_new)
+    {
+        radius_a = 1.0/6.0;
+        radius_b = 1.0/12.0;
+        //radius_a = 1.0/9.0;
+        //radius_b = 1.0/9.0;
+        std::cout << bold << yellow << "Initial Analytic Area of the ELLIPSE: "<< M_PI*radius_a*radius_b << std::endl;
+        radius = sqrt( radius_a * radius_b ) ;
+        std::cout << bold << yellow << "Final radius expected of the circle : " << radius <<reset<<std::endl;
+    }
+    */
+    
+    /************** ANALYTIC VELOCITY FIELD   **************/
+    T u_0 = 1.00 ; // For rotational field u_0 = 0., else u_0 = 1 for right movemenent
+    T u_1 = 0.00 ;
+    auto u = linear_velocity_field<RealType>(0,u_0,0,u_1); // analytic velocity (0,0,0,0)
+    typedef linear_velocity_field<RealType> Velocity;
+    //auto u = rotational_velocity_field<RealType>( x_centre , y_centre , 1.0);
+    //typedef rotational_velocity_field<RealType> Velocity;
+    //auto u = stokes_field<RealType>();
+    //auto u = stokes_field<RealType>(4.0,2.0);
+    //auto u = stokes_field<RealType>(4.0,2.0,2.0);
+    //typedef stokes_field<RealType> Velocity;
+    //std::cout<<"prob here 0  "<<std::endl;
+    
+    
+    /************** VELOCITY INTERPOLATION **************/
+    // Velocity interpolated onto a Lagrangian Basis High Order
+    
+    std::cout<<yellow<<bold<<"--> USING LAGRANGIAN HIGH ORDER VELOCITY FIELD"<<reset<<std::endl;
+    auto u_projected = projection_velocity_high_order< Mesh,Velocity,FiniteSpace,T >(fe_data , u , msh);
+    testing_velocity( msh , u_projected , u );
+    
+    /************** VELOCITY L2-PROJECTION **************/
+    // Velocity projected onto a Bernstein basis
+    
+    //auto u_L2_projected = L2_projection_velocity<Mesh,Velocity,FiniteSpace,T>(fe_data , u , msh);
+    //testing_velocity( msh , u_L2_projected , u );
+    
+    
+    
+    /************** LEVEL SET FUNCTION L2-PROJECTION **************/
+/*
+    //T C = 0.2;  // Imposed max value at the boundary
+    T C = 0.2;  // Imposed max value at the boundary
+    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+    //T C = r0*r0 - radius*radius ;
+    std::cout<<"C new is "<<C<<std::endl;
+    
+    //std::cout<<"Smoothed solution, C  max value is "<< C <<std::endl;
+    std::cout<<"CUT OFF solution to check OLD RESULTS, C  max value is "<< C <<std::endl;
+    // Creation of analytic level set smoothed (close to the boundary)
+    //auto level_set_anal_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , level_set_function_anal ) ;
+    
+    //typedef analytic_level_set_smoothness< T , Fonction >  Fonction_smooth;
+    // L2 projection of the analytic smooth level set
+    //auto level_set_function = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth , msh);
+    // Plot of initial level set
+    //mapping_phi_SPARSE(level_set_function);
+    //testing_level_set_Bernstein(msh,level_set_function,level_set_anal_smooth);
+    //inverse_mapping_phi_SPARSE(level_set_function);
+  
+*/
+    
+     /// PARTE NUOVA ----------> THIS DATA BELOW HAS TO BE UPLOAD DEPENDING ON THE PROBLEM.
+    
+    //auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
+
+    //auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
+    
+    //auto level_set_function_anal = elliptic_level_set_new<RealType>( radius_a, radius_b, x_centre, y_centre , 1.0/16.0 );
+    
+    T h = std::max( fe_data.hx , fe_data.hy) ;
+    //auto level_set_function_anal = circle_level_set_new<RealType>(radius, x_centre, y_centre , 4.0*h );
+    
+    
+    
+    //typedef  elliptic_level_set<T> Fonction;
+    typedef  circle_level_set<T> Fonction;
+    //typedef  circle_level_set_new <T> Fonction;
+    //typedef  elliptic_level_set_new <T> Fonction;
+    
+   
+    /************** LEVEL SET FUNCTION: LAGRANGIAN HIGH ORDER DISCRETISATION **************/
+    
+    
+    auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
+   
+    T C ;  // Imposed max value at the boundary
+    
+    std::cout<<"C new is "<<C<<std::endl;
+    if(cut_off_active){
+        T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+        C = r0*r0 - radius*radius ;
+        level_set_function.cut_off( C );
+        std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+    }
+    else{
+        C = 0.2;
+        level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
+        std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+    }
+    
+    
+    /*
+    T r0 , rad_max ;
+       
+    if( circle_old || ellipse_old )
+    {
+           
+        if( circle_old ) // FOR CIRCLE
+        {
+            //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+            r0 = radius + h*sqrt(2.0);
+            C = r0*r0 - radius*radius ;
+        }
+        if( ellipse_old )  // FOR ELLIPSE
+        {
+            rad_max = std::max(radius_a,radius_b) ;
+            //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+            r0 = rad_max + h*sqrt(2.0);
+            C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
+        }
+                
+        T C_bis = std::abs(level_set_function.phi_min) ;
+        if( C_bis > C)
+            C = C_bis;
+                
+        if(cut_off_active)
+        {
+            level_set_function.cut_off( C );
+            std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+            std::cout<<"C = "<<C<<std::endl;
+        }
+        else
+        {
+            //C = 0.2;  // Imposed max value at the boundary
+            T delta = r0/8.0;
+            std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
+            if( circle_old ) // FOR CIRCLE
+            {
+                std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
+                T pos_bdry = std::min(x_centre , y_centre) ;
+                std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+              
+            }
+            if( ellipse_old ) // FOR CIRCLE
+            {
+                std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
+                std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
+                T pos_bdry = std::min(x_centre , y_centre) ;
+                std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+              
+            }
+               
+            level_set_function.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
+            std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+            std::cout<<"C = "<<C<<std::endl;
+        }
+                
+    }
+    
+    */
+    
+    if(high_order)
+        std::cout<<bold<<yellow<<"----> USING phi_HP HIGH order!!!!! "<<reset<<std::endl;
+    else
+        std::cout<<bold<<yellow<<"----> USING phi_L LOW order!!!!! "<<reset<<std::endl;
+    
+    
+    testing_level_set(msh,level_set_function,level_set_function_anal);
+  
+   
+    // Initiliatisation data for time routine
+    auto crr_mesh =  Current_Mesh<Mesh>(msh); // current meshg
+   
+    // Initialisation area , mass -> I calculate them just the first and last time step.
+    T initial_area = 0. , initial_mass = 0.;
+    T area_previous_time = 0. , mass_previous_time = 0. , dt = 0. ;
+   
+    
+    std::cout<<yellow<<bold<<"check if operator(node) work for Bernstein basis"<<reset<<std::endl;
+   
+    
+    // ERROR DATA INITIALISATION
+    T l1_L1_error = 0. , l2_L1_error = 0. , linf_L1_error = 0.;
+    T l1_L2_error = 0. ,  l2_L2_error = 0. , linf_L2_error = 0.;
+    T l1_Linf_error = 0. ,  l2_Linf_error = 0. , linf_Linf_error = 0.;
+    
+    T l1_W11_error = 0. , l2_W11_error = 0. , linf_W11_error = 0.;
+    T l1_W12_error = 0. ,  l2_W12_error = 0. , linf_W12_error = 0.;
+    T l1_W1inf_error = 0. ,  l2_W1inf_error = 0. , linf_W1inf_error = 0.;
+    
+    // DATA CHECK INITIALISATION
+    T d_a = 0. ; // It is related to area-> calculated just first and last time
+    T error_normal_global = 0. ;
+    T error_normal_local = 0. ;
+    T perimeter0 = 0. ;
+    T centre_mass0_x = 0. , centre_mass0_y = 0. ;
+    
+    for (size_t time_step = 0; time_step<=T_N; time_step++)
+    {
+        
+        // ************** Re-Initialization mesh **************
+        crr_mesh.current_mesh = msh;
+        Mesh msh_i =  crr_mesh.current_mesh;
+        offset_definition(msh_i);
+        
+        
+        typedef L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > Level_Set;
+        auto ls_cell = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+        
+        //auto ls_cell = LS_cell_high_order< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+         
+        // DATA CHECK INITIALISATION
+        T area0 = 0. , mass0 = 0. , global_mass0 = 0. ;
+        
+        
+        T error_normal_global0 = 0. ;
+        T diff_interface_normal = 0. ;
+        size_t counter_interface_pts = 0;
+        T divergence_error_inital = 0. ;
+        //T perimeter0 = 0. ;
+        if(time_step == 0)
+        {
+        //************ DO cutHHO MESH PROCESSING **************
+            tc.tic();
+            detect_node_position2(msh_i, level_set_function); // In cuthho_geom
+            detect_cut_faces2(msh_i, level_set_function); // In cuthho_geom
+       
+       
+            if (agglomeration)
+            {
+            detect_cut_cells2(msh_i, level_set_function); // In cuthho_geom
+            detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
+            make_neighbors_info_cartesian(msh_i); // Non serve modificarla
+            //refine_interface2(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface_angle(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
+            make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+            }
+            else
+            {
+            //move_nodes(msh_i, level_set_function);
+            //detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
+            detect_cut_cells2(msh_i, level_set_function);
+            //refine_interface2(msh_i, level_set_function, int_refsteps);
+            //refine_interface_angle(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro(msh_i, level_set_function, int_refsteps);
+            }
+       
+            tc.toc();
+            std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
+
+            if (dump_debug)
+            {
+            dump_mesh(msh_i);
+            output_mesh_info(msh_i, level_set_function);
+            test_projection(msh_i, level_set_function, degree);
+            }
+            
+            
+            output_mesh_info2_pre_FEM(msh_i, level_set_function); // IN cuthho_export
+            //output_mesh_info2(msh_i, level_set_function); // IN cuthho_export..Points/Nodes don't change
+   
+            ls_cell.agglo_msh = msh_i ;
+        
+            // CALCULATION OF AREA AND MASS AT TIME STEP t^n
+            // CALCULATION ALSO OF CENTRE OF MASS
+            for(auto& cl : msh_i.cells)
+            {
+                ls_cell.cell_assignment(cl);
+                if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
+                {
+                    T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+                    //std::cout<<"Partial area is "<<partial_area<<std::endl;
+                    area0 += partial_area;
+                    auto qps = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_NEGATIVE_SIDE);
+                    for(auto& qp:qps)
+                    {
+                        mass0 += qp.second * ls_cell(qp.first);
+                        centre_mass0_x += qp.second * qp.first.x() ;
+                        centre_mass0_y += qp.second * qp.first.y() ;
+                    }
+                    if( location(msh_i, cl) == element_location::ON_INTERFACE )
+                    {
+                        auto qps1 = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
+                        for(auto& qp1:qps1)
+                            global_mass0 += qp1.second * ls_cell(qp1.first);
+                    }
+                }
+                else
+                {
+                    auto qps2 = integrate (msh_i,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
+                    for(auto& qp2:qps2)
+                        global_mass0 += qp2.second * ls_cell(qp2.first);
+                }
+            }
+            global_mass0 += mass0;
+            std::cout << bold << yellow << "Area at time step: "<<time_step*dt<<" is "<<reset<< area0  << reset << std::endl;
+            std::cout << bold << yellow << "Internal mass at time step: "<<time_step*dt<<" is "<<reset<< mass0  << reset << std::endl;
+            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<time_step<<" is "<<reset<<global_mass0<< reset << std::endl;
+            std::cout << bold << yellow << "CENTRE OF MASS at time step: " <<reset <<time_step*dt<<" is "<<" ( "<< centre_mass0_x/area0  << " , "<< centre_mass0_y/area0 <<" ). " << reset << std::endl;
+        
+            d_a = sqrt(4.0*area0/M_PI) ;
+           
+            initial_area  = area0 ;
+            initial_mass = mass0 ;
+        
+    
+            /// CHECKING ERROR OF THE NORMAL ( --> SI PUO TOGLIERE PER VELOCIZZARE CODICE )
+    
+            T x_deviation = u_0*(time_step)*dt;
+            T y_deviation = u_1*(time_step)*dt;
+        
+            //auto analytic_level_set_final = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
+            //auto level_set_anal_smooth_final = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final ) ;
+            // L2 projection of the analytic smooth level set
+            
+        
+    
+            /// VECCHIA IMPLEMENTAZIONE CON PROJECT LAGRANGIAN
+           
+            auto analytic_level_set_final = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
+             /*
+             auto analytic_level_set_final = circle_level_set_new<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation , 4.0*h );
+             */
+
+
+            
+            
+            auto level_set_exact = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final , msh, true);
+            
+            
+            if(cut_off_active){
+                level_set_exact.cut_off( C );
+            }
+            else{
+                level_set_exact.smooth_cut_off( C , x_centre + x_deviation , y_centre +y_deviation,radius );
+            }
+           
+            /*
+            if( circle_old || ellipse_old )
+            {
+                
+                if( circle_old ) // FOR CIRCLE
+                {
+                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+                    r0 = radius + h*sqrt(2.0);
+                    C = r0*r0 - radius*radius ;
+                }
+                if( ellipse_old )  // FOR ELLIPSE
+                {
+                    rad_max = std::max(radius_a,radius_b) ;
+                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+                    r0 = rad_max + h*sqrt(2.0);
+                    C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
+                }
+                     
+                T C_bis = std::abs(level_set_function.phi_min) ;
+                if( C_bis > C)
+                    C = C_bis;
+                     
+                if(cut_off_active)
+                {
+                    level_set_exact.cut_off( C );
+                    std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+                    std::cout<<"C = "<<C<<std::endl;
+                }
+                else
+                {
+                    //C = 0.2;  // Imposed max value at the boundary
+                    T delta = r0/8.0;
+                    std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
+                    if( circle_old ) // FOR CIRCLE
+                    {
+                        std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
+                        T pos_bdry = std::min(x_centre , y_centre) ;
+                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                      
+                    }
+                    if( ellipse_old ) // FOR CIRCLE
+                    {
+                        std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
+                        std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
+                        T pos_bdry = std::min(x_centre , y_centre) ;
+                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                      
+                    }
+                    
+                    level_set_exact.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
+                    std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+                    std::cout<<"C = "<<C<<std::endl;
+                }
+                     
+            }
+            */
+            auto ls_cell_exact = LS_cell_L2proj_high_order< T , Mesh , Level_Set, Fonction ,FiniteSpace >(level_set_exact,msh_i);
+            
+            // PLOTTING OF NORMAL
+            postprocess_output<double> postoutput_vec;
+            auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
+            auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
+           
+            postprocess_output<double> postoutput_div2;
+            auto test_interface_divergence2  = std::make_shared< gnuplot_output_object<double> >("divergence_interface_initial.dat");
+        
+        
+            
+        
+            for(const auto & cl:msh_i.cells)
+            {
+                // NORMAL ERROR ON THE CUT CELLS: error_normal_global0
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+                ls_cell.cell_assignment(cl);
+                ls_cell_exact.cell_assignment(cl);
+                auto qps=integrate(msh_i,cl,2*degree_FEM+1);
+                for(auto& qp:qps)
+                {
+                Eigen::Matrix<T,2,1> diff_global_normal = (ls_cell.normal(qp.first) - ls_cell_exact.normal(qp.first) ).cwiseAbs();
+                error_normal_global0 += qp.second * (pow(diff_global_normal(0),2));
+                error_normal_global0 += qp.second * (pow(diff_global_normal(1),2));
+                
+                }
+                
+        // NORMAL ERROR ON THE INTERFACE POINTS: diff_interface_normal
+            
+                for(auto& interface_point : cl.user_data.interface)
+                {
+                Eigen::Matrix<T,2,1> normal = ls_cell.normal(interface_point);
+                Eigen::Matrix<T,2,1> normal_exact = ls_cell_exact.normal(interface_point);
+                    
+                diff_interface_normal += (pow((normal(0)-normal_exact(0)),2) + pow((normal(1)-normal_exact(1)),2));
+                    
+                counter_interface_pts++;
+                T val = ls_cell.divergence( interface_point );
+                divergence_error_inital += pow((std::abs(val) - 1.0/radius),2) ;
+                //std::cout<<"Divergence value in pt = "<<interface_point<<" is "<<val<<std::endl;
+                test_interface_divergence2->add_data(interface_point,val);
+                }
+               
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                {
+                    perimeter0 += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                   
+                }
+               
+           
+        
+            } // End of the ( IF I'm into a cut cell)
+    
+        } // End of the loop over the cells
+    
+        
+        postoutput_div2.add_object(test_interface_divergence2);
+        postoutput_div2.write();
+        
+        divergence_error_inital /= counter_interface_pts;
+        divergence_error_inital = sqrt(divergence_error_inital);
+        std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*time_step <<" is " << divergence_error_inital <<std::endl;
+                   
+        
+        postoutput_vec.add_object(vec_normal);
+        postoutput_vec.add_object(vec_normal_exact);
+        postoutput_vec.write();
+            
+        // SQRT OF NORMAL ERROR ON CUT CELLS
+        error_normal_global0 = sqrt(error_normal_global0);
+            
+        //divergence_error_inital /= counter_interface_pts;
+        //divergence_error_inital = sqrt(divergence_error_inital);
+        //std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*time_step <<" is " << divergence_error_inital <<std::endl;
+            
+        std::cout<<"number of interface points is "<<counter_interface_pts<<std::endl;
+        diff_interface_normal /= counter_interface_pts;
+        diff_interface_normal = sqrt(diff_interface_normal);
+        
+            
+        std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*time_step <<" is " << error_normal_global0 <<std::endl;
+        std::cout<<yellow<<bold<<"The l2 error of normal N over the INTERFACE, at time "<<reset<< dt*time_step <<" is " << diff_interface_normal <<std::endl;
+        
+        std::cout<<yellow<<bold<<"The PERIMETER, at time "<<reset<< dt*time_step <<" is " << perimeter0 <<std::endl;
+        
+        std::cout<<yellow<<bold<<"The CIRCULARITY, at time "<<reset<< dt*time_step <<" is " << M_PI*d_a/perimeter0 <<std::endl;
+        
+        
+        // ERROR IN TIME
+        error_normal_global += error_normal_global0*dt;
+        error_normal_local += diff_interface_normal*dt;
+       
+        // To add only if I calculate Area and Mass in all the times.
+        //area_previous_time = area0 ;
+        //mass_previous_time = mass0 ;
+           
+        }
+                    
+        /// THE NEXT PART IS FOR ALL THE TIME STEPS
+        
+        
+        
+        
+        
+    
+        
+        
+        // CUT CELL PLOTTING
+        /*
+        postprocess_output<double> postoutput3;
+        auto cut_cell_disegno = std::make_shared< gnuplot_output_object<double> >("cut_cell_disegno.dat");
+        for (auto cl:msh_i.cells) {
+            if( is_cut(msh_i,cl) )
+            {
+            // std::cout<<" the cell in the new mesh num "<<offset(msh,cl)<<" is cut."<<std::endl;
+                // std::cout<<" EQuivalent to the old cells numero: ";
+                auto pts = points(msh_i,cl) ;
+                for (auto pt:pts) {
+                    T value = 1.;
+                    cut_cell_disegno->add_data(pt,value);
+                }
+            }
+        }
+        postoutput3.add_object(cut_cell_disegno);
+        postoutput3.write();
+        */
+    
+        
+/// RESOLUTION OF THE HHO PROBLEM
+        
+        // jumps sin_sin -> exp_cos
+        // auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function);
+        // jumps3 sin_sin -> sin_sin + pol
+    
+/*
+        //auto test_case = make_test_case_laplacian_jumps_3bis(msh_i, ls_cell,current_cell);
+        auto test_case = make_test_case_laplacian_jumps_3(msh_i, ls_cell);
+        // 2 possibilità.. 1) creo 3bis 2) anzichè passarle level_set_function le passo LS_cell
+
+        // auto method = make_Nitsche_interface_method(msh, 1.0, test_case);
+        // auto method = make_sym_gradrec_interface_method(msh, 1.0, test_case);
+        // auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+        auto method = make_Nitsche_interface_method_2(msh_i, 1.0, test_case);
+        //Matrix<RealType, Dynamic, 1> sol;
+        if(solve_interface){
+            run_cuthho_interface2(msh_i, degree, method,test_case, ls_cell);
+        //run_cuthho_interface(msh, degree, method, test_case);
+        }
+        if (solve_fictdom)
+            run_cuthho_fictdom(msh_i, degree, test_case);
+        
+*/
+        
+        
+        
+        /************** FEM -  PROCESSING **************/
+         
+        // SE VOGLIO CONDIZIONE CON d_ii devo farle dentro run_FEM_SPARSE_high_order !!!
+        
+        
+        T eps = 1.0 ; // factor to be inside CFL stability zone
+
+        //T dt1 = time_step_CFL_L2_velocity_NEW( u_L2_projected , mip , eps );
+        //T dt1 = time_step_CFL_L2_velocity( u_L2_projected , mip , eps );
+        T dt1 = time_step_CFL_new( u_projected , mip , eps );
+        //std::cout<<"dt1 is "<<dt1<<std::endl;
+        T dt2 = 1*1e-3;
+        dt = std::min(dt1 , dt2);
+        std::cout<<"I USE dt = "<<dt<<" AND CFL IS "<<dt1<<std::endl;
+        
+        
+        // CHECKING DIFFERENT PROJECTIONS / INTERPOLATION STRATEGIES
+        //checking_projection( level_set_function.msh , fe_data , level_set_function  ) ;
+        
+        
+        /// TRANSPORT PROBLEM:
+        
+        // FIRST ORDER PB (LAGRANGIAN BASIS) WITH LAGRANGIAN VELOCITY
+        //assert(degree_FEM==1);
+        //std::cout<<"LAGRANGIAN VELOCITY AND LAGRANGIAN BASIS FOR ALL. ONLY FIRST ORDER ALLOWED!!!"<<std::endl;
+        /*
+        std::cout<<"PRE FEM è"<<std::endl;
+        for(auto& cl : msh.cells)
+            for(auto& pt : points(msh,cl)){
+                std::cout.precision(15);
+                std::cout<<level_set_function(pt,msh,cl)<<std::endl;
+            }
+        
+        //for(auto& pt : msh.points)
+         //   std::cout<<level_set_function(pt)<<std::endl;
+        std::cout<<"FINE FEM"<<std::endl;
+        */
+        
+        if(high_order)
+            run_FEM_BERNSTEIN_CORRECT_FAST_PROVA( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            //run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            
+        else
+            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+        
+        /*
+        std::cout<<"LA SOL è"<<std::endl;
+        for(auto& cl : msh.cells)
+            for(auto& pt : points(msh,cl)){
+                std::cout.precision(15);
+                std::cout<<level_set_function(pt,msh,cl)<<std::endl;
+            }
+         */
+        //for(auto& pt : msh.points)
+        //     std::cout<<level_set_function(pt)<<std::endl;
+        //std::cout<<"FINE SOL"<<std::endl;
+        
+        // FIRST ORDER PB WITH CONSTANT VELOCITY FIELD
+        //run_FEM_first_order_u_const( level_set_function.msh , fe_data , level_set_function , dt , u_0 , u_1);
+        
+        // HIGH ORDER PB WITH CONSTANT VELOCITY FIELD
+        //run_FEM_SPARSE_u_const( level_set_function.msh , fe_data , level_set_function , dt , u_0 , u_1);
+        
+        // GENERAL CASE WITH LAGRANGIAN VELOCITY
+        //run_FEM_SPARSE_high_order_u_Lagrangian( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+       
+        // GENERAL CASE WITH BERNSTEIN BASIS VELOCITY
+        //run_FEM_SPARSE_high_order( level_set_function.msh , fe_data , level_set_function , u_L2_projected , dt);
+        
+        
+        // Uploading mesh data to check out differences in mass and areas at LAST TIME
+        
+        
+        
+        
+        
+        // testing_level_set(msh,level_set_function,level_set_function_anal);
+         
+        T x_deviation = u_0*(time_step+1)*dt;
+        T y_deviation = u_1*(time_step+1)*dt;
+        
+        
+        //auto analytic_level_set_final_bis = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
+        //auto analytic_level_set_final_smooth = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final_bis ) ;
+        // L2 projection of the analytic smooth level set
+        //auto level_set_final = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , analytic_level_set_final_smooth , msh);
+        
+        // VECCHIA IMPLEMENTAZIONE LAGRANGIAN BASIS
+        
+        auto analytic_level_set_post_FE = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
+        /*
+        auto analytic_level_set_post_FE = circle_level_set_new<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation , 4.0*h );
+        */
+        
+        auto level_set_final = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_post_FE , msh,true);
+        
+        
+        if(cut_off_active){
+            level_set_final.cut_off( C );
+        }
+        else{
+            level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
+        }
+        
+        /*
+        if( circle_old || ellipse_old )
+        {
+            
+            if( circle_old ) // FOR CIRCLE
+            {
+                //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+                r0 = radius + h*sqrt(2.0);
+                C = r0*r0 - radius*radius ;
+            }
+            if( ellipse_old )  // FOR ELLIPSE
+            {
+                rad_max = std::max(radius_a,radius_b) ;
+                //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+                r0 = rad_max + h*sqrt(2.0);
+                C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
+            }
+                 
+            T C_bis = std::abs(level_set_function.phi_min) ;
+            if( C_bis > C)
+                C = C_bis;
+                 
+            if(cut_off_active)
+            {
+                level_set_final.cut_off( C );
+                std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+                std::cout<<"C = "<<C<<std::endl;
+            }
+            else
+            {
+                //C = 0.2;  // Imposed max value at the boundary
+                T delta = r0/8.0;
+                std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
+                if( circle_old ) // FOR CIRCLE
+                {
+                    std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
+                    T pos_bdry = std::min(x_centre , y_centre) ;
+                    std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                  
+                }
+                if( ellipse_old ) // FOR CIRCLE
+                {
+                    std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
+                    std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
+                    T pos_bdry = std::min(x_centre , y_centre) ;
+                    std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                  
+                }
+                
+                level_set_final.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
+                std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+                std::cout<<"C = "<<C<<std::endl;
+            }
+                 
+        }
+        */
+        
+        testing_level_set2(msh,level_set_function,level_set_final);
+        //testing_level_set(msh,level_set_function,analytic_level_set_final);
+        
+        
+        
+        T L1_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM,1.0);
+        
+        //T L2_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM,2.0);
+         
+        T Linf_err_par = Linf_error_FEM_new( level_set_final , level_set_function , msh,degree_FEM);
+         
+        std::cout << bold << yellow << "L1-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L1_err_par << std::endl;
+        //std::cout << bold << yellow << "L2-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L2_err_par << std::endl;
+        std::cout << bold << yellow << "Linf-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< Linf_err_par << std::endl;
+        
+        T W11_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 1.0);
+        //T W12_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 2.0);
+        T W1inf_err_par = W1inf_error_FEM_new(level_set_final , level_set_function , msh,degree_FEM);
+        
+        // l^q in time: norm in time
+        l1_L1_error += dt*L1_err_par;
+        l2_L1_error += dt*L1_err_par*L1_err_par;
+        linf_L1_error = std::max( L1_err_par , linf_L1_error );
+        //l1_L2_error += dt*L2_err_par;
+        //l2_L2_error += dt*L2_err_par*L2_err_par;
+        //linf_L2_error = std::max( L2_err_par , linf_L2_error );
+        l1_Linf_error += dt*Linf_err_par;
+        l2_Linf_error += dt*Linf_err_par*Linf_err_par;
+        linf_Linf_error = std::max( Linf_err_par , linf_Linf_error );
+        
+        l1_W11_error += dt*W11_err_par ;
+        l2_W11_error += dt*W11_err_par*W11_err_par ;
+        linf_W11_error = std::max( W11_err_par , linf_W11_error );
+        //l1_W12_error += dt*W12_err_par ;
+        //l2_W12_error += dt*W12_err_par*W12_err_par ;
+        //linf_W12_error = std::max( W12_err_par , linf_W12_error );
+        l1_W1inf_error += dt*W1inf_err_par;
+        l2_W1inf_error += dt*W1inf_err_par*W1inf_err_par;
+        linf_W1inf_error = std::max( W1inf_err_par , linf_W1inf_error );
+        
+        std::cout << bold << yellow << "W_1,1 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W11_err_par << std::endl;
+        //std::cout << bold << yellow << "W_1,2 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W12_err_par << std::endl;
+        std::cout << bold << yellow << "W_1,inf error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W1inf_err_par << std::endl;
+        
+        if( (T_N - time_step)==0 )
+        {
+            crr_mesh.current_mesh = msh;
+            Mesh msh_i2 =  crr_mesh.current_mesh;
+            offset_definition(msh_i2);
+            tc.tic();
+            detect_node_position2(msh_i2, level_set_function); // In cuthho_geom
+            //detect_node_position3(msh_i2, level_set_function); // In cuthho_geom
+            //detect_cut_faces(msh_i2, level_set_function); // In cuthho_geom
+            
+            // DA MODIFICARE!!!
+            //detect_cut_faces(msh_i2, level_set_function); // In cuthho_geom SLOW VERSION
+            detect_cut_faces2(msh_i2, level_set_function); // In cuthho_geom
+            
+            std::cout<<"SONO QUA 0"<<std::endl;
+           
+            if (agglomeration)
+            {
+            // std::cout<<"i m here 1"<<std::endl;
+                detect_cut_cells2(msh_i2, level_set_function); // In cuthho_geom
+               
+                detect_cell_agglo_set(msh_i2, level_set_function); // Non serve modificarla
+               
+                make_neighbors_info_cartesian(msh_i2); // Non serve modificarla
+                // IN cuthho_geom
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
+                //refine_interface3(msh_i2, level_set_function, int_refsteps);
+                
+                make_agglomeration(msh_i2, level_set_function); // Non serve modificarla
+            }
+            else
+            {
+                //move_nodes(msh_i2, level_set_function);
+                //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection points
+                
+                // ADD BY STE TO CHANGE refine_interface3
+                make_neighbors_info_cartesian(msh_i2);
+                detect_cut_cells2(msh_i2, level_set_function);
+                std::cout<<"SONO QUA 1"<<std::endl;
+                //refine_interface(msh_i2, level_set_function, int_refsteps);
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro(msh_i2, level_set_function, int_refsteps);
+                std::cout<<"SONO QUA 2"<<std::endl;
+            }
+            
+            tc.toc();
+            std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
+
+            if (dump_debug)
+            {
+                dump_mesh(msh_i2);
+                output_mesh_info(msh_i2, level_set_function);
+                test_projection(msh_i2, level_set_function, degree);
+            }
+            
+            output_mesh_info2(msh_i2, level_set_function); // IN cuthho_export..Points/Nodes don't change
+            
+            // UPLOADING LS_CELL -> LEVEL SET AND MESH
+            ls_cell.level_set = level_set_function;
+            ls_cell.agglo_msh = msh_i2;
+            
+           
+            // DATA CHECK INITIALISATION
+            T  mass_fin = 0. , global_mass1 = 0. , area_fin = 0. ;
+            T centre_mass_x = 0. , centre_mass_y = 0. ;
+                
+            for(auto& cl : msh_i2.cells)
+            {
+                ls_cell.cell_assignment(cl);
+                if( location(msh_i2, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i2, cl) == element_location::ON_INTERFACE )
+                {
+                    T partial_area = measure( msh_i2, cl, element_location::IN_NEGATIVE_SIDE);
+                    //std::cout<<"Partial area in cell "<< offset(msh_i2,cl) <<" is "<<partial_area<<std::endl;
+                    area_fin += partial_area;
+                    auto qps=integrate(msh_i2,cl,2*degree_FEM+1,element_location::IN_NEGATIVE_SIDE);
+                    for(auto& qp:qps){
+                        mass_fin += qp.second * ls_cell(qp.first);
+                        centre_mass_x += qp.second * qp.first.x() ;
+                        centre_mass_y += qp.second * qp.first.y() ;
+                    }
+                    if( location(msh_i2, cl) == element_location::ON_INTERFACE )
+                    {
+                        auto qps1 = integrate (msh_i2,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
+                        for(auto& qp1:qps1)
+                            global_mass1 += qp1.second * ls_cell(qp1.first);
+                    }
+                }
+                else
+                {
+                    auto qps2 = integrate (msh_i2,cl,2*degree_FEM+1,element_location::IN_POSITIVE_SIDE);
+                    for(auto& qp2:qps2)
+                        global_mass1 += qp2.second * ls_cell(qp2.first);
+                }
+            }
+            global_mass1 += mass_fin;
+                
+            d_a = sqrt(4.0*area_fin/M_PI) ;
+            std::cout << bold << yellow << "Area at time step: " <<(time_step+1)*dt<<" is "<< reset<< area_fin   << std::endl;
+            std::cout << bold << yellow << "Internal mass at time step: "<<(time_step+1)*dt<<" is "<<reset<< mass_fin  << reset << std::endl;
+                
+            std::cout << bold << yellow << "CENTRE OF MASS at time step: "<<(time_step+1)*dt<<" is "<<reset<<" ( " << centre_mass_x/area_fin <<" , " << centre_mass_y/area_fin<<" ). " << std::endl;
+            std::cout << bold << yellow << "TRANSLATION OF THE CENTRE OF MASS at time step: " <<reset <<(time_step+1)*dt<<" is "<<" ( " << centre_mass_x/area_fin - centre_mass0_x/initial_area <<" , " << centre_mass_y/area_fin - centre_mass0_y/initial_area<<" ). " << std::endl;
+            //std::cout<<bold<<yellow << "GLOBAL Mass at time step: "<<(time_step+1)<<" is "<<reset<<global_mass1<< reset << std::endl;
+            std::cout << bold << yellow << "Difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)  << std::endl;
+            std::cout << bold << yellow << "Difference in INTERNAL MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass) << std::endl;
+            
+                
+            std::cout << bold << yellow << "NORMALISED difference in AREA between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (area_fin - initial_area)/(std::abs(initial_area))  << std::endl;
+            std::cout << bold << yellow << "NORMALISED difference in MASS between initial state and final TIME "<<(T_N+1)*(dt)<<" IS "<< reset<< (mass_fin - initial_mass)/(std::abs(initial_mass)) << std::endl;
+                
+            //std::cout << bold << yellow << "Difference in GLOBAL MASS: "<< reset<< global_mass1 - global_mass0 << std::endl;
+                
+                
+                
+            /// CHECKING NORMAL VELOCITY
+            
+            x_deviation = u_0*(time_step+1)*dt;
+            y_deviation = u_1*(time_step+1)*dt;
+                
+            //auto analytic_level_set_final_exact = circle_level_set<RealType>(radius,x_centre + x_deviation, y_centre + y_deviation );
+            //auto level_set_anal_smooth_final_exact = analytic_level_set_smoothness< T , Fonction > ( mip , C , x_centre , y_centre , radius , analytic_level_set_final_exact ) ;
+            // L2 projection of the analytic smooth level set
+            //auto level_set_exact_fin = L2_projected_level_set < Mesh , Fonction_smooth , FiniteSpace , T > (fe_data , level_set_anal_smooth_final_exact , msh);
+                
+            // VECCHIA IMPLEMENTAZIONE CON BASE LAGRANGIANA
+           
+            auto analytic_level_set_final_exact = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
+            /*
+            auto analytic_level_set_final_exact = circle_level_set_new<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation , 4.0*h );
+           */
+            
+            auto level_set_exact_fin = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final_exact , msh,true);
+            
+           
+            if(cut_off_active){
+                level_set_exact_fin.cut_off( C );
+            }
+            else{
+                level_set_exact_fin.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
+            }
+             /*
+            if( circle_old || ellipse_old )
+            {
+                
+                if( circle_old ) // FOR CIRCLE
+                {
+                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+                    r0 = radius + h*sqrt(2.0);
+                    C = r0*r0 - radius*radius ;
+                }
+                if( ellipse_old )  // FOR ELLIPSE
+                {
+                    rad_max = std::max(radius_a,radius_b) ;
+                    //T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+                    r0 = rad_max + h*sqrt(2.0);
+                    C = r0*r0*radius_b*radius_b - radius_a*radius_a*radius_b*radius_b;
+                }
+                     
+                T C_bis = std::abs(level_set_function.phi_min) ;
+                if( C_bis > C)
+                    C = C_bis;
+                     
+                if(cut_off_active)
+                {
+                    level_set_exact_fin.cut_off( C );
+                    std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+                    std::cout<<"C = "<<C<<std::endl;
+                }
+                else
+                {
+                    //C = 0.2;  // Imposed max value at the boundary
+                    T delta = r0/8.0;
+                    std::cout<<"r_max = "<<rad_max<<" , r0 = "<<r0<<" , delta = "<<delta<<" , max (hx,hy) = "<< h <<std::endl;
+                    if( circle_old ) // FOR CIRCLE
+                    {
+                        std::cout<<"Value in alfa in position radius R  = "<<( radius - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius - r0 )/delta) )/2.0<<std::endl;
+                        T pos_bdry = std::min(x_centre , y_centre) ;
+                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                      
+                    }
+                    if( ellipse_old ) // FOR CIRCLE
+                    {
+                        std::cout<<"Value in alfa in position radius r_a  = "<<( radius_a - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_a - r0 )/delta) )/2.0<<std::endl;
+                        std::cout<<"Value in alfa in position radius r_b  = "<<( radius_b - r0)/delta << " -> its approximation error = "<< 1.0 - (1.0 - tanh((radius_b - r0 )/delta) )/2.0<<std::endl;
+                        T pos_bdry = std::min(x_centre , y_centre) ;
+                        std::cout<<"value in alfa in the boundary = "<<(pos_bdry - r0)/delta<< " -> its approximation error = "<< (1.0 - tanh((pos_bdry - r0 )/delta) )/2.0<<std::endl;
+                      
+                    }
+                    
+                    level_set_exact_fin.smooth_cut_off( C , r0 , delta, x_centre , y_centre , radius ,radius_a ,radius_b );
+                    std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+                    std::cout<<"C = "<<C<<std::endl;
+                }
+                     
+            }
+             */
+            
+            auto ls_cell_exact_fin = LS_cell_L2proj_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
+            //auto ls_cell_exact_fin = LS_cell_high_order< T,Mesh,Level_Set,Fonction , FiniteSpace> (level_set_exact_fin,msh_i2);
+                
+                
+            postprocess_output<double> postoutput_vec;
+            auto vec_normal = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface.dat");
+            auto vec_normal_exact = std::make_shared< gnuplot_output_object_vec<double> >("vec_normal_interface_EXACT.dat");
+                
+            postprocess_output<double> postoutput_div;
+            auto test_interface_divergence  = std::make_shared< gnuplot_output_object<double> >("divergence_interface_u_const.dat");
+            
+            error_normal_global0 = 0. ;
+            diff_interface_normal = 0. ;
+            counter_interface_pts = 0;
+            T perimeter = 0. ;
+            T divergence_error_fin = 0. ;
+                
+            for(const auto & cl:msh_i2.cells)
+            {
+                if(cl.user_data.location == element_location::ON_INTERFACE)
+                {
+                    ls_cell.cell_assignment(cl);
+                    ls_cell_exact_fin.cell_assignment(cl);
+                    auto qps=integrate(msh_i2,cl,2*degree_FEM+2);
+                    for(auto& qp:qps){
+                        Eigen::Matrix<T,2,1> diff_global_normal = (ls_cell.normal(qp.first) - ls_cell_exact_fin.normal(qp.first) ).cwiseAbs();
+                        error_normal_global0 += qp.second * (pow(diff_global_normal(0),2));
+                        error_normal_global0 += qp.second * (pow(diff_global_normal(1),2));
+                        
+                    }
+                
+                    T curvature_avg_cell = 0.;
+                    size_t points_cell = 0;
+                    for(auto& interface_point : cl.user_data.interface)
+                    {
+                        Eigen::Matrix<T,2,1> normal = ls_cell.normal(interface_point);
+                        Eigen::Matrix<T,2,1> normal_exact = ls_cell_exact_fin.normal(interface_point);
+                                    
+                        diff_interface_normal += (pow((normal(0)-normal_exact(0)),2) + pow((normal(1)-normal_exact(1)),2));
+                                    
+                        std::pair<T,T> normal_vec = std::make_pair(normal(0),normal(1));
+                        vec_normal->add_data(interface_point,normal_vec);
+                        std::pair<T,T> normal_vec_exact = std::make_pair(normal(0),normal(1));
+                        vec_normal_exact->add_data(interface_point,normal_vec_exact);
+                                    
+                        counter_interface_pts++;
+                        T val = ls_cell.divergence( interface_point );
+                        //std::cout<<"Divergence value in pt = "<<interface_point<<" is "<<val<<std::endl;
+                        divergence_error_fin += pow((std::abs(val) - 1.0/radius),2);
+                        test_interface_divergence->add_data(interface_point,val);
+                        curvature_avg_cell += val;
+                        points_cell++;
+                    }
+                    
+                    curvature_avg_cell/= points_cell ;
+                    std::cout<<"In cell "<<offset(msh,cl)<<" AVG CURVATURE = "<<curvature_avg_cell<<std::endl;
+                    
+                    for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                    {
+                        perimeter += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                            
+                    }
+                    //perimeter += ( *(cl.user_data.interface.begin()) - *(cl.user_data.interface.end() -1) ).to_vector().norm();
+                    //std::cout<<std::endl;
+                }
+            }
+            
+            postoutput_div.add_object(test_interface_divergence);
+            postoutput_div.write();
+            
+            postoutput_vec.add_object(vec_normal);
+            postoutput_vec.add_object(vec_normal_exact);
+            postoutput_vec.write();
+            
+            divergence_error_fin /= counter_interface_pts;
+            divergence_error_fin = sqrt(divergence_error_fin);
+            std::cout<<yellow<<bold<<"The l2 error of the DIVERGENCE at the INTERFACE, at time "<<reset<< dt*(time_step+1) <<" is " << divergence_error_fin <<std::endl;
+                            
+            error_normal_global0 = sqrt(error_normal_global0);
+                    
+            std::cout<<"number of interface points is "<<counter_interface_pts<<std::endl;
+                        
+            diff_interface_normal /= (counter_interface_pts);
+            std::cout<<"diff_interface_normal = "<<diff_interface_normal<<std::endl;
+            diff_interface_normal = sqrt(diff_interface_normal);
+                    
+            std::cout<<"The L2 error of normal N over the cut cells, at time "<< dt*(time_step+1) <<" is " << error_normal_global0 <<std::endl;
+            std::cout<<"The l2 error of normal N over the INTERFACE, at time "<< dt*(time_step+1) <<" is " << diff_interface_normal <<std::endl;
+                        
+                        
+            std::cout<< bold << yellow<<"The PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << perimeter <<std::endl;
+                
+            std::cout<<"perimeter = "<< perimeter << " AND  perimeter0 =  "<<perimeter0<<std::endl;
+            std::cout<< bold << yellow<<"NORMALISED DIFFERENCE PERIMETER, at time "<<reset<< dt*(time_step+1) <<" is " << (perimeter - perimeter0)/perimeter0 <<std::endl;
+                
+            std::cout<< bold << yellow<<"The CIRCULARITY, at time "<< dt*(time_step+1)<<reset <<" is " << M_PI*d_a/perimeter <<std::endl;
+                        
+            error_normal_global += error_normal_global0*dt;
+            error_normal_local += diff_interface_normal*dt;
+                        
+                    
+            std::cout << bold << yellow << "Error l1(L2) of the normal in the CUT CELLS: "<< reset<< error_normal_global  << std::endl;
+                
+            std::cout << bold << yellow << "Error l1(l2) of the normal in the INTERFACE POINTS: "<< reset<< error_normal_local  << std::endl;
+            
+        
+        } // END OF T = FINAL TIME
+        
+        
+        
+        
+    } // End of the temporal loop
+    
+    l2_L1_error = sqrt(l2_L1_error);
+    l2_L2_error = sqrt(l2_L2_error);
+    l2_Linf_error = sqrt(l2_Linf_error);
+    
+    l2_W11_error = sqrt(l2_W11_error);
+    l2_W12_error = sqrt(l2_W12_error);
+    l2_W1inf_error = sqrt(l2_W1inf_error);
+    std::cout<<'\n';
+    std::cout << bold << yellow << "l1(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L1_error << std::endl;
+    std::cout << bold << yellow << "l2(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_L1_error << std::endl;
+    std::cout << bold << yellow << "linf(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L1_error << std::endl;
+    std::cout<<'\n';
+    
+    std::cout << bold << yellow << "l1(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L2_error << std::endl;
+    std::cout << bold << yellow << "l2(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_L2_error << std::endl;
+    std::cout << bold << yellow << "linf(L2) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L2_error << std::endl;
+    std::cout<<'\n';
+    std::cout << bold << yellow << "l1(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_Linf_error << std::endl;
+    std::cout << bold << yellow << "l2(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_Linf_error << std::endl;
+    std::cout << bold << yellow << "linf(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_Linf_error << std::endl;
+    std::cout<<'\n';
+    
+    std::cout << bold << yellow << "Seminorm l1(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W11_error << std::endl;
+   
+    std::cout << bold << yellow << "Seminorm l2(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W11_error << std::endl;
+    std::cout << bold << yellow << "Seminorm linf(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W11_error << std::endl;
+   
+    std::cout<<'\n';
+    std::cout << bold << yellow << "Seminorm l1(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W12_error << std::endl;
+    
+    std::cout << bold << yellow << "Seminorm l2(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W12_error << std::endl;
+    std::cout << bold << yellow << "Seminorm linf(W12) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W12_error << std::endl;
+    
+    std::cout<<'\n';
+    std::cout << bold << yellow << "Seminorm l1(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W1inf_error << std::endl;
+    
+    std::cout << bold << yellow << "Seminorm l2(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l2_W1inf_error << std::endl;
+    std::cout << bold << yellow << "Seminorm linf(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W1inf_error << std::endl;
+    std::cout<<'\n';
+    
+    
+    // ************** ANALYTIC SOLUTION FOR FINAL TIME LINEAR VELOCITY FIELD   **************
+    /*
+    T x_deviation = u_0*(T_N+1)*dt;
+    T y_deviation = u_1*(T_N+1)*dt;
+    auto analytic_level_set_final = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
+    auto level_set_final = projected_level_set< T, Mesh,Fonction>(analytic_level_set_final, msh, degree_FEM , mip);
+    
+
+    level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
+    //level_set_final.cut_off(d);
+    testing_level_set2(msh,level_set_function,level_set_final);
+    //testing_level_set(msh,level_set_function,analytic_level_set_final);
+    Lp_space_Tfin_error_FEM( level_set_final , level_set_function , msh ,degree_FEM ,1.0 );
+    Lp_space_Tfin_error_FEM( level_set_final , level_set_function , msh ,degree_FEM ,2.0 );
+    */
+    
+    return 0;
+}
+#endif
 
 
 
@@ -39058,7 +39058,7 @@ int main(int argc, char **argv)
 
 
 // Convergence analysis for FEM-> FAST JUST GLOBAL COMPUTATIONS
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     convergence_fast_Bernstein();

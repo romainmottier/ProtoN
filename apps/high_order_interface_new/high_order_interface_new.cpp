@@ -2924,6 +2924,96 @@ testing_level_set(const Mesh msh , const FonctionD& level_set_disc , const Fonct
     
 }
 
+template< typename FonctionD , typename Mesh  >
+void
+testing_level_set(const Mesh msh , const FonctionD& level_set_disc  )
+{
+    typedef typename Mesh::point_type       point_type;
+    postprocess_output<double> postoutput1;
+    double valueD , valueA , derDx , derDy , derAx , derAy;
+    Eigen::Matrix<double,2,1> derD , derA;
+    point<double,2> node;
+    size_t N, M;
+    std::cout<<"In testing_level_set I need 80x80 points to see the interface. Now is 40x40, faster."<<std::endl;
+    N = 40; //80 points to see also the interface!!!
+    M = 40; //80 points to see also the interface!!!
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc.dat");
+   
+    
+    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX.dat");
+    
+    
+    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY.dat");
+   
+    
+    auto test_profile_disc  = std::make_shared< gnuplot_output_object<double> >("test_profile_disc.dat");
+  
+    for(size_t i = 0 ; i<= N ; i++ )
+    {
+        for (size_t j = 0 ; j<= M ; j++ )
+        {
+            double px = i*(1.0/N);
+            double py = j*(1.0/M);
+            node = point_type(px,py);
+            /*
+            if (std::abs( level_set_disc(node)) <1e-2 ) {
+                valueD = 1;
+            }
+            else
+                valueD = 0;
+            */
+            valueD = level_set_disc(node);
+            /*
+            if (std::abs( level_set_anal(node)) <1e-2 ) {
+                valueA = 1;
+            }
+            else
+                valueA = 0;
+            */
+           
+            derD = level_set_disc.gradient(node);
+           
+        
+            
+            if( py == 0.5 )
+            {
+                test_profile_disc->add_data(node,valueD);
+                
+            }
+            
+            derDx = derD(0);
+            derDy = derD(1);
+            
+            
+            test_disc->add_data(node,valueD);
+           
+            
+            
+            test_disc_gradX->add_data(node,derDx);
+        
+            test_disc_gradY->add_data(node,derDy);
+           
+            
+        }
+        
+    }
+    postoutput1.add_object(test_disc);
+    
+    
+    postoutput1.add_object(test_disc_gradX);
+    
+    postoutput1.add_object(test_disc_gradY);
+  
+    
+    postoutput1.add_object(test_profile_disc);
+   
+    
+    postoutput1.write();
+    
+}
+
+
+
 // Qualitative testing of the discrete level set function wrt the analytical one
 template< typename FonctionD , typename Mesh  >
 void
@@ -11429,15 +11519,23 @@ struct L2projected_level_set_high_order: public level_set<T>
         cell_basis_Bernstein <Mesh,T> cb(msh, cl, degree_FEM);
         //cell_basis_Lagrangian_ordered<Mesh,T> cb(msh, cl, degree_FEM);
         auto values_cell = (sol_HHO.block(0,counter,local_dim,1)).col(0);
-        
+          
         T grad_norm = (this->gradient( pt , msh , cl )).norm() ;
-    
+        auto grad_eval = cb.eval_gradients(pt) ;
         //std::cout<<"grad norm is "<<grad_norm<<std::endl;
         //std::cout<<"values_cell is "<<'\n'<<values_cell<<std::endl;
         //std::cout<<"cb.eval_divergence(pt) is "<<'\n'<<cb.eval_divergence(pt)<<std::endl;
         //std::cout<<"( values_cell.dot(cb.eval_divergence(pt)) ) is "<<( values_cell.dot(cb.eval_divergence(pt)) )<<std::endl;
-           
-        return -( values_cell.dot(cb.eval_divergence(pt)) ) / (2 * grad_norm) ;
+             
+        T divergence_correction = -1.0/( pow(grad_norm,3) )*( (pow( ( values_cell.dot(grad_eval.col(0)) ) , 2)) * ( values_cell.dot(cb.eval_double_derivative_x(pt)) ) + (pow( ( values_cell.dot(grad_eval.col(1)) ) , 2)) * ( values_cell.dot(cb.eval_double_derivative_y(pt)) ) + 2.0* ( values_cell.dot(grad_eval.col(0)) )  * ( values_cell.dot(grad_eval.col(1)) ) * ( values_cell.dot(cb.eval_derivative_xy(pt)) )
+                                                               ) ;
+        //std::cout<<"CHECK divergence AND double derivative: in pt = "<< pt <<" error = "<< ( cb.eval_double_derivative_x(pt) + cb.eval_double_derivative_y(pt) - cb.eval_divergence(pt) ) <<std::endl;
+        //T divergence_correction = values_cell.dot(cb.eval_gradients(pt).col(0))/pow(grad_norm,3)*values_cell.dot(cb.eval_double_derivative_x(pt)) + values_cell.dot(cb.eval_gradients(pt).col(1))/pow(grad_norm,3)*values_cell.dot(cb.eval_double_derivative_y(pt)) ;
+        
+        //std::cout<<"Res 0 = "<< values_cell.dot(cb.eval_divergence(pt)) / (grad_norm) + divergence_correction ;
+        //std::cout<<"Res 1 = "<< - (values_cell.dot(cb.eval_divergence(pt)) / (grad_norm) + divergence_correction  );
+          
+        return -( (values_cell.dot(cb.eval_divergence(pt)) ) / (grad_norm) + divergence_correction );
                 
     }
 
@@ -11492,14 +11590,14 @@ struct L2projected_level_set_high_order: public level_set<T>
             }
             sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
             sol_HHO.col(cell_offset) = sol_loc ; // SAVE Vandermonde
-            
+            for (size_t i = 0; i < local_dim; i++)
+            {
+                auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                sol_FEM(asm_map) = sol_loc(i) ;
+            }
             if(!analytic_check)
             {
-                for (size_t i = 0; i < local_dim; i++)
-                {
-                    auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                    sol_FEM(asm_map) = sol_loc(i) ;
-                }
+                
                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
@@ -11576,14 +11674,13 @@ struct L2projected_level_set_high_order: public level_set<T>
             }
             sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
             sol_HHO.col(cell_offset) = sol_loc ; // SAVE Vandermonde
-            
+            for (size_t i = 0; i < local_dim; i++)
+            {
+                auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                sol_FEM(asm_map) = sol_loc(i) ;
+            }
             if(!analytic_check)
             {
-                for (size_t i = 0; i < local_dim; i++)
-                {
-                    auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                    sol_FEM(asm_map) = sol_loc(i) ;
-                }
                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
@@ -11648,14 +11745,15 @@ struct L2projected_level_set_high_order: public level_set<T>
             
             sol_loc = vandermonde_interpolant.solve(local_RHS); // SAVE Vandermonde interpolation
             sol_HHO.col(cell_offset) = sol_loc ; // SAVE Vandermonde
+            for (size_t i = 0; i < local_dim; i++)
+            {
+                auto asm_map =  connectivity_matrix[cell_offset][i].first;
+                sol_FEM(asm_map) = sol_loc(i) ;
+            }
+            
             if(!analytic_check)
             {
-                for (size_t i = 0; i < local_dim; i++)
-                {
-                    auto asm_map =  connectivity_matrix[cell_offset][i].first;
-                    sol_FEM(asm_map) = sol_loc(i) ;
-                }
-            
+                
                 size_t i_vertex = cell_offset+floor(cell_offset/Nx);
                 vertices(i_vertex) = sol_HHO(0,cell_offset) ;
                 vertices(i_vertex+1) = sol_HHO(1,cell_offset) ;
@@ -23760,7 +23858,7 @@ void
 run_FEM_BERNSTEIN_CORRECT_FAST_ENTROPIC_NEW(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt )
 {
     // Starting time for FE calculation
-    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (ENTROPIC CASE) -----------"<<reset<<std::endl;
     //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
     
     timecounter tc;
@@ -23768,7 +23866,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_ENTROPIC_NEW(const Mesh & msh, const FiniteSpace&
     
     size_t degree = fe_data.order; // finite element order
     size_t dim = fe_data.ndof_FE ;
-    size_t n_cls = fe_data.n_cls ;
+    //size_t n_cls = fe_data.n_cls ;
     size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
     auto S_i = fe_data.S_i;
     
@@ -23971,7 +24069,14 @@ run_FEM_BERNSTEIN_CORRECT_FAST_ENTROPIC_NEW(const Mesh & msh, const FiniteSpace&
         }
         triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
         
-        R_i(counter_row) = std::abs(N_i_entropic)/( std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ) ;
+       T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+        
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
         
         
         counter_row++;
@@ -25689,15 +25794,16 @@ void
 run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
 {
     // Starting time for FE calculation
-    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (widehat{c}_{ij} - new D - new INLET - COMPRESSED ) -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- DA RIFARE CON widehat{c}_{ij} SCALARE -----------"<<reset<<std::endl;
     //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
-    
+    throw std::logic_error("ERRORE: widehat{c}_{ij} is vectorial!");
     timecounter tc;
     tc.tic();
     
     size_t degree = fe_data.order; // finite element order
     size_t dim = fe_data.ndof_FE ;
-    size_t n_cls = fe_data.n_cls ;
+    //size_t n_cls = fe_data.n_cls ;
     size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
     auto S_i = fe_data.S_i;
     
@@ -25770,7 +25876,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh
     global_cij_y.setFromTriplets( triplets_c_term_y_l.begin(), triplets_c_term_y_l.end() );
     triplets_c_term_y_l.clear();
     
-    /*
+    
     SparseMatrix<T> cij_norm = ( global_cij_x.cwiseProduct(global_cij_x) + global_cij_y.cwiseProduct(global_cij_y) ).cwiseSqrt() ;
     //std::cout<<"cij norm "<<'\n'<<cij_norm<<std::endl;
     
@@ -25791,8 +25897,8 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh
     // MATRIX n_ij (TRANSPOSED)
     SparseMatrix<T> nji0 = cji_x.cwiseQuotient( cji_norm );
     SparseMatrix<T> nji1 = cji_y.cwiseQuotient( cji_norm );
-    */
     
+    /*
     auto cij_norm = phi.cij_norm ;
     auto nij0 = phi.nij0 ;
     auto nij1 = phi.nij1 ;
@@ -25800,7 +25906,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh
     auto cji_norm = phi.cij_norm ;
     auto nji0 = phi.nji0 ;
     auto nji1 = phi.nji1 ;
-    
+    */
     
     
     // INITIALISATION OF THE SOLVER (CONJUGATE GRADIENT)
@@ -26229,7 +26335,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh
     phi.converting_into_HHO_formulation(phi_new);
     phi.coefficients_inverse_mapping();
     //phi_exact.coefficients_inverse_mapping();
-    auto phi_prova = phi.sol_FEM ;
+    //auto phi_prova = phi.sol_FEM ;
 
     //std::cout<<"phi.sol_FEM - phi_prova"<<'\n'<<phi.sol_FEM - phi_prova<<std::endl;
     
@@ -26288,11 +26394,9 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh
 }
 
 
-
-
 template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
 void
-run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_HP(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
 {
     // Starting time for FE calculation
     std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM -----------"<<reset<<std::endl;
@@ -26303,7 +26407,1117 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const 
     
     size_t degree = fe_data.order; // finite element order
     size_t dim = fe_data.ndof_FE ;
-    size_t n_cls = fe_data.n_cls ;
+    //size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+    
+
+    phi.coefficients_mapping( );
+    
+    //phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+    //phi_exact.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+   
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+    auto phi_exact_FEM = phi_exact.sol_FEM ;
+  
+    
+    // NON LINEAR ENTROPY INITIALISATION
+    T eps = 1e-14 ; //constant into entropy
+    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    // PHI TILDE INITIALISATION --> (FOR HIGH ORDER METHOD)
+    auto phi_tilde = L2_projection< T, Mesh , FiniteSpace> ( fe_data , msh );
+    
+    
+    // SAVING OF USEFUL MATRICES
+    auto global_mass = phi.Global_Mass ;
+    Matrix<T, Dynamic, 1> global_lumped_mass = phi.Global_Mass_Lumped;
+    
+    auto global_cij_x = phi.Global_c_term_x ;
+    auto global_cij_y = phi.Global_c_term_y ;
+    auto local_vandermonde = phi.local_vandermonde ;
+    
+    auto cij_norm = phi.cij_norm ;
+    auto nij0 = phi.nij0 ;
+    auto nij1 = phi.nij1 ;
+    
+    auto cji_norm = phi.cij_norm ;
+    auto nji0 = phi.nji0 ;
+    auto nji1 = phi.nji1 ;
+    
+    
+    
+    // INITIALISATION OF THE SOLVER (CONJUGATE GRADIENT)
+    /*
+    ConjugateGradient<SparseMatrix<T> > solver_prova;
+    solver_prova.compute(global_mass);
+    if(solver_prova.info()!=Success){
+           std::cout<<"FAILED SOLVER PROVA."<<std::endl;
+           exit(1);
+       }
+    */
+    timecounter tc_solver;
+    tc_solver.tic();
+    
+    SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+    solver_global_mass.compute(global_mass); // use solver_global_mass to solve M^-1
+    
+    if(solver_global_mass.info()!=Success){
+        std::cout<<"FAILED SOLVER LLT."<<std::endl;
+        exit(1);
+    }
+    
+    tc_solver.toc();
+    std::cout << bold << yellow << "INVERSION WITH CHOLESKY METHOD, t = " << tc_solver << " seconds" << reset << std::endl;
+       
+    
+    /*
+    timecounter tc_solver1_bis;
+    tc_solver1_bis.tic();
+    ConjugateGradient<SparseMatrix<double>, Lower|Upper> solver2_bis;
+    solver2_bis.compute(global_mass);
+    if(solver2_bis.info()!=Success) {
+        std::cout<<"FAILED SOLVER2 PROVA ->phi_tilde"<<std::endl;
+        return;
+    }
+       
+    tc_solver1_bis.toc();
+    std::cout << bold << yellow << "INVERSION WITH ITERATIVE CG METHOD, t = " << tc_solver1_bis << " seconds" << reset << std::endl;
+    
+    */
+    
+   
+    
+    
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+    
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            
+        }
+        
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+            
+        }
+        
+        
+        i_fl++;
+    }
+    
+
+    tc_solver2.toc();
+    std::cout << bold << yellow << "DIRECT INVERSION OF VANDERMONDE MATRIX LOCAL, t = " << tc_solver2 << " seconds" << reset << std::endl;
+    
+    
+    
+    timecounter tc_case00;
+    tc_case00.tic();
+    
+    // RESOLUTION OF phi_tilde (GLOBALLY)    ( with cij(phi_j) )
+    Matrix<T, Dynamic, 1> mass_phi_old = global_mass * phi_FEM ;
+    //std::cout<<"vec1  "<<'\n'<<mass_phi_old<<std::endl;
+    
+    // CONVOLUTION TERM
+    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    
+    
+    
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+    
+    // TERM R_i^n
+    //Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Emax_global *= -1e20;
+    //Emin_global *= 1e20;
+    
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        T N_i_entropic = 0.0;
+        T D_i_entropic0 = 0.0;
+        T D_i_entropic1 = 0.0;
+        for(auto& elem:row_i)
+        {
+            
+            //Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            //Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            N_i_entropic += ( (q_entropy.values0(elem) - E.E_der(counter_row)*flux0(elem) )*global_cij_x.coeff(counter_row,elem) + (q_entropy.values1(elem) - E.E_der(counter_row)*flux1(elem) )*global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic0 += ( q_entropy.values0(elem) * global_cij_x.coeff(counter_row,elem) + q_entropy.values1(elem) * global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic1 += ( flux0(elem)*global_cij_x.coeff(counter_row,elem) + flux1(elem)*global_cij_y.coeff(counter_row,elem) ) ;
+            
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+            
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+               
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+            
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+            
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+            
+            sum_row += val_dij ;
+            
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+      
+            
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+        
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+        
+        
+        counter_row++;
+        
+    }
+    
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+    
+    
+    
+    tc_case00.toc();
+    std::cout << bold << yellow << "RESOLUTION OF LOW ORDER TRANSPORT, t = " << tc_case00 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case01;
+    tc_case01.tic();
+    
+    // CHECK TIME STEP dt
+    T dt_old = dt ;
+    std::cout<<bold<<yellow<<"---> COND IN TEMPO CFL, ALEXANDRE BOOK"<<reset<<std::endl;
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+    
+    T nu_max0 = CFL_numb/fe_data.hx;
+    T nu0 = dt_old/fe_data.hx;
+    T nu1 = dt/fe_data.hx;
+    
+    std::cout<<"VALID FOR u = (1,0). nu_max VERO = "<<nu_max0<<" , nu max con dt assegnato = "<<nu0<< " and with dt appeared by CFL COND "<<nu1<<std::endl;
+    
+    if(dt_old != dt )
+    {
+        std::cout<<"dt is "<<dt_old<<" and dt CFL is "<<dt<<" . STOP!"<<std::endl;
+        exit(10);
+    }
+    
+    tc_case01.toc();
+    std::cout << bold << yellow << "TIME CHECKING, t = " << tc_case01 << " seconds" << reset << std::endl;
+    
+    
+    
+    
+    // CONSTANT TERM (PHI TILDE PROBLEM)
+    //Matrix<T, Dynamic, 1> b = mass_phi_old - dt*conv_global.cwiseQuotient(global_lumped_mass);
+    //std::cout<<"TERMINE NOTO:b  "<<'\n'<<b<<std::endl;
+    
+  /*
+    timecounter tc_solver3;
+    tc_solver3.tic();
+    
+    // RESOLUTION OF PHI_TILDE
+    phi_tilde.sol_FEM = solver_global_mass.solve(b); // SAVE THE L2 projection
+    //auto prova0 = solver_prova.solve(b); // SAVE THE L2 projection
+    // norm() is L2 norm
+    T relative_error0 = (global_mass*phi_tilde.sol_FEM - b).norm() / b.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b norm =  " << b.norm() << " , (global_mass*phi_tilde.sol_FEM - b).norm() =  "<< (global_mass*phi_tilde.sol_FEM - b).norm() << std::endl;
+    
+    //T error0_prova = (global_mass*prova0 - b).norm() / b.norm();
+    
+    //std::cout << "The PROVA error is: " << error0_prova << std::endl;
+    //std::cout << "b norm =  " << b.norm() << " , (global_mass*prova0 - b).norm() =  "<< (global_mass*prova0 - b).norm() << std::endl;
+    
+    tc_solver3.toc();
+    std::cout << bold << yellow << "INVERSION OF phi_tilde, t = " << tc_solver3 << " seconds" << reset << std::endl;
+    
+    // SAVING BOTH SOL_HHO AND VERTICES OF PHI_TILDE
+    std::cout<<"CONVERTING phi_tilde"<<std::endl;
+    timecounter tc_solver4;
+    tc_solver4.tic();
+    phi_tilde.converting_into_HHO_formulation( phi_tilde.sol_FEM );
+    tc_solver4.toc();
+    std::cout << bold << yellow << "CONVERTING phi_tilde, t = " << tc_solver4 << " seconds" << reset << std::endl;
+    
+    
+  */
+    
+    timecounter tc_case02;
+    tc_case02.tic();
+    
+ /*   // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i_bis = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    for( auto& cl: msh.cells )
+    {
+        size_t di = 1;
+        size_t offset_cell = offset(msh,cl) ;
+        cell_basis_Bernstein<Mesh,T> cb(msh, cl, phi.degree_FEM);
+        auto cbs = cb.size();
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+        //auto qps = integrate(msh, cl, 2*(phi.degree_FEM+di));
+        //auto qps = integrate(msh, cl, (phi.degree_FEM)+di);
+        auto qps = integrate(msh, cl, di);
+        
+        for (auto& qp : qps)
+        {
+            auto bi = cb.eval_basis(qp.first);
+            auto phi_grad0 = phi.gradient(qp.first,msh,cl)(0);
+            auto phi_grad1 = phi.gradient(qp.first,msh,cl)(1);
+            
+            auto f = ( ( ( phi_tilde(qp.first,msh,cl)-phi(qp.first,msh,cl) )/dt + u(qp.first,msh,cl).first * phi_grad0 + u(qp.first,msh,cl).second * phi_grad1 ) * E.derivative(qp.first,cl) );
+            ret += qp.second * bi * f;
+        }
+        for (size_t i = 0; i < phi.local_dim; i++)
+        {
+            size_t asm_map =  phi.connectivity_matrix[offset_cell][i].first ;
+            R_i_bis(asm_map) += ret(i) ;
+        }
+
+    }
+    
+  
+    // R_i FINALISATION:
+    //std::cout<<"Emax_global: "<<'\n'<<Emax_global<<std::endl;
+    //std::cout<<"Emin_global: "<<'\n'<<Emin_global<<std::endl;
+    R_i_bis = R_i_bis.cwiseQuotient( Emax_global - Emin_global );
+    //std::cout<<"Emax_global - Emin_global = "<<'\n'<<Emax_global-Emin_global<<std::endl;
+    std::cout<<"Ri - R_i_bis = "<<'\n'<<R_i- R_i_bis <<std::endl;
+ 
+    tc_case02.toc();
+    std::cout << bold << yellow << "R_i PROCESS, t = " << tc_case02 << " seconds" << reset << std::endl;
+ */
+    timecounter tc_case03;
+    tc_case03.tic();
+    
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    T c_e = 1.0;
+    T c_comp = 1.0;
+    
+    
+    SparseMatrix<T> dC_ij =  SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dC_ij;
+    
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    
+    size_t counter = 0;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+            
+            if(elem!=counter)
+            {
+                
+                auto R_i_j = c_e * std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) );
+                //auto value_E = std::min( dij.coeff( counter , elem ) , R_i_j );
+                auto value_E = dij.coeff( counter , elem ) * R_i_j ;
+                //triplets_dE_ij.push_back( Triplet<T>(counter, elem, value_E ) );
+                
+                //auto value_1 = 0.5*( phi_FEM(counter) + phi_FEM(elem) );
+                //auto value_2 = std::max( value_1*(1.0 -value_1) , 0.0 );
+                //triplets_phi_ij.push_back( Triplet<T>(counter, elem, value_bis ) );
+                //T value = 0.0;
+                //bool check_else = FALSE;
+                //T value = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                /*
+                if( (std::abs(phi_FEM(counter) - phi_FEM(elem))>1e-15) && (std::abs(value_2)>1e-15) ){
+                    value = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                }
+                */
+                /*
+                if( (std::abs(phi_FEM(counter) - phi_FEM(elem))<1e-20) && (std::abs(value_2)<1e-20) ){
+                    //std::cout<<"SONO IN ELSE: std::abs(phi_FEM(counter) - phi_FEM(elem)) = "<<std::abs(phi_FEM(counter) - phi_FEM(elem))<< " and value_2 = "<<value_2<<std::endl;
+                    //std::cout<<"elem = "<<elem << " and counter = "<<counter<<std::endl;
+                    //auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                    //std::cout<<"1.0 - c_comp * value = "<<(1.0 - c_comp * value) << " and value_C = "<<value_C<<std::endl;
+                    check_else = TRUE;
+                }
+                */
+                /*
+                else{
+                    std::cout<<"SONO IN ELSE: std::abs(phi_FEM(counter) - phi_FEM(elem)) = "<<std::abs(phi_FEM(counter) - phi_FEM(elem))<< " and value_2 = "<<value_2<<std::endl;
+                    std::cout<<"elem = "<<elem << " and counter = "<<counter<<std::endl;
+                    auto value_prova = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) ) ;
+                    auto value_C = std::max( 1.0 - c_comp * value_prova , 0.0 ) ;
+                    std::cout<<"1.0 - c_comp * value = "<<(1.0 - c_comp * value_prova) << " and value_C = "<<value_C<<std::endl;
+                    check_else = TRUE;
+                }
+                */
+                /*
+                auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                if(check_else){
+                    //std::cout<<"value_C GIUSTO = "<<value_C <<std::endl;
+                    value = (value_2 )/( std::abs(phi_FEM(counter) - phi_FEM(elem))+ 1e-18 );
+                    value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                    //value_C = 1.0;
+                    //std::cout<<"Se NaN-> metto dC = 0!!! -> value_C CORRETTO = "<<value_C<<'\n' <<std::endl;
+                 
+                } // CONTROLLA QUAAAAA
+                */
+                auto value_dC_ij = value_E ;  //* value_C ;
+                triplets_dC_ij.push_back( Triplet<T>(counter, elem, value_dC_ij ) );
+                
+                term_dij_no_entropy(counter) += dij.coeff(counter,elem)*(phi_FEM(elem)-phi_FEM(counter));
+                
+                term_dij(counter) += value_dC_ij*(phi_FEM(elem)-phi_FEM(counter));
+            
+        
+            }
+            
+            
+        }
+        counter++;
+    }
+    
+    dC_ij.setFromTriplets( triplets_dC_ij.begin(), triplets_dC_ij.end() );
+    triplets_dC_ij.clear();
+
+    
+    tc_case03.toc();
+    std::cout << bold << yellow << "ENTROPIC and HO PROCESS, t = " << tc_case03 << " seconds" << reset << std::endl;
+    
+  
+    
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+   
+    
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+  
+
+    timecounter tc_solver5;
+    tc_solver5.tic();
+    // RESOLUTION HIGH ORDER -> NO MIN MAX PRINCIPLE PRESERVING
+    Matrix<T, Dynamic, 1> b_phiH = mass_phi_old - dt * conv_global + dt * term_dij ;
+    Matrix<T, Dynamic, 1> phi_H = solver_global_mass.solve(b_phiH);
+    
+    //auto prova1 = solver_prova.solve(b_phiH); // SAVE THE L2 projection
+    
+    tc_solver5.toc();
+    std::cout << bold << yellow << "SOLUTION phi_H (new method book Alexandre), t = " << tc_solver5 << " seconds" << reset << std::endl;
+    
+    //std::cout << "mass_phi_old =  " << mass_phi_old << " , conv_global =  "<< conv_global << " , term_dij = "<< term_dij << " , dt = "<< dt << std::endl;
+    
+    T relative_error0 = (global_mass*phi_H - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b_phiH.norm() =  " <<b_phiH.norm() << " , (global_mass*phi_H - b_phiH).norm() =  "<< (global_mass*phi_H - b_phiH).norm() << std::endl;
+    
+    //T error1_prova = (global_mass*prova1 - b_phiH).norm() / b_phiH.norm();
+    
+    //std::cout << "The PROVA error is: " << error1_prova << std::endl;
+    //std::cout << "b_phiH norm =  " << b_phiH.norm() << " , (global_mass*prova1 - b_phiH).norm() =  "<< (global_mass*prova1 - b_phiH).norm() << std::endl;
+    
+    /*
+    auto phi_H_prova2 = solver2_bis.solve(b_phiH);
+    relative_error2 = (global_mass*phi_H_prova2 - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error2 << std::endl;
+   */
+    
+    timecounter tc_case06;
+    tc_case06.tic();
+    
+    // EXTENSION: MAXIMUM PRINCIPLE PRESERVING
+    
+    Matrix<T, Dynamic, 1> delta_phi = phi_H - phi_FEM;
+   
+    //Matrix<T, Dynamic, 1> f_i = f_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , dt , dij , dC_ij , phi_FEM , S_i );
+    
+    // CORRECTION TERM
+    Matrix<T, Dynamic, 1> correction_fi = alfaf_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , phi_L , dt , dij , dC_ij , phi_FEM , S_i );
+    Matrix<T, Dynamic, 1>  phi_new = phi_L + correction_fi.cwiseQuotient(global_lumped_mass);
+    
+    
+   
+    
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_new ;
+    phi.converting_into_HHO_formulation(phi_new);
+    
+    phi.coefficients_inverse_mapping();
+    
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+    size_t counter_dir = 0 ;
+    
+       
+    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+    {
+        if(dir_elem){
+            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+            phi.sol_FEM(counter_dir) = phi_exact_FEM(counter_dir) ;
+        }
+        counter_dir++ ;
+    }
+    
+    phi.converting_into_HHO_formulation(phi.sol_FEM);
+    
+    //if(!mapping)
+    //    phi.coefficients_inverse_mapping_MAX_MAX( );
+    //phi.coefficients_inverse_mapping();
+    //phi_exact.coefficients_inverse_mapping();
+  
+    
+    tc_case06.toc();
+    std::cout << bold << yellow << "EXTENSION HO, t = " << tc_case06 << " seconds" << reset << std::endl;
+    
+    tc.toc();
+    std::cout << bold << yellow << "FEM method, time resolution: " << tc << " seconds" << reset << std::endl;
+       
+       
+    
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_new = std::make_shared< gnuplot_output_object<double> >("phi_new.dat");
+    
+    
+    
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            //std::cout<<pt<<std::endl;
+            //test_phi_h->add_data( pt , phi.sol_HHO(iii , counter_cl ) );
+            test_phi_new->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_new);
+    postoutput5.write();
+    */
+  
+    
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    
+    
+
+    //return phi_tilde;
+    
+}
+
+
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_CHECK_QUANTITIES(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (NEW INLET, NEW D, COMPRESSED) -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- CHECK QUANTITIES -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
+    
+    timecounter tc;
+    tc.tic();
+    
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    //size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+    
+    T h = fe_data.hx ;
+    
+    phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+    //phi_exact.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+   
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+    
+    auto phi_exact_FEM = phi_exact.sol_FEM ;
+  
+    
+    // NON LINEAR ENTROPY INITIALISATION
+    T eps = 1e-14 ; //constant into entropy
+    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    // PHI TILDE INITIALISATION --> (FOR HIGH ORDER METHOD)
+    auto phi_tilde = L2_projection< T, Mesh , FiniteSpace> ( fe_data , msh );
+    
+    
+    // SAVING OF USEFUL MATRICES
+    auto global_mass = phi.Global_Mass ;
+    Matrix<T, Dynamic, 1> global_lumped_mass = phi.Global_Mass_Lumped;
+    
+    auto global_cij_x = phi.Global_c_term_x ;
+    auto global_cij_y = phi.Global_c_term_y ;
+    auto local_vandermonde = phi.local_vandermonde ;
+    
+    auto cij_norm = phi.cij_norm ;
+    auto nij0 = phi.nij0 ;
+    auto nij1 = phi.nij1 ;
+    
+    auto cji_norm = phi.cij_norm ;
+    auto nji0 = phi.nji0 ;
+    auto nji1 = phi.nji1 ;
+    
+    
+    
+    // INITIALISATION OF THE SOLVER (CONJUGATE GRADIENT)
+    /*
+    ConjugateGradient<SparseMatrix<T> > solver_prova;
+    solver_prova.compute(global_mass);
+    if(solver_prova.info()!=Success){
+           std::cout<<"FAILED SOLVER PROVA."<<std::endl;
+           exit(1);
+       }
+    */
+    timecounter tc_solver;
+    tc_solver.tic();
+    
+    SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+    solver_global_mass.compute(global_mass); // use solver_global_mass to solve M^-1
+    
+    if(solver_global_mass.info()!=Success){
+        std::cout<<"FAILED SOLVER LLT."<<std::endl;
+        exit(1);
+    }
+    
+    tc_solver.toc();
+    std::cout << bold << yellow << "INVERSION WITH CHOLESKY METHOD, t = " << tc_solver << " seconds" << reset << std::endl;
+       
+    
+    /*
+    timecounter tc_solver1_bis;
+    tc_solver1_bis.tic();
+    ConjugateGradient<SparseMatrix<double>, Lower|Upper> solver2_bis;
+    solver2_bis.compute(global_mass);
+    if(solver2_bis.info()!=Success) {
+        std::cout<<"FAILED SOLVER2 PROVA ->phi_tilde"<<std::endl;
+        return;
+    }
+       
+    tc_solver1_bis.toc();
+    std::cout << bold << yellow << "INVERSION WITH ITERATIVE CG METHOD, t = " << tc_solver1_bis << " seconds" << reset << std::endl;
+    
+    */
+    
+   
+    
+    
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+    
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            
+        }
+        
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+            
+        }
+        
+        
+        i_fl++;
+    }
+    
+
+    tc_solver2.toc();
+    std::cout << bold << yellow << "DIRECT INVERSION OF VANDERMONDE MATRIX LOCAL, t = " << tc_solver2 << " seconds" << reset << std::endl;
+    
+    
+    
+    timecounter tc_case00;
+    tc_case00.tic();
+    
+    // RESOLUTION OF phi_tilde (GLOBALLY)    ( with cij(phi_j) )
+    Matrix<T, Dynamic, 1> mass_phi_old = global_mass * phi_FEM ;
+    //std::cout<<"vec1  "<<'\n'<<mass_phi_old<<std::endl;
+    
+    // CONVOLUTION TERM
+    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    
+    
+    
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+    
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    Emax_global *= -1e20;
+    Emin_global *= 1e20;
+    
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    T sum_R_i = 0.0;
+    T square_R_i = 0.0;
+    
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        T N_i_entropic = 0.0;
+        T D_i_entropic0 = 0.0;
+        T D_i_entropic1 = 0.0;
+        for(auto& elem:row_i)
+        {
+            
+            Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            N_i_entropic += ( (q_entropy.values0(elem) - E.E_der(counter_row)*flux0(elem) )*global_cij_x.coeff(counter_row,elem) + (q_entropy.values1(elem) - E.E_der(counter_row)*flux1(elem) )*global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic0 += ( q_entropy.values0(elem) * global_cij_x.coeff(counter_row,elem) + q_entropy.values1(elem) * global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic1 += ( flux0(elem)*global_cij_x.coeff(counter_row,elem) + flux1(elem)*global_cij_y.coeff(counter_row,elem) ) ;
+            
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+            
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+               
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+            
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+            
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+            
+            sum_row += val_dij ;
+            
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+      
+            
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+        
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+        
+        sum_R_i += R_i(counter_row) ;
+        square_R_i += pow(R_i(counter_row),2) ;
+        counter_row++;
+        
+    }
+    
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+    
+    std::cout<<"Average value of R_i = "<<sum_R_i/counter_row <<std::endl;
+    std::cout<<"Norm value of R_i = "<<std::sqrt(square_R_i/counter_row) <<std::endl;
+    
+    
+    tc_case00.toc();
+    std::cout << bold << yellow << "RESOLUTION OF LOW ORDER TRANSPORT, t = " << tc_case00 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case01;
+    tc_case01.tic();
+    
+    // CHECK TIME STEP dt
+    T dt_old = dt ;
+    std::cout<<bold<<yellow<<"---> COND IN TEMPO CFL, ALEXANDRE BOOK"<<reset<<std::endl;
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+    
+    T nu_max0 = CFL_numb/fe_data.hx;
+    T nu0 = dt_old/fe_data.hx;
+    T nu1 = dt/fe_data.hx;
+    
+    std::cout<<"VALID FOR u = (1,0). nu_max VERO = "<<nu_max0<<" , nu max con dt assegnato = "<<nu0<< " and with dt appeared by CFL COND "<<nu1<<std::endl;
+    
+    if(dt_old != dt )
+    {
+        std::cout<<"dt is "<<dt_old<<" and dt CFL is "<<dt<<" . STOP!"<<std::endl;
+        exit(10);
+    }
+    
+    tc_case01.toc();
+    std::cout << bold << yellow << "TIME CHECKING, t = " << tc_case01 << " seconds" << reset << std::endl;
+    
+    
+    
+    
+    // CONSTANT TERM (PHI TILDE PROBLEM)
+    Matrix<T, Dynamic, 1> b = mass_phi_old - dt*conv_global.cwiseQuotient(global_lumped_mass);
+    phi_tilde.sol_FEM = solver_global_mass.solve(b); // SAVE THE L2 projection
+    phi_tilde.converting_into_HHO_formulation( phi_tilde.sol_FEM );
+    
+    timecounter tc_case02;
+    tc_case02.tic();
+    
+    // TERM R_i^n PROVA OLD
+    Matrix<T, Dynamic, 1> R_i_bis = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    for( auto& cl: msh.cells )
+    {
+        size_t di = 1;
+        size_t offset_cell = offset(msh,cl) ;
+        cell_basis_Bernstein<Mesh,T> cb(msh, cl, phi.degree_FEM);
+        auto cbs = cb.size();
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+        //auto qps = integrate(msh, cl, 2*(phi.degree_FEM+di));
+        //auto qps = integrate(msh, cl, (phi.degree_FEM)+di);
+        auto qps = integrate(msh, cl, di);
+        
+        for (auto& qp : qps)
+        {
+            auto bi = cb.eval_basis(qp.first);
+            auto phi_grad0 = phi.gradient(qp.first,msh,cl)(0);
+            auto phi_grad1 = phi.gradient(qp.first,msh,cl)(1);
+            
+            auto f = ( ( ( phi_tilde(qp.first,msh,cl)-phi(qp.first,msh,cl) )/dt + u(qp.first,msh,cl).first * phi_grad0 + u(qp.first,msh,cl).second * phi_grad1 ) * E.derivative(qp.first,cl) );
+            ret += qp.second * bi * f;
+        }
+        for (size_t i = 0; i < phi.local_dim; i++)
+        {
+            size_t asm_map =  phi.connectivity_matrix[offset_cell][i].first ;
+            R_i_bis(asm_map) += ret(i) ;
+        }
+
+    }
+    
+  
+    // R_i FINALISATION:
+    //std::cout<<"Emax_global: "<<'\n'<<Emax_global<<std::endl;
+    //std::cout<<"Emin_global: "<<'\n'<<Emin_global<<std::endl;
+    R_i_bis = R_i_bis.cwiseQuotient( Emax_global - Emin_global );
+    //std::cout<<"Emax_global - Emin_global = "<<'\n'<<Emax_global-Emin_global<<std::endl;
+    std::cout<<"R_i_bis.max() = "<<R_i_bis.maxCoeff()<<" , R_i_bis.min() = "<<R_i_bis.minCoeff()<<" , R_i_bis.norm() = "<<R_i_bis.norm()<<std::endl;
+ 
+    tc_case02.toc();
+    std::cout << bold << yellow << "R_i PROCESS, t = " << tc_case02 << " seconds" << reset << std::endl;
+ 
+    timecounter tc_case03;
+    tc_case03.tic();
+    
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    T c_e = 1.0;
+    T c_comp = 1.0;
+    
+    
+    SparseMatrix<T> dC_ij =  SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dC_ij;
+    
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    
+    T sum_value_dE_ij = 0.0 ;
+    T sum_value_dE_ij_bis = 0.0 ;
+    T sum_value_dC_ij = 0.0 ;
+    T sum_value_dC_ij_bis = 0.0 ;
+    
+    size_t counter = 0;
+    size_t total_size = 0 ;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+            
+            if(elem!=counter)
+            {
+                
+                auto R_i_j = c_e * std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) );
+                auto R_i_j_bis = c_e * std::max( std::abs(R_i_bis(counter)),std::abs(R_i_bis(elem)) );
+                auto value_E_bis = std::min( dij.coeff( counter , elem ) , R_i_j_bis );
+                auto value_E = dij.coeff( counter , elem ) * R_i_j ;
+                //triplets_dE_ij.push_back( Triplet<T>(counter, elem, value_E ) );
+                
+                auto value_1 = 0.5*( phi_FEM(counter) + phi_FEM(elem) );
+                auto value_2 = std::max( value_1*(1.0 -value_1) , 0.0 );
+                //triplets_phi_ij.push_back( Triplet<T>(counter, elem, value_bis ) );
+                //T value = 0.0;
+                bool check_else = FALSE;
+                T value = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                /*
+                if( (std::abs(phi_FEM(counter) - phi_FEM(elem))>1e-15) && (std::abs(value_2)>1e-15) ){
+                    value = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
+                }
+                */
+                if( (std::abs(phi_FEM(counter) - phi_FEM(elem))<1e-20) && (std::abs(value_2)<1e-20) ){
+                    //std::cout<<"SONO IN ELSE: std::abs(phi_FEM(counter) - phi_FEM(elem)) = "<<std::abs(phi_FEM(counter) - phi_FEM(elem))<< " and value_2 = "<<value_2<<std::endl;
+                    //std::cout<<"elem = "<<elem << " and counter = "<<counter<<std::endl;
+                    auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                    //std::cout<<"1.0 - c_comp * value = "<<(1.0 - c_comp * value) << " and value_C = "<<value_C<<std::endl;
+                    check_else = TRUE;
+                }
+                /*
+                else{
+                    std::cout<<"SONO IN ELSE: std::abs(phi_FEM(counter) - phi_FEM(elem)) = "<<std::abs(phi_FEM(counter) - phi_FEM(elem))<< " and value_2 = "<<value_2<<std::endl;
+                    std::cout<<"elem = "<<elem << " and counter = "<<counter<<std::endl;
+                    auto value_prova = value_2/( std::abs(phi_FEM(counter) - phi_FEM(elem)) ) ;
+                    auto value_C = std::max( 1.0 - c_comp * value_prova , 0.0 ) ;
+                    std::cout<<"1.0 - c_comp * value = "<<(1.0 - c_comp * value_prova) << " and value_C = "<<value_C<<std::endl;
+                    check_else = TRUE;
+                }
+                */
+                auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                if(check_else){
+                    //std::cout<<"value_C GIUSTO = "<<value_C <<std::endl;
+                    value = (value_2 + 1e-18  )/( std::abs(phi_FEM(counter) - phi_FEM(elem)));
+                    value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
+                    //value_C = 1.0;
+                    //std::cout<<"Se NaN-> metto dC = 0!!! -> value_C CORRETTO = "<<value_C<<'\n' <<std::endl;
+                } // CONTROLLA QUAAAAA
+                
+                T value_dC_ij = value_E * value_C ;
+                T value_dC_ij_bis = value_E_bis * value_C ;
+                triplets_dC_ij.push_back( Triplet<T>(counter, elem, value_dC_ij ) );
+                sum_value_dE_ij += pow(value_E,2) ;
+                sum_value_dC_ij += pow(value_dC_ij,2) ;
+                sum_value_dE_ij_bis += pow(value_E_bis,2) ;
+                sum_value_dC_ij_bis += pow(value_dC_ij_bis,2) ;
+                term_dij_no_entropy(counter) += dij.coeff(counter,elem)*(phi_FEM(elem)-phi_FEM(counter));
+                
+                term_dij(counter) += value_dC_ij*(phi_FEM(elem)-phi_FEM(counter));
+            
+                total_size++;
+        
+            }
+            
+            
+        }
+        counter++;
+    }
+    
+    dC_ij.setFromTriplets( triplets_dC_ij.begin(), triplets_dC_ij.end() );
+    triplets_dC_ij.clear();
+
+    T norm_dE = std::sqrt(sum_value_dE_ij/total_size)  ;
+    T norm_dC = std::sqrt(sum_value_dC_ij/total_size) ;
+    T norm_dE_bis = std::sqrt(sum_value_dE_ij_bis/total_size)  ;
+    T norm_dC_bis = std::sqrt(sum_value_dC_ij_bis/total_size) ;
+    std::cout<<"Norm value of d^E = "<<norm_dE<<std::endl;
+    std::cout<<"Norm value of d^C = "<<norm_dC<<std::endl;
+    std::cout<<"Magnitude of d^E w.r.t. h^k; k = "<<log(norm_dE)/log(h) <<std::endl;
+    std::cout<<"Magnitude of d^C w.r.t. h^k; k = "<<log(norm_dC)/log(h)  <<std::endl;
+    std::cout<<"Magnitude of d^E (OLD FORMULATION) w.r.t. h^k; k = "<<log(norm_dE_bis)/log(h) <<std::endl;
+    std::cout<<"Magnitude of d^C (OLD FORMULATION) w.r.t. h^k; k = "<<log(norm_dC_bis)/log(h)  <<std::endl;
+    
+    
+    tc_case03.toc();
+    std::cout << bold << yellow << "ENTROPIC and HO PROCESS, t = " << tc_case03 << " seconds" << reset << std::endl;
+    
+  
+    
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+   
+    
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+  
+
+    timecounter tc_solver5;
+    tc_solver5.tic();
+    // RESOLUTION HIGH ORDER -> NO MIN MAX PRINCIPLE PRESERVING
+    Matrix<T, Dynamic, 1> b_phiH = mass_phi_old - dt * conv_global + dt * term_dij ;
+    Matrix<T, Dynamic, 1> phi_H = solver_global_mass.solve(b_phiH);
+    
+    //auto prova1 = solver_prova.solve(b_phiH); // SAVE THE L2 projection
+    
+    tc_solver5.toc();
+    std::cout << bold << yellow << "SOLUTION phi_H, t = " << tc_solver5 << " seconds" << reset << std::endl;
+    
+    //std::cout << "mass_phi_old =  " << mass_phi_old << " , conv_global =  "<< conv_global << " , term_dij = "<< term_dij << " , dt = "<< dt << std::endl;
+    
+    T relative_error0 = (global_mass*phi_H - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b_phiH.norm() =  " <<b_phiH.norm() << " , (global_mass*phi_H - b_phiH).norm() =  "<< (global_mass*phi_H - b_phiH).norm() << std::endl;
+    
+    //T error1_prova = (global_mass*prova1 - b_phiH).norm() / b_phiH.norm();
+    
+    //std::cout << "The PROVA error is: " << error1_prova << std::endl;
+    //std::cout << "b_phiH norm =  " << b_phiH.norm() << " , (global_mass*prova1 - b_phiH).norm() =  "<< (global_mass*prova1 - b_phiH).norm() << std::endl;
+    
+    /*
+    auto phi_H_prova2 = solver2_bis.solve(b_phiH);
+    relative_error2 = (global_mass*phi_H_prova2 - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error2 << std::endl;
+   */
+    
+    timecounter tc_case06;
+    tc_case06.tic();
+    
+    // EXTENSION: MAXIMUM PRINCIPLE PRESERVING
+    
+    Matrix<T, Dynamic, 1> delta_phi = phi_H - phi_FEM;
+   
+    Matrix<T, Dynamic, 1> f_i = f_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , dt , dij , dC_ij , phi_FEM , S_i );
+    
+    // CORRECTION TERM
+    Matrix<T, Dynamic, 1> correction_fi = alfaf_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , phi_L , dt , dij , dC_ij , phi_FEM , S_i );
+    Matrix<T, Dynamic, 1>  phi_new = phi_L + correction_fi.cwiseQuotient(global_lumped_mass);
+    
+    
+ 
+    
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_new ;
+    phi.converting_into_HHO_formulation(phi_new);
+    phi.coefficients_inverse_mapping();
+    //phi_exact.coefficients_inverse_mapping();
+    //auto phi_prova = phi.sol_FEM ;
+
+    //std::cout<<"phi.sol_FEM - phi_prova"<<'\n'<<phi.sol_FEM - phi_prova<<std::endl;
+    
+    
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+    size_t counter_dir = 0 ;
+    
+    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+    {
+        if(dir_elem){
+            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+            std::cout<<"In i = "<<counter_dir<<" phi^{n+1} = "<<phi.sol_FEM(counter_dir)<<std::endl;
+            phi.sol_FEM(counter_dir) = phi_exact_FEM(counter_dir) ;
+            std::cout<<"In i = "<<counter_dir<<" phi_exact = "<<phi_exact_FEM(counter_dir) <<std::endl;
+        }
+        counter_dir++ ;
+    }
+
+    //std::cout<<"phi.sol_FEM - phi_new"<<'\n'<<phi.sol_FEM - phi_prova<<std::endl;
+    phi.converting_into_HHO_formulation(phi.sol_FEM);
+    //std::cout<<"phi.sol_FEM - phi_new"<<'\n'<<phi.sol_FEM - phi_prova<<std::endl;
+    tc_case06.toc();
+    std::cout << bold << yellow << "EXTENSION HO, t = " << tc_case06 << " seconds" << reset << std::endl;
+    
+    tc.toc();
+    std::cout << bold << yellow << "FEM method, time resolution: " << tc << " seconds" << reset << std::endl;
+       
+       
+    
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_new = std::make_shared< gnuplot_output_object<double> >("phi_new.dat");
+    
+    
+    
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            //std::cout<<pt<<std::endl;
+            //test_phi_h->add_data( pt , phi.sol_HHO(iii , counter_cl ) );
+            test_phi_new->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_new);
+    postoutput5.write();
+    */
+  
+    
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    
+    
+
+    //return phi_tilde;
+    
+}
+
+
+
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (NEW INLET, NEW D, COMPRESSED) -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
+    
+    timecounter tc;
+    tc.tic();
+    
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    //size_t n_cls = fe_data.n_cls ;
     size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
     auto S_i = fe_data.S_i;
     
@@ -26508,8 +27722,14 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const 
             
         }
         triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
         
-        R_i(counter_row) = std::abs(N_i_entropic)/( std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ) ;
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
         
         
         counter_row++;
@@ -26689,7 +27909,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const 
                 auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
                 if(check_else){
                     //std::cout<<"value_C GIUSTO = "<<value_C <<std::endl;
-                    value = (value_2 )/( std::abs(phi_FEM(counter) - phi_FEM(elem))+ 1e-18 );
+                    value = (value_2 + 1e-18  )/( std::abs(phi_FEM(counter) - phi_FEM(elem)));
                     value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
                     //value_C = 1.0;
                     //std::cout<<"Se NaN-> metto dC = 0!!! -> value_C CORRETTO = "<<value_C<<'\n' <<std::endl;
@@ -26775,7 +27995,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const 
     phi.converting_into_HHO_formulation(phi_new);
     phi.coefficients_inverse_mapping();
     //phi_exact.coefficients_inverse_mapping();
-    auto phi_prova = phi.sol_FEM ;
+    //auto phi_prova = phi.sol_FEM ;
 
     //std::cout<<"phi.sol_FEM - phi_prova"<<'\n'<<phi.sol_FEM - phi_prova<<std::endl;
     
@@ -26788,7 +28008,9 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const 
         if(dir_elem){
             //phi_L(counter_dir) = phi_FEM(counter_dir) ;
             //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+            std::cout<<"In i = "<<counter_dir<<" phi^{n+1} = "<<phi.sol_FEM(counter_dir)<<std::endl;
             phi.sol_FEM(counter_dir) = phi_exact_FEM(counter_dir) ;
+            std::cout<<"In i = "<<counter_dir<<" phi_exact = "<<phi_exact_FEM(counter_dir) <<std::endl;
         }
         counter_dir++ ;
     }
@@ -26834,13 +28056,12 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND(const Mesh & msh, const 
 }
 
 
-
 template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
 void
-run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt )
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NO_COMPRESSION(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt )
 {
     // Starting time for FE calculation
-    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM NEW D -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (NEW D - NO COMPRESSION) -----------"<<reset<<std::endl;
     //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
     
     timecounter tc;
@@ -26848,7 +28069,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D(const Mesh & msh, const FiniteSpace& fe_dat
     
     size_t degree = fe_data.order; // finite element order
     size_t dim = fe_data.ndof_FE ;
-    size_t n_cls = fe_data.n_cls ;
+    //size_t n_cls = fe_data.n_cls ;
     size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
     auto S_i = fe_data.S_i;
     
@@ -27053,9 +28274,527 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D(const Mesh & msh, const FiniteSpace& fe_dat
         }
         triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
         
-        R_i(counter_row) = std::abs(N_i_entropic)/( std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ) ;
-        //R_i_prova(counter_row) = std::abs(N_i_entropic) ;
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
         
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18) ;
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+        
+        std::cout<<"R_i = "<<R_i(counter_row)<<std::endl;
+        counter_row++;
+        
+    }
+    
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+    
+    
+    
+    tc_case00.toc();
+    std::cout << bold << yellow << "RESOLUTION OF LOW ORDER TRANSPORT, t = " << tc_case00 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case01;
+    tc_case01.tic();
+    
+    // CHECK TIME STEP dt
+    T dt_old = dt ;
+    std::cout<<bold<<yellow<<"---> COND IN TEMPO CFL, ALEXANDRE BOOK"<<reset<<std::endl;
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+    
+    T nu_max0 = CFL_numb/fe_data.hx;
+    T nu0 = dt_old/fe_data.hx;
+    T nu1 = dt/fe_data.hx;
+    
+    std::cout<<"VALID FOR u = (1,0). nu_max VERO = "<<nu_max0<<" , nu max con dt assegnato = "<<nu0<< " and with dt appeared by CFL COND "<<nu1<<std::endl;
+    
+    if(dt_old != dt )
+    {
+        std::cout<<"dt is "<<dt_old<<" and dt CFL is "<<dt<<" . STOP!"<<std::endl;
+        exit(10);
+    }
+    
+    tc_case01.toc();
+    std::cout << bold << yellow << "TIME CHECKING, t = " << tc_case01 << " seconds" << reset << std::endl;
+    
+    
+  /*
+    
+    // CONSTANT TERM (PHI TILDE PROBLEM)
+    Matrix<T, Dynamic, 1> b = mass_phi_old - dt*conv_global.cwiseQuotient(global_lumped_mass);
+    //std::cout<<"TERMINE NOTO:b  "<<'\n'<<b<<std::endl;
+    
+    
+    timecounter tc_solver3;
+    tc_solver3.tic();
+    
+    // RESOLUTION OF PHI_TILDE
+    phi_tilde.sol_FEM = solver_global_mass.solve(b); // SAVE THE L2 projection
+    //auto prova0 = solver_prova.solve(b); // SAVE THE L2 projection
+    // norm() is L2 norm
+    T relative_error0 = (global_mass*phi_tilde.sol_FEM - b).norm() / b.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b norm =  " << b.norm() << " , (global_mass*phi_tilde.sol_FEM - b).norm() =  "<< (global_mass*phi_tilde.sol_FEM - b).norm() << std::endl;
+    
+    //T error0_prova = (global_mass*prova0 - b).norm() / b.norm();
+    
+    //std::cout << "The PROVA error is: " << error0_prova << std::endl;
+    //std::cout << "b norm =  " << b.norm() << " , (global_mass*prova0 - b).norm() =  "<< (global_mass*prova0 - b).norm() << std::endl;
+    
+    tc_solver3.toc();
+    std::cout << bold << yellow << "INVERSION OF phi_tilde, t = " << tc_solver3 << " seconds" << reset << std::endl;
+    
+    // SAVING BOTH SOL_HHO AND VERTICES OF PHI_TILDE
+    std::cout<<"CONVERTING phi_tilde"<<std::endl;
+    timecounter tc_solver4;
+    tc_solver4.tic();
+    phi_tilde.converting_into_HHO_formulation( phi_tilde.sol_FEM );
+    tc_solver4.toc();
+    std::cout << bold << yellow << "CONVERTING phi_tilde, t = " << tc_solver4 << " seconds" << reset << std::endl;
+    
+*/
+    
+/*
+    timecounter tc_case02;
+    tc_case02.tic();
+    
+    // TERM R_i^n
+    
+    Matrix<T, Dynamic, 1> R_i_bis = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    for( auto& cl: msh.cells )
+    {
+        size_t di = 1;
+        size_t offset_cell = offset(msh,cl) ;
+        cell_basis_Bernstein<Mesh,T> cb(msh, cl, phi.degree_FEM);
+        auto cbs = cb.size();
+        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+        auto qps = integrate(msh, cl, 2*(phi.degree_FEM+di));
+        //auto qps = integrate(msh, cl, (phi.degree_FEM)+di);
+        //auto qps = integrate(msh, cl, di);
+        
+        for (auto& qp : qps)
+        {
+            auto bi = cb.eval_basis(qp.first);
+            auto phi_grad0 = phi.gradient(qp.first,msh,cl)(0);
+            auto phi_grad1 = phi.gradient(qp.first,msh,cl)(1);
+            
+            auto f = ( ( ( phi_tilde(qp.first,msh,cl)-phi(qp.first,msh,cl) )/dt + u(qp.first,msh,cl).first * phi_grad0 + u(qp.first,msh,cl).second * phi_grad1 ) * E.derivative(qp.first,cl) );
+            ret += qp.second * bi * f;
+        }
+        for (size_t i = 0; i < phi.local_dim; i++)
+        {
+            size_t asm_map =  phi.connectivity_matrix[offset_cell][i].first ;
+            R_i_bis(asm_map) += ret(i) ;
+        }
+
+    }
+    
+    
+    // R_i FINALISATION:
+    //std::cout<<"Emax_global: "<<'\n'<<Emax_global<<std::endl;
+    //std::cout<<"Emin_global: "<<'\n'<<Emin_global<<std::endl;
+    //R_i_bis = R_i_bis.cwiseQuotient( Emax_global - Emin_global );
+    //std::cout<<"Emax_global - Emin_global = "<<'\n'<<Emax_global-Emin_global<<std::endl;
+    std::cout<<"Ri - R_i_bis = "<<'\n'<<R_i_prova<<" , "<<R_i_bis<<" , DIFF -> "<<R_i_prova- R_i_bis <<std::endl;
+    
+    tc_case02.toc();
+    std::cout << bold << yellow << "R_i PROCESS, t = " << tc_case02 << " seconds" << reset << std::endl;
+*/
+    timecounter tc_case03;
+    tc_case03.tic();
+    
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    T c_e = 1.0;
+    T c_comp = 1.0;
+    
+    
+    SparseMatrix<T> dC_ij =  SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dC_ij;
+    
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    
+    size_t counter = 0;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+            
+            if(elem!=counter)
+            {
+                
+                auto R_i_j = c_e * std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) );
+                //auto value_E = std::min( dij.coeff( counter , elem ) , R_i_j );
+                auto value_E = dij.coeff( counter , elem ) * R_i_j ;
+                //triplets_dE_ij.push_back( Triplet<T>(counter, elem, value_E ) );
+           
+                auto value_dC_ij = value_E ;
+                triplets_dC_ij.push_back( Triplet<T>(counter, elem, value_dC_ij ) );
+           
+                
+                term_dij_no_entropy(counter) += dij.coeff(counter,elem)*(phi_FEM(elem)-phi_FEM(counter));
+                
+                term_dij(counter) += value_dC_ij*(phi_FEM(elem)-phi_FEM(counter));
+            
+        
+            }
+            
+            
+        }
+        
+        counter++;
+    }
+    
+    dC_ij.setFromTriplets( triplets_dC_ij.begin(), triplets_dC_ij.end() );
+    triplets_dC_ij.clear();
+
+    
+    tc_case03.toc();
+    std::cout << bold << yellow << "ENTROPIC and HO PROCESS, t = " << tc_case03 << " seconds" << reset << std::endl;
+    
+  
+    
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+   
+    
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+  
+
+    timecounter tc_solver5;
+    tc_solver5.tic();
+    // RESOLUTION HIGH ORDER -> NO MIN MAX PRINCIPLE PRESERVING
+    Matrix<T, Dynamic, 1> b_phiH = mass_phi_old - dt * conv_global + dt * term_dij ;
+    Matrix<T, Dynamic, 1> phi_H = solver_global_mass.solve(b_phiH);
+    
+    //auto prova1 = solver_prova.solve(b_phiH); // SAVE THE L2 projection
+    
+    tc_solver5.toc();
+    std::cout << bold << yellow << "SOLUTION phi_H, t = " << tc_solver5 << " seconds" << reset << std::endl;
+    
+    //std::cout << "mass_phi_old =  " << mass_phi_old << " , conv_global =  "<< conv_global << " , term_dij = "<< term_dij << " , dt = "<< dt << std::endl;
+    
+    T relative_error0 = (global_mass*phi_H - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    //std::cout << "b_phiH.norm() =  " <<b_phiH.norm() << " , (global_mass*phi_H - b_phiH).norm() =  "<< (global_mass*phi_H - b_phiH).norm() << std::endl;
+    
+    //T error1_prova = (global_mass*prova1 - b_phiH).norm() / b_phiH.norm();
+    
+    //std::cout << "The PROVA error is: " << error1_prova << std::endl;
+    //std::cout << "b_phiH norm =  " << b_phiH.norm() << " , (global_mass*prova1 - b_phiH).norm() =  "<< (global_mass*prova1 - b_phiH).norm() << std::endl;
+    
+    /*
+    auto phi_H_prova2 = solver2_bis.solve(b_phiH);
+    relative_error2 = (global_mass*phi_H_prova2 - b_phiH).norm() / b_phiH.norm();
+    std::cout << "The relative error is: " << relative_error2 << std::endl;
+   */
+    
+    timecounter tc_case06;
+    tc_case06.tic();
+    
+    // EXTENSION: MAXIMUM PRINCIPLE PRESERVING
+    
+    Matrix<T, Dynamic, 1> delta_phi = phi_H - phi_FEM;
+   
+    Matrix<T, Dynamic, 1> f_i = f_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , dt , dij , dC_ij , phi_FEM , S_i );
+    
+    // CORRECTION TERM
+    Matrix<T, Dynamic, 1> correction_fi = alfaf_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , phi_L , dt , dij , dC_ij , phi_FEM , S_i );
+    Matrix<T, Dynamic, 1>  phi_new = phi_L + correction_fi.cwiseQuotient(global_lumped_mass);
+    
+    
+    
+    
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+    size_t counter_dir = 0 ;
+    for (const auto& dir_elem : fe_data.Dirichlet_boundary )
+    {
+        if(dir_elem){
+            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+            phi_new(counter_dir) = phi_FEM(counter_dir) ;
+        }
+        counter_dir++ ;
+    }
+     
+    tc_case06.toc();
+    std::cout << bold << yellow << "EXTENSION HO, t = " << tc_case06 << " seconds" << reset << std::endl;
+    
+    
+    
+   
+    
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_new ;
+    phi.converting_into_HHO_formulation(phi_new);
+    phi.coefficients_inverse_mapping();
+    
+    tc.toc();
+    std::cout << bold << yellow << "FEM method, time resolution: " << tc << " seconds" << reset << std::endl;
+       
+       
+    
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_new = std::make_shared< gnuplot_output_object<double> >("phi_new.dat");
+    
+    
+    
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            //std::cout<<pt<<std::endl;
+            //test_phi_h->add_data( pt , phi.sol_HHO(iii , counter_cl ) );
+            test_phi_new->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_new);
+    postoutput5.write();
+    */
+  
+    
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    
+    
+
+    //return phi_tilde;
+    
+}
+
+
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (NEW D - COMPRESSED ) -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
+    
+    timecounter tc;
+    tc.tic();
+    
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    //size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+    
+    
+    phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+   
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+  
+    
+    // NON LINEAR ENTROPY INITIALISATION
+    T eps = 1e-14 ; //constant into entropy
+    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    // PHI TILDE INITIALISATION --> (FOR HIGH ORDER METHOD)
+    auto phi_tilde = L2_projection< T, Mesh , FiniteSpace> ( fe_data , msh );
+    
+    
+    // SAVING OF USEFUL MATRICES
+    auto global_mass = phi.Global_Mass ;
+    Matrix<T, Dynamic, 1> global_lumped_mass = phi.Global_Mass_Lumped;
+    
+    auto global_cij_x = phi.Global_c_term_x ;
+    auto global_cij_y = phi.Global_c_term_y ;
+    auto local_vandermonde = phi.local_vandermonde ;
+    
+    auto cij_norm = phi.cij_norm ;
+    auto nij0 = phi.nij0 ;
+    auto nij1 = phi.nij1 ;
+    
+    auto cji_norm = phi.cij_norm ;
+    auto nji0 = phi.nji0 ;
+    auto nji1 = phi.nji1 ;
+    
+    
+    
+    // INITIALISATION OF THE SOLVER (CONJUGATE GRADIENT)
+    /*
+    ConjugateGradient<SparseMatrix<T> > solver_prova;
+    solver_prova.compute(global_mass);
+    if(solver_prova.info()!=Success){
+           std::cout<<"FAILED SOLVER PROVA."<<std::endl;
+           exit(1);
+       }
+    */
+    timecounter tc_solver;
+    tc_solver.tic();
+    
+    SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+    solver_global_mass.compute(global_mass); // use solver_global_mass to solve M^-1
+    
+    if(solver_global_mass.info()!=Success){
+        std::cout<<"FAILED SOLVER LLT."<<std::endl;
+        exit(1);
+    }
+    
+    tc_solver.toc();
+    std::cout << bold << yellow << "INVERSION WITH CHOLESKY METHOD, t = " << tc_solver << " seconds" << reset << std::endl;
+       
+    
+    /*
+    timecounter tc_solver1_bis;
+    tc_solver1_bis.tic();
+    ConjugateGradient<SparseMatrix<double>, Lower|Upper> solver2_bis;
+    solver2_bis.compute(global_mass);
+    if(solver2_bis.info()!=Success) {
+        std::cout<<"FAILED SOLVER2 PROVA ->phi_tilde"<<std::endl;
+        return;
+    }
+       
+    tc_solver1_bis.toc();
+    std::cout << bold << yellow << "INVERSION WITH ITERATIVE CG METHOD, t = " << tc_solver1_bis << " seconds" << reset << std::endl;
+    
+    */
+    
+   
+    
+    
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+    
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            
+        }
+        
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+            
+        }
+        
+        
+        i_fl++;
+    }
+    
+
+    tc_solver2.toc();
+    std::cout << bold << yellow << "DIRECT INVERSION OF VANDERMONDE MATRIX LOCAL, t = " << tc_solver2 << " seconds" << reset << std::endl;
+    
+    
+    
+    timecounter tc_case00;
+    tc_case00.tic();
+    
+    // RESOLUTION OF phi_tilde (GLOBALLY)    ( with cij(phi_j) )
+    Matrix<T, Dynamic, 1> mass_phi_old = global_mass * phi_FEM ;
+    //std::cout<<"vec1  "<<'\n'<<mass_phi_old<<std::endl;
+    
+    // CONVOLUTION TERM
+    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    
+    
+    
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+    
+    // TERM R_i^n
+    //Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Emax_global *= -1e20;
+    //Emin_global *= 1e20;
+    
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    //Matrix<T, Dynamic, 1> R_i_prova = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+    
+    
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        T N_i_entropic = 0.0;
+        T D_i_entropic0 = 0.0;
+        T D_i_entropic1 = 0.0;
+        for(auto& elem:row_i)
+        {
+            
+            //Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            //Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            N_i_entropic += ( (q_entropy.values0(elem) - E.E_der(counter_row)*flux0(elem) )*global_cij_x.coeff(counter_row,elem) + (q_entropy.values1(elem) - E.E_der(counter_row)*flux1(elem) )*global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic0 += ( q_entropy.values0(elem) * global_cij_x.coeff(counter_row,elem) + q_entropy.values1(elem) * global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic1 += ( flux0(elem)*global_cij_x.coeff(counter_row,elem) + flux1(elem)*global_cij_y.coeff(counter_row,elem) ) ;
+            
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+            
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+               
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+            
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+            
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+            
+            sum_row += val_dij ;
+            
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+      
+            
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+        
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18) ;
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+        
+        std::cout<<"R_i = "<<R_i(counter_row)<<std::endl;
         counter_row++;
         
     }
@@ -27234,7 +28973,7 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D(const Mesh & msh, const FiniteSpace& fe_dat
                 auto value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
                 if(check_else){
                     std::cout<<"value_C GIUSTO = "<<value_C <<std::endl;
-                    value = (value_2 )/( std::abs(phi_FEM(counter) - phi_FEM(elem))+ 1e-18 );
+                    value = (value_2 + 1e-18 )/( std::abs(phi_FEM(counter) - phi_FEM(elem)) );
                     value_C = std::max( 1.0 - c_comp * value , 0.0 ) ;
                     //value_C = 1.0;
                     std::cout<<"Se NaN-> metto dC = 0!!! -> value_C CORRETTO = "<<value_C<<'\n' <<std::endl;
@@ -27320,8 +29059,8 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D(const Mesh & msh, const FiniteSpace& fe_dat
     for (const auto& dir_elem : fe_data.Dirichlet_boundary )
     {
         if(dir_elem){
-            phi_L(counter_dir) = phi_FEM(counter_dir) ;
-            phi_H(counter_dir) = phi_FEM(counter_dir) ;
+            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
             phi_new(counter_dir) = phi_FEM(counter_dir) ;
         }
         counter_dir++ ;
@@ -27914,15 +29653,17 @@ void
 run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
 {
     // Starting time for FE calculation
-    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM LOW ORDER -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM LOW ORDER ( widehat{c}_{ij} ) -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- DA RIFARE: QUI ( widehat{c}_{ij} ) IS VECTORIAL -----------"<<reset<<std::endl;
     //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
-    
+     
+    throw std::logic_error("ERRORE: widehat{c}_{ij} is vectorial!");
     timecounter tc;
     tc.tic();
     
     size_t degree = fe_data.order; // finite element order
     size_t dim = fe_data.ndof_FE ;
-    size_t n_cls = fe_data.n_cls ;
+    //size_t n_cls = fe_data.n_cls ;
     size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
     auto S_i = fe_data.S_i;
     
@@ -27977,7 +29718,7 @@ run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh &
     
     global_cij_y.setFromTriplets( triplets_c_term_y_l.begin(), triplets_c_term_y_l.end() );
     triplets_c_term_y_l.clear();
-    /*
+    
     Matrix<T, Dynamic, 1> sum0 = Eigen::Matrix<T, Dynamic, 1>::Zero(global_cij_x.rows(), 1);
        
     Matrix<T, Dynamic, 1> sum1 = Eigen::Matrix<T, Dynamic, 1>::Zero(global_cij_y.rows(), 1);
@@ -27988,27 +29729,51 @@ run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh &
         sum1 += (global_cij_y).col(k);
     }
        
-    for (size_t i=0; i<global_cij_x.rows(); i++) {
-        std::cout<<"The sum is "<<sum1(i)<<" and "<<sum0(i)<<std::endl;
-    }
-    
+    //for (size_t i=0; i<global_cij_x.rows(); i++) {
+    //    std::cout<<"The sum is "<<sum1(i)<<" and "<<sum0(i)<<std::endl;
+    //}
+    T error0_sum_l1, error1_sum_l1 ;
+    T error0_sum_linf = -10.0 , error1_sum_linf = -10.0 ;
+    size_t counter_tot = 0;
     for(size_t counter_sum = 0 ; counter_sum < global_cij_x.rows() ; counter_sum++ )
     {
-        for(size_t counter_col = 0 ; counter_col < global_cij_x.cols() ; counter_col++)
+        for(size_t counter_col = 0 ; counter_col < counter_sum ; counter_col++)
         {
        
-            if(counter_col==counter_sum)
-                std::cout<<"In ("<<counter_sum<<" , "<<counter_col<<" ), c^0 = "<<global_cij_x.coeff( counter_sum , counter_col )<<" and c1 = "<<global_cij_y.coeff( counter_sum , counter_col )<<std::endl;
-            else
-                std::cout<<"In ("<<counter_sum<<" , "<<counter_col<<" ), c^0_ij + c^0_ji = "<<global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum )<<" and c^1_ij + c^1_ji = "<<global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) <<std::endl;
+            //std::cout<<"counter_sum = "<<counter_sum<< ", fe_data.Dirichlet_boundary[counter_sum]"<<fe_data.Dirichlet_boundary[counter_sum]<<'\n'<<"counter_col = "<<counter_col<< ", fe_data.Dirichlet_boundary[counter_col]"<<fe_data.Dirichlet_boundary[counter_col]<<'\n'<<std::endl;
+            if( (!fe_data.Dirichlet_boundary[counter_sum]) || (!fe_data.Dirichlet_boundary[counter_col]) )
+            {
+                if(counter_col==counter_sum){
+                    
+                    if( abs(global_cij_x.coeff( counter_sum , counter_col )) > 1e-15 || abs(global_cij_y.coeff( counter_sum , counter_col )) > 1e-15 )
+                        std::cout<<"In ("<<counter_sum<<" , "<<counter_col<<" ), c^0 = "<<global_cij_x.coeff( counter_sum , counter_col )<<" and c1 = "<<global_cij_y.coeff( counter_sum , counter_col )<<std::endl;
+                     
+                }
+                else{
+                    error0_sum_l1 += abs( global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum ) );
+                    error1_sum_l1 += abs( global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) ) ;
+                    error0_sum_linf = std::max(error0_sum_linf , global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum ) );
+                    error1_sum_linf = std::max(error1_sum_linf , global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) ) ;
+                    counter_tot++;
+                    /*
+                    if( abs( global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum )) > 1e-15 || abs( global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) ) > 1e-15 )
+                        std::cout<<"In ("<<counter_sum<<" , "<<counter_col<<" ), c^0_ij + c^0_ji = "<<global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum )<<" and c^1_ij + c^1_ji = "<<global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) <<std::endl;
+                    */
+                }
+                
+            }
+           
+            
         }
     }
     
-    */
+    std::cout<<"l1 error = "<< (error0_sum_l1 + error1_sum_l1)/counter_tot << std::endl ;
+    std::cout<<"linf_0 error = "<< error0_sum_linf << "linf_1 error = "<< error1_sum_linf<< std::endl ;
+    
     auto local_vandermonde = phi.local_vandermonde ;
     
     
-   
+    /*
     auto cij_norm = phi.cij_norm ;
     auto nij0 = phi.nij0 ;
     auto nij1 = phi.nij1 ;
@@ -28016,8 +29781,8 @@ run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh &
     auto cji_norm = phi.cij_norm ;
     auto nji0 = phi.nji0 ;
     auto nji1 = phi.nji1 ;
-  
-     /*
+   */
+    
     SparseMatrix<T> cij_norm = ( global_cij_x.cwiseProduct(global_cij_x) + global_cij_y.cwiseProduct(global_cij_y) ).cwiseSqrt() ;
     //std::cout<<"cij norm "<<'\n'<<cij_norm<<std::endl;
     
@@ -28038,7 +29803,7 @@ run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh &
     // MATRIX n_ij (TRANSPOSED)
     SparseMatrix<T> nji0 = cji_x.cwiseQuotient( cji_norm );
     SparseMatrix<T> nji1 = cji_y.cwiseQuotient( cji_norm );
-    */
+   
     
     
     
@@ -28246,6 +30011,304 @@ run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ(const Mesh &
     
 }
 
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ_SCALAR(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , T& dt , Fonction & phi_exact )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM LOW ORDER ( widehat{c}_{ij} ) -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
+    
+    timecounter tc;
+    tc.tic();
+    
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    //size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+    
+   
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+    auto phi_exact_FEM = phi_exact.sol_FEM ;
+  
+    
+  
+    // SAVING OF USEFUL MATRICES
+    Matrix<T, Dynamic, 1> global_lumped_mass = phi.Global_Mass_Lumped;
+    
+    //auto global_cij_x = phi.Global_c_term_x ;
+    //auto global_cij_y = phi.Global_c_term_y ;
+    
+    SparseMatrix<T>                 global_cij; // Global mass, saved for FEM problem
+   
+    global_cij = SparseMatrix<T>( dim, dim ); //(b_i,b_j)_ij , b_i Lagrange basis fx
+   
+    std::vector< Triplet<T> >       triplets_c_term; // Position elements: Sparse Matrix Notation
+   
+    for( const auto& cl : msh.cells )
+    {
+        size_t cell_offset = offset(msh, cl) ;
+        auto local_cij = make_bernstein_local_cij_matrix_with_velocity (msh, cl, degree , u );
+        auto qps = equidistriduted_nodes_ordered_bis<T,Mesh>(msh, cl, degree);
+        //std::cout<< "local_cij_lagrangian.first "<<'\n'<<local_cij_lagrangian.first<<std::endl;
+    
+        
+        // Assembling triplets for global problem
+        for (size_t i = 0; i < local_ndof; i++)
+        {
+            size_t asm_map_i = phi.connectivity_matrix[cell_offset][i].first ;
+            for (size_t j = 0; j < local_ndof; j++)
+            {
+                size_t asm_map_j = phi.connectivity_matrix[cell_offset][j].first ;
+                triplets_c_term.push_back( Triplet<T>(asm_map_i, asm_map_j , local_cij.first(i,j)+local_cij.second(i,j) ) );
+               
+            
+            }
+        }
+
+    }
+
+    global_cij.setFromTriplets( triplets_c_term.begin(), triplets_c_term.end() );
+    triplets_c_term.clear();
+    
+   
+    Matrix<T, Dynamic, 1> sum0 = Eigen::Matrix<T, Dynamic, 1>::Zero(global_cij.rows(), 1);
+       
+    for (size_t k = 0; k<global_cij.cols(); k++)
+    {
+        sum0 += (global_cij).col(k);
+       
+    }
+       
+    //for (size_t i=0; i<global_cij_x.rows(); i++) {
+    //    std::cout<<"The sum is "<<sum1(i)<<" and "<<sum0(i)<<std::endl;
+    //}
+    T error0_sum_l1, error1_sum_l1 ;
+    T error0_sum_linf = -10.0 , error1_sum_linf = -10.0 ;
+    size_t counter_tot = 0;
+    for(size_t counter_sum = 0 ; counter_sum < global_cij.rows() ; counter_sum++ )
+    {
+        for(size_t counter_col = 0 ; counter_col < counter_sum ; counter_col++)
+        {
+       
+            //std::cout<<"counter_sum = "<<counter_sum<< ", fe_data.Dirichlet_boundary[counter_sum]"<<fe_data.Dirichlet_boundary[counter_sum]<<'\n'<<"counter_col = "<<counter_col<< ", fe_data.Dirichlet_boundary[counter_col]"<<fe_data.Dirichlet_boundary[counter_col]<<'\n'<<std::endl;
+            if( (!fe_data.Dirichlet_boundary[counter_sum]) || (!fe_data.Dirichlet_boundary[counter_col]) )
+            {
+                if(counter_col==counter_sum){
+                    
+                    if( abs(global_cij.coeff( counter_sum , counter_col )) > 1e-15 )
+                        std::cout<<"In ("<<counter_sum<<" , "<<counter_col<<" ), c_ij = "<<global_cij.coeff( counter_sum , counter_col )<<std::endl;
+                     
+                }
+                else{
+                    error0_sum_l1 += abs( global_cij.coeff( counter_sum , counter_col ) + global_cij.coeff( counter_col , counter_sum ) );
+                    
+                    error0_sum_linf = std::max(error0_sum_linf , global_cij.coeff( counter_sum , counter_col ) + global_cij.coeff( counter_col , counter_sum ) );
+                   
+                    counter_tot++;
+                    /*
+                    if( abs( global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum )) > 1e-15 || abs( global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) ) > 1e-15 )
+                        std::cout<<"In ("<<counter_sum<<" , "<<counter_col<<" ), c^0_ij + c^0_ji = "<<global_cij_x.coeff( counter_sum , counter_col ) + global_cij_x.coeff( counter_col , counter_sum )<<" and c^1_ij + c^1_ji = "<<global_cij_y.coeff( counter_sum , counter_col ) + global_cij_y.coeff( counter_col , counter_sum ) <<std::endl;
+                    */
+                }
+                
+            }
+           
+            
+        }
+    }
+    
+    std::cout<<"l1 error = "<< (error0_sum_l1 )/counter_tot << std::endl ;
+    std::cout<<"linf error = "<< error0_sum_linf << std::endl ;
+    
+    auto local_vandermonde = phi.local_vandermonde ;
+    
+    
+    
+    auto cij_norm = phi.cij_norm ;
+    auto nij0 = phi.nij0 ;
+    auto nij1 = phi.nij1 ;
+    
+    auto cji_norm = phi.cij_norm ;
+    auto nji0 = phi.nji0 ;
+    auto nji1 = phi.nji1 ;
+   
+    /*
+    SparseMatrix<T> cij_norm = ( global_cij.cwiseProduct(global_cij) ).cwiseSqrt() ;
+    //std::cout<<"cij norm "<<'\n'<<cij_norm<<std::endl;
+    
+    // MATRIX n_ij
+    SparseMatrix<T> nij = global_cij.cwiseQuotient( cij_norm );
+   
+    //std::cout<<"nij1  "<<'\n'<<nij1<<std::endl;
+    
+
+    // MATRIX c_ji
+    SparseMatrix<T> cji = global_cij.adjoint() ;
+   
+    // NORM of c_ji -> i.e. c_ij transposed
+    SparseMatrix<T> cji_norm = (cji.cwiseProduct(cji)).cwiseSqrt();
+    
+    // MATRIX n_ij (TRANSPOSED)
+    SparseMatrix<T> nji = cji.cwiseQuotient( cji_norm );
+    
+   */
+    
+    timecounter tc_case00;
+    tc_case00.tic();
+    
+    
+    
+    // CONVOLUTION TERM
+    Matrix<T, Dynamic, 1> conv_global = global_cij * phi_FEM  ;
+    
+    
+    
+    // TERM d_ij
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        for(auto& elem:row_i)
+        {
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+            
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+               
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+            
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+            
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+            
+            sum_row += val_dij ;
+            
+            
+            if( counter_row != elem ){
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+                term_dij_no_entropy(counter_row) += val_dij*(phi_FEM(elem)-phi_FEM(counter_row));
+            }
+      
+            
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+        counter_row++;
+        
+    }
+    
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+    
+    
+    
+    tc_case00.toc();
+    std::cout << bold << yellow << "RESOLUTION OF LOW ORDER TRANSPORT, t = " << tc_case00 << " seconds" << reset << std::endl;
+    
+    timecounter tc_case01;
+    tc_case01.tic();
+    
+    // CHECK TIME STEP dt
+    T dt_old = dt ;
+    std::cout<<bold<<yellow<<"---> COND IN TEMPO CFL, ALEXANDRE BOOK"<<reset<<std::endl;
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+    
+    T nu_max0 = CFL_numb/fe_data.hx;
+    T nu0 = dt_old/fe_data.hx;
+    T nu1 = dt/fe_data.hx;
+    
+    std::cout<<"VALID FOR u = (1,0). nu_max VERO = "<<nu_max0<<" , nu max con dt assegnato = "<<nu0<< " and with dt appeared by CFL COND "<<nu1<<std::endl;
+    
+    if(dt_old != dt )
+    {
+        std::cout<<"dt is "<<dt_old<<" and dt CFL is "<<dt<<" . STOP!"<<std::endl;
+        exit(10);
+    }
+    
+    tc_case01.toc();
+    std::cout << bold << yellow << "TIME CHECKING, t = " << tc_case01 << " seconds" << reset << std::endl;
+    
+ 
+  
+    
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+   
+    
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+  
+    
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+    //std::cout<<"phi_L = "<<phi_L.size()<<" , phi_exact_FEM = "<<phi_exact_FEM.size()<<std::endl;
+    size_t counter_dir = 0 ;
+    for (const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+    {
+        
+        //std::cout<<"counter_dir = "<<counter_dir<<" , dir_elem = "<<dir_elem<<std::endl;
+        if(dir_elem){
+            phi_L(counter_dir) = phi_exact_FEM(counter_dir) ;
+        }
+        counter_dir++ ;
+    }
+     
+    
+    
+    
+    
+   
+    
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_L ;
+    phi.converting_into_HHO_formulation(phi_L);
+   
+    
+    
+    tc.toc();
+    std::cout << bold << yellow << "FEM method, time resolution: " << tc << " seconds" << reset << std::endl;
+       
+       
+    
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_L = std::make_shared< gnuplot_output_object<double> >("phi_L.dat");
+    
+    
+    
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            test_phi_L->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_L);
+    postoutput5.write();
+    */
+  
+    
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+    
+    
+
+    //return phi_tilde;
+    
+}
 
 template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename T = typename Mesh::coordinate_type >
 void
@@ -31152,6 +33215,11 @@ void run_FEM_levelset_SPARSE(const Mesh & msh, const FiniteSpace& fe_data, Fonct
 
     
 }
+
+
+
+
+
 
 template< typename Mesh , typename Fonction , typename T = typename Mesh::coordinate_type ,typename VEC >
 void Lp_space_Tfin_error_FEM( const Fonction& level_set_final , const Fonction& level_set_initial , const Mesh& msh , size_t degree ,double p , VEC& error )
@@ -41132,7 +43200,7 @@ void convergence_fast_Bernstein() // I do case entropic!!!
     using T = double;
     // CONVERGENCE TEST ANALYSIS-> GOAL QUANTITIES IN EACH TIME CALCULATED. SLOW
     bool high_order = TRUE ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
-    bool case_entropic = FALSE ;
+    bool case_entropic = TRUE ;
     
     bool cut_off_active = FALSE ; // IF FALSE IS SMOOTH, IF TRUE  CUTOFF
    
@@ -41169,11 +43237,11 @@ void convergence_fast_Bernstein() // I do case entropic!!!
     // Time steps to be analysed // HAS TO be smaller than ||u||/max(h) = 1/32 = 0.03
     //time_steps.push_back(5*1e-3);
     //time_steps.push_back(4*1e-3);
-    //time_steps.push_back(2*1e-3);
-    //time_steps.push_back(1*1e-3);
+    time_steps.push_back(2*1e-3);
+    time_steps.push_back(1*1e-3);
     //time_steps.push_back(5*1e-4);
     //time_steps.push_back(2.5*1e-4);
-    time_steps.push_back(1.25*1e-4);
+    //time_steps.push_back(1.25*1e-4);
 
     T final_T = 0.1;
     
@@ -41217,8 +43285,8 @@ void convergence_fast_Bernstein() // I do case entropic!!!
         output << "N\th\tdt\tl1(L1)\tordre1"
                 << std::endl;
         // convergence tests
-        T previous_l1_L1 = 0.0 , previous_l2_L1 = 0.0;
-        T previous_l1_L2 = 0.0 , previous_l2_L2 = 0.0;
+        T previous_l1_L1 = 0.0 ; //, previous_l2_L1 = 0.0;
+        //T previous_l1_L2 = 0.0 , previous_l2_L2 = 0.0;
         T previous_h = 0.0;
         size_t which_mesh = 0;
         
@@ -41256,6 +43324,7 @@ void convergence_fast_Bernstein() // I do case entropic!!!
             auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
             
            
+            //testing_level_set(msh,level_set_function);
             T C ;
            
             if(cut_off_active){
@@ -41280,7 +43349,7 @@ void convergence_fast_Bernstein() // I do case entropic!!!
             else
                 std::cout<<bold<<yellow<<"----> USING phi_L LOW order!!!!! "<<reset<<std::endl;
             
-            
+            //testing_level_set(msh,level_set_function);
             /************** ANALYTIC VELOCITY FIELD   **************/
             T u_0 = 1. ;
             T u_1 = 0. ;
@@ -41294,8 +43363,8 @@ void convergence_fast_Bernstein() // I do case entropic!!!
             auto crr_mesh =  Current_Mesh<Mesh>(msh);
             
             // Error Initialisation
-            T l1_L1_error = 0.0 , l2_L1_error = 0.0 ;
-            T l1_L2_error = 0.0 , l2_L2_error = 0.0 ;
+            T l1_L1_error = 0.0 ;//, l2_L1_error = 0.0 ;
+            //T l1_L2_error = 0.0 , l2_L2_error = 0.0 ;
             
             for (size_t time_step = 0; time_step<=T_N; time_step++)
             {
@@ -41314,8 +43383,8 @@ void convergence_fast_Bernstein() // I do case entropic!!!
                 else{
                     std::cout<<"---------> IN SIMULAZIONE ENTROPIC NON DEVO ENTRARE QUA <---------"<<std::endl;
                     if(high_order)
-                        run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-                        //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+                        //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+                        run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
                     else
                         run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
                         
@@ -41334,7 +43403,7 @@ void convergence_fast_Bernstein() // I do case entropic!!!
                 auto analytic_level_set_final = circle_level_set<T>(radius, x_centre + x_deviation, y_centre + y_deviation );
                  auto level_set_final = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final , msh , TRUE);
                 
-                
+                //testing_level_set(msh,level_set_function,level_set_final);
                 
                 if(cut_off_active){
                     level_set_final.cut_off( C );
@@ -41351,7 +43420,7 @@ void convergence_fast_Bernstein() // I do case entropic!!!
                 l1_L1_error += dt*L1_err_par;
                 
                 L1_err_vec[which_mesh].push_back(L1_err_par);
-                
+                //testing_level_set(msh,level_set_function,level_set_final);
                 /*
                 if(which_mesh == 0 && time_step == T_N )
                     testing_level_set_mesh0( msh, level_set_function, level_set_final);
@@ -41528,16 +43597,16 @@ void convergence_fast_Bernstein_inlet_condition()
 
     // Finite Element orders for Level Set
     //FE_orders.push_back(0);
-    //FE_orders.push_back(1);
-    FE_orders.push_back(2);
+    FE_orders.push_back(1);
+    //FE_orders.push_back(2);
     //FE_orders.push_back(2);
     
     // Time steps to be analysed // HAS TO be smaller than ||u||/max(h) = 1/32 = 0.03
     //time_steps.push_back(5*1e-3);
-    //time_steps.push_back(4*1e-3);
+    time_steps.push_back(4*1e-3);
     time_steps.push_back(2*1e-3);
     time_steps.push_back(1*1e-3);
-    time_steps.push_back(5*1e-4);
+    //time_steps.push_back(5*1e-4);
     //time_steps.push_back(2.5*1e-4);
     //time_steps.push_back(1.25*1e-4);
 
@@ -41583,8 +43652,8 @@ void convergence_fast_Bernstein_inlet_condition()
         output << "N\th\tdt\tl1(L1)\tordre1"
                 << std::endl;
         // convergence tests
-        T previous_l1_L1 = 0.0 , previous_l2_L1 = 0.0;
-        T previous_l1_L2 = 0.0 , previous_l2_L2 = 0.0;
+        T previous_l1_L1 = 0.0 ; //, previous_l2_L1 = 0.0;
+        //T previous_l1_L2 = 0.0 , previous_l2_L2 = 0.0;
         T previous_h = 0.0;
         size_t which_mesh = 0;
         
@@ -41621,8 +43690,23 @@ void convergence_fast_Bernstein_inlet_condition()
             
             auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
             
+        /*
+           T C ;
            
-            
+           if(cut_off_active){
+               T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+               C = r0*r0 - radius*radius ;
+               level_set_function.cut_off( C );
+               std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+               std::cout<<"C = "<<C<<std::endl;
+           }
+           else{
+               C = 0.2;  // Imposed max value at the boundary
+               level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
+               std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+               std::cout<<"C = "<<C<<std::endl;
+           }
+            */
             if(high_order)
                 std::cout<<bold<<yellow<<"----> USING phi_HP HIGH order!!!!! "<<reset<<std::endl;
             else
@@ -41648,8 +43732,8 @@ void convergence_fast_Bernstein_inlet_condition()
             check_inlet( msh , fe_data , bdry_bottom , bdry_right , bdry_up , bdry_left, 1e-14 );
             
             // Error Initialisation
-            T l1_L1_error = 0.0 , l2_L1_error = 0.0 ;
-            T l1_L2_error = 0.0 , l2_L2_error = 0.0 ;
+            T l1_L1_error = 0.0 ; //, l2_L1_error = 0.0 ;
+            //T l1_L2_error = 0.0 , l2_L2_error = 0.0 ;
             T time = 0;
             for (size_t time_step = 0; time_step<=T_N; time_step++)
             {
@@ -41668,7 +43752,15 @@ void convergence_fast_Bernstein_inlet_condition()
                 
                 auto analytic_level_set_final = circle_level_set<T>(radius, x_centre + x_deviation, y_centre + y_deviation );
                  auto level_set_final = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_final , msh , TRUE);
-                
+                /*
+                if(cut_off_active){
+                    level_set_final.cut_off( C );
+                }
+                else{
+                    level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
+                }
+                */
+                //if( time_step == 0 )
                 testing_level_set_time( msh , level_set_function , time , level_set_final);
                 
                 //************ Resolution of the problem  ****************//
@@ -41683,14 +43775,20 @@ void convergence_fast_Bernstein_inlet_condition()
                 else{
                     if(high_order){
                         std::cout<<"In HIGH ORDER simulation c_s = 1e-18 al denominatore"<<std::endl;
-                        run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
-                        //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+                        //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+                        //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_HP( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+                        run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+                        //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+                        //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NO_COMPRESSION( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
                         //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
                     }
-                    else
-                     run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
-                       // run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-                        
+                    else{
+                     
+                        //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+                        //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+                       
+                        run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ_SCALAR( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final );
+                    }
                         
                 }
                 
@@ -41778,7 +43876,7 @@ void convergence_fast_Bernstein_inlet_condition()
         output3 << "tdt\terrorL1N12\terrorL1N24\terrorL1N48\terrorL1N96" << std::endl;
         for(size_t pos = 0 ; pos<L1_err_vec[0].size();pos++)
         {
-            T time_pos = dt*(pos+1);
+            //T time_pos = dt*(pos+1);
             output3  << dt ;
             size_t i_vec = 0;
             while( i_vec < mesh_sizes.size() )
@@ -42377,7 +44475,7 @@ int main(int argc, char **argv)
 
 
 
-// Convergence analysis for FEM-> FAST JUST GLOBAL COMPUTATIONS
+// Convergence analysis for FEM -> FAST JUST GLOBAL COMPUTATIONS
 #if 0
 int main(int argc, char **argv)
 {
@@ -42386,9 +44484,9 @@ int main(int argc, char **argv)
 }
 #endif
 
-// Convergence analysis for FEM-> FAST JUST GLOBAL COMPUTATIONS
+// Convergence analysis for FEM -> FAST JUST GLOBAL COMPUTATIONS
 // New Dirichlet conditions (just over the inlet + NEW D_E definition)
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     convergence_fast_Bernstein_inlet_condition();
@@ -42399,7 +44497,7 @@ int main(int argc, char **argv)
 
 // FUNZIONA-> FAST COMPUTATION, JUST GLOBAL QUANTITIES, I.E. L^1 NORM
 // BERNSTEIN BASIS HIGH ORDER FOR PHI PLUS L2 PROJECTION -> Velocity is Lagrangian
-#if 0
+#if 1
 // NEW CASE, WITH DIRICHLET CONDITION JUST ON THE INLET (TIME DEPENDENT)
 int main(int argc, char **argv)
 {
@@ -42421,7 +44519,7 @@ int main(int argc, char **argv)
     mesh_init_params<RealType> mip;
     mip.Nx = 5;
     mip.Ny = 5;
-    RealType d = 0.5;
+    //RealType d = 0.5;
     size_t T_N = 0;
     /* k <deg>:     method degree
      * g<deg>:  method FEM degree
@@ -42616,7 +44714,7 @@ int main(int argc, char **argv)
         
         T eps = 1.0 ; // factor to be inside CFL stability zone
         T dt1 = time_step_CFL_new( u_projected , mip , eps );
-        T dt2 = 4*1e-3;
+        T dt2 = 1*1e-3;
         dt = std::min(dt1 , dt2);
         std::cout<<"I USE dt = "<<dt<<" AND HEURSTIC CFL GIVES dt  = "<<dt1<<std::endl;
         
@@ -42630,20 +44728,26 @@ int main(int argc, char **argv)
     
         auto level_set_final = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_post_FE , msh , TRUE);
         
-        if(high_order)
-            run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final);
+        if(high_order){
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final);
+            run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_CHECK_QUANTITIES( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final);
 
             //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , dt );
             
-            
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_HP( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
             //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
             //run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-        else
-            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final);
-            
+        }
+        else{
+            //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final);
+            std::cout<<"------------> LOW ORDER CASE WITH NEW widehat{c}_{ij}---------"<<std::endl;
+            //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final );
+            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ_SCALAR( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final );
             //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt );
             //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
-            
+         
+       
+        }
        
         testing_level_set2(msh,level_set_function,level_set_final);
         
@@ -42977,6 +45081,376 @@ int main(int argc, char **argv)
             //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
             
        
+        testing_level_set2(msh,level_set_function,level_set_final);
+        
+        /**************POST-PROCESSING ---> ERROR ANALYSIS **************/
+        timecounter tc_err ;
+        tc_err.tic();
+        T L1_err_par = Lp_space_error_FEM( level_set_final , level_set_function,msh,degree_FEM, 1.0 );
+       tc_err.toc();
+       std::cout << bold << yellow << "TIME FOR Lp_space_error_FEM THE ERROR, t =  "<< reset<< tc_err << std::endl;
+        tc_err.tic();
+        T Linf_err_par = Linf_error_FEM_new( level_set_final , level_set_function , msh,degree_FEM);
+        tc_err.toc();
+        std::cout << bold << yellow << "TIME FOR Linf_error_FEM THE ERROR, t =  "<< reset<< tc_err << std::endl;
+       
+         
+        std::cout << bold << yellow << "L1-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< L1_err_par << std::endl;
+        std::cout << bold << yellow << "Linf-space error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< Linf_err_par << std::endl;
+        tc_err.tic();
+        T W11_err_par = W1p_error_FEM( level_set_final , level_set_function , msh ,degree_FEM, 1.0);
+        tc_err.toc();
+        std::cout << bold << yellow << "TIME FOR W1p_error_FEM THE ERROR, t =  "<< reset<< tc_err << std::endl;
+        tc_err.tic();
+        T W1inf_err_par = W1inf_error_FEM_new(level_set_final , level_set_function , msh,degree_FEM);
+        tc_err.toc();
+        std::cout << bold << yellow << "TIME FOR W1inf_error_FEM THE ERROR, t =  "<< reset<< tc_err << std::endl;
+        
+        // l^q in time: norm in time
+        l1_L1_error += dt*L1_err_par;
+        
+        linf_L1_error = std::max( L1_err_par , linf_L1_error );
+       
+        l1_Linf_error += dt*Linf_err_par;
+      
+        linf_Linf_error = std::max( Linf_err_par , linf_Linf_error );
+        
+        l1_W11_error += dt*W11_err_par ;
+       
+        linf_W11_error = std::max( W11_err_par , linf_W11_error );
+        
+        l1_W1inf_error += dt*W1inf_err_par;
+       
+        linf_W1inf_error = std::max( W1inf_err_par , linf_W1inf_error );
+        
+       
+        
+        std::cout << bold << yellow << "W_1,1 error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W11_err_par << std::endl;
+       
+        std::cout << bold << yellow << "W_1,inf error at time "<<(time_step+1)*(dt)<<" IS "<< reset<< W1inf_err_par << std::endl;
+        
+        tc_err.toc();
+        std::cout << bold << yellow << "TIME FOR POST_PROCESSING THE ERROR, t =  "<< reset<< tc_err << std::endl;
+        
+    } /// End of the temporal loop
+    
+    
+    std::cout<<'\n';
+    std::cout << bold << yellow << "l1(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_L1_error << std::endl;
+    std::cout << bold << yellow << "linf(L1) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_L1_error << std::endl;
+    
+    std::cout<<'\n';
+    
+    std::cout << bold << yellow << "l1(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_Linf_error << std::endl;
+    std::cout << bold << yellow << "linf(Linf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_Linf_error << std::endl;
+    
+    std::cout<<'\n';
+    
+    std::cout << bold << yellow << "Seminorm l1(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W11_error << std::endl;
+    std::cout << bold << yellow << "Seminorm linf(W11) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W11_error << std::endl;
+   
+    std::cout<<'\n';
+   
+    std::cout << bold << yellow << "Seminorm l1(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< l1_W1inf_error << std::endl;
+    std::cout << bold << yellow << "Seminorm linf(W1inf) error GLOBAL at final time "<<(T_N+1)*(dt)<<" IS "<< reset<< linf_W1inf_error << std::endl;
+    
+    std::cout<<'\n';
+    
+    
+    return 0;
+}
+#endif
+
+
+
+
+//Questo main è di prova : si partirà da risolvere il problema base phi_L, constant bdry cond -> fino a complicare con INLET BDRY, NEW D, phi_H, COMPRESSED vs UNCOMPRESSED per capire bene se ci sono errori e/o come queste modifiche influenzano la soluzione di base.
+//FISSATE: mesh = 12x12 , dt = 1e-3 , Q1, T = 0.1
+//NOTICE: per INLET BDRY COND, smooth/cutoff non servirebbe. Li usiamo giusto per avere continuità con le versioni precedenti. CONTROLLEREMO ANCHE per INLET BDRY CONDITION cosa comporta lo SMOOTH vs phi^0
+#if 0
+int main(int argc, char **argv)
+{
+    
+    using RealType = double;
+
+    size_t degree           = 0;
+    size_t int_refsteps     = 4;
+    size_t degree_FEM       = 0;
+
+    bool dump_debug         = false;
+    bool solve_interface    = false;
+    bool solve_fictdom      = false;
+    bool agglomeration      = false;
+
+    bool high_order = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool cut_off_active = false ; // IF FALSE IS SMOOTH, IF TRUE  CUT_OFF
+    
+    mesh_init_params<RealType> mip;
+    mip.Nx = 5;
+    mip.Ny = 5;
+    //RealType d = 0.5;
+    size_t T_N = 0;
+    /* k <deg>:     method degree
+     * g<deg>:  method FEM degree
+     * M <num>:     number of cells in x direction
+     * N <num>:     number of cells in y direction
+     * r <num>:     number of interface refinement steps
+     *
+     * i:           solve interface problem
+     * f:           solve fictitious domain problem
+     *
+     * D:           use node displacement to solve bad cuts (default)
+     * A:           use agglomeration to solve bad cuts
+     *
+     * d:           dump debug data
+     */
+
+    int ch;
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:ifDAdhc")) != -1 )
+    {
+        switch(ch)
+        {
+            case 'k':
+                degree = atoi(optarg);
+                break;
+
+            case 'q':
+                degree_FEM = atoi(optarg);
+                break;
+
+            case 'M':
+                mip.Nx = atoi(optarg);
+                break;
+
+            case 'N':
+                mip.Ny = atoi(optarg);
+                break;
+
+            case 'r':
+                int_refsteps = atoi(optarg);
+                break;
+            
+            case 'T':
+                T_N = atoi(optarg);
+                break;
+
+            case 'i':
+                solve_interface = true;
+                break;
+
+            case 'f':
+                solve_fictdom = true;
+                break;
+
+            case 'D':
+                agglomeration = false;
+                break;
+
+            case 'A':
+                agglomeration = true;
+                break;
+
+            case 'd':
+                dump_debug = true;
+                break;
+                
+            case 'h':
+                high_order = true;
+            break;
+            
+            case 'c':
+                cut_off_active = true;
+            break;
+            
+            
+
+            case '?':
+            default:
+                std::cout << "wrong arguments" << std::endl;
+                exit(1);
+        }
+    }
+    
+
+    argc -= optind;
+    argv += optind;
+
+    
+    
+    timecounter tc;
+    std::cout << bold << yellow << "BERNSTEIN BASIS: HIGH ORDER TRANSPORT PROBLEM -----> FAST RESOLUTION, GLOBAL ERROR ANALYSIS." << std::endl;
+       
+    /************** BUILD MESH **************/
+    tc.tic();
+    cuthho_poly_mesh<RealType> msh(mip);
+    typedef cuthho_poly_mesh<RealType> Mesh;
+    offset_definition(msh);
+    tc.toc();
+    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
+       
+    
+    /************** FINITE ELEMENT INITIALIZATION **************/
+    timecounter tc_fedata;
+    tc_fedata.tic();
+    auto fe_data = Finite_Element<RealType,Mesh>( msh , degree_FEM , mip ) ;
+    typedef Finite_Element<RealType,Mesh> FiniteSpace;
+    tc_fedata.toc();
+    std::cout << bold << yellow << "FE space generation: " << tc_fedata << " seconds" << reset << std::endl;
+    
+    /************** ANALYTIC LEVEL SET FUNCTION  **************/
+    
+    RealType radius = 1.0/9.0; // I PUT 6.0, IT WAS 1.0/3.0
+    RealType x_centre = 0.45;
+    RealType y_centre = 0.5;
+    
+    auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre);
+    std::cout << "Initial Analytic Area Circle: "<< M_PI*radius*radius << " , and circonference: "<< 2*M_PI*radius << std::endl;
+    
+    typedef RealType T;
+    typedef  circle_level_set<T> Fonction;
+    
+    
+    
+    /************** ANALYTIC VELOCITY FIELD   **************/
+    T u_0 = 1.00 ;
+    T u_1 = 0.00 ;
+    auto u = linear_velocity_field<RealType>(0,u_0,0,u_1); // analytic velocity (0,0,0,0)
+    typedef linear_velocity_field<RealType> Velocity;
+   
+    
+    /************** VELOCITY INTERPOLATION **************/
+    // Velocity interpolated onto a Lagrangian Basis High Order
+    
+    std::cout<<"----> USING LAGRANGIAN HIGH ORDER VELOCITY FIELD"<<std::endl;
+    timecounter tc_vel;
+    tc_vel.tic();
+    auto u_projected = projection_velocity_high_order< Mesh,Velocity,FiniteSpace,T >(fe_data , u , msh);
+    //testing_velocity( msh , u_projected , u );
+    tc_vel.toc();
+    std::cout << bold << yellow << "VELOCITY SPACE: generated in time = " << tc_vel << " seconds" << reset << std::endl;
+    
+   
+   
+    /************** LEVEL SET FUNCTION: LAGRANGIAN HIGH ORDER DISCRETISATION **************/
+    
+    
+    auto level_set_function = L2projected_level_set_high_order< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
+    
+    T C ;  // Imposed max value at the boundary
+       
+    if(cut_off_active){
+        T r0 = radius + (x_centre - radius + 2.0/16.0)/2.0;
+        C = r0*r0 - radius*radius ;
+        level_set_function.cut_off( C );
+        std::cout<<bold<<yellow<<"----> USING CUT_OFF!!!!! "<<reset<<std::endl;
+    }
+    else{
+        C = 0.2;
+        level_set_function.smooth_cut_off( C , x_centre , y_centre , radius );
+        std::cout<<bold<<yellow<<"----> USING SMOOTH!!!!! "<<reset<<std::endl;
+    }
+    
+  
+    if(high_order)
+        std::cout<<bold<<yellow<<"----> USING phi_HP HIGH order!!!!! "<<reset<<std::endl;
+    else
+        std::cout<<bold<<yellow<<"----> USING phi_L LOW order!!!!! "<<reset<<std::endl;
+    
+    
+    testing_level_set(msh,level_set_function,level_set_function_anal);
+  
+   
+    // ERROR DATA INITIALISATION
+    T l1_L1_error   = 0. , linf_L1_error   = 0.;
+    T l1_Linf_error = 0. , linf_Linf_error = 0.;
+    
+    T l1_W11_error   = 0. , linf_W11_error   = 0.;
+    T l1_W1inf_error = 0. , linf_W1inf_error = 0.;
+    
+    T dt = 0.0 ;
+    bool bdry_bottom = false , bdry_up = false ;
+    bool bdry_left = true , bdry_right = false ;
+    
+    check_inlet( msh , fe_data , bdry_bottom , bdry_right , bdry_up , bdry_left, 1e-14 );
+    /*
+    std::cout<<"Dirichlet_boundary_inlet"<<'\n';
+    for(auto& cl:msh.cells)
+    {
+        auto cell_offset = offset(msh,cl);
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree_FEM);
+        for (size_t i = 0; i < fe_data.local_ndof; i++)
+        {
+            auto pt = pts[i];
+            size_t asm_map = fe_data.connectivity_matrix[cell_offset][i].first ;
+            std::cout<<"In cell "<<cell_offset<<" ,point = "<<pt<<" is inlet : "<< fe_data.Dirichlet_boundary_inlet[asm_map]<<std::endl;
+        }
+    }
+    */
+    
+    
+     /// ---> TIME EVOLUTION
+    for (size_t time_step = 0; time_step <= T_N; time_step++)
+    {
+      
+        /************** FEM -  PROCESSING **************/
+         
+        
+        T eps = 1.0 ; // factor to be inside CFL stability zone
+        T dt1 = time_step_CFL_new( u_projected , mip , eps );
+        T dt2 = 1*1e-3;
+        dt = std::min(dt1 , dt2);
+        std::cout<<"I USE dt = "<<dt<<" AND HEURSTIC CFL GIVES dt  = "<<dt1<<std::endl;
+        
+        //check_inlet( msh , fe_data , u , 1e-14 ) ;
+        
+        T x_deviation = u_0*(time_step+1)*dt;
+        T y_deviation = u_1*(time_step+1)*dt;
+        
+        
+        auto analytic_level_set_post_FE = circle_level_set<RealType>(radius, x_centre + x_deviation, y_centre + y_deviation );
+    
+        auto level_set_final = L2projected_level_set_high_order < Mesh , Fonction , FiniteSpace , T > (fe_data , analytic_level_set_post_FE , msh , TRUE);
+        
+        if(cut_off_active){
+            level_set_final.cut_off( C );
+        }
+        else{
+            level_set_final.smooth_cut_off( C , x_centre + x_deviation , y_centre + y_deviation , radius );
+        }
+        
+        if(high_order){
+            // HIGH ORDER CASE phi^H
+                    
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_HP( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+            
+            run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NO_COMPRESSION( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+                       //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+           
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , dt );
+            
+            
+            //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            //run_FEM_BERNSTEIN_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            
+            //ENTROPIC CASE phi^E
+            //run_FEM_BERNSTEIN_CORRECT_FAST_ENTROPIC_NEW( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            //run_FEM_BERNSTEIN_CORRECT_FAST_NO_MAXMIN_PRESERVING_H( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+                
+           
+                              
+                                
+        }
+        else{
+            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , dt , level_set_final);
+            //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_CIJ( level_set_function.msh , fe_data , level_set_function , u_projected , dt, level_set_final);
+            // run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            
+            //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , dt );
+            //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT( level_set_function.msh , fe_data , level_set_function , u_projected , dt);
+            
+        }
         testing_level_set2(msh,level_set_function,level_set_final);
         
         /**************POST-PROCESSING ---> ERROR ANALYSIS **************/

@@ -67,6 +67,67 @@ public:
     }
 };
 
+
+template<typename T>
+class gnuplot_output_object_time : public postprocess_output_object<T>
+{
+    std::string                                 output_filename;
+    std::vector< std::pair< T , T >>            data;
+
+public:
+    gnuplot_output_object_time(const std::string& filename)
+        : output_filename(filename)
+    {}
+
+    void add_data(const T& time, const T& val)
+    {
+        data.push_back( std::make_pair(time, val) );
+    }
+
+    bool write()
+    {
+        std::ofstream ofs(output_filename);
+
+        for (auto& d : data)
+            ofs << d.first << " " << d.second << std::endl;
+
+        ofs.close();
+
+        return true;
+    }
+};
+
+template<typename T>
+class gnuplot_output_object_val : public postprocess_output_object<T>
+{
+    std::string                                 output_filename;
+    std::vector< T >                            data;
+
+public:
+    gnuplot_output_object_val(const std::string& filename)
+        : output_filename(filename)
+    {}
+
+    void add_data(const T& val)
+    {
+        data.push_back( val );
+    }
+
+    bool write()
+    {
+        std::ofstream ofs(output_filename);
+
+        for (auto& d : data)
+            ofs << d << std::endl;
+
+        ofs.close();
+
+        return true;
+    }
+};
+
+
+
 template<typename T>
 class gnuplot_output_object_vec : public postprocess_output_object<T>
 {
@@ -305,9 +366,15 @@ public:
             L2_vel = 0.0;
             L2_p = 0.0;
             cond = 0.0;
+            l1_normal_vel = 0.0 ;
+            l2_normal_vel = 0.0 ;
+            linf_normal_vel = 0.0 ;
         }
     T H1_vel; // H1-error for velocity
     T L2_vel; // L2-error for velocity
     T L2_p;   // L2-error for pressure
     T cond;   // condition number
+    T l1_normal_vel ; // L2-error for the normal velocity at the interface
+    T l2_normal_vel ; // L2-error for the normal velocity at the interface
+    T linf_normal_vel ; // Linf-error for the normal velocity at the interface
 };
