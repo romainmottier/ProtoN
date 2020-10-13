@@ -698,7 +698,7 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
 
     // Time controls : Final time value 1.0
     size_t nt = 10;
-    size_t nt_divs = 5;
+    size_t nt_divs = 6;
     for (unsigned int i = 0; i < nt_divs; i++) {
         nt *= 2;
     }
