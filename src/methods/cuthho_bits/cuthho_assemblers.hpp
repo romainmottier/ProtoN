@@ -235,11 +235,12 @@ public:
                 auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
 
                 bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                if ( dirichlet )
-                    throw std::invalid_argument("Dirichlet boundary on cut cell not supported.");
+            if ( dirichlet )
+                    std::cout << "Dirichlet boundary on cut cell detected." << std::endl;
+//                    throw std::invalid_argument("Dirichlet boundary on cut cell not supported.");
 
                 for (size_t i = 0; i < fbs; i++)
-                    asm_map.push_back( assembly_index(face_LHS_offset+i, true) );
+                    asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
             }
         }
 
@@ -282,7 +283,7 @@ public:
         auto loc_size = cbs + f_dofs;
 
         if( double_unknowns )
-            loc_size = 2 * loc_size;
+            loc_size *= 2;
 
         Matrix<T, Dynamic, 1> dirichlet_data = Matrix<T, Dynamic, 1>::Zero( loc_size );
 
@@ -303,7 +304,8 @@ public:
                 && in_dom;
 
             if( dirichlet && double_unknowns )
-                throw std::invalid_argument("Dirichlet boundary on cut cell not supported.");
+                std::cout << "Dirichlet boundary on cut cell detected." << std::endl;
+//                throw std::invalid_argument("Dirichlet boundary on cut cell not supported.");
 
             if (dirichlet && loc_zone == element_location::ON_INTERFACE )
             {
@@ -723,9 +725,20 @@ public:
             else
                 num_all_faces += 1;
         }
+            
+        size_t num_dirichlet_faces = 0; /* counts faces with dup. unknowns */
+        for (auto& fc : msh.faces)
+        {
+            if(fc.is_boundary && fc.bndtype == boundary::DIRICHLET){
+                if (location(msh, fc) == element_location::ON_INTERFACE)
+                        num_dirichlet_faces += 2;
+                    else
+                        num_dirichlet_faces += 1;
+            }
+        }
 
         /* We assume that cut cells can not have dirichlet faces */
-        auto num_dirichlet_faces = std::count_if(msh.faces.begin(), msh.faces.end(), is_dirichlet);
+//        auto num_dirichlet_faces = std::count_if(msh.faces.begin(), msh.faces.end(), is_dirichlet);
         this->num_other_faces = num_all_faces - num_dirichlet_faces;
 
         this->face_table.resize( msh.faces.size() );

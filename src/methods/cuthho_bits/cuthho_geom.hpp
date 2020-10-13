@@ -176,7 +176,8 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         size_t k = 0;
         for (size_t i = 0; i < fcs.size(); i++)
         {
-            if ( is_cut(msh, fcs[i]) )
+            bool face_is_cut_Q = is_cut(msh, fcs[i]);
+            if ( face_is_cut_Q )
                 cut_faces.at(k++) = std::make_pair(i, fcs[i].user_data.intersection_point);
         }
 
@@ -203,7 +204,8 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             auto p0 = cut_faces[0].second;
             auto p1 = cut_faces[1].second;
             auto pt = p1 - p0;
-            auto pn = p0 + point<T,2>(-pt.y(), pt.x());
+            auto pt_t = point<T,2>(-pt.y(), pt.x());
+            auto pn = p0 + pt_t;
 
             if ( level_set_function(pn) >= 0 )
             {
