@@ -33028,7 +33028,7 @@ int main(int argc, char **argv)
 // VAAAAAAAAA!!!!!
 // BERNSTEIN BASIS HIGH ORDER FOR PHI PLUS L2 PROJECTION -> Velocity is Lagrangian
 // Taylor Green Vortex Velocity Field
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -34484,7 +34484,7 @@ int main(int argc, char **argv)
 #endif
 
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     convergence_fast_Bernstein_inlet_condition();

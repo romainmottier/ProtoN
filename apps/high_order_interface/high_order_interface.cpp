@@ -37742,7 +37742,7 @@ int main(int argc, char **argv)
 // VAAAAAAAAA!!!!!
 // BERNSTEIN BASIS HIGH ORDER FOR PHI PLUS L2 PROJECTION -> Velocity is Lagrangian
 // UTILE PER FARE ANALISI SU INTERFACE VARI CASI QUAAAAA
-#if 0 // QQQUUUUAAA
+#if 1 // QQQUUUUAAA
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -37933,8 +37933,8 @@ int main(int argc, char **argv)
     /************** ANALYTIC VELOCITY FIELD   **************/
     T u_0 = 1.00 ; // For rotational field u_0 = 0., else u_0 = 1 for right movemenent
     T u_1 = 0.00 ;
-    auto u = linear_velocity_field<RealType>(0,u_0,0,u_1); // analytic velocity (0,0,0,0)
-    typedef linear_velocity_field<RealType> Velocity;
+    //auto u = linear_velocity_field<RealType>(0,u_0,0,u_1); // analytic velocity (0,0,0,0)
+    //typedef linear_velocity_field<RealType> Velocity;
     //auto u = rotational_velocity_field<RealType>( x_centre , y_centre , 1.0);
     //typedef rotational_velocity_field<RealType> Velocity;
     //auto u = stokes_field<RealType>();
@@ -39058,7 +39058,7 @@ int main(int argc, char **argv)
 
 
 // Convergence analysis for FEM-> FAST JUST GLOBAL COMPUTATIONS
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     convergence_fast_Bernstein();
