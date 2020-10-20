@@ -65,7 +65,25 @@ make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
     return ret;
 }
 
+template<typename T, size_t ET>
+Matrix<T, Dynamic, Dynamic>
+make_vec_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+                 size_t degree, element_location where)
+{
+    vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
+    auto cbs = cb.size();
+    
+    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
 
+    auto qps = integrate(msh, cl, 2*degree, where);
+    for (auto& qp : qps)
+    {
+        auto phi = cb.eval_basis(qp.first);
+        ret += qp.second * phi * phi.transpose();
+    }
+
+    return ret;
+}
 
 
 //////////////////////   MAKE_HHO_LAPLACIAN  ///////////////////////
@@ -626,6 +644,129 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh,
     return std::make_pair(oper, data);
 }
 
+template<typename T, size_t ET, typename Function>
+std::pair<   Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,
+             Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>  >
+make_hho_gradrec_mixed_vector_interface(const cuthho_mesh<T, ET>& msh,
+                                  const typename cuthho_mesh<T, ET>::cell_type& cl,
+                                  const Function& level_set_function, const hho_degree_info& di,
+                                  element_location where, T coeff)
+{
+
+    if ( !is_cut(msh, cl) )
+        throw std::invalid_argument("The cell is not cut");
+
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+    typedef Matrix<T, Dynamic, 1>       vector_type;
+
+    const auto celdeg  = di.cell_degree();
+    const auto facdeg  = di.face_degree();
+    const auto graddeg = di.grad_degree();
+
+    cell_basis<cuthho_mesh<T, ET>,T>            cb(msh, cl, celdeg);
+    vector_cell_basis<cuthho_mesh<T, ET>,T>     gb(msh, cl, graddeg);
+
+
+    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
+    const auto num_faces = faces(msh, cl).size();
+
+    matrix_type       rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
+    matrix_type        gr_lhs = matrix_type::Zero(gbs, gbs);
+    matrix_type        gr_rhs = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
+
+    const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
+    for (auto& qp : qps)
+    {
+        const auto c_dphi = cb.eval_gradients(qp.first);
+        const auto g_phi  = gb.eval_basis(qp.first);
+
+        gr_lhs.block(0, 0, gbs, gbs) += qp.second * g_phi * g_phi.transpose();
+        rhs_tmp.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
+    }
+
+    const auto fcs = faces(msh, cl);
+    const auto ns = normals(msh, cl);
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        const auto fc = fcs[i];
+        const auto n  = ns[i];
+        // face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg);
+        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
+
+
+        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), where);
+        for (auto& qp : qps_f)
+        {
+            const vector_type c_phi      = cb.eval_basis(qp.first);
+            const vector_type f_phi      = fb.eval_basis(qp.first);
+            const auto        g_phi      = gb.eval_basis(qp.first);
+            const vector_type qp_g_phi_n = qp.second * g_phi * n;
+
+            rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
+            rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+        }
+    }
+
+    // term on the interface
+    matrix_type        interface_term = matrix_type::Zero(gbs, 2*cbs);
+    const auto iqps = integrate_interface(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
+    for (auto& qp : iqps)
+    {
+        const auto c_phi        = cb.eval_basis(qp.first);
+        const auto g_phi        = gb.eval_basis(qp.first);
+
+        Matrix<T,2,1> n = level_set_function.normal(qp.first);
+        const vector_type qp_g_phi_n = qp.second * g_phi * n;
+
+        interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+        interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
+    }
+    gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
+
+    // other terms
+    if(where == element_location::IN_NEGATIVE_SIDE)
+    {
+        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
+        gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs)
+            += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
+    }
+    else if( where == element_location::IN_POSITIVE_SIDE)
+    {
+        gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
+        gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs)
+                     += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
+    }
+
+//    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
+//    matrix_type data = gr_rhs.transpose() * oper;
+//
+//    return std::make_pair(oper, data);
+    
+    auto vec_cell_size = 2*gbs;
+    auto nrows = gr_rhs.cols()+vec_cell_size;
+    auto ncols = gr_rhs.cols()+vec_cell_size;
+    
+    // Shrinking data
+    matrix_type data_mixed = matrix_type::Zero(nrows,ncols);
+    if(where == element_location::IN_NEGATIVE_SIDE)
+    {
+        data_mixed.block(0, vec_cell_size, gbs, ncols-vec_cell_size) = -gr_rhs;
+        data_mixed.block(vec_cell_size, 0, nrows-vec_cell_size, gbs) = gr_rhs.transpose();
+    }
+    else if( where == element_location::IN_POSITIVE_SIDE)
+    {
+        data_mixed.block(gbs, vec_cell_size, gbs, ncols-vec_cell_size) = -gr_rhs;
+        data_mixed.block(vec_cell_size, gbs, nrows-vec_cell_size, gbs) = gr_rhs.transpose();
+    }
+
+    
+    matrix_type oper = gr_lhs.llt().solve(gr_rhs);
+    return std::make_pair(oper, data_mixed);
+    
+}
 
 
 ///////////////////////////  NITSCHE TERMS  /////////////////////////////
@@ -733,6 +874,7 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
     }
     return ret;
 }
+
 
 
 // make_rhs on faces

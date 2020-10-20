@@ -287,8 +287,8 @@ make_mixed_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
     using T = typename Mesh::coordinate_type;
 
     cell_basis<Mesh,T> cb(msh, cl, degree);
-    cell_basis<Mesh,T> recb(msh, cl, degree+1);
-    auto rbc = recb.size()-1;
+    vector_cell_basis<Mesh,T> recb(msh, cl, degree-1);
+    auto rbc = recb.size();
     auto cbs = cb.size()+rbc;
 
     Matrix<T, Dynamic, 1> ret_loc = Matrix<T, Dynamic, 1>::Zero(cb.size());
