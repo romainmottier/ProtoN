@@ -917,7 +917,7 @@ public:
     Matrix<T, Dynamic, 1>
     take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl,
                     const Matrix<T, Dynamic, 1>& solution,
-                    element_location where)
+                    element_location where = element_location::UNDEF)
     {
         auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();

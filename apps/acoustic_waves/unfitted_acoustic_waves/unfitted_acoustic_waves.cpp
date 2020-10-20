@@ -1,6 +1,6 @@
 /*
  *       /\        Omar Duran 2019
- *      /__\       omar-yesid.duran-triana@enpc.fr
+ *      /__\       omar.duran@enpc.fr
  *     /_\/_\      École Nationale des Ponts et Chaussées - CERMICS
  *    /\    /\
  *   /__\  /__\    This is ProtoN, a library for fast Prototyping of
@@ -54,7 +54,9 @@ using namespace Eigen;
 #include "../common/analytical_functions.hpp"
 
 
+// ----- common data types ------------------------------
 using RealType = double;
+typedef cuthho_poly_mesh<RealType>  mesh_type;
 
 template<typename T, size_t ET, typename testType>
 class interface_method
@@ -383,12 +385,12 @@ public:
     
     Mat
     make_contrib_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
-                 const testType &test_case, const hho_degree_info hdi)
+                 const testType &test_case, const hho_degree_info hdi, bool add_scalar_mass_Q = true)
     {
         if( location(msh, cl) != element_location::ON_INTERFACE )
-            return make_contrib_uncut_mass(msh, cl, hdi, test_case);
+            return make_contrib_uncut_mass(msh, cl, hdi, test_case, add_scalar_mass_Q);
         else // on interface
-            return make_contrib_cut_mass(msh, cl, hdi, test_case);
+            return make_contrib_cut_mass(msh, cl, hdi, test_case, add_scalar_mass_Q);
     }
     Mat uncut_vec_mass_matrix(const Mesh& msh, const typename Mesh::cell_type& cl,
     const hho_degree_info hdi)
@@ -420,7 +422,7 @@ public:
     
     Mat
     make_contrib_uncut_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
-                       const hho_degree_info hdi, const testType &test_case)
+                       const hho_degree_info hdi, const testType &test_case, bool add_scalar_mass_Q = true)
     {
         
         T c;
@@ -440,13 +442,15 @@ public:
         size_t n_data = mass_sigma.rows() + mass_v.rows();
         Mat mass = Mat::Zero(cbs+gbs,cbs+gbs);
         mass.block(0,0,gbs,gbs) = (1.0/(c*c))*mass_sigma;
-//        mass.block(gbs,gbs,cbs,cbs) = (1.0/(c*c))*mass_v;
+        if (add_scalar_mass_Q) {
+            mass.block(gbs,gbs,cbs,cbs) = (1.0/(c*c))*mass_v;
+        }
         return mass;
     }
     
     Mat
     make_contrib_cut_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
-                       const hho_degree_info hdi, const testType &test_case)
+                       const hho_degree_info hdi, const testType &test_case, bool add_scalar_mass_Q = true)
     {
 
         Mat mass_sigma_neg = make_vec_mass_matrix(msh, cl,
@@ -474,9 +478,10 @@ public:
         
         mass.block(0,0,n_s_data_neg,n_s_data_neg) = mass_sigma_neg;
         mass.block(n_s_data_neg,n_s_data_neg,n_s_data_pos,n_s_data_pos) = mass_sigma_pos;
-//        mass.block(n_s_data,n_s_data,n_data_neg,n_data_neg) = mass_v_neg;
-//        mass.block(n_s_data+n_data_neg,n_s_data+n_data_neg,n_data_pos,n_data_pos) = mass_v_pos;
-
+        if (add_scalar_mass_Q) {
+            mass.block(n_s_data,n_s_data,n_data_neg,n_data_neg) = mass_v_neg;
+            mass.block(n_s_data+n_data_neg,n_s_data+n_data_neg,n_data_pos,n_data_pos) = mass_v_pos;
+        }
         return mass;
     }
     
@@ -584,76 +589,41 @@ auto make_gradrec_mixed_interface_method(const cuthho_mesh<T, ET>& msh, const T 
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg);
+create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg);
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg);
+create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg, bool add_scalar_mass_Q = true);
 
 template<typename Mesh, typename testType, typename meth>
-test_info<typename Mesh::coordinate_type>
-newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_error_Q = false);
+void
+newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_error_Q = false);
 
 template<typename Mesh, typename testType, typename meth>
-void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell);
+void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell);
 
-///// test_case_laplacian_waves
-// exact solution : t*t*sin(\pi x) sin(\pi y)               in \Omega_1
-//                  t*t*sin(\pi x) sin(\pi y)               in \Omega_2
-// (\kappa_1,\rho_1) = (\kappa_2,\rho_2) = (1,1)
+///// test_case_laplacian_conv
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_waves: public test_case_laplacian<T, Function, Mesh>
+class test_case_laplacian_conv: public test_case_laplacian<T, Function, Mesh>
 {
    public:
-//    test_case_laplacian_waves(T t,Function level_set__)
-//        : test_case_laplacian<T, Function, Mesh>
-//        (level_set__, params<T>(),
-//         [level_set__,t](const typename Mesh::point_type& pt) -> T { /* sol */
-//            if(level_set__(pt) > 0)
-//                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
-//            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
-//         [level_set__,t](const typename Mesh::point_type& pt) -> T { /* rhs */
-//             if(level_set__(pt) > 0)
-//                 return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
-//            else return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
-//         [level_set__,t](const typename Mesh::point_type& pt) -> T { // bcs
-//             if(level_set__(pt) > 0)
-//                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
-//            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
-//         [level_set__,t](const typename Mesh::point_type& pt) -> auto { // grad
-//             Matrix<T, 1, 2> ret;
-//             if(level_set__(pt) > 0)
-//             {
-//                 ret(0) = M_PI*t*t*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y());
-//                 ret(1) = M_PI*t*t*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y());
-//                 return ret;
-//             }
-//             else {
-//                 ret(0) = M_PI*t*t*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y());
-//                 ret(1) = M_PI*t*t*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y());
-//                 return ret;}},
-//         [](const typename Mesh::point_type& pt) -> T {/* Null Dir */
-//             return 0;},
-//         [level_set__](const typename Mesh::point_type& pt) -> T {/* Null Neu */
-//             return 0;})
-//        {}
     
-    test_case_laplacian_waves(T t,Function level_set__)
+    test_case_laplacian_conv(Function level_set__)
     : test_case_laplacian<T, Function, Mesh>
     (level_set__, params<T>(),
-     [level_set__,t](const typename Mesh::point_type& pt) -> T { /* sol */
+     [level_set__](const typename Mesh::point_type& pt) -> T { /* sol */
         if(level_set__(pt) > 0)
             return std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
         else return std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
-     [level_set__,t](const typename Mesh::point_type& pt) -> T { /* rhs */
+     [level_set__](const typename Mesh::point_type& pt) -> T { /* rhs */
          if(level_set__(pt) > 0)
              return 2.0*(M_PI*M_PI)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
         else return 2.0*(M_PI*M_PI)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
-     [level_set__,t](const typename Mesh::point_type& pt) -> T { // bcs
+     [level_set__](const typename Mesh::point_type& pt) -> T { // bcs
          if(level_set__(pt) > 0)
             return std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
         else return std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
-     [level_set__,t](const typename Mesh::point_type& pt) -> auto { // grad
+     [level_set__](const typename Mesh::point_type& pt) -> auto { // grad
          Matrix<T, 1, 2> ret;
          if(level_set__(pt) > 0)
          {
@@ -671,6 +641,51 @@ class test_case_laplacian_waves: public test_case_laplacian<T, Function, Mesh>
          return 0;})
     {}
 };
+
+///// test_case_laplacian_waves
+// exact solution : t*t*sin(\pi x) sin(\pi y)               in \Omega_1
+//                  t*t*sin(\pi x) sin(\pi y)               in \Omega_2
+// (\kappa_1,\rho_1) = (\kappa_2,\rho_2) = (1,1)
+template<typename T, typename Function, typename Mesh>
+class test_case_laplacian_waves: public test_case_laplacian<T, Function, Mesh>
+{
+   public:
+    test_case_laplacian_waves(T t,Function level_set__)
+        : test_case_laplacian<T, Function, Mesh>
+        (level_set__, params<T>(),
+         [level_set__,t](const typename Mesh::point_type& pt) -> T { /* sol */
+            if(level_set__(pt) > 0)
+                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+         [level_set__,t](const typename Mesh::point_type& pt) -> T { /* rhs */
+             if(level_set__(pt) > 0)
+                 return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+            else return 2.0*(1.0 + M_PI*M_PI*t*t)*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+         [level_set__,t](const typename Mesh::point_type& pt) -> T { // bcs
+             if(level_set__(pt) > 0)
+                return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());
+            else return t*t*std::sin(M_PI*pt.x())*std::sin(M_PI*pt.y());},
+         [level_set__,t](const typename Mesh::point_type& pt) -> auto { // grad
+             Matrix<T, 1, 2> ret;
+             if(level_set__(pt) > 0)
+             {
+                 ret(0) = M_PI*t*t*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y());
+                 ret(1) = M_PI*t*t*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y());
+                 return ret;
+             }
+             else {
+                 ret(0) = M_PI*t*t*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y());
+                 ret(1) = M_PI*t*t*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y());
+                 return ret;}},
+         [](const typename Mesh::point_type& pt) -> T {/* Null Dir */
+             return 0;},
+         [level_set__](const typename Mesh::point_type& pt) -> T {/* Null Neu */
+             return 0;})
+        {}
+
+};
+
+
 
 ///// test_case_laplacian_waves_scatter
 // (\kappa_1,\rho_1) = (2,1)
@@ -751,6 +766,13 @@ test_case_laplacian_waves_scatter(T t,Function level_set__)
 };
 
 template<typename Mesh, typename Function>
+auto make_test_case_laplacian_conv(const Mesh& msh, Function level_set_function)
+{
+    return test_case_laplacian_conv<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
+}
+
+
+template<typename Mesh, typename Function>
 auto make_test_case_laplacian_waves(double t, const Mesh& msh, Function level_set_function)
 {
     return test_case_laplacian_waves<typename Mesh::coordinate_type, Function, Mesh>(t,level_set_function);
@@ -763,21 +785,281 @@ auto make_test_case_laplacian_waves_scatter(double t, const Mesh& msh, Function 
 }
 
 void ICutHHOSecondOrder(int argc, char **argv);
-
 void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv);
 
-void FirstOrderConvTest(int argc, char **argv);
+// Convergence with homogeneous material props
+mesh_type SquareCutMesh(level_set<RealType> & level_set_function, size_t l_divs, size_t int_refsteps = 4);
+void CutHHOSecondOrderConvTest(int argc, char **argv);
+void CutHHOFirstOrderConvTest(int argc, char **argv);
+
 
 int main(int argc, char **argv)
 {
     
 //    ICutHHOSecondOrder(argc, argv);
-    FirstOrderConvTest(argc, argv);
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
+    
+//    CutHHOSecondOrderConvTest(argc, argv);
+//    CutHHOFirstOrderConvTest(argc, argv);
     return 0;
 }
 
-void FirstOrderConvTest(int argc, char **argv){
+mesh_type SquareCutMesh(level_set<RealType> & level_set_function, size_t l_divs, size_t int_refsteps){
+    
+    mesh_init_params<RealType> mip;
+    mip.Nx = 2;
+    mip.Ny = 2;
+    l_divs += 2;
+    for (unsigned int i = 0; i < l_divs; i++) {
+      mip.Nx *= 2;
+      mip.Ny *= 2;
+    }
+
+    timecounter tc;
+
+    tc.tic();
+    mesh_type msh(mip);
+    tc.toc();
+    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
+
+    tc.tic();
+    detect_node_position(msh, level_set_function); // ok
+    detect_cut_faces(msh, level_set_function); // it could be improved
+    detect_cut_cells(msh, level_set_function);
+
+    // Agglomerate.
+    bool agglomerate_Q = true;
+    if (agglomerate_Q) {
+      detect_cell_agglo_set(msh, level_set_function);
+      make_neighbors_info_cartesian(msh);
+      refine_interface(msh, level_set_function, int_refsteps);
+      make_agglomeration(msh, level_set_function);
+    }
+
+    tc.toc();
+    std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
+    return msh;
+}
+
+void CutHHOSecondOrderConvTest(int argc, char **argv){
+    
+    size_t degree           = 0;
+    size_t l_divs          = 0;
+    size_t nt_divs       = 0;
+    size_t int_refsteps     = 4;
+    bool dump_debug         = false;
+
+    /* k <deg>:     method degree
+     * l <num>:     number of cells in x and y direction
+     * r <num>:     number of interface refinement steps
+     * d:           dump debug data
+     */
+
+    // Simplified input
+     int ch;
+     while ( (ch = getopt(argc, argv, "k:l:r:n:d")) != -1 )
+     {
+         switch(ch)
+         {
+             case 'k':
+                 degree = atoi(optarg);
+                 break;
+
+             case 'l':
+                 l_divs = atoi(optarg);
+                 break;
+
+             case 'r':
+                 int_refsteps = atoi(optarg);
+                 break;
+                 
+             case 'n':
+                 nt_divs = atoi(optarg);
+                 break;
+
+             case 'd':
+                 dump_debug = true;
+                 break;
+
+             case '?':
+             default:
+                 std::cout << "wrong arguments" << std::endl;
+                 exit(1);
+         }
+     }
+
+    argc -= optind;
+    argv += optind;
+
+    std::ofstream error_file("steady_state_one_field_error.txt");
+    
+    RealType radius = 1.0/3.0;
+    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+
+    
+    timecounter tc;
+    SparseMatrix<RealType> Kg, Mg;
+
+    for(size_t k = 0; k <= degree; k++){
+        std::cout << bold << cyan << "Running an approximation with k : " << k << reset << std::endl;
+        error_file << "Approximation with k : " << k << std::endl;
+        
+        hho_degree_info hdi(k+1, k);
+        for(size_t l = 0; l < l_divs; l++){
+            
+            mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
+            if (dump_debug)
+            {
+                dump_mesh(msh);
+                output_mesh_info(msh, level_set_function);
+            }
+            auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
+            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            
+            create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
+            
+            bool direct_solver_Q = true;
+            linear_solver<RealType> analysis;
+            analysis.set_Kg(Kg);
+
+            if (!direct_solver_Q) {
+                analysis.set_iterative_solver();
+            }
+            analysis.factorize();
+            
+
+            auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
+            assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+            for (auto& cl : msh.cells)
+            {
+                auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
+                assembler.assemble_rhs(msh, cl, f);
+            }
+            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            x_dof = analysis.solve(assembler.RHS);
+            
+            if (dump_debug)
+            {
+                std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
+                postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+            }
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
+        }
+        error_file << std::endl << std::endl;
+    }
+    error_file.close();
+}
+
+void CutHHOFirstOrderConvTest(int argc, char **argv){
+    
+    size_t degree           = 0;
+    size_t l_divs          = 0;
+    size_t nt_divs       = 0;
+    size_t int_refsteps     = 4;
+    bool dump_debug         = false;
+
+    /* k <deg>:     method degree
+     * l <num>:     number of cells in x and y direction
+     * r <num>:     number of interface refinement steps
+     * d:           dump debug data
+     */
+
+    // Simplified input
+     int ch;
+     while ( (ch = getopt(argc, argv, "k:l:r:n:d")) != -1 )
+     {
+         switch(ch)
+         {
+             case 'k':
+                 degree = atoi(optarg);
+                 break;
+
+             case 'l':
+                 l_divs = atoi(optarg);
+                 break;
+
+             case 'r':
+                 int_refsteps = atoi(optarg);
+                 break;
+                 
+             case 'n':
+                 nt_divs = atoi(optarg);
+                 break;
+
+             case 'd':
+                 dump_debug = true;
+                 break;
+
+             case '?':
+             default:
+                 std::cout << "wrong arguments" << std::endl;
+                 exit(1);
+         }
+     }
+
+    argc -= optind;
+    argv += optind;
+
+    std::ofstream error_file("steady_state_two_fields_error.txt");
+    
+    RealType radius = 1.0/3.0;
+    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+
+    
+    timecounter tc;
+    SparseMatrix<RealType> Kg, Mg;
+
+    for(size_t k = 0; k <= degree; k++){
+        std::cout << bold << cyan << "Running an approximation with k : " << k << reset << std::endl;
+        error_file << "Approximation with k : " << k << std::endl;
+        
+        hho_degree_info hdi(k+1, k);
+        for(size_t l = 0; l < l_divs; l++){
+            
+            mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
+            if (dump_debug)
+            {
+                dump_mesh(msh);
+                output_mesh_info(msh, level_set_function);
+            }
+            auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
+            auto method = make_gradrec_mixed_interface_method(msh, 1.0, test_case);
+            
+            create_mixed_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg, false);
+            bool direct_solver_Q = true;
+            linear_solver<RealType> analysis;
+            Kg += Mg;
+            analysis.set_Kg(Kg);
+            tc.tic();
+            if (!direct_solver_Q) {
+                analysis.set_iterative_solver();
+            }
+            analysis.factorize();
+            
+            auto assembler = make_two_fields_interface_assembler(msh, test_case.bcs_fun, hdi);
+            assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+            for (auto& cl : msh.cells)
+            {
+                auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
+                assembler.assemble_rhs(msh, cl, f);
+            }
+            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            x_dof = analysis.solve(assembler.RHS);
+
+            if (dump_debug)
+            {
+                std::string silo_file_name = "cut_steady_mixed_k_" + std::to_string(k) + "_";
+                postprocessor<cuthho_poly_mesh<RealType>>::write_silo_two_fields(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+            }
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_two_fields(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
+        }
+        error_file << std::endl << std::endl;
+    }
+    error_file.close();
+}
+
+void ICutHHOSecondOrder(int argc, char **argv){
+    
     
     size_t degree           = 0;
     size_t l_divs          = 0;
@@ -877,155 +1159,6 @@ void FirstOrderConvTest(int argc, char **argv){
         output_mesh_info(msh, level_set_function);
 //        test_projection(msh, level_set_function, degree);
     }
-    
-    // Time controls : Final time value 1.0
-    size_t nt = 10;
-    for (unsigned int i = 0; i < nt_divs; i++) {
-        nt *= 2;
-    }
-    RealType ti = 0.0;
-    RealType tf = 1.0;
-    RealType dt = (tf-ti)/nt;
-    RealType t = ti;
-    
-    // Create static data
-    SparseMatrix<RealType> Kg, Mg;
-    auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
-    auto method = make_gradrec_mixed_interface_method(msh, 1.0, test_case);
-    create_mixed_kg_and_mg_cuthho_interface(msh, degree, method, test_case, Kg, Mg);
-//    std::cout << "kg = " << Kg.toDense() << std::endl;
-//    std::cout << "mg = " << Mg.toDense() << std::endl;
-    
-    bool direct_solver_Q = true;
-    linear_solver<RealType> analysis;
-    Kg += Mg;
-    analysis.set_Kg(Kg);
-    tc.tic();
-    if (!direct_solver_Q) {
-        analysis.set_iterative_solver();
-    }
-    analysis.factorize();
-    
-    hho_degree_info hdi(degree+1, degree);
-    auto assembler = make_two_fields_interface_assembler(msh, test_case.bcs_fun, hdi);
-    assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
-    for (auto& cl : msh.cells)
-    {
-        auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
-        assembler.assemble_rhs(msh, cl, f);
-    }
-    Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-//    assembler.project_over_cells(msh, hdi, x_dof, test_case.sol_fun);
-    x_dof = analysis.solve(assembler.RHS);
-//        std::cout << "x_dof = " << x_dof << std::endl;
-//    std::cout << "rhs = " << x_dof << std::endl;
-//    std::cout << "rhs_a = " << Kg*x_dof << std::endl;
-    std::string silo_file_name = "cut_hho_two_fields_";
-    postprocessor<cuthho_poly_mesh<RealType>>::write_silo_two_fields(silo_file_name, 0, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
-    int aka = 0;
-}
-
-void ICutHHOSecondOrder(int argc, char **argv){
-    
-    
-    size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
-    bool dump_debug         = false;
-
-    mesh_init_params<RealType> mip;
-    mip.Nx = 8;
-    mip.Ny = 8;
-
-    /* k <deg>:     method degree
-     * l <num>:     number of cells in x and y direction
-     * r <num>:     number of interface refinement steps
-     * d:           dump debug data
-     */
-
-    // Simplified input
-     int ch;
-     while ( (ch = getopt(argc, argv, "k:l:r:n:d")) != -1 )
-     {
-         switch(ch)
-         {
-             case 'k':
-                 degree = atoi(optarg);
-                 break;
-
-             case 'l':
-                 l_divs = atoi(optarg);
-                 break;
-
-             case 'r':
-                 int_refsteps = atoi(optarg);
-                 break;
-                 
-             case 'n':
-                 nt_divs = atoi(optarg);
-                 break;
-
-             case 'd':
-                 dump_debug = true;
-                 break;
-
-             case '?':
-             default:
-                 std::cout << "wrong arguments" << std::endl;
-                 exit(1);
-         }
-     }
-
-    argc -= optind;
-    argv += optind;
-
-    mip.Nx = 3;
-    mip.Ny = 3;
-    for (unsigned int i = 0; i < l_divs; i++) {
-        mip.Nx *= 2;
-        mip.Ny *= 2;
-    }
-
-  
-    timecounter tc;
-
-    /************** BUILD MESH **************/
-    tc.tic();
-    cuthho_poly_mesh<RealType> msh(mip);
-    tc.toc();
-    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
-    /************** LEVEL SET FUNCTION **************/
-    RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
-    
-
-    tc.tic();
-    detect_node_position(msh, level_set_function); // ok
-    detect_cut_faces(msh, level_set_function); // it could be improved
-    detect_cut_cells(msh, level_set_function);
-    
-    
-    // Agglomerate.
-    bool agglomerate_Q = true;
-    if (agglomerate_Q) {
-        detect_cell_agglo_set(msh, level_set_function);
-        make_neighbors_info_cartesian(msh);
-        // make_neighbors_info(msh);
-        refine_interface(msh, level_set_function, int_refsteps);
-        make_agglomeration(msh, level_set_function);
-    }
-
-
-    tc.toc();
-    std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
-
-    if (dump_debug)
-    {
-        dump_mesh(msh);
-        output_mesh_info(msh, level_set_function);
-//        test_projection(msh, level_set_function, degree);
-    }
 
     // Time controls : Final time value 1.0
     size_t nt = 10;
@@ -1042,9 +1175,10 @@ void ICutHHOSecondOrder(int argc, char **argv){
     
     // Create static data
     SparseMatrix<RealType> Kg, Kg_c, Mg;
+    hho_degree_info hdi(degree+1, degree);
     auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
     auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-    create_kg_and_mg_cuthho_interface(msh, degree, method, test_case, Kg, Mg);
+    create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
     
     bool direct_solver_Q = true;
     linear_solver<RealType> analysis;
@@ -1072,7 +1206,7 @@ void ICutHHOSecondOrder(int argc, char **argv){
         if (it == nt) {
             write_error_Q = true;
         }
-        newmark_step_cuthho_interface(it, dt, beta, gamma, msh, degree, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, write_error_Q);
+        newmark_step_cuthho_interface(it, dt, beta, gamma, msh, hdi, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, write_error_Q);
     }
     RealType hx = 1.0/mip.Nx;
     RealType hy = 1.0/mip.Ny;
@@ -1149,9 +1283,8 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
     timecounter tc;
 
     /************** BUILD MESH **************/
-    typedef cuthho_poly_mesh<RealType>  mesh_type;
     tc.tic();
-    cuthho_poly_mesh<RealType> msh(mip);
+    mesh_type msh(mip);
     tc.toc();
     std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
     /************** LEVEL SET FUNCTION **************/
@@ -1202,13 +1335,14 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
     
     // Create static data
     SparseMatrix<RealType> Kg, Kg_c, Mg;
+    hho_degree_info hdi(degree+1, degree);
     auto test_case = make_test_case_laplacian_waves_scatter(t,msh, level_set_function);
     test_case.parms.kappa_1 = 1.0;
     test_case.parms.kappa_2 = 1.0;
     test_case.parms.c_1 = std::sqrt(3.0);
     test_case.parms.c_2 = std::sqrt(9.0);
     auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-    create_kg_and_mg_cuthho_interface(msh, degree, method, test_case, Kg, Mg);
+    create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
     
     bool direct_solver_Q = true;
     linear_solver<RealType> analysis;
@@ -1242,7 +1376,7 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
         RealType t = dt*it+ti;
         auto test_case = make_test_case_laplacian_waves_scatter(t,msh, level_set_function);
         auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-        newmark_step_cuthho_interface_scatter(it, dt, beta, gamma, msh, degree, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, sensor_1_log, sensor_2_log, sensor_3_log, s1_pt_cell, s2_pt_cell, s3_pt_cell);
+        newmark_step_cuthho_interface_scatter(it, dt, beta, gamma, msh, hdi, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis, sensor_1_log, sensor_2_log, sensor_3_log, s1_pt_cell, s2_pt_cell, s3_pt_cell);
         
     }
     RealType hx = 1.0/mip.Nx;
@@ -1254,7 +1388,7 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg){
+create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg){
     
     using RealType = typename Mesh::coordinate_type;
 
@@ -1272,9 +1406,6 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, t
 
     bool sc = false; // static condensation
     assert(sc==false); // This case will implemented properly
-
-    /************** ASSEMBLE PROBLEM **************/
-    hho_degree_info hdi(degree+1, degree);
     
     tc.tic();
     auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
@@ -1315,7 +1446,7 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, t
 
 template<typename Mesh, typename testType, typename meth>
 test_info<typename Mesh::coordinate_type>
-create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg){
+create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth method, testType test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg, bool add_scalar_mass_Q){
     
     using RealType = typename Mesh::coordinate_type;
     auto level_set_function = test_case.level_set_;
@@ -1332,9 +1463,6 @@ create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth met
 
     bool sc = false; // static condensation
     assert(sc==false); // This case will implemented properly
-
-    /************** ASSEMBLE PROBLEM **************/
-    hho_degree_info hdi(degree+1, degree);
     
     tc.tic();
     auto assembler = make_two_fields_interface_assembler(msh, bcs_fun, hdi);
@@ -1347,21 +1475,10 @@ create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth met
         auto lc = contrib.first;
         auto f = contrib.second;
 
-
-        
-        auto cell_mass = method.make_contrib_mass(msh, cl, test_case, hdi);
+        auto cell_mass = method.make_contrib_mass(msh, cl, test_case, hdi, add_scalar_mass_Q);
         size_t n_dof = assembler.n_dof(msh,cl);
         Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof,n_dof);
         mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
-        
-        if (cell_ind == 10) {
-            std::cout << "i = " << cell_ind << std::endl;
-            std::cout << "k = " << lc << std::endl;
-            std::cout << "m = " << mass << std::endl;
-            std::cout << "f = " << f << std::endl;
-            std::cout << std::endl;
-            std::cout << std::endl;
-        }
         
         if( sc )
             assembler_sc.assemble(msh, cl, lc, f);
@@ -1385,8 +1502,8 @@ create_mixed_kg_and_mg_cuthho_interface(const Mesh& msh, size_t degree, meth met
 }
 
 template<typename Mesh, typename testType, typename meth>
-test_info<typename Mesh::coordinate_type>
-newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_error_Q)
+void
+newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, bool write_error_Q)
 {
     using RealType = typename Mesh::coordinate_type;
     bool write_silo_Q = true;
@@ -1404,9 +1521,6 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
 
     bool sc = false; // static condensation
     assert(sc==false); // This case will implemented properly
-
-    /************** ASSEMBLE PROBLEM **************/
-    hho_degree_info hdi(degree+1, degree);
     
     tc.tic();
     auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
@@ -1464,141 +1578,20 @@ newmark_step_cuthho_interface(size_t it, typename Mesh::coordinate_type dt, type
     u_dof_n += beta*dt*dt*a_dof_n;
     v_dof_n += gamma*dt*a_dof_n;
     
-    RealType    H1_error = 0.0;
-    RealType    L2_error = 0.0;
-    
     if(write_silo_Q){
         std::string silo_file_name = "cut_hho_one_field_";
         postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, false);
     }
     
     if(write_error_Q){
-
-        Matrix<RealType, Dynamic, 1> sol = u_dof_n;
-
-        tc.tic();
-
-        size_t      cell_i   = 0;
-        for (auto& cl : msh.cells)
-        {
-            cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi.cell_degree());
-            auto cbs = cb.size();
-            auto fcs = faces(msh, cl);
-            auto num_faces = fcs.size();
-            auto fbs = face_basis<cuthho_poly_mesh<RealType>,RealType>::size(hdi.face_degree());
-            
-            Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
-            Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
-
-            if (location(msh, cl) == element_location::ON_INTERFACE)
-            {
-                if( sc )
-                {
-                    locdata_n = assembler_sc.take_local_data(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
-                    locdata_p = assembler_sc.take_local_data(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-                }
-                else
-                {
-                    locdata_n = assembler.take_local_data(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
-                    locdata_p = assembler.take_local_data(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-                }
-
-                cell_dofs_n = locdata_n.head(cbs);
-                cell_dofs_p = locdata_p.head(cbs);
-
-
-                auto qps_n = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-                for (auto& qp : qps_n)
-                {
-                    /* Compute H1-error */
-                    auto t_dphi = cb.eval_gradients( qp.first );
-                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-
-                    for (size_t i = 1; i < cbs; i++ )
-                        grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
-
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
-
-                    auto t_phi = cb.eval_basis( qp.first );
-                    auto v = cell_dofs_n.dot(t_phi);
-                    
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
-                }
-                
-                
-                auto qps_p = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
-                for (auto& qp : qps_p)
-                {
-                    /* Compute H1-error */
-                    auto t_dphi = cb.eval_gradients( qp.first );
-                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-
-                    for (size_t i = 1; i < cbs; i++ )
-                        grad += cell_dofs_p(i) * t_dphi.block(i, 0, 1, 2);
-
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
-
-                    auto t_phi = cb.eval_basis( qp.first );
-                    auto v = cell_dofs_p.dot(t_phi);
-
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
-                }
-            }
-            else
-            {
-                if( sc )
-                {
-                    locdata = assembler_sc.take_local_data(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-                }
-                else
-                    locdata = assembler.take_local_data(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-                cell_dofs = locdata.head(cbs);
-
-                auto qps = integrate(msh, cl, 2*hdi.cell_degree());
-                for (auto& qp : qps)
-                {
-                    /* Compute H1-error */
-                    auto t_dphi = cb.eval_gradients( qp.first );
-                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-
-                    for (size_t i = 1; i < cbs; i++ )
-                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
-
-                    auto t_phi = cb.eval_basis( qp.first );
-                    auto v = cell_dofs.dot(t_phi);
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
-                }
-            }
-
-            cell_i++;
-        }
-
-        std::cout << bold << green << "L2-norm absolute error:           " << std::sqrt(L2_error) << std::endl;
-        std::cout << bold << green << "Energy-norm absolute error:           " << std::sqrt(H1_error) << std::endl;
-        
-        tc.toc();
-        std::cout << bold << yellow << "Error completed: " << tc << " seconds" << reset << std::endl;
+        postprocessor<Mesh>::compute_errors_one_field(msh, hdi, assembler, u_dof_n, sol_fun, sol_grad);
     }
-    
-    test_info<RealType> TI;
-    TI.H1 = std::sqrt(H1_error);
-    TI.L2 = std::sqrt(L2_error);
-
-
-
-    return TI;
 }
 
 template<typename Mesh, typename testType, typename meth>
-void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, size_t degree, meth method, testType test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell)
+void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell)
 {
     using RealType = typename Mesh::coordinate_type;
-    typedef cuthho_poly_mesh<RealType>  mesh_type;
     bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
@@ -1614,9 +1607,6 @@ void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_
 
     bool sc = false; // static condensation
     assert(sc==false); // This case will implemented properly
-
-    /************** ASSEMBLE PROBLEM **************/
-    hho_degree_info hdi(degree+1, degree);
     
     tc.tic();
     auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
