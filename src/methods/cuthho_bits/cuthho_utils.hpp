@@ -68,18 +68,26 @@ make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
 make_vec_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-                 size_t degree, element_location where)
+                 size_t degree, element_location where = element_location::UNDEF)
 {
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     
     Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
-
-    auto qps = integrate(msh, cl, 2*degree, where);
-    for (auto& qp : qps)
-    {
-        auto phi = cb.eval_basis(qp.first);
-        ret += qp.second * phi * phi.transpose();
+    if (element_location::UNDEF == where) {
+        auto qps = integrate(msh, cl, 2*degree);
+        for (auto& qp : qps)
+        {
+            auto phi = cb.eval_basis(qp.first);
+            ret += qp.second * phi * phi.transpose();
+        }
+    }else{
+        auto qps = integrate(msh, cl, 2*degree, where);
+        for (auto& qp : qps)
+        {
+            auto phi = cb.eval_basis(qp.first);
+            ret += qp.second * phi * phi.transpose();
+        }
     }
 
     return ret;

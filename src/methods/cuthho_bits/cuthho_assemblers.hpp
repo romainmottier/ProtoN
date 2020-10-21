@@ -1153,6 +1153,51 @@ public:
 
         return ret;
     }
+    
+//    void
+//    scatter_face_data(const Mesh& msh, const typename Mesh::cell_type& cl,
+//                    Matrix<T, Dynamic, 1>& x_dof, Matrix<T, Dynamic, 1>& cell_dof,
+//                    element_location where)
+//    {
+//        auto celdeg = this->di.cell_degree();
+//        auto graddeg = this->di.grad_degree();
+//        auto facdeg = this->di.face_degree();
+//
+//        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+//        auto rbs = vector_cell_basis<Mesh,T>::size(graddeg);
+//        auto fbs = face_basis<Mesh,T>::size(facdeg);
+//
+//        auto cell_offset        = offset(msh, cl);
+//        size_t cell_SOL_offset;
+//        if ( location(msh, cl) == element_location::ON_INTERFACE )
+//        {
+//            if (where == element_location::IN_NEGATIVE_SIDE)
+//                cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+rbs);
+//            else if (where == element_location::IN_POSITIVE_SIDE)
+//                cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+rbs) + (cbs+rbs);
+//            else
+//                throw std::invalid_argument("Invalid location");
+//        }
+//        else
+//        {
+//            cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+rbs);
+//        }
+//
+//        auto fcs = faces(msh, cl);
+//        auto num_faces = fcs.size();
+//
+//        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero((cbs+rbs) + num_faces*fbs);
+//        ret.block(0, 0, (cbs+rbs), 1) = solution.block(cell_SOL_offset, 0, (cbs+rbs), 1);
+//
+//
+//        auto solF = this->get_solF(msh, cl, solution);
+//        if(where == element_location::IN_NEGATIVE_SIDE)
+//            ret.tail(num_faces * fbs) = solF.head(num_faces * fbs);
+//        else
+//            ret.tail(num_faces * fbs) = solF.tail(num_faces * fbs);
+//
+//        return ret;
+//    }
             
     Matrix<T, Dynamic, 1>
     gather_cell_dof(const Mesh& msh, const typename Mesh::cell_type& cl,
@@ -1193,24 +1238,86 @@ public:
         dof.block(rbs,0,cbs,1) = solution.block(cell_SOL_offset, 0, cbs, 1);
         return dof;
     }
+    
+    Matrix<T, Dynamic, 1> project_vec_function(const Mesh& msh, const typename Mesh::cell_type& cell, hho_degree_info hho_di,
+                      std::function<Matrix<T, 1, 2>(const typename Mesh::point_type& )> vec_fun, element_location where = element_location::UNDEF){
+    
+            auto gradeg = hho_di.grad_degree();
+            vector_cell_basis<Mesh, T> vec_cell_basis(msh, cell, hho_di.grad_degree());
+            auto gbs = vec_cell_basis.size();
+        
+            Matrix<T, Dynamic, Dynamic> mass;
+            Matrix<T, Dynamic, 1> rhs = Matrix<T, Dynamic, 1>::Zero(gbs);
             
-    void project_over_cells(const Mesh& msh, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
-        size_t cell_ind = 0;
+            if(element_location::UNDEF == where){
+                mass = make_vec_mass_matrix(msh, cell, gradeg);
+                const auto qps = integrate(msh, cell, 2*gradeg);
+                for (auto& qp : qps)
+                {
+                  auto t_phi = vec_cell_basis.eval_basis(qp.first);
+                  Matrix<T, 1, 2> f_vec = vec_fun(qp.first);
+                  for (size_t i = 0; i < gbs; i++){
+                  Matrix<T, 2, 1> phi_i = t_phi.block(i, 0, 1, 2).transpose();
+                      rhs(i,0) = rhs(i,0) + (qp.second * f_vec*phi_i)(0,0);
+                  }
+                }
+            }else{
+                mass = make_vec_mass_matrix(msh, cell, gradeg, where);
+                const auto qps = integrate(msh, cell, 2*gradeg, where);
+                for (auto& qp : qps)
+                {
+                  auto t_phi = vec_cell_basis.eval_basis(qp.first);
+                  Matrix<T, 1, 2> f_vec = vec_fun(qp.first);
+                  for (size_t i = 0; i < gbs; i++){
+                  Matrix<T, 2, 1> phi_i = t_phi.block(i, 0, 1, 2).transpose();
+                      rhs(i,0) = rhs(i,0) + (qp.second * f_vec*phi_i)(0,0);
+                  }
+                }
+                
+//                {
+//                    vector_cell_basis<Mesh, T> vec_cell_basis(msh, cell, hho_di.grad_degree());
+//                    Matrix<T, Dynamic, 1> x_g_proj_dof = mass.llt().solve(rhs);
+//                    const auto qps = integrate(msh, cell, 2*gradeg, where);
+//                    for (auto& qp : qps)
+//                    {
+//
+//                        Matrix<T, Dynamic, 1> vec_cell_dof = x_g_proj_dof;
+//                        auto t_phi_v = vec_cell_basis.eval_basis( qp.first );
+//                        Matrix<T, 1, 2> grad_uh = Matrix<T, 1, 2>::Zero();
+//                        for (size_t i = 0; i < t_phi_v.rows(); i++){
+//                            grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
+//                        }
+//                        Matrix<T, 1, 2> f_vec = vec_fun(qp.first);
+//                        int aka=0;
+//                    }
+//                }
+                
+            }
+    
+            Matrix<T, Dynamic, 1> x_dof = mass.llt().solve(rhs);
+            return x_dof;
+    }
+        
+    void project_over_cells(const Mesh& msh, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<T, 1, 2>(const typename Mesh::point_type& )> flux_fun){
+        size_t n_dof = this->MASS.rows();
+        x_glob = Matrix<T, Dynamic, 1>::Zero(n_dof);
+
         for (auto& cl : msh.cells)
         {
             if( location(msh, cl) != element_location::ON_INTERFACE ){
-                project_over_uncutcells(msh, cl, hho_di, x_glob, scal_fun);
+                project_over_uncutcells(msh, cl, hho_di, x_glob, scal_fun, flux_fun);
             } else{ // on interface
-                project_over_cutcells(msh, cl, hho_di, x_glob, scal_fun);
+                project_over_cutcells(msh, cl, hho_di, x_glob, scal_fun, flux_fun);
             }
-            cell_ind++;
         }
     }
+    
+
             
-    void project_over_uncutcells(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
+    void project_over_uncutcells(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<T, 1, 2>(const typename Mesh::point_type& )> flux_fun){
             
-        Matrix<T, Dynamic, 1> x_proj_dof = project_function(msh, cl, hho_di, scal_fun);
-//        std::cout << "x_proj_dof = " << x_proj_dof << std::endl;
+        Matrix<T, Dynamic, 1> x_g_proj_dof = project_vec_function(msh, cl, hho_di, flux_fun);
+        Matrix<T, Dynamic, 1> x_c_proj_dof = project_function(msh, cl, hho_di, scal_fun);
         
         auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();
@@ -1220,17 +1327,36 @@ public:
         auto gbs = vector_cell_basis<Mesh,T>::size(gradeg);
         auto cell_offset        = offset(msh, cl);
         size_t cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+gbs);
-        x_glob.block(cell_SOL_offset+gbs, 0, cbs, 1) = x_proj_dof.block(0, 0, cbs, 1);
+        
+        x_glob.block(cell_SOL_offset, 0, gbs, 1) = x_g_proj_dof;
+        x_glob.block(cell_SOL_offset+gbs, 0, cbs, 1) = x_c_proj_dof.block(0, 0, cbs, 1);
+        
+//        vector_cell_basis<Mesh, T> vec_cell_basis(msh, cl, hho_di.grad_degree());
+//        const auto qps = integrate(msh, cl, 2*gradeg);
+//        for (auto& qp : qps)
+//        {
+//
+//            Matrix<T, Dynamic, 1> vec_cell_dof = x_g_proj_dof;
+//            auto t_phi_v = vec_cell_basis.eval_basis( qp.first );
+//            Matrix<T, 1, 2> grad_uh = Matrix<T, 1, 2>::Zero();
+//            for (size_t i = 0; i < t_phi_v.rows(); i++){
+//                grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
+//            }
+//            Matrix<T, 1, 2> f_vec = flux_fun(qp.first);
+//            int aka=0;
+//        }
+
+        
     }
             
-    void project_over_cutcells(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun){
+    void project_over_cutcells(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info hho_di, Matrix<T, Dynamic, 1> & x_glob, std::function<T(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<T, 1, 2>(const typename Mesh::point_type& )> flux_fun){
             
+        Matrix<T, Dynamic, 1> x_neg_g_proj_dof = project_vec_function(msh, cl, hho_di, flux_fun, element_location::IN_NEGATIVE_SIDE);
         Matrix<T, Dynamic, 1> x_neg_proj_dof = project_function(msh, cl, hho_di, element_location::IN_NEGATIVE_SIDE, scal_fun);
             
+        Matrix<T, Dynamic, 1> x_pos_g_proj_dof = project_vec_function(msh, cl, hho_di, flux_fun, element_location::IN_POSITIVE_SIDE);
         Matrix<T, Dynamic, 1> x_pos_proj_dof = project_function(msh, cl, hho_di, element_location::IN_POSITIVE_SIDE, scal_fun);
             
-//        std::cout << "neg = " << x_neg_proj_dof << std::endl;
-//        std::cout << "pos = " << x_pos_proj_dof << std::endl;
             
         auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();
@@ -1241,6 +1367,9 @@ public:
         
         auto cell_offset        = offset(msh, cl);
         size_t cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+gbs);
+
+        x_glob.block(cell_SOL_offset, 0, gbs, 1) = x_neg_g_proj_dof;
+        x_glob.block(cell_SOL_offset+gbs, 0, gbs, 1) = x_pos_g_proj_dof;
         x_glob.block(cell_SOL_offset+2*gbs, 0, cbs, 1) = x_neg_proj_dof.block(0, 0, cbs, 1);
         x_glob.block(cell_SOL_offset+cbs+2*gbs, 0, cbs, 1) = x_pos_proj_dof.block(0, 0, cbs, 1);
     
