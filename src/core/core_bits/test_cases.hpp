@@ -735,10 +735,22 @@ class test_case_stokes
     
     struct params<T> parms;
 
+    test_case_stokes(const test_case_stokes& other){
+        level_set_ = other.level_set_;
+        sol_vel = other.sol_vel;
+        sol_p = other.sol_p;
+        rhs_fun = other.rhs_fun;
+        bcs_vel = other.bcs_vel;
+        vel_grad = other.vel_grad;
+        dirichlet_jump = other.dirichlet_jump;
+        neumann_jump = other.neumann_jump;
+        
+    }
+    
     test_case_stokes(){}
 
     test_case_stokes
-    (Function level_set__, params<T> parms_,
+    (Function& level_set__, params<T> parms_,
      std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel_,
      std::function<T(const typename Mesh::point_type&)> sol_p_,
      std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun_,
@@ -763,7 +775,7 @@ template<typename T, typename Function, typename Mesh>
 class test_case_stokes_1: public test_case_stokes<T, Function, Mesh>
 {
    public:
-    test_case_stokes_1(Function level_set__)
+    test_case_stokes_1(Function& level_set__)
         : test_case_stokes<T, Function, Mesh>
         (level_set__, params<T>(),
          [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
@@ -836,7 +848,7 @@ class test_case_stokes_1: public test_case_stokes<T, Function, Mesh>
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_stokes_1(const Mesh& msh, Function level_set_function)
+auto make_test_case_stokes_1(const Mesh& msh, Function& level_set_function)
 {
     return test_case_stokes_1<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
@@ -851,7 +863,7 @@ template<typename T, typename Function, typename Mesh>
 class test_case_stokes_2: public test_case_stokes<T, Function, Mesh>
 {
    public:
-    test_case_stokes_2(Function level_set__)
+    test_case_stokes_2(Function& level_set__)
         : test_case_stokes<T, Function, Mesh>
         (level_set__, params<T>(),
          [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
@@ -922,7 +934,7 @@ class test_case_stokes_2: public test_case_stokes<T, Function, Mesh>
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_stokes_2(const Mesh& msh, Function level_set_function)
+auto make_test_case_stokes_2(const Mesh& msh, Function& level_set_function)
 {
     return test_case_stokes_2<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
@@ -935,8 +947,10 @@ auto make_test_case_stokes_2(const Mesh& msh, Function level_set_function)
 //                  k/R - \pi k R         in Omega_1 for p
 //                  - \pi k R             in Omega_2 for p
 // \kappa_1 = \kappa_2 = 1
-template<typename T, typename Mesh>
-class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, Mesh>
+
+// I PUT COMMENTED SINCE THERE IS A PROBLEM WITH THE CONSTRUCTOR: IF I DECLERE THE circle_level_set DIRECTLY HERE IT CANNOT BE PASSED AS A REFERENCE. IW WOULD BE LOST.
+template<typename T, typename Mesh , typename Function >
+class test_case_static_bubble: public test_case_stokes<T, Function , Mesh>
 {
 //<<<<<<< HEAD
 //   public:
@@ -946,9 +960,9 @@ class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, M
 //         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
 //=======
   public:
-   test_case_static_bubble(T R, T a, T b, T k)
-       : test_case_stokes<T, circle_level_set<T>, Mesh>
-       (circle_level_set<T>(R, a, b), params<T>(),
+   test_case_static_bubble(T R, T a, T b, T k , Function& level_set_)
+       : test_case_stokes<T, Function, Mesh>
+       (level_set_, params<T>(),
         [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
            Matrix<T, 2, 1> ret;
            ret(0) = 0.0;
@@ -994,8 +1008,7 @@ class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, M
             ret(1,0) = 0.0;
             ret(1,1) = 0.0;
             return ret;},
-        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
-//>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Dir //
             Matrix<T, 2, 1> ret;
             ret(0) = 0.0;
             ret(1) = 0.0;
@@ -1021,7 +1034,7 @@ class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, M
 //             return ret;})
 //        {}
 //=======
-        [this, k, R](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+        [this, k, R](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Neu //
             Matrix<T, 2, 1> ret;
             Matrix<T, 1, 2> normal = this->level_set_.normal(pt);
             ret(0) = - k / R * normal(0);
@@ -1031,10 +1044,10 @@ class test_case_static_bubble: public test_case_stokes<T, circle_level_set<T>, M
 //>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)
 };
 
-template<typename Mesh, typename T>
-auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k)
+template<typename Mesh, typename T, typename Function >
+auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k ,Function& level_set_ )
 {
-    return test_case_static_bubble<typename Mesh::coordinate_type, Mesh>(R,a,b,k);
+   return test_case_static_bubble<typename Mesh::coordinate_type, Mesh, Function > (R,a,b,k,level_set_);
 }
 
 
@@ -1412,4 +1425,3 @@ auto make_test_case_kink_velocity(const Mesh& msh, T R, T a, T b, params<T> parm
  
 */
 
->>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)

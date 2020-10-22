@@ -38,13 +38,13 @@ if (LUA_FOUND)
     set(LINK_LIBS ${LINK_LIBS} ${LUA_LIBRARIES})
 endif()
 
-#find_package(TBB)
-#if (TBB_FOUND)
+find_package(TBB)
+if (TBB_FOUND)
   #target_link_libraries(my_project PRIVATE tbb::tbb_static)
-#  include_directories(${TBB_INCLUDE_DIRS})
-#  set(LINK_LIBS ${LINK_LIBS} ${TBB_LIBRARIES})
-#  set(HAVE_INTEL_TBB TRUE)
-#endif()
+  include_directories(${TBB_INCLUDE_DIRS})
+  set(LINK_LIBS ${LINK_LIBS} ${TBB_LIBRARIES})
+  set(HAVE_INTEL_TBB TRUE)
+endif()
 
 
 
