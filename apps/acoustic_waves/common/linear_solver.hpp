@@ -9,8 +9,12 @@
 #ifndef linear_solver_hpp
 #define linear_solver_hpp
 
-//#include "solvers/solver.hpp"
+#include "config.h"
 #include "core/solvers"
+
+#ifdef HAVE_INTEL_MKL
+#include <Eigen/PardisoSupport>
+#endif
 
 #ifdef HAVE_INTEL_TBB
 #include <tbb/parallel_for.h>
@@ -202,6 +206,88 @@ class linear_solver
 
     Matrix<T, Dynamic, 1> & Fc(){
         return m_Fc;
+    }
+    
+    void condense_equations_irregular_blocks(std::vector<std::pair<size_t,size_t>> vec_cell_basis_data){
+        
+        if (!m_global_sc_Q) {
+            return;
+        }
+        
+        size_t nnz_cc = 0;
+        for (auto chunk : vec_cell_basis_data) {
+            nnz_cc += chunk.second*chunk.second;
+        }
+        std::vector< Triplet<T> > triplets_cc;
+        triplets_cc.resize(nnz_cc);
+        m_Kcc_inv = SparseMatrix<T>( m_n_c_dof, m_n_c_dof );
+        #ifdef HAVE_INTEL_TBB2
+        size_t stride_eq = 0;
+        size_t stride_l = 0;
+        for (auto chunk : vec_cell_basis_data) {
+                size_t n_cells = chunk.first;
+                size_t n_cbs   = chunk.second;
+                tbb::parallel_for(size_t(0), size_t(n_cells), size_t(1),
+                    [this,&triplets_cc,&n_cbs,&stride_n_block_eq,&stride_n_block_l] (size_t & cell_ind){
+                    
+                    size_t stride_eq = cell_ind * n_cbs + stride_n_block_eq;
+                    size_t stride_l = cell_ind * n_cbs * n_cbs + stride_n_block_l;
+
+                    SparseMatrix<T> K_cc_loc = m_Kcc.block(stride_eq, stride_eq, n_cbs, n_cbs);
+                    SparseLU<SparseMatrix<T>> analysis_cc;
+                    analysis_cc.analyzePattern(K_cc_loc);
+                    analysis_cc.factorize(K_cc_loc);
+                    Matrix<T, Dynamic, Dynamic> K_cc_inv_loc = analysis_cc.solve(Matrix<T, Dynamic, Dynamic>::Identity(n_cbs, n_cbs));
+            
+                    size_t l = 0;
+                    for (size_t i = 0; i < K_cc_inv_loc.rows(); i++)
+                    {
+                        for (size_t j = 0; j < K_cc_inv_loc.cols(); j++)
+                        {
+                            triplets_cc[stride_l+l] = Triplet<T>(stride_eq+i, stride_eq+j, K_cc_inv_loc(i,j));
+                            l++;
+                        }
+                    }
+                }
+            );
+            stride_n_block_eq   += n_cells * n_cbs;
+            stride_n_block_l    += n_cells * n_cbs * n_cbs;
+        }
+        #else
+
+        size_t stride_eq = 0;
+        size_t stride_l = 0;
+        for (auto chunk : vec_cell_basis_data) {
+            size_t cell_ind = chunk.first;
+            size_t n_cbs   = chunk.second;
+            
+            SparseMatrix<T> K_cc_loc = m_Kcc.block(stride_eq, stride_eq, n_cbs, n_cbs);
+            SparseLU<SparseMatrix<T>> analysis_cc;
+            analysis_cc.analyzePattern(K_cc_loc);
+            analysis_cc.factorize(K_cc_loc);
+            Matrix<T, Dynamic, Dynamic> K_cc_inv_loc = analysis_cc.solve(Matrix<T, Dynamic, Dynamic>::Identity(n_cbs, n_cbs));
+    
+            size_t l = 0;
+            for (size_t i = 0; i < K_cc_inv_loc.rows(); i++)
+            {
+                for (size_t j = 0; j < K_cc_inv_loc.cols(); j++)
+                {
+                    triplets_cc[stride_l+l] = Triplet<T>(stride_eq+i, stride_eq+j, K_cc_inv_loc(i,j));
+                    l++;
+                }
+            }
+
+            stride_eq   += n_cbs;
+            stride_l    += n_cbs * n_cbs;
+        }
+        #endif
+        
+        m_Kcc_inv.setFromTriplets( triplets_cc.begin(), triplets_cc.end() );
+        triplets_cc.clear();
+        m_K = m_Kff - m_Kfc*m_Kcc_inv*m_Kcf;
+        m_is_decomposed_Q = false;
+        return;
+
     }
         
     void condense_equations(std::vector<std::pair<size_t,size_t>> vec_cell_basis_data){

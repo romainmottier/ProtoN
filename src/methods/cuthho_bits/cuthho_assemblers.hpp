@@ -1017,9 +1017,6 @@ public:
             
         Matrix<T, Dynamic, 1> x_pos_proj_dof = project_function(msh, cl, hho_di, element_location::IN_POSITIVE_SIDE, scal_fun);
             
-//        std::cout << "neg = " << x_neg_proj_dof << std::endl;
-//        std::cout << "pos = " << x_pos_proj_dof << std::endl;
-            
         auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
@@ -1029,6 +1026,24 @@ public:
         x_glob.block(cell_SOL_offset, 0, cbs, 1) = x_neg_proj_dof.block(0, 0, cbs, 1);
         x_glob.block(cell_SOL_offset+cbs, 0, cbs, 1) = x_pos_proj_dof.block(0, 0, cbs, 1);
     
+    }
+    
+    std::vector<std::pair<size_t,size_t>> compute_cell_basis_data(const Mesh& msh){
+        size_t n_cells =  msh.cells.size();
+        std::vector<std::pair<size_t,size_t>> cell_basis_data;
+        cell_basis_data.reserve(n_cells);
+        size_t cell_ind = 0;
+        for(auto& cl : msh.cells) {
+            bool double_unknowns = ( location(msh, cl) == element_location::ON_INTERFACE);
+            auto cbs = this->loc_cbs;
+            if( double_unknowns ){
+                cbs *= 2;
+            }
+            cell_basis_data.push_back(std::make_pair(cell_ind, cbs));
+            cell_ind++;
+        }
+        
+        return cell_basis_data;
     }
             
 };

@@ -23,6 +23,13 @@ if (MKL_FOUND)
 	set(HAVE_INTEL_MKL TRUE)
 endif()
 
+find_package(TBB)
+if (TBB_FOUND)
+  include_directories(${TBB_INCLUDE_DIRS})
+  set(LINK_LIBS ${LINK_LIBS} ${TBB_LIBRARIES})
+  set(HAVE_INTEL_TBB TRUE)
+endif()
+
 find_package(SILO REQUIRED)
 if (SILO_FOUND)
     include_directories("${SILO_INCLUDE_DIRS}")
@@ -44,6 +51,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(LINK_LIBS "${LINK_LIBS}" pthread)
 endif()
 
+configure_file (
+  "${PROJECT_SOURCE_DIR}/config.h.in"
+  "${PROJECT_BINARY_DIR}/config.h"
+  )
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
 
