@@ -69,10 +69,17 @@ class dirk_hho_scheme
         m_analysis.condense_equations(m_cell_basis_data);
     }
     
+    void condense_equations_irregular_blocks(){
+        SparseMatrix<T> K = m_Mg + m_scale * m_Kg;
+        m_analysis.set_Kg(K,m_n_f_dof);
+        m_analysis.condense_equations_irregular_blocks(m_cell_basis_data);
+    }
+    
     void ComposeMatrix(){
         if(m_global_sc_Q)
         {
-            condense_equations();
+//            condense_equations();
+            condense_equations_irregular_blocks();
         }else{
             SparseMatrix<T> K = m_Mg + m_scale * m_Kg;
             m_analysis.set_Kg(K);

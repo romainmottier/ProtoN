@@ -1265,7 +1265,7 @@ public:
             Matrix<T, Dynamic, 1> rhs = Matrix<T, Dynamic, 1>::Zero(gbs);
             
             if(element_location::UNDEF == where){
-                mass = make_vec_mass_matrix(msh, cell, gradeg);
+                mass = make_vec_mass_matrix(msh, cell, hho_di);
                 const auto qps = integrate(msh, cell, 2*gradeg);
                 for (auto& qp : qps)
                 {
@@ -1277,7 +1277,7 @@ public:
                   }
                 }
             }else{
-                mass = make_vec_mass_matrix(msh, cell, gradeg, where);
+                mass = make_vec_mass_matrix(msh, cell, hho_di, where);
                 const auto qps = integrate(msh, cell, 2*gradeg, where);
                 for (auto& qp : qps)
                 {
@@ -1388,6 +1388,24 @@ public:
         x_glob.block(cell_SOL_offset+2*gbs, 0, cbs, 1) = x_neg_proj_dof.block(0, 0, cbs, 1);
         x_glob.block(cell_SOL_offset+cbs+2*gbs, 0, cbs, 1) = x_pos_proj_dof.block(0, 0, cbs, 1);
     
+    }
+            
+    std::vector<std::pair<size_t,size_t>> compute_cell_basis_data(const Mesh& msh){
+        size_t n_cells =  msh.cells.size();
+        std::vector<std::pair<size_t,size_t>> cell_basis_data;
+        cell_basis_data.reserve(n_cells);
+        size_t cell_ind = 0;
+        for(auto& cl : msh.cells) {
+            bool double_unknowns = ( location(msh, cl) == element_location::ON_INTERFACE);
+            auto cbs = this->loc_cbs;
+            if( double_unknowns ){
+                cbs *= 2;
+            }
+            cell_basis_data.push_back(std::make_pair(cell_ind, cbs));
+            cell_ind++;
+        }
+        
+        return cell_basis_data;
     }
             
 };
