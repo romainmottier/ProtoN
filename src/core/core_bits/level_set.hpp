@@ -53,6 +53,13 @@ struct circle_level_set: public level_set<T>
     {}
     
     circle_level_set(){}
+    
+    circle_level_set(const circle_level_set& other){
+        radius = other.radius ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        
+    }
 
     T operator()(const point<T,2>& pt) const
     {
@@ -180,6 +187,14 @@ struct elliptic_level_set: public level_set<T>
     {}
     
     elliptic_level_set(){}
+    
+    elliptic_level_set(const elliptic_level_set& other){
+        radius_a = other.radius_a ;
+        radius_b = other.radius_b ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        
+    }
 
     T operator()(const point<T,2>& pt) const
     {
@@ -243,6 +258,11 @@ class line_level_set: public level_set<T>
 
     line_level_set(){}
     
+    line_level_set(const line_level_set& other){
+        cut_y = other.cut_y ;
+        
+    }
+    
     T operator()(const point<T,2>& pt) const
     {
         auto x = pt.x();
@@ -274,6 +294,14 @@ class square_level_set: public level_set<T>
     
     square_level_set(){}
 
+    square_level_set(const square_level_set& other){
+        y_top = other.y_top ;
+        y_bot = other.y_bot ;
+        x_left = other.x_left ;
+        x_right = other.x_right ;
+        
+    }
+    
     T operator()(const point<T,2>& pt) const
     {
         auto x = pt.x();
@@ -339,6 +367,14 @@ struct flower_level_set: public level_set<T>
     {}
 
     flower_level_set(){}
+    
+    flower_level_set(const flower_level_set& other){
+        radius = other.radius ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        a = other.a ;
+        
+    }
     
     T operator()(const point<T,2>& pt) const
     {
