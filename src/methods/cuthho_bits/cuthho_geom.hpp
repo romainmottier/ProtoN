@@ -726,6 +726,30 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
+make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+               size_t degree, const element_location& where)
+{
+    std::vector< std::pair<point<T,2>, T> > ret;
+
+    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
+        return ret;
+
+    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+        return integrate(msh, cl, degree);
+
+    auto tris = triangulate(msh, cl, where);
+    for (auto& tri : tris)
+    {
+        auto qpts = triangle_quadrature(tri.pts[0], tri.pts[1], tri.pts[2], degree);
+        ret.insert(ret.end(), qpts.begin(), qpts.end());
+    }
+
+    return ret;
+}
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
 integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
