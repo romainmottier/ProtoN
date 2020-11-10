@@ -19177,7 +19177,7 @@ struct Interface_parametrisation
         auto basis = cb.eval_basis_1d(pt) ;
                   
         auto size_pts = physical_pts.size() ;
-        auto size_cls = size_pts/basis_size ;
+        auto size_cls = (size_pts-1)/basis_degree ;
                   
                   
         if (size_cls == 1){
@@ -19234,7 +19234,7 @@ struct Interface_parametrisation
         auto basis = cb.eval_gradients_1d(pt) ;
                   
         auto size_pts = physical_pts.size() ;
-        auto size_cls = size_pts/basis_size ;
+        auto size_cls = (size_pts-1)/basis_degree ;
                   
                   
         if (size_cls == 1){
@@ -19279,7 +19279,7 @@ struct Interface_parametrisation
     }
     
     Matrix<T, 2, 1>
-    normal( const T& pt, const Mesh & msh,  cell_type& cl, int r = 0 ) const
+    normal_old( const T& pt, const Mesh & msh,  cell_type& cl, int r = 0 ) const
        {
 
            
@@ -19291,7 +19291,7 @@ struct Interface_parametrisation
             auto basis = cb.eval_double_derivative_1d(pt) ;
                       
             auto size_pts = physical_pts.size() ;
-            auto size_cls = size_pts/basis_size ;
+            auto size_cls = (size_pts-1)/basis_degree ;
                       
             auto curv_der = (this->derivative(pt, msh, cl,r)) ;
             auto curv_der_norm = curv_der.norm() ;
@@ -19328,11 +19328,13 @@ struct Interface_parametrisation
            T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
            ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
            ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
-           return -ret/ret.norm() ;
+           
+          
+            return -ret/ret.norm() ;
            
        }
     Matrix<T, 2, 1>
-    normal_alternatif( const T& pt, const Mesh & msh,  cell_type& cl, int r = 0 ) const
+    normal( const T& pt, const Mesh & msh,  cell_type& cl, int r = 0 ) const
        {
 
            Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
@@ -19354,7 +19356,7 @@ struct Interface_parametrisation
          auto basis = cb.eval_double_derivative_1d(pt) ;
                    
          auto size_pts = physical_pts.size() ;
-         auto size_cls = size_pts/basis_size ;
+        auto size_cls = (size_pts-1)/basis_degree ;
                    
          auto curv_der = (this->derivative(pt, msh, cl,r)) ;
          auto curv_der_norm = curv_der.norm() ;
@@ -56125,18 +56127,19 @@ int main(int argc, char **argv)
     ///---------->!!!!!!!!  THIS DATA BELOW HAS TO BE UPLOAD DEPENDING ON THE PROBLEM:
 
     // ------------------------------------ CIRCLE LEVEL SET ------------------------------------
+    /*
     std::cout<<"Initial interface: CIRCLE"<<std::endl;
     auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
     typedef  circle_level_set<T> Fonction;
-
+     */
     // ------------------------------------ FLOWER LEVEL SET ------------------------------------
-    /*
+    
     radius = 0.31 ;
     std::cout<<"Initial interface: FLOWER"<<std::endl;
     auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, 0.04); //0.11
     typedef  flower_level_set<T> Fonction;
     flower = true ;
-     */
+     
     // ------------------------------------ ELLIPTIC LEVEL SET -----------------------------------
     //std::cout<<"Initial interface: ELLIPSE"<<std::endl;
     //auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
@@ -56317,10 +56320,10 @@ int main(int argc, char **argv)
             curve.cell_assignment(cl);
           
             std::cout<<"Cell "<<offset(msh_i,cl)<<" pts:"<<std::endl;
-            //auto pts = points(msh, cl);
-            //for(auto& pt : pts)
-            //    std::cout<<pt<<std::endl;
-            //std::cout<<"Interfacea pts:"<<std::endl;
+            auto pts = points(msh, cl);
+            for(auto& pt : pts)
+                std::cout<<pt<<std::endl;
+            std::cout<<"Interfacea pts:"<<std::endl;
             auto pts_int = cl.user_data.interface ;
             for(auto& pt : pts_int)
                 std::cout<<pt<<std::endl;
@@ -56329,7 +56332,7 @@ int main(int argc, char **argv)
 
              if( pts_int.size() == degree_curve + 1 ) // if( curve.subcells.size()<1 )
              {
-                //std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<std::endl;
+                std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<std::endl;
                 for(int i= 0; i <= tot ; i++)
                 {
                     T pos = 0.0+i/tot ;
@@ -56358,7 +56361,7 @@ int main(int argc, char **argv)
             else
             {
                 size_t tot_cls = (pts_int.size()-1)/ (degree_curve )  ;
-                //std::cout<<"tot_cls = "<<tot_cls<<std::endl;
+                std::cout<<"tot_cls = "<<tot_cls<<std::endl;
                 for(size_t cell_ind = 0 ; cell_ind < tot_cls ; cell_ind++ ){
                     //std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<" , cell_ind = "<<cell_ind<<std::endl;
                     
@@ -56367,7 +56370,7 @@ int main(int argc, char **argv)
                         T pos = 0.0+i/tot ;
                         //if(i== 0 && cell_ind>0)
                         //    continue;
-                        //std::cout<<"pos = "<<pos<<" , curve(pos,msh_i,cl) = "<<curve(pos,msh_i,cl,cell_ind)<<std::endl;
+                        std::cout<<"pos = "<<pos<<" , curve(pos,msh_i,cl) = "<<curve(pos,msh_i,cl,cell_ind)<<std::endl;
                          interface_gamma.push_back( curve(pos,msh_i,cl,cell_ind) ) ;
                         point<T,2> curv_var0 = point_type(curve(pos,msh_i,cl,cell_ind)(0), curve(pos,msh_i,cl,cell_ind)(1));
                         interface_gamma_plot->add_data(curv_var0,0.0);
@@ -56375,6 +56378,11 @@ int main(int argc, char **argv)
                         curvature_gamma.push_back( curve.curvature(pos,msh_i,cl,cell_ind) ) ;
                         tangent_gamma.push_back( curve.tangent(pos,msh_i,cl,cell_ind) ) ;
                         normal_gamma.push_back( curve.normal(pos,msh_i,cl,cell_ind) ) ;
+                        if(offset(msh_i,cl)==65)
+                        {
+                            std::cout<<"curvature = "<<curve.curvature(pos,msh_i,cl,cell_ind)<<" , tangent = "<<curve.tangent(pos,msh_i,cl,cell_ind)<<" , nromal = "<<curve.normal(pos,msh_i,cl,cell_ind)<<std::endl;
+                        }
+                        
                     }
                     /*
                     interface_gamma.push_back( curve(0,msh_i,cl,cell_ind) ) ;
