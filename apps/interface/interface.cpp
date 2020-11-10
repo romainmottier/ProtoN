@@ -2470,6 +2470,8 @@ reference_nodes_ordered(size_t degree)
     return ret;
 }
 
+
+
 template<typename T,typename Mesh>
 std::vector< point<T,2> >
 equidistriduted_nodes_ordered(const Mesh& msh,
