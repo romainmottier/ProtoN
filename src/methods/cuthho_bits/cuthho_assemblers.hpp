@@ -1168,51 +1168,6 @@ public:
 
         return ret;
     }
-    
-//    void
-//    scatter_face_data(const Mesh& msh, const typename Mesh::cell_type& cl,
-//                    Matrix<T, Dynamic, 1>& x_dof, Matrix<T, Dynamic, 1>& cell_dof,
-//                    element_location where)
-//    {
-//        auto celdeg = this->di.cell_degree();
-//        auto graddeg = this->di.grad_degree();
-//        auto facdeg = this->di.face_degree();
-//
-//        auto cbs = cell_basis<Mesh,T>::size(celdeg);
-//        auto rbs = vector_cell_basis<Mesh,T>::size(graddeg);
-//        auto fbs = face_basis<Mesh,T>::size(facdeg);
-//
-//        auto cell_offset        = offset(msh, cl);
-//        size_t cell_SOL_offset;
-//        if ( location(msh, cl) == element_location::ON_INTERFACE )
-//        {
-//            if (where == element_location::IN_NEGATIVE_SIDE)
-//                cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+rbs);
-//            else if (where == element_location::IN_POSITIVE_SIDE)
-//                cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+rbs) + (cbs+rbs);
-//            else
-//                throw std::invalid_argument("Invalid location");
-//        }
-//        else
-//        {
-//            cell_SOL_offset = this->cell_table.at(cell_offset) * (cbs+rbs);
-//        }
-//
-//        auto fcs = faces(msh, cl);
-//        auto num_faces = fcs.size();
-//
-//        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero((cbs+rbs) + num_faces*fbs);
-//        ret.block(0, 0, (cbs+rbs), 1) = solution.block(cell_SOL_offset, 0, (cbs+rbs), 1);
-//
-//
-//        auto solF = this->get_solF(msh, cl, solution);
-//        if(where == element_location::IN_NEGATIVE_SIDE)
-//            ret.tail(num_faces * fbs) = solF.head(num_faces * fbs);
-//        else
-//            ret.tail(num_faces * fbs) = solF.tail(num_faces * fbs);
-//
-//        return ret;
-//    }
             
     Matrix<T, Dynamic, 1>
     gather_cell_dof(const Mesh& msh, const typename Mesh::cell_type& cl,

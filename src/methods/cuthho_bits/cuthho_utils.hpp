@@ -750,11 +750,6 @@ make_hho_gradrec_mixed_vector_interface(const cuthho_mesh<T, ET>& msh,
         gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs)
                      += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
     }
-
-//    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
-//    matrix_type data = gr_rhs.transpose() * oper;
-//
-//    return std::make_pair(oper, data);
     
     auto vec_cell_size = 2*gbs;
     auto nrows = gr_rhs.cols()+vec_cell_size;
@@ -773,7 +768,6 @@ make_hho_gradrec_mixed_vector_interface(const cuthho_mesh<T, ET>& msh,
         data_mixed.block(vec_cell_size, gbs, nrows-vec_cell_size, gbs) = gr_rhs.transpose();
     }
 
-    
     matrix_type oper = gr_lhs.llt().solve(gr_rhs);
     return std::make_pair(oper, data_mixed);
     

@@ -318,6 +318,7 @@ public:
        size_t cell_i = 0;
        RealType h = 10.0;
        std::vector<RealType> l2_error_vec(msh.cells.size());
+       std::vector<RealType> flux_l2_error_vec(msh.cells.size());
        for (auto& cell : msh.cells)
        {
            l2_error_vec[cell_i] = 0.0;
@@ -337,11 +338,6 @@ public:
                auto cell_dofs_n = dofs_n.head(cbs);
                auto cell_dofs_p = dofs_p.head(cbs);
                
-//               if (cell_i == 13) {
-//                   std::cout << "cell_dofs_n = " << cell_dofs_n <<std::endl;
-//                   std::cout << "cell_dofs_p = " << cell_dofs_p <<std::endl;
-//               }
-               
                // negative side
                auto qps_n = integrate(msh, cell, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
                for (auto& qp : qps_n)
@@ -353,15 +349,14 @@ public:
                    for (size_t i = 1; i < cbs; i++ )
                        grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
 
-                   flux_l2_error += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                   flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                   
 
                    auto t_phi = cell_basis.eval_basis( qp.first );
                    auto v = cell_dofs_n.dot(t_phi);
                    
                    /* Compute L2-error */
-//                   l2_error_vec[cell_i] += qp.second;
                    l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
-//                   scalar_l2_error += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
                }
                
                // positive side
@@ -375,25 +370,20 @@ public:
                    for (size_t i = 1; i < cbs; i++ )
                        grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
 
-                   flux_l2_error += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                   flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
 
                    auto t_phi = cell_basis.eval_basis( qp.first );
                    auto v = cell_dofs_n.dot(t_phi);
                    
                    /* Compute L2-error */
-//                   l2_error_vec[cell_i] += qp.second;
                    l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
-//                   scalar_l2_error += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
                }
 
            }else{
                
                auto dofs = assembler.take_local_data(msh, cell, x_dof);
                 auto cell_dofs = dofs.head(cbs);
-//               if (cell_i == 0) {
-//                   std::cout << "cell_dofs = " << cell_dofs <<std::endl;
-//               }
-               
+
                // uncut case
                auto qps = integrate(msh, cell, 2*hho_di.cell_degree());
                for (auto& qp : qps)
@@ -405,24 +395,21 @@ public:
                    for (size_t i = 1; i < cbs; i++ )
                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
 
-                   flux_l2_error += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                   flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
 
                    auto t_phi = cell_basis.eval_basis( qp.first );
                    auto v = cell_dofs.dot(t_phi);
                    
                    /* Compute L2-error */
                    l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
-//                   scalar_l2_error += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
                    
                }
            }
            cell_i++;
        }
        
-        scalar_l2_error = std::accumulate(l2_error_vec.begin(), l2_error_vec.end(),0.0);
-//        for (size_t i = 0; i < l2_error_vec.size(); i++) {
-//            std::cout << "i = " << i << ", " << l2_error_vec[i] << std::endl;
-//        }
+       scalar_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
+       flux_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
        tc.toc();
        
        std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;
@@ -447,6 +434,7 @@ public:
         size_t cell_i = 0;
         RealType h = 10.0;
         std::vector<RealType> l2_error_vec(msh.cells.size());
+        std::vector<RealType> flux_l2_error_vec(msh.cells.size());
         for (auto& cell : msh.cells)
         {
             l2_error_vec[cell_i] = 0.0;
@@ -468,11 +456,6 @@ public:
                     Matrix<RealType, Dynamic, 1> cell_dof_n = assembler.gather_cell_dof(msh,cell,x_dof,element_location::IN_NEGATIVE_SIDE);
                     Matrix<RealType, Dynamic, 1> cell_dof_p = assembler.gather_cell_dof(msh,cell,x_dof,element_location::IN_POSITIVE_SIDE);
                     
-//                    if (cell_i == 13) {
-//                            std::cout << "cell_dofs_n = " << cell_dof_n.tail(cbs) <<std::endl;
-//                            std::cout << "cell_dofs_p = " << cell_dof_p.tail(cbs) <<std::endl;
-//                    }
-                    
                     // negative side
                     auto qps_n = integrate(msh, cell, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
                     for (auto& qp : qps_n)
@@ -481,10 +464,7 @@ public:
                         Matrix<RealType, Dynamic, 1> scal_cell_dof = cell_dof_n.tail(cbs);
                         auto t_phi = cell_basis.eval_basis( qp.first );
                         RealType uh = scal_cell_dof.dot( t_phi );
-//                        scalar_l2_error += qp.second * (scal_fun(qp.first) - uh) * (scal_fun(qp.first) - uh);
                         l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - uh) * (scal_fun(qp.first) - uh);
-//                        l2_error_vec[cell_i] += qp.second;
-                        
                     
                         // flux evaluation
                         Matrix<RealType, Dynamic, 1> vec_cell_dof = cell_dof_n.head(gbs);
@@ -494,7 +474,7 @@ public:
                           grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
                         }
                         auto grad_u_exact = flux_fun(qp.first);
-                        flux_l2_error += qp.second * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
+                        flux_l2_error_vec[cell_i] += qp.second * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
                         
 
                     }
@@ -507,9 +487,7 @@ public:
                         Matrix<RealType, Dynamic, 1> scal_cell_dof = cell_dof_p.tail(cbs);
                         auto t_phi = cell_basis.eval_basis( qp.first );
                         RealType uh = scal_cell_dof.dot( t_phi );
-//                        scalar_l2_error += qp.second * (scal_fun(qp.first) - uh) * (scal_fun(qp.first) - uh);
                         l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - uh) * (scal_fun(qp.first) - uh);
-//                        l2_error_vec[cell_i] += qp.second;
                         
                         // flux evaluation
                         Matrix<RealType, Dynamic, 1> vec_cell_dof = cell_dof_p.head(gbs);
@@ -519,24 +497,22 @@ public:
                           grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
                         }
                         auto grad_u_exact = flux_fun(qp.first);
-                        flux_l2_error += qp.second * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
+                        flux_l2_error_vec[cell_i] += qp.second * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
                         
                     }
 
                 }else{
                     
                     // uncut case
+                    // scalar evaluation
+                    Matrix<RealType, Dynamic, 1> cell_dof = assembler.gather_cell_dof(msh,cell,x_dof,location(msh, cell));
                     auto qps = integrate(msh, cell, 2*hho_di.cell_degree());
                     for (auto& qp : qps)
                     {
-                        // scalar evaluation
-                        Matrix<RealType, Dynamic, 1> cell_dof = assembler.gather_cell_dof(msh,cell,x_dof,location(msh, cell));
-                          Matrix<RealType, Dynamic, 1> scal_cell_dof = cell_dof.tail(cbs);
-                          auto t_phi = cell_basis.eval_basis( qp.first );
-                          RealType uh = scal_cell_dof.dot( t_phi );
-//                        scalar_l2_error += qp.second * (scal_fun(qp.first) - uh) * (scal_fun(qp.first) - uh);
+                        Matrix<RealType, Dynamic, 1> scal_cell_dof = cell_dof.tail(cbs);
+                        auto t_phi = cell_basis.eval_basis( qp.first );
+                        RealType uh = scal_cell_dof.dot( t_phi );
                         l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - uh) * (scal_fun(qp.first) - uh);
-//                        l2_error_vec[cell_i] += qp.second;
                         
                         // flux evaluation
                         Matrix<RealType, Dynamic, 1> vec_cell_dof = cell_dof.head(gbs);
@@ -546,12 +522,7 @@ public:
                           grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
                         }
                         auto grad_u_exact = flux_fun(qp.first);
-                        flux_l2_error += qp.second * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
-                        
-//                        if (cell_i == 13) {
-//                                std::cout << "scal_cell_dof = " << scal_cell_dof <<std::endl;
-//                                std::cout << "cell_dof = " << cell_dof <<std::endl;
-//                            }
+                        flux_l2_error_vec[cell_i] += qp.second * (grad_u_exact - grad_uh).dot(grad_u_exact - grad_uh);
                         
                     }
                 }
@@ -560,9 +531,7 @@ public:
             cell_i++;
         }
         scalar_l2_error = std::accumulate(l2_error_vec.begin(), l2_error_vec.end(),0.0);
-//        for (size_t i = 0; i < l2_error_vec.size(); i++) {
-//            std::cout << "i = " << i << ", " << l2_error_vec[i] << std::endl;
-//        }
+        flux_l2_error = std::accumulate(flux_l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
         tc.toc();
         
         std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;
@@ -706,17 +675,14 @@ public:
         return -1;
     }
     
-    /// Record data at provided point for two fields approximation
-    static void record_data_acoustic_two_fields(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
+    /// Record data at provided point for one field approximation
+    static void record_data_acoustic_one_field(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
 
         timecounter tc;
         tc.tic();
 
         using RealType = double;
         auto dim = 2;
-//        size_t n_scal_dof ;//= disk::scalar_basis_size(hho_di.cell_degree(), Mesh::dimension);
-//        size_t n_vec_dof ;//= disk::scalar_basis_size(hho_di.reconstruction_degree(), Mesh::dimension)-1;
-//        size_t cell_dof = n_scal_dof + n_vec_dof;
 
         Matrix<double, Dynamic, 1> vh = Matrix<double, Dynamic, 1>::Zero(2, 1);
 
@@ -773,6 +739,87 @@ public:
                            grad += scalar_cell_dof(i) * t_dphi.block(i, 0, 1, 2);
                     
                     vh = grad;
+                }
+
+
+            }
+        }
+        tc.toc();
+        std::cout << bold << cyan << "Value recorded: " << tc << " seconds" << reset << std::endl;
+        seismogram_file << it << "," << std::setprecision(16) <<  vh(0,0) << "," << std::setprecision(16) <<  vh(1,0) << std::endl;
+        seismogram_file.flush();
+
+    }
+    
+    /// Record data at provided point for two fields approximation
+    static void record_data_acoustic_two_fields(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
+
+        timecounter tc;
+        tc.tic();
+
+        using RealType = double;
+        auto dim = 2;
+
+        Matrix<double, Dynamic, 1> vh = Matrix<double, Dynamic, 1>::Zero(2, 1);
+
+        typename Mesh::point_type pt = pt_cell_index.first;
+        
+        if(pt_cell_index.second == -1){
+            std::set<size_t> cell_indexes = find_cells(pt, msh, true);
+            size_t cell_index = pick_cell(pt, msh, cell_indexes, true);
+            assert(cell_index != -1);
+            pt_cell_index.second = cell_index;
+            seismogram_file << "\"Time\"" << "," << "\"vhx\"" << "," << "\"vhy\"" << std::endl;
+        }
+
+        {
+            size_t cell_ind = pt_cell_index.second;
+            auto cell = msh.cells.at(cell_ind);
+
+            // flux evaluation
+            {
+                vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vec_cell_basis(msh, cell, hho_di.grad_degree());
+                auto gbs = vec_cell_basis.size();
+                
+                if ( location(msh, cell) == element_location::ON_INTERFACE )
+                {
+                    auto node = msh.nodes.at(0);
+                    throw std::invalid_argument("Recoding at cut cell. Not implemented.");
+                    Matrix<RealType, Dynamic, 1> cell_dof_n = assembler.gather_cell_dof(msh,cell,x_dof,element_location::IN_NEGATIVE_SIDE);
+                    Matrix<RealType, Dynamic, 1> cell_dof_p = assembler.gather_cell_dof(msh,cell,x_dof,element_location::IN_POSITIVE_SIDE);
+                    
+                    if (location(msh, node) == element_location::IN_NEGATIVE_SIDE)
+                    // negative side
+                    {
+                        Matrix<RealType, Dynamic, 1> vec_cell_dof = cell_dof_n.head(gbs);
+                        auto t_phi_v = vec_cell_basis.eval_basis( pt );
+                        Matrix<RealType, 1, 2> grad_uh = Matrix<RealType, 1, 2>::Zero();
+                        for (size_t i = 0; i < t_phi_v.rows(); i++){
+                          grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
+                        }
+                        vh = grad_uh;
+                    }else
+                    // positive side
+                    {
+                        Matrix<RealType, Dynamic, 1> vec_cell_dof = cell_dof_p.head(gbs);
+                        auto t_phi_v = vec_cell_basis.eval_basis( pt );
+                        Matrix<RealType, 1, 2> grad_uh = Matrix<RealType, 1, 2>::Zero();
+                        for (size_t i = 0; i < t_phi_v.rows(); i++){
+                          grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
+                        }
+                        vh = grad_uh;
+                    }
+
+                }else{
+                    Matrix<RealType, Dynamic, 1> cell_dof = assembler.gather_cell_dof(msh,cell,x_dof,location(msh, cell));
+                    
+                    Matrix<RealType, Dynamic, 1> vec_cell_dof = cell_dof.head(gbs);
+                    auto t_phi_v = vec_cell_basis.eval_basis( pt );
+                    Matrix<RealType, 1, 2> grad_uh = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 0; i < t_phi_v.rows(); i++){
+                      grad_uh = grad_uh + vec_cell_dof(i)*t_phi_v.block(i, 0, 1, 2);
+                    }
+                    vh = grad_uh;
                 }
 
 
