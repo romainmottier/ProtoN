@@ -1122,8 +1122,8 @@ mesh_type SquareCutMesh(level_set<RealType> & level_set_function, size_t l_divs,
 mesh_type SquareGar6moreCutMesh(level_set<RealType> & level_set_function, size_t l_divs, size_t int_refsteps){
     
     mesh_init_params<RealType> mip;
-    mip.Nx = 8;
-    mip.Ny = 8;
+    mip.Nx = 3;
+    mip.Ny = 3;
     mip.min_x = -1.5;
     mip.max_x = 1.5;
     mip.min_y = -1.5;
@@ -1977,9 +1977,9 @@ void HeterogeneousGar6moreICutHHOFirstOrder(int argc, char **argv){
     std::ofstream sensor_2_log("s2_cut_acoustic_two_fields.csv");
     std::ofstream sensor_3_log("s3_cut_acoustic_two_fields.csv");
     
-    typename mesh_type::point_type s1_pt(-1.0/3.0, -1.0/3.0);
-    typename mesh_type::point_type s2_pt( 0.0, -1.0/3.0);
-    typename mesh_type::point_type s3_pt(+1.0/3.0, -1.0/3.0);
+    typename mesh_type::point_type s1_pt(-1.0/3.0, +1.0/3.0);
+    typename mesh_type::point_type s2_pt( 0.0, +1.0/3.0);
+    typename mesh_type::point_type s3_pt(+1.0/3.0, +1.0/3.0);
     std::pair<typename mesh_type::point_type,size_t> s1_pt_cell = std::make_pair(s1_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s2_pt_cell = std::make_pair(s2_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s3_pt_cell = std::make_pair(s3_pt, -1);
@@ -2431,7 +2431,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 sdirk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, dirk_hho_scheme<RealType> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell){
     
-    bool write_silo_Q = true;
+    bool write_silo_Q = false;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
