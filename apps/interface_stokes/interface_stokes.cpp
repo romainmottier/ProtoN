@@ -56127,13 +56127,13 @@ int main(int argc, char **argv)
     ///---------->!!!!!!!!  THIS DATA BELOW HAS TO BE UPLOAD DEPENDING ON THE PROBLEM:
 
     // ------------------------------------ CIRCLE LEVEL SET ------------------------------------
-    /*
+    
     std::cout<<"Initial interface: CIRCLE"<<std::endl;
     auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
     typedef  circle_level_set<T> Fonction;
-     */
-    // ------------------------------------ FLOWER LEVEL SET ------------------------------------
     
+    // ------------------------------------ FLOWER LEVEL SET ------------------------------------
+    /*
     radius = 0.31 ;
     std::cout<<"Initial interface: FLOWER"<<std::endl;
     auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, 0.04); //0.11
@@ -56150,7 +56150,8 @@ int main(int argc, char **argv)
     //typedef  elliptic_distance_ls<T> Fonction;
     //auto level_set_function_anal = circle_distance_ls<RealType>(radius, x_centre, y_centre ,2*h );
     //typedef  circle_distance_ls<T> Fonction;
-
+     
+      */
 
 
     /**************  VELOCITY FIELD  INITIALISATION  **************/
@@ -56318,21 +56319,22 @@ int main(int argc, char **argv)
         if( location(msh_i, cl) == element_location::ON_INTERFACE )
         {
             curve.cell_assignment(cl);
-          
+            auto pts_int = cl.user_data.interface ;
+            /*
             std::cout<<"Cell "<<offset(msh_i,cl)<<" pts:"<<std::endl;
             auto pts = points(msh, cl);
             for(auto& pt : pts)
                 std::cout<<pt<<std::endl;
             std::cout<<"Interfacea pts:"<<std::endl;
-            auto pts_int = cl.user_data.interface ;
+            
             for(auto& pt : pts_int)
                 std::cout<<pt<<std::endl;
                        
             std::cout<<'\n'<<std::endl;
-
+            */
              if( pts_int.size() == degree_curve + 1 ) // if( curve.subcells.size()<1 )
              {
-                std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<std::endl;
+                //std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<std::endl;
                 for(int i= 0; i <= tot ; i++)
                 {
                     T pos = 0.0+i/tot ;
@@ -56361,7 +56363,7 @@ int main(int argc, char **argv)
             else
             {
                 size_t tot_cls = (pts_int.size()-1)/ (degree_curve )  ;
-                std::cout<<"tot_cls = "<<tot_cls<<std::endl;
+                //std::cout<<"tot_cls = "<<tot_cls<<std::endl;
                 for(size_t cell_ind = 0 ; cell_ind < tot_cls ; cell_ind++ ){
                     //std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<" , cell_ind = "<<cell_ind<<std::endl;
                     
@@ -56370,7 +56372,7 @@ int main(int argc, char **argv)
                         T pos = 0.0+i/tot ;
                         //if(i== 0 && cell_ind>0)
                         //    continue;
-                        std::cout<<"pos = "<<pos<<" , curve(pos,msh_i,cl) = "<<curve(pos,msh_i,cl,cell_ind)<<std::endl;
+                        //std::cout<<"pos = "<<pos<<" , curve(pos,msh_i,cl) = "<<curve(pos,msh_i,cl,cell_ind)<<std::endl;
                          interface_gamma.push_back( curve(pos,msh_i,cl,cell_ind) ) ;
                         point<T,2> curv_var0 = point_type(curve(pos,msh_i,cl,cell_ind)(0), curve(pos,msh_i,cl,cell_ind)(1));
                         interface_gamma_plot->add_data(curv_var0,0.0);
@@ -56378,10 +56380,12 @@ int main(int argc, char **argv)
                         curvature_gamma.push_back( curve.curvature(pos,msh_i,cl,cell_ind) ) ;
                         tangent_gamma.push_back( curve.tangent(pos,msh_i,cl,cell_ind) ) ;
                         normal_gamma.push_back( curve.normal(pos,msh_i,cl,cell_ind) ) ;
+                        /*
                         if(offset(msh_i,cl)==65)
                         {
                             std::cout<<"curvature = "<<curve.curvature(pos,msh_i,cl,cell_ind)<<" , tangent = "<<curve.tangent(pos,msh_i,cl,cell_ind)<<" , nromal = "<<curve.normal(pos,msh_i,cl,cell_ind)<<std::endl;
                         }
+                         */
                         
                     }
                     /*
