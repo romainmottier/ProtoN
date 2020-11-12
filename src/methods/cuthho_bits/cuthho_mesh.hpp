@@ -206,5 +206,5 @@ template<typename T>
 using cuthho_poly_mesh = mesh<T, 0, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;
 
 
-template<typename T >
-using hho_mesh_integration = mesh<T, 1, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;
+//template<typename T >
+//using hho_mesh_integration = mesh<T, 1, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;

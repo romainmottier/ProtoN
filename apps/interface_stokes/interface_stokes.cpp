@@ -56283,7 +56283,7 @@ int main(int argc, char **argv)
         if( location(msh_i, cl) == element_location::ON_INTERFACE )
         {
             
-            auto msh_int =  hho_mesh_integration<T>(cl,degree_curve);
+            auto msh_int =  integration_mesh<T>(degree_curve);
             cl.user_data.integration_msh = msh_int ;
         }
         

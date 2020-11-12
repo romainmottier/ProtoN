@@ -566,6 +566,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     
     }
     
+    mesh_impl( size_t degree_curve ): degree_curve(degree_curve){}
+    
     mesh_impl( cell_type& cl , size_t degree_curve ): cl(cl),points(cl.user_data.interface),degree_curve(degree_curve),size_cls((points.size()-1)/degree_curve)
     {
         //interface_pts = cl.user_data.interface ;
