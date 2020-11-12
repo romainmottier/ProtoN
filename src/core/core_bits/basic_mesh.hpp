@@ -83,6 +83,26 @@ struct cell<UserData, 0> : public mesh_element<UserData> {
     }
 };
 
+template<typename UserData>
+struct cell<UserData, 1> : public mesh_element<UserData> {
+    std::vector<size_t>   ptids;
+
+    cell()
+    {}
+
+    bool operator<(const cell& other) const
+    {
+        return (this->ptids < other.ptids);
+    }
+
+    bool operator==(const cell& other) const
+    {
+        return (this->ptids == other.ptids);
+    }
+};
+
+
+
 template<typename UserData = void>
 using poly_cell = cell<UserData, 0>;
 
@@ -316,6 +336,7 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
     std::vector<node_type>      nodes;
     std::vector<face_type>      faces;
     std::vector<cell_type>      cells;
+    
 
     mesh_impl() : mesh_impl( mesh_init_params<T>() )
     {}
@@ -404,7 +425,11 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
                 fc.bndtype = boundary::DIRICHLET;
         }
     }
-
+    
+    
+    
+    
+    
     mesh_impl(const std::string& filename)
     {
         std::ifstream ifs(filename);
@@ -478,6 +503,187 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
     }
 };
 
+//, typename Mesh
+    
+    
+
+
+    
+    
+template<typename T,  typename CellUD, typename FaceUD, typename NodeUD  >
+struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
+
+    typedef point<T,2>          point_type;
+    typedef cell<CellUD, 0>     cell_type;
+    typedef face<FaceUD>        face_type;
+    typedef node<NodeUD>        node_type;
+    typedef CellUD              cell_ud_type;
+    typedef FaceUD              face_ud_type;
+    typedef NodeUD              node_ud_type;
+    typedef T                   coordinate_type;
+
+    std::vector<point_type>     points;
+    //std::vector<node_type>      nodes;
+    //std::vector<face_type>      faces;
+    std::vector<cell_type>      cells;
+    
+    cell_type cl ;
+    //std::vector<point<T,2>>     interface_pts;
+    //Mesh msh ;
+    size_t size_cls ;
+    size_t degree_curve ;
+    
+    mesh_impl(){}
+   
+    
+
+    
+    mesh_impl& operator=( const mesh_impl& other)
+    {
+         
+        if (this != &other)
+        {
+            points = other.points ;
+            cells = other.cells ;
+            cl = other.cl ;
+            size_cls = other.size_cls ;
+            degree_curve = other.degree_curve ;
+        
+        }
+        return *this;
+        
+    }
+    
+    mesh_impl(  const mesh_impl& other )
+    {
+        points = other.points ;
+        cells = other.cells ;
+        cl = other.cl ;
+        size_cls = other.size_cls ;
+        degree_curve = other.degree_curve ;
+        
+        
+    
+    }
+    
+    mesh_impl( cell_type& cl , size_t degree_curve ): cl(cl),points(cl.user_data.interface),degree_curve(degree_curve),size_cls((points.size()-1)/degree_curve)
+    {
+        //interface_pts = cl.user_data.interface ;
+       
+        //if ( !is_cut(msh, cl) )
+        //    exit(9);
+        //size_cls = (points.size()-1)/degree_curve ;
+        
+        size_t point_num = 0;
+        //cell_basis_Lagrange_1d_reference <Mesh,T> cb(msh, cl, basis_degree);
+        //auto size_pts = interface_pts.size() ;
+        //size_cls = (size_pts-1)/basis_degree ;
+    
+        for(size_t pos = 0 ; pos < size_cls ; pos++ )
+        {
+            cell_type cl;
+            for (size_t i = 0; i <= degree_curve ; i++)
+            {
+                cl.ptids.push_back( point_num ) ;
+                if( i < degree_curve )
+                    point_num++ ;
+                //cl.ptids = {{pt0_idx, pt1_idx, pt2_idx, pt3_idx}};
+            }
+            cells.push_back(cl);
+        }
+    
+    }
+    /*
+    mesh_impl(const mesh_init_params<T>& parms)
+    {
+        auto hx = parms.hx();
+        auto hy = parms.hy();
+
+        size_t numpoints = (parms.Nx + 1) * (parms.Ny + 1);
+        points.reserve(numpoints);
+
+        //std::default_random_engine generator;
+        //std::uniform_real_distribution<double> dist_x(-hx/10.0, hx/10.0);
+        //std::uniform_real_distribution<double> dist_y(-hy/10.0, hy/10.0);
+        //auto disp_x = std::bind( dist_x, generator );
+        //auto disp_y = std::bind( dist_y, generator );
+
+        size_t point_num = 0;
+        for (size_t j = 0; j < parms.Ny+1; j++)
+        {
+            for(size_t i = 0; i < parms.Nx+1; i++)
+            {
+                double dx = 0.0;
+                double dy = 0.0;
+                //if ( i != 0 && i != parms.Nx )
+                //    dx = disp_x();
+
+                //if ( j != 0 && j != parms.Ny )
+                //    dy = disp_y();
+
+                auto px = parms.min_x + i*hx + dx;
+                auto py = parms.min_y + j*hy + dy;
+                point_type pt(px, py);
+                points.push_back(pt);
+                node_type n;
+                n.ptid = point_num++;
+                nodes.push_back(n);
+            }
+        }
+
+        for (size_t j = 0; j < parms.Ny; j++)
+        {
+            for (size_t i = 0; i < parms.Nx; i++)
+            {
+                auto pt0_idx = j*(parms.Nx+1) + i;
+                auto pt1_idx = pt0_idx + 1;
+                auto pt2_idx = pt0_idx + parms.Nx + 2;
+                auto pt3_idx = pt0_idx + parms.Nx + 1;
+
+                cell_type cl;
+                cl.ptids = {{pt0_idx, pt1_idx, pt2_idx, pt3_idx}};
+                cells.push_back(cl);
+
+                face_type f0;
+                f0.ptids = {pt0_idx, pt1_idx};
+                if (j == 0) f0.is_boundary = true;
+                faces.push_back(f0);
+
+                face_type f1;
+                f1.ptids = {pt1_idx, pt2_idx};
+                if (i == parms.Nx-1) f1.is_boundary = true;
+                faces.push_back(f1);
+
+                face_type f2;
+                f2.ptids = {pt3_idx, pt2_idx};
+                if (j == parms.Ny-1) f2.is_boundary = true;
+                faces.push_back(f2);
+
+                face_type f3;
+                f3.ptids = {pt0_idx, pt3_idx};
+                if (i == 0) f3.is_boundary = true;
+                faces.push_back(f3);
+
+            }
+        }
+
+        std::sort(cells.begin(), cells.end());
+        std::sort(faces.begin(), faces.end());
+        faces.erase( std::unique(faces.begin(), faces.end()), faces.end() );
+
+        
+        for (auto& fc : faces)
+        {
+            if (fc.is_boundary)
+                fc.bndtype = boundary::DIRICHLET;
+        }
+    }
+    */
+    
+};
+
+    
+    
 
 template<typename T, size_t ElemType, typename CellUD = void, typename FaceUD = void, typename NodeUD = void>
 using mesh = mesh_impl<T, ElemType, CellUD, FaceUD, NodeUD>;
@@ -487,6 +693,9 @@ using quad_mesh = mesh_impl<T, 4, CellUD, FaceUD, NodeUD>;
 
 template<typename T, typename CellUD = void, typename FaceUD = void, typename NodeUD = void>
 using poly_mesh = mesh_impl<T, 0, CellUD, FaceUD, NodeUD>;
+
+template<typename T, typename CellUD = void, typename FaceUD = void, typename NodeUD = void >
+using integration_mesh = mesh_impl<T, 1, CellUD, FaceUD, NodeUD>;
 
 #if 0
 

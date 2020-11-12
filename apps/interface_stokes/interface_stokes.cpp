@@ -77,6 +77,15 @@ void offset_definition( Mesh& msh)
     }
 }
 
+template<typename Mesh>
+void degree_parametrisaiton_definition( Mesh& msh , size_t degree )
+{
+    //size_t counter = 0;
+    for (auto& cl:msh.cells) {
+        cl.user_data.degree_curve = degree ;
+    
+    }
+}
 
 /// Useful to plot level set pre FE transport problem
 /// in cuthho_export.hpp
@@ -56026,6 +56035,7 @@ int main(int argc, char **argv)
 
     cuthho_poly_mesh<RealType> msh(mip);
     typedef cuthho_poly_mesh<RealType> Mesh;
+    
     typedef typename Mesh::point_type point_type;
     offset_definition(msh);
     std::cout<<"Mesh size = "<<mip.Nx<<"x"<<mip.Ny<<std::endl;
@@ -56180,7 +56190,7 @@ int main(int argc, char **argv)
     typedef Level_set_berstein< Mesh , Fonction , FiniteSpace , T > Level_Set;
     T degree_curve = 3 ;
     auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
-    
+    degree_parametrisaiton_definition(msh,degree_curve);
     
     //auto level_set_function = Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
     //auto level_set_function = Level_set_berstein_high_order_interpolation_grad_cont< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
@@ -56267,8 +56277,30 @@ int main(int argc, char **argv)
         output_mesh_info(msh_i, level_set_function);
     }
 
+    /*
+    for(auto& cl : msh_i.cells)
+    {
+        if( location(msh_i, cl) == element_location::ON_INTERFACE )
+        {
+            
+            auto msh_int =  hho_mesh_integration<T>(cl,degree_curve);
+            cl.user_data.integration_msh = msh_int ;
+        }
+        
+    }
+    */
     
-    
+    for(auto& cl : msh_i.cells)
+    {
+        if( location(msh_i, cl) == element_location::ON_INTERFACE )
+        {
+            
+            auto msh_int =  integration_mesh_cl<T,typename Mesh::cell_type >(cl,degree_curve);
+            cl.user_data.integration_msh = msh_int ;
+        }
+        
+    }
+
 
     
 
@@ -56320,6 +56352,7 @@ int main(int argc, char **argv)
         {
             curve.cell_assignment(cl);
             auto pts_int = cl.user_data.interface ;
+            auto pts = points(msh, cl);
             /*
             std::cout<<"Cell "<<offset(msh_i,cl)<<" pts:"<<std::endl;
             auto pts = points(msh, cl);
