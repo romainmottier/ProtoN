@@ -51,8 +51,8 @@ using namespace Eigen;
 #include "methods/hho"
 #include "methods/cuthho"
 
-#include "tbb/tbb.h"
-#define HAVE_INTEL_TBB
+//#include "tbb/tbb.h"
+//#define HAVE_INTEL_TBB
 //#include "/usr/local/Cellar/tbb/2020_U2/include/tbb/tbb.h"
 //#include "/opt/intel/compilers_and_libraries_2020.1.216⁩/mac/tbb/include/tbb/tbb.h"
 
