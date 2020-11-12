@@ -56277,7 +56277,7 @@ int main(int argc, char **argv)
         output_mesh_info(msh_i, level_set_function);
     }
 
-    /*
+    
     for(auto& cl : msh_i.cells)
     {
         if( location(msh_i, cl) == element_location::ON_INTERFACE )
@@ -56288,8 +56288,8 @@ int main(int argc, char **argv)
         }
         
     }
-    */
     
+    /*
     for(auto& cl : msh_i.cells)
     {
         if( location(msh_i, cl) == element_location::ON_INTERFACE )
@@ -56300,7 +56300,7 @@ int main(int argc, char **argv)
         }
         
     }
-
+    */
 
     
 
