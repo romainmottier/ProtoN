@@ -56282,9 +56282,27 @@ int main(int argc, char **argv)
     {
         if( location(msh_i, cl) == element_location::ON_INTERFACE )
         {
+            if(0)
+            {
+                auto msh_int =  integration_mesh<T>(degree_curve);
+                msh_int.set_cell(cl);
+                cl.user_data.integration_msh = msh_int ;
+            }
+            else
+                cl.user_data.integration_msh.set_cell_new2(cl,degree_curve);
             
-            auto msh_int =  integration_mesh<T>(degree_curve);
-            cl.user_data.integration_msh = msh_int ;
+            for(auto& cl_i : cl.user_data.integration_msh.cells)
+            {
+                std::cout<<"cl = "<<offset(cl.user_data.integration_msh,cl_i)<<std::endl;
+                auto pts = points( cl.user_data.integration_msh , cl_i);
+                auto nds = nodes( cl.user_data.integration_msh , cl_i);
+                for(auto& pt: pts)
+                    std::cout<<"pt = "<<'\n'<<pt<<std::endl;
+                for(auto& nd: nds)
+                    std::cout<<"nd = "<<'\n'<<nd<<std::endl;
+                std::cout<<'\n'<<std::endl;
+            }
+            
         }
         
     }

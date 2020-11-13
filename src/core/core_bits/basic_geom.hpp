@@ -101,6 +101,27 @@ nodes(const mesh<T, 0, CellUD, FaceUD, NodeUD>& msh,
     return ret;
 }
 
+
+template<typename T, typename CellUD, typename FaceUD, typename NodeUD>
+std::vector< typename mesh<T, 1, CellUD, FaceUD, NodeUD>::node_type >
+nodes(const mesh<T, 1, CellUD, FaceUD, NodeUD>& msh,
+      const typename mesh<T, 0, CellUD, FaceUD, NodeUD>::cell_type& cl)
+{
+    using Mesh = mesh<T, 1, CellUD, FaceUD, NodeUD>;
+
+    std::vector< typename Mesh::node_type> ret;
+    ret.resize( cl.ptids.size() );
+
+    auto ptid2node = [&](size_t ptid) -> auto {
+        return msh.nodes.at(ptid);
+    };
+
+    std::transform( cl.ptids.begin(), cl.ptids.end(), ret.begin(), ptid2node );
+
+    return ret;
+}
+
+
 template<typename Mesh>
 std::array< typename Mesh::node_type, 2 >
 nodes(const Mesh& msh, const typename Mesh::face_type& fc)
@@ -154,6 +175,26 @@ points(const mesh<T, 0, CellUD, FaceUD, NodeUD>& msh,
 
     return ret;
 }
+
+template<typename T, typename CellUD, typename FaceUD, typename NodeUD>
+std::vector< typename mesh<T, 1, CellUD, FaceUD, NodeUD>::point_type >
+points(const mesh<T, 1, CellUD, FaceUD, NodeUD>& msh,
+      const typename mesh<T, 0, CellUD, FaceUD, NodeUD>::cell_type& cl)
+{
+    using Mesh = mesh<T, 1, CellUD, FaceUD, NodeUD>;
+
+    std::vector< typename Mesh::point_type> ret;
+    ret.resize( cl.ptids.size() );
+
+    auto ptid2pt = [&](size_t ptid) -> auto {
+        return msh.points.at(ptid);
+    };
+
+    std::transform( cl.ptids.begin(), cl.ptids.end(), ret.begin(), ptid2pt );
+
+    return ret;
+}
+
 
 template<typename Mesh>
 std::array< typename Mesh::point_type, 2 >

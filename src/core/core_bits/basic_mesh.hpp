@@ -523,14 +523,11 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     typedef T                   coordinate_type;
 
     std::vector<point_type>     points;
-    //std::vector<node_type>      nodes;
-    //std::vector<face_type>      faces;
+    std::vector<node_type>      nodes;
     std::vector<cell_type>      cells;
     
-    cell_type cl ;
-    //std::vector<point<T,2>>     interface_pts;
-    //Mesh msh ;
-    size_t size_cls ;
+    //cell_type cl ;
+    std::vector<point<T,2>>     interface_pts;
     size_t degree_curve ;
     
     mesh_impl(){}
@@ -545,8 +542,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         {
             points = other.points ;
             cells = other.cells ;
-            cl = other.cl ;
-            size_cls = other.size_cls ;
+            //cl = other.cl ;
+            //size_cls = other.size_cls ;
             degree_curve = other.degree_curve ;
         
         }
@@ -558,8 +555,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     {
         points = other.points ;
         cells = other.cells ;
-        cl = other.cl ;
-        size_cls = other.size_cls ;
+        //cl = other.cl ;
+        //size_cls = other.size_cls ;
         degree_curve = other.degree_curve ;
         
         
@@ -568,6 +565,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     
     mesh_impl( size_t degree_curve ): degree_curve(degree_curve){}
     
+    
+    /*
     mesh_impl( cell_type& cl , size_t degree_curve ): cl(cl),points(cl.user_data.interface),degree_curve(degree_curve),size_cls((points.size()-1)/degree_curve)
     {
         //interface_pts = cl.user_data.interface ;
@@ -595,92 +594,142 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         }
     
     }
-    /*
-    mesh_impl(const mesh_init_params<T>& parms)
-    {
-        auto hx = parms.hx();
-        auto hy = parms.hy();
-
-        size_t numpoints = (parms.Nx + 1) * (parms.Ny + 1);
-        points.reserve(numpoints);
-
-        //std::default_random_engine generator;
-        //std::uniform_real_distribution<double> dist_x(-hx/10.0, hx/10.0);
-        //std::uniform_real_distribution<double> dist_y(-hy/10.0, hy/10.0);
-        //auto disp_x = std::bind( dist_x, generator );
-        //auto disp_y = std::bind( dist_y, generator );
-
+    */
+    template<typename Cell>
+    void
+    set_cell(Cell& other_cl){
+        interface_pts = other_cl.user_data.interface ;
+        auto size_cls = (interface_pts.size()-1)/degree_curve ;
         size_t point_num = 0;
-        for (size_t j = 0; j < parms.Ny+1; j++)
+        for(size_t pos = 0 ; pos < size_cls ; pos++ )
         {
-            for(size_t i = 0; i < parms.Nx+1; i++)
+            cell_type cl;
+            for (size_t i = 0; i <= degree_curve ; i++)
             {
-                double dx = 0.0;
-                double dy = 0.0;
-                //if ( i != 0 && i != parms.Nx )
-                //    dx = disp_x();
-
-                //if ( j != 0 && j != parms.Ny )
-                //    dy = disp_y();
-
-                auto px = parms.min_x + i*hx + dx;
-                auto py = parms.min_y + j*hy + dy;
-                point_type pt(px, py);
-                points.push_back(pt);
+                cl.ptids.push_back( point_num ) ;
                 node_type n;
+                n.ptid = point_num;
+                nodes.push_back(n);
+                
+                if( i < degree_curve )
+                    point_num++ ;
+            }
+            cells.push_back(cl);
+        }
+        
+    }
+    
+    template<typename Cell>
+    void
+    set_cell(Cell& other_cl,size_t m_degree){
+        degree_curve = m_degree;
+        interface_pts = other_cl.user_data.interface ;
+        auto size_cls = (interface_pts.size()-1)/degree_curve ;
+        size_t point_num = 0;
+        for(size_t pos = 0 ; pos < size_cls ; pos++ )
+        {
+            cell_type cl;
+            for (size_t i = 0; i <= degree_curve ; i++)
+            {
+                cl.ptids.push_back( point_num ) ;
+                node_type n;
+                n.ptid = point_num;
+                nodes.push_back(n);
+                
+                if( i < degree_curve )
+                    point_num++ ;
+            }
+            cells.push_back(cl);
+        }
+        auto last = std::unique(nodes.begin(), nodes.end());
+        nodes.erase(last, nodes.end());
+        
+    }
+    
+    template<typename Cell>
+    void
+    set_cell_new(Cell& other_cl,size_t m_degree){
+        degree_curve = m_degree;
+        //interface_pts = other_cl.user_data.interface ;
+        
+    
+        points = other_cl.user_data.interface ;
+        auto size_cls = (points.size()-1)/degree_curve ;
+        size_t point_num = 0;
+        //size_t vertices = degree_curve;
+        for(size_t pos = 0 ; pos < size_cls ; pos++ )
+        {
+            cell_type cl;
+            auto pt0 = 0 + pos*degree_curve ;
+            auto pt1 = degree_curve + pos*degree_curve ;
+            cl.ptids = {{ pt0 , pt1 }};
+            node_type n;
+            n.ptid = point_num++;
+            nodes.push_back(n);
+            n.ptid = point_num++;
+            nodes.push_back(n);
+            for (size_t i = 1 ; i < degree_curve ; i++)
+            {
+                auto pt_high_order = i + pos*degree_curve ;
+                cl.ptids.push_back( pt_high_order ) ;
                 n.ptid = point_num++;
                 nodes.push_back(n);
             }
+            cells.push_back(cl);
         }
-
-        for (size_t j = 0; j < parms.Ny; j++)
-        {
-            for (size_t i = 0; i < parms.Nx; i++)
-            {
-                auto pt0_idx = j*(parms.Nx+1) + i;
-                auto pt1_idx = pt0_idx + 1;
-                auto pt2_idx = pt0_idx + parms.Nx + 2;
-                auto pt3_idx = pt0_idx + parms.Nx + 1;
-
-                cell_type cl;
-                cl.ptids = {{pt0_idx, pt1_idx, pt2_idx, pt3_idx}};
-                cells.push_back(cl);
-
-                face_type f0;
-                f0.ptids = {pt0_idx, pt1_idx};
-                if (j == 0) f0.is_boundary = true;
-                faces.push_back(f0);
-
-                face_type f1;
-                f1.ptids = {pt1_idx, pt2_idx};
-                if (i == parms.Nx-1) f1.is_boundary = true;
-                faces.push_back(f1);
-
-                face_type f2;
-                f2.ptids = {pt3_idx, pt2_idx};
-                if (j == parms.Ny-1) f2.is_boundary = true;
-                faces.push_back(f2);
-
-                face_type f3;
-                f3.ptids = {pt0_idx, pt3_idx};
-                if (i == 0) f3.is_boundary = true;
-                faces.push_back(f3);
-
-            }
-        }
-
-        std::sort(cells.begin(), cells.end());
-        std::sort(faces.begin(), faces.end());
-        faces.erase( std::unique(faces.begin(), faces.end()), faces.end() );
-
         
-        for (auto& fc : faces)
-        {
-            if (fc.is_boundary)
-                fc.bndtype = boundary::DIRICHLET;
-        }
+                
     }
-    */
+    
+    template<typename Cell>
+    void
+    set_cell_new2(Cell& other_cl,size_t m_degree){
+        degree_curve = m_degree;
+        
+        interface_pts = other_cl.user_data.interface ;
+        
+        points.resize( interface_pts.size() );
+        points = interface_pts ;
+        points[0] = interface_pts[0] ;
+        points[1] = interface_pts[0] ;
+        auto size_cls = (points.size()-1)/degree_curve ;
+        
+        size_t point_num = 0;
+        size_t pt0_cl = 0;
+        size_t pt1_cl = 1;
+        for(size_t pos = 0 ; pos < size_cls ; pos++ )
+        {
+            cell_type cl;
+            node_type n;
+            if(pos == 0){
+                points[point_num] = interface_pts[pos] ;
+                n.ptid = point_num++;
+                nodes.push_back(n);
+            }
+            auto pt1 = degree_curve + pos*degree_curve ;
+            points[point_num] = interface_pts[pt1] ;
+            n.ptid = point_num++;
+            nodes.push_back(n);
+            
+            cl.ptids = {{ pt0_cl , pt1_cl }};
+           
+            for (size_t i = 1 ; i < degree_curve ; i++)
+            {
+                auto pt_high_order = i + pos*degree_curve ;
+                points[point_num] = interface_pts[pt_high_order] ;
+                n.ptid = point_num++;
+                nodes.push_back(n);
+                auto pt_high_order_cl = pt1_cl + i  ;
+                cl.ptids.push_back( pt_high_order_cl ) ;
+            }
+            cells.push_back(cl);
+            pt0_cl = pt1_cl ;
+            pt1_cl += degree_curve ;
+        }
+        
+                
+    }
+    
     
 };
 
