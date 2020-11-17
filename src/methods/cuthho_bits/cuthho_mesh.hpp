@@ -44,96 +44,6 @@ enum class cell_agglo_set {
 
 
 
-template<typename T, typename Cell >
-struct integration_mesh_cl
-{
-
-    typedef point<T,2>          point_type;
-    //typedef T                   coordinate_type;
-  
-
-    std::vector<point_type>     points;
-    std::vector<Cell>      cells;
-    size_t size_cls ;
-    size_t degree_curve ;
-   
-    //Mesh msh ;
-    //Cell cl;
-    
-    integration_mesh_cl(){}
-    
-    
-    integration_mesh_cl(integration_mesh_cl& other ){
-        points = other.points ;
-        cells = other.cells ;
-        size_cls = other.size_cls ;
-        degree_curve = other.degree_curve ;
-        
-        
-    }
-    
-    integration_mesh_cl( Cell& cl, T degree_curve ) : degree_curve(degree_curve), points(cl.userd_data.interface), size_cls((points.size()-1)/degree_curve)
-    {
-      
-        size_t point_num = 0;
-        //cell_basis_Lagrange_1d_reference <Mesh,T> cb(msh, cl, basis_degree);
-        for(size_t pos = 0 ; pos < size_cls ; pos++ )
-        {
-            Cell m_cl;
-            for (size_t i = 0; i <= degree_curve ; i++)
-            {
-                m_cl.ptids.push_back( point_num ) ;
-                if( i < degree_curve )
-                    point_num++ ;
-            }
-            cells.push_back(m_cl);
-        }
-                
-        
-            
-        
-    }
-    
-       
-};
-
-template<typename T, typename Cell >
-struct cell_cuthho_info_bis
-{
-    element_location            location;
-    cell_agglo_set              agglo_set;
-    point<T,2>                  p0, p1;
-    std::vector<point<T,2>>     interface;
-    //integration_mesh<T>         integration_msh;
-    
-    integration_mesh_cl<T,Cell>         integration_msh;
-    bool                        distorted;
-    std::set<size_t>            f_neighbors; // face neighbors
-    std::set<size_t>            d_neighbors; // diagonal neighbors
-    
-    std::vector< std::pair<point<T,2>, T> > integration_n; // composite integration rules
-    std::vector< std::pair<point<T,2>, T> > integration_p;
-
-    bool                        highlight; // for tests
-    
-    std::vector<size_t>         offset_subcells;
-    size_t                      degree_curve ;
-    
-    cell_cuthho_info_bis() :
-        location(element_location::UNDEF),
-        agglo_set(cell_agglo_set::UNDEF),
-        distorted(false),
-        //integration_msh(),
-        integration_msh(),
-        highlight(false)
-        
-    {}
-  
-    
-    
-};
-
-
 template<typename T>
 struct cell_cuthho_info
 {
@@ -205,6 +115,3 @@ using cuthho_quad_mesh = mesh<T, 4, cell_cuthho_info<T>, face_cuthho_info<T>, no
 template<typename T>
 using cuthho_poly_mesh = mesh<T, 0, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;
 
-
-//template<typename T >
-//using hho_mesh_integration = mesh<T, 1, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;

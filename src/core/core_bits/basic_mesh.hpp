@@ -30,6 +30,7 @@
 #include <random>
 
 #include "point.hpp"
+//#include "quadratures.hpp"
 
 
 /*****************************************************************************
@@ -527,8 +528,10 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     std::vector<cell_type>      cells;
     
     //cell_type cl ;
-    std::vector<point<T,2>>     interface_pts;
+    std::vector<point_type>     interface_vertices; // just the vertices of the mesh
     size_t degree_curve ;
+    
+    
     
     mesh_impl(){}
    
@@ -545,6 +548,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
             //cl = other.cl ;
             //size_cls = other.size_cls ;
             degree_curve = other.degree_curve ;
+           
         
         }
         return *this;
@@ -558,7 +562,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         //cl = other.cl ;
         //size_cls = other.size_cls ;
         degree_curve = other.degree_curve ;
-        
+       
         
     
     }
@@ -598,8 +602,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     template<typename Cell>
     void
     set_cell(Cell& other_cl){
-        interface_pts = other_cl.user_data.interface ;
-        auto size_cls = (interface_pts.size()-1)/degree_curve ;
+        interface_vertices = other_cl.user_data.interface ;
+        auto size_cls = (interface_vertices.size()-1)/degree_curve ;
         size_t point_num = 0;
         for(size_t pos = 0 ; pos < size_cls ; pos++ )
         {
@@ -623,8 +627,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     void
     set_cell(Cell& other_cl,size_t m_degree){
         degree_curve = m_degree;
-        interface_pts = other_cl.user_data.interface ;
-        auto size_cls = (interface_pts.size()-1)/degree_curve ;
+        interface_vertices = other_cl.user_data.interface ;
+        auto size_cls = (interface_vertices.size()-1)/degree_curve ;
         size_t point_num = 0;
         for(size_t pos = 0 ; pos < size_cls ; pos++ )
         {
@@ -650,7 +654,6 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     void
     set_cell_new(Cell& other_cl,size_t m_degree){
         degree_curve = m_degree;
-        //interface_pts = other_cl.user_data.interface ;
         
     
         points = other_cl.user_data.interface ;
@@ -678,6 +681,12 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
             cells.push_back(cl);
         }
         
+        for(size_t j = 0 ; j < points.size(); j+= degree_curve )
+        {
+            interface_vertices.push_back(points[j]);
+        }
+        
+     
                 
     }
     
@@ -686,12 +695,12 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     set_cell_new2(Cell& other_cl,size_t m_degree){
         degree_curve = m_degree;
         
-        interface_pts = other_cl.user_data.interface ;
+        interface_vertices = other_cl.user_data.interface ;
         
-        points.resize( interface_pts.size() );
-        points = interface_pts ;
-        points[0] = interface_pts[0] ;
-        points[1] = interface_pts[0] ;
+        points.resize( interface_vertices.size() );
+        points = interface_vertices ;
+        points[0] = interface_vertices[0] ;
+        points[1] = interface_vertices[0] ;
         auto size_cls = (points.size()-1)/degree_curve ;
         
         size_t point_num = 0;
@@ -702,12 +711,12 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
             cell_type cl;
             node_type n;
             if(pos == 0){
-                points[point_num] = interface_pts[pos] ;
+                points[point_num] = interface_vertices[pos] ;
                 n.ptid = point_num++;
                 nodes.push_back(n);
             }
             auto pt1 = degree_curve + pos*degree_curve ;
-            points[point_num] = interface_pts[pt1] ;
+            points[point_num] = interface_vertices[pt1] ;
             n.ptid = point_num++;
             nodes.push_back(n);
             
@@ -716,7 +725,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
             for (size_t i = 1 ; i < degree_curve ; i++)
             {
                 auto pt_high_order = i + pos*degree_curve ;
-                points[point_num] = interface_pts[pt_high_order] ;
+                points[point_num] = interface_vertices[pt_high_order] ;
                 n.ptid = point_num++;
                 nodes.push_back(n);
                 auto pt_high_order_cl = pt1_cl + i  ;

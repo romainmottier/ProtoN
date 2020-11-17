@@ -77,15 +77,6 @@ void offset_definition( Mesh& msh)
     }
 }
 
-template<typename Mesh>
-void degree_parametrisaiton_definition( Mesh& msh , size_t degree )
-{
-    //size_t counter = 0;
-    for (auto& cl:msh.cells) {
-        cl.user_data.degree_curve = degree ;
-    
-    }
-}
 
 /// Useful to plot level set pre FE transport problem
 /// in cuthho_export.hpp
@@ -12550,45 +12541,427 @@ reference_nodes_ordered_01(size_t degree)
     return ret;
 }
 
-template<typename Mesh, typename VT>
-class cell_basis_Lagrange_1d_reference
+template<typename T>
+std::vector<point<T,2> >
+reference_nodes_triangle(size_t degree)
 {
-    typedef typename Mesh::coordinate_type  coordinate_type;
-    typedef typename Mesh::point_type       point_type;
-    typedef typename Mesh::cell_type       cell_type;
+    auto comp_degree = degree + 1;
+    size_t reqd_nodes = comp_degree;
 
-    //point_type          cell_bar;
-    //coordinate_type     cell_h;
+    std::vector<point<T,2> > ret;
+    ret.reserve(reqd_nodes);
+
+    point<T,2>  qp ; // , qp_1;
+    //T           a1, a2;
+    //T           delta_x;
+    T pt0 = 0.0;
+    T pt1 = 1.0;
+    T pt2 = 0.5;
+    //T pt3 = 1.0/3.0;
+    //T pt4 = 2.0/3.0;
+    //T pt5 = 1.0/4.0;
+    //T pt6 = 3.0/4.0;
+    switch(reqd_nodes)
+    {
+            /*
+        case 1:
+            qp = point<T,1>({0.5});
+            ret.push_back(qp);
+            return ret;
+            */
+        case 2:
+           
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+            return ret;
+
+        case 3:
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+            qp = point<T,2>({0.5,pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({0.5,0.5});
+            ret.push_back( qp );
+            qp = point<T,2>({pt0,0.5});
+            ret.push_back( qp );
+            
+            return ret;
+
+        case 4:
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+            
+            qp = point<T,2>({ 1.0/3.0 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 2.0/3.0 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 2.0/3.0 , 1.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/3.0 , 2.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 2.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 1.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/3.0 , 1.0/3.0 });
+            ret.push_back( qp );
+            return ret;
+
+        case 5:
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+
+            qp = point<T,2>({ 1.0/4.0 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 0.5 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 3.0/4.0 , pt0 });
+            ret.push_back( qp );
+            
+            qp = point<T,2>({ 3.0/4.0 , 1.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 0.5 , 0.5 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/4.0 , 3.0/4.0 });
+            ret.push_back( qp );
+            
+    
+            qp = point<T,2>({ pt0 , 3.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 0.5 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 1.0/4.0 });
+            ret.push_back( qp );
+            
+            qp = point<T,2>({ 1.0/4.0 , 1.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 0.5 , 1.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/4.0 , 0.5 });
+            ret.push_back( qp );
+            
+            
+            return ret;
+            
+            /*
+        default:
+
+            delta_x = 1.0/degree;
+            a1 = delta_x;
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( qp );
+            while (a1<1) {
+                qp = point<T,1>({ a1 });
+                ret.push_back( qp );
+                a1+=delta_x;
+
+            }
+           
+            
+            return ret;
+             */
+    }
+    return ret;
+}
+
+
+template<typename VT>
+class cell_basis_triangle_Lagrange
+{
     size_t              basis_degree, basis_size;
-    coordinate_type min_x , max_x , min_y , max_y ;
-    coordinate_type scaling_x ;
-    std::vector<point<VT,2>> physical_pts ;
-    std::vector<point<VT,1> > ref_nodes ;
-    cell_type m_cl ;
-    Mesh msh_orig ;
-    Mesh msh_agglo ;
+    std::vector<point<VT,2> > ref_nodes ;
+    
    
 public:
-    cell_basis_Lagrange_1d_reference(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree)
-       {
-           //cell_bar        = barycenter(msh, cl);
-           //cell_h          = diameter(msh, cl);
+   
+    
+    cell_basis_triangle_Lagrange(size_t degree)
+    {
            basis_degree    = degree;
-           basis_size      = (basis_degree+1);
-           
-           ref_nodes = reference_nodes_ordered_01<VT>(degree) ; //[0,1]
-           //ref_nodes = reference_nodes_ordered<VT>(degree) ; //[-1,1]
-           physical_pts = cl.user_data.interface ;
-           
-           //min_x = 0.0 ; // points(msh,cl)[0].x();
-           //max_x = 1.0 ; //points(msh,cl)[1].x();
-           //scaling_x = 1.0/( pow( (max_x - min_x), basis_degree) );
-            
-           m_cl = cl ;
+           basis_size      = (basis_degree+1.0)*(basis_degree+2.0)/2.0;
+           ref_nodes = reference_nodes_triangle<VT>(degree) ; //{0,0},{1,0},{0,1}
 
     }
 
+    
 
+    Matrix<VT, Dynamic, 1>
+    eval_basis(const point<VT,2>& pt)
+    {
+
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
+        VT xi = pt.x() ;
+        VT eta = pt.y() ;
+       
+        if( basis_degree == 1 )
+        {
+            ret(0) = 1.0 - eta - xi ;
+            ret(1) = xi ;
+            ret(2) = eta ;
+        }
+        else if( basis_degree == 2 )
+        {
+            ret(0) = (-1.0 + eta + xi)*(-1.0 + 2.0* eta + 2.0* xi) ;
+            ret(1) = xi * (-1.0 + 2.0* xi) ;
+            ret(2) = eta * (-1.0 + 2.0* eta) ;
+            ret(3) = -4.0 * xi * (-1.0 + eta + xi) ;
+            ret(4) = 4.0 * eta * xi ;
+            ret(5) = -4.0 * eta * (-1.0 + eta + xi) ;
+        }
+        else if( basis_degree == 3 )
+        {
+           ret(0) = -(1.0/2.0)* (-1.0 + eta + xi) *(-2.0 + 3.0* eta + 3.0* xi)* (-1.0 +
+           3.0* eta + 3.0* xi) ;
+            ret(1) = 1.0/2.0* xi *(-2.0 + 3.0* xi)* (-1.0 + 3.0* xi) ;
+            ret(2) = 1.0/2.0* eta* (-2.0 + 3.0* eta)* (-1.0 + 3.0* eta) ;
+            ret(3) = 9.0/2.0* xi *(-1.0 + eta + xi)* (-2.0 + 3.0* eta + 3.0* xi) ;
+            ret(4) = -9.0/2.0* xi *(-1.0 + eta + xi)* (-1.0 + 3.0* xi) ;
+            ret(5) = 9.0/2.0* eta *xi* (-1.0 + 3.0* xi) ;
+            
+             ret(6) = 9.0/2.0* eta* (-1.0 + 3 * eta)* xi ;
+             ret(7) = -9.0/2.0* eta* (-1.0 + 3 *eta)* (-1.0 + eta + xi) ;
+             ret(8) = 9.0/2.0* eta* (-1.0 + eta + xi)* (-2.0 + 3.0* eta + 3.0* xi) ;
+             ret(9) = -27.0* eta *xi* (-1.0 + eta + xi) ;
+            
+        }
+        else if( basis_degree == 4 )
+        {
+            ret(0) = 1.0/3.0 * (-1.0 + eta + xi) * (-1.0 + 2.0* eta + 2.0* xi) * (-3.0 + 4.0* eta +
+            4.0* xi) * (-1.0 + 4.0* eta + 4.0* xi);
+            ret(1) = 1.0/3.0 * xi * (-1.0 + 2.0* xi) * (-3.0 + 4.0* xi)* (-1.0 + 4.0* xi) ;
+            ret(2) = 1.0/3.0 * eta * (-1.0 + 2.0* eta) * (-3.0 + 4.0* eta)* (-1.0 + 4.0* eta) ;
+            
+            ret(3) = -(16.0/3.0)* xi * (-1.0 + eta + xi) * (-1.0 + 2.0* eta + 2.0* xi) *(-3.0 +
+            4.0* eta + 4.0* xi) ;
+            ret(4) = 4.0* xi* (-1.0 + eta + xi)* (-1.0 + 4.0* xi)* (-3.0 + 4.0* eta + 4.0* xi) ;
+            ret(5) = -(16.0/3.0)* xi* (-1.0 + eta + xi)* (-1.0 + 2.0* xi)* (-1.0 + 4.0* xi) ;
+            ret(6) = (16.0/3.0)* eta* xi* (-1.0 + 2.0* xi)* (-1.0 + 4.0* xi) ;
+            ret(7) = 4.0* eta* (-1.0 + 4.0* eta) *xi* (-1.0 + 4.0* xi) ;
+            
+            ret(8) = (16.0/3.0)* eta* (-1.0 + 2.0* eta)* (-1.0 + 4.0* eta)* xi ;
+            ret(9) =-(16.0/3.0)* eta* (-1.0 + 2.0* eta)* (-1.0 + 4.0* eta)* (-1.0 + eta + xi) ;
+            ret(10) = 4.0* eta* (-1.0 + 4.0* eta)* (-1.0 + eta + xi)* (-3.0 + 4.0* eta +
+            4.0* xi) ;
+            ret(11) = -(16.0/3.0)* eta *(-1.0 + eta + xi)* (-1.0 + 2.0* eta + 2.0* xi) *(-3.0 +
+            4.0* eta + 4.0* xi) ;
+            
+            ret(12) = 32.0* eta* xi *(-1.0 + eta + xi)* (-3.0 + 4.0* eta + 4.0* xi) ;
+            ret(13) = -32.0* eta* xi *(-1.0 + eta + xi)* (-1.0 + 4.0* xi) ;
+            ret(14) = -32.0* eta* (-1.0 + 4.0* eta) *xi* (-1.0 + eta + xi) ;
+            
+            
+            
+        }
+        else
+            exit(9);
+
+        
+       
+       
+
+        return ret;
+    }
+    
+    Matrix<VT, Dynamic, 2>
+    eval_gradients(const point<VT,2>& pt)
+    {
+
+        Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size,2);
+        VT xi = pt.x() ;
+        VT eta = pt.y() ;
+       
+        if( basis_degree == 1 )
+        {
+            ret(0,0) = -1.0;
+            ret(0,1) = -1.0 ;
+            
+            ret(1,0) = 1.0 ;
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = 1.0 ;
+            
+        }
+        else if( basis_degree == 2 )
+        {
+            ret(0,0) = -3.0 + 4.0*eta + 4.0*xi ;
+            ret(0,1) = -3.0 + 4.0*eta + 4.0*xi ;
+           
+            ret(1,0) = -1.0 + 4.0*xi ;
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = -1.0 + 4.0*eta ;
+            
+            ret(3,0) = -4.0 *( -1.0 + eta + 2.0 * xi) ;
+            ret(3,1) = -4.0 * xi ;
+            
+            ret(4,0) = 4.0 * eta ;
+            ret(4,1) = 4.0 * xi ;
+            
+            ret(5,0) = -4.0 * eta ;
+            ret(5,1) = -4.0*( -1.0 + 2.0*eta + xi) ;
+        }
+        else if( basis_degree == 3 )
+        {
+            ret(0,0) = -(1.0/2.0) * ( -11.0 + 36.0*xi -9.0*( eta*( -4.0+3.0*eta ) + 6.0*eta*xi + 3.0*xi*xi ) ) ;
+            ret(0,1) =  -(1.0/2.0) * ( -11.0 + 36.0*xi -9.0*( eta*( -4.0+3.0*eta ) + 6.0*eta*xi + 3.0*xi*xi ) ) ;
+            
+            ret(1,0) = 1.0 + 9.0/2.0 * xi * (-2.0 + 3.0* xi) ;
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = 1.0 + 9.0/2.0* eta * (-2.0 + 3.0* eta) ;
+            
+            ret(3,0) = 9.0/2.0* (2.0 + 3.0 * eta * eta + xi *(-10.0 + 9.0* xi) + eta *(-5.0 + 12.0* xi)) ;
+            ret(3,1) = 9.0/2.0* xi* (-5.0 + 6.0* eta + 6.0* xi) ;
+            
+            
+            ret(4,0) = -9.0/2.0* (1.0 + eta * (-1.0 + 6.0* xi) + xi * (-8.0 + 9.0* xi)) ;
+            ret(4,1) = 9.0/2.0* xi * (1.0 - 3.0* xi) ;
+            
+            
+            ret(5,0) = 9.0/2.0* eta * (-1.0 + 6.0* xi) ;
+            ret(5,1) = 9.0/2.0* xi * (-1.0 + 3.0* xi) ;
+
+            
+            ret(6,0) = 9.0/2.0* eta* (-1.0 + 3.0 * eta);
+            ret(6,1) = 9.0/2.0* xi * (-1.0 + 6.0* eta) ;
+            
+            
+            ret(7,0) = 9.0/2.0* eta* (1.0 - 3.0 * eta);
+            ret(7,1) =  -9.0/2.0* (1.0 -xi + eta * (-8.0 + 9.0* eta + 6.0* xi)) ;
+            
+            ret(8,0) = 9.0/2.0* eta* (-5.0 + 6.0*eta + 6.0*xi) ;
+            ret(8,1) = 9.0/2.0* (2.0 + 9.0* eta * eta - 5.0* xi + 3.0* xi*xi + 2.0* eta* (-5.0 + 6.0* xi)) ;
+            
+            ret(9,0) = -27.0 * eta * (-1.0 + eta + 2.0*xi) ;
+            ret(9,1) = -27.0 *xi* (-1.0 + 2.0*eta + xi) ;
+            
+        }
+        else if( basis_degree == 4 )
+        {
+            ret(0,0) = 1.0/3.0 * (-5.0 + 8*eta + 8*xi) * (5.0 + 16* eta* eta + 4.0* xi * (-5.0 + 4*xi) + 4.0* eta * (-5.0 + 8*xi) ) ;
+            ret(0,1) = 1.0/3.0 * (-5.0 + 8*eta + 8*xi) * (5.0 + 16* eta* eta + 4.0* xi * (-5.0 + 4*xi) + 4.0* eta * (-5.0 + 8*xi) ) ;
+            
+            ret(1,0) = 1.0/3.0 * (-3.0 + 8.0* xi) * (1.0 + 4.0* xi * (-3.0 + 4.0* xi) );
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = 1.0/3.0 * (-3.0 + 8.0* eta) * (1.0 + 4.0* eta * (-3.0 + 4.0* eta) );
+            
+            ret(3,0) = -(16.0/3.0) * (-3 + 8 *pow(eta,3) +
+            6 *pow(eta,2)* (-3 + 8*xi) + eta * (13 + 72 * (-1 + xi) *xi) +
+            2 *xi* (13 + xi * (-27 + 16 *xi))) ;
+            ret(3,1) = -(16.0/3.0)* xi * (13 + 24 *pow(eta,2) + 12 *xi* (-3 + 2 *xi) +
+            12 * eta* (-3 + 4 *xi)) ;
+            
+            ret(4,0) = 4.0* (-1.0 + eta + 2*xi)* (3.0 + 32.0*(1-xi)* xi + 4.0* eta *(-1+8*xi)) ;
+            ret(4,1) = 4.0* xi* (-1.0 + 4*xi)* (-7.0 + 8.0* eta + 8.0* xi) ;
+            
+            ret(5,0) = -(16.0/3.0)*(-1 + eta + 12 *eta * xi * (-1 + 2 *xi) +
+            2 *xi* (7 + *xi* (-21 + 16 *xi))) ;
+            ret(5,1) = -(16.0/3.0)* xi* (1.0 - xi + 8 * pow(xi,2))  ;
+            
+            ret(6,0) = (16.0/3.0)* eta* (1.0 + 12.0* xi* (-1.0 + 2.0* xi)  ) ;
+            ret(6,1) = (16.0/3.0)* xi* (1.0 - xi + 8 * pow(xi,2))  ;
+            
+            ret(7,0) = 4.0* eta* (-1.0 + 4.0* eta) * (-1.0 + 8.0* xi) ;
+            ret(7,1) = 4.0* (-1.0 + 8.0* eta) *xi* (-1.0 + 4.0* xi) ;
+            
+            ret(8,0) = (16.0/3.0)* eta* (1.0 - 6.0* eta + 8.0* eta* eta) ;
+            ret(8,1) = (16.0/3.0)* (1.0 + 12.0* eta* (-1.0 + 2.0* eta))*xi ;
+            
+            ret(9,0) = - (16.0/3.0)* eta* (1.0 - 6.0* eta + 8.0* eta* eta) ;
+            ret(9,1) = -(16.0/3.0)*(-1 + xi + 2 *eta* (7 - 6 *xi + eta* (-21 + 16 *eta + 12 *xi))) ;
+            
+            ret(10,0) = 4.0* eta* (-1.0 + 4.0* eta)* (-7.0 + 8*eta + 8*xi) ;
+            ret(10,1) = 4.0 * (-1.0 + 2.0* eta + xi)* (3.0 -4* xi + 32*eta* (-1.0 + eta + xi) ) ;
+            
+            ret(11,0) = -(16.0/3.0)* eta *(13 + 24 *pow(eta,2) + 12*xi* (-3 + 2 *xi) +
+            12 *eta* (-3 + 4 *xi));
+            ret(11,1) = -(16.0/3.0)* (-3 + 2 *eta* (13 + eta* (-27 + 16 *eta)) + 13 *xi +
+            72* (-1 +eta) *eta* xi + 6* (-3 + 8 *eta) *pow(xi,2) + 8 * pow(xi,3)) ;
+            
+            
+            ret(12,0) = 32.0* eta*(3.0 + 4*eta*eta + 2*xi* (-7.0 + 6.0* xi) + eta*(-7.0 + 16* xi)) ;
+            ret(12,1) = 32 *xi* (3 + 2* eta* (-7 + 6* eta) - 7 *xi + 16 *eta* xi + 4 *pow(xi,2) );
+            
+            ret(13,0) = -32.0* eta* (1 + 2 *xi* (-5 + 6 *xi) +eta* (-1 + 8*xi)) ;
+            ret(13,1) = -32.0* xi *(-1 + 2 *eta + xi)* (-1 + 4 *xi);
+            
+            ret(14,0) = -32.0* eta* (-1.0 + 4.0* eta) * (-1.0 + eta + 2*xi) ;
+            ret(14,1) = -32.0* eta* (1 -xi + 2 *eta* (-5 + 6*eta + 4*xi)) ;
+            
+            
+            
+        }
+        else
+            exit(9);
+
+        
+       
+       
+
+        return ret;
+    }
+   
+
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return (degree+1.0)*(degree+2.0)/2.0;
+    }
+};
+
+
+template<typename VT>
+class cell_basis_Lagrange_1d_reference_new
+{
+    size_t              basis_degree, basis_size;
+    std::vector<point<VT,1> > ref_nodes ;
+    
+   
+public:
+   
+    
+    cell_basis_Lagrange_1d_reference_new(size_t degree)
+    {
+           basis_degree    = degree;
+           basis_size      = (basis_degree+1);
+           ref_nodes = reference_nodes_ordered_01<VT>(degree) ; //[0,1]
+
+    }
+
+    
 
     Matrix<VT, Dynamic, 1>
     eval_basis_1d(const VT& pt)
@@ -12617,53 +12990,7 @@ public:
         return ret;
     }
 
-    Matrix<VT, 2, 1>
-    eval_basis_curv(const VT& pt , int r = 0 )
-    {
-        Matrix<VT, 2, 1> ret = Matrix<VT, 2, 1>::Zero(2, 1);
-        auto basis = eval_basis_1d(pt) ;
-        
-        auto size_pts = physical_pts.size() ;
-        auto size_cls = size_pts/basis_size ;
-        
-        
-        if (size_cls == 1){
-    
-            ret(0) += basis(0)*physical_pts[0].x();
-            ret(0) += basis(1)*physical_pts[basis_degree].x();
-            ret(1) += basis(0)*physical_pts[0].y();
-            ret(1) += basis(1)*physical_pts[basis_degree].y();
-            for(size_t i = 2 ; i < basis_size ; i++)
-            {
-                ret(0) += basis(i)*physical_pts[i-1].x();
-                ret(1) += basis(i)*physical_pts[i-1].y();
-            }
-            return ret;
-        }
-        else
-        {
-            ret(0) += basis(0)*physical_pts[0+ r * basis_size].x();
-            ret(0) += basis(1)*physical_pts[basis_degree+ r * basis_size].x();
-            ret(1) += basis(0)*physical_pts[0+ r * basis_size].y();
-            ret(1) += basis(1)*physical_pts[basis_degree+ r * basis_size].y();
-                       
-            for(size_t i = 2 ; i < basis_size ; i++)
-            {
-                ret(0) += basis(i)*physical_pts[i -1 + r * basis_size].x();
-                ret(1) += basis(i)*physical_pts[i -1 + r * basis_size].y();
-            }
-            
-        return ret;
-        }
-
-        
-        
-        //ret.col(0) = eval_basis_1d(pt).transpose()*( physical_pts.x()  ) ;
-        //ret.col(1) = eval_basis_1d(pt)*( physical_pts.y()  ) ;
-        //return ret ;
-
-    }
-
+   
 
     // ANCORA DA DEFINIRE
     Matrix<VT, Dynamic, 1>
@@ -12826,7 +13153,320 @@ public:
     }
     
 
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return (degree+1);
+    }
+};
+
+
+template<typename Mesh, typename VT>
+class cell_basis_Lagrange_1d_reference
+{
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+    typedef typename Mesh::cell_type       cell_type;
+
+    //point_type          cell_bar;
+    //coordinate_type     cell_h;
+    size_t              basis_degree, basis_size;
+    coordinate_type min_x , max_x , min_y , max_y ;
+    coordinate_type scaling_x ;
+    std::vector<point<VT,2>> physical_pts ;
+    std::vector<point<VT,1> > ref_nodes ;
+    cell_type m_cl ;
+    Mesh msh_orig ;
+    Mesh msh_agglo ;
+   
+public:
+    cell_basis_Lagrange_1d_reference(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree)
+       {
+           //cell_bar        = barycenter(msh, cl);
+           //cell_h          = diameter(msh, cl);
+           basis_degree    = degree;
+           basis_size      = (basis_degree+1);
+           
+           ref_nodes = reference_nodes_ordered_01<VT>(degree) ; //[0,1]
+           //ref_nodes = reference_nodes_ordered<VT>(degree) ; //[-1,1]
+           physical_pts = cl.user_data.interface ;
+           
+           //min_x = 0.0 ; // points(msh,cl)[0].x();
+           //max_x = 1.0 ; //points(msh,cl)[1].x();
+           //scaling_x = 1.0/( pow( (max_x - min_x), basis_degree) );
+            
+           m_cl = cl ;
+
+    }
     
+    cell_basis_Lagrange_1d_reference(size_t degree)
+    {
+           //cell_bar        = barycenter(msh, cl);
+           //cell_h          = diameter(msh, cl);
+           basis_degree    = degree;
+           basis_size      = (basis_degree+1);
+           
+           ref_nodes = reference_nodes_ordered_01<VT>(degree) ; //[0,1]
+           //ref_nodes = reference_nodes_ordered<VT>(degree) ; //[-1,1]
+           //physical_pts = cl.user_data.interface ;
+           
+           //min_x = 0.0 ; // points(msh,cl)[0].x();
+           //max_x = 1.0 ; //points(msh,cl)[1].x();
+           //scaling_x = 1.0/( pow( (max_x - min_x), basis_degree) );
+            
+           //m_cl = cl ;
+
+    }
+
+    
+
+    Matrix<VT, Dynamic, 1>
+    eval_basis_1d(const VT& pt)
+    {
+
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
+        
+        
+        for(size_t k = 0 ; k < basis_size ; k++)
+        {
+            VT bk = 1;
+            for ( size_t j = 0 ; j < basis_size ; j++ ){
+                if(j!=k){
+                    bk *= ( ( pt - ref_nodes.at(j).x() )/ ( ref_nodes.at(k).x() - ref_nodes.at(j).x() ) );
+                    //std::cout<<"ref_nodes.at(j).x() = " << ref_nodes.at(j).x() << " , ref_nodes.at(k).x() = "<<ref_nodes.at(k).x()<<std::endl;
+                }
+            }
+
+            ret(k) = bk;
+           
+        }
+        
+       
+       
+
+        return ret;
+    }
+
+    /*
+    Matrix<VT, 2, 1>
+    eval_basis_curv(const VT& pt , int r = 0 )
+    {
+        Matrix<VT, 2, 1> ret = Matrix<VT, 2, 1>::Zero(2, 1);
+        auto basis = eval_basis_1d(pt) ;
+        
+        auto size_pts = physical_pts.size() ;
+        auto size_cls = size_pts/basis_size ;
+        
+        
+        if (size_cls == 1){
+    
+            ret(0) += basis(0)*physical_pts[0].x();
+            ret(0) += basis(1)*physical_pts[basis_degree].x();
+            ret(1) += basis(0)*physical_pts[0].y();
+            ret(1) += basis(1)*physical_pts[basis_degree].y();
+            for(size_t i = 2 ; i < basis_size ; i++)
+            {
+                ret(0) += basis(i)*physical_pts[i-1].x();
+                ret(1) += basis(i)*physical_pts[i-1].y();
+            }
+            return ret;
+        }
+        else
+        {
+            ret(0) += basis(0)*physical_pts[0+ r * basis_size].x();
+            ret(0) += basis(1)*physical_pts[basis_degree+ r * basis_size].x();
+            ret(1) += basis(0)*physical_pts[0+ r * basis_size].y();
+            ret(1) += basis(1)*physical_pts[basis_degree+ r * basis_size].y();
+                       
+            for(size_t i = 2 ; i < basis_size ; i++)
+            {
+                ret(0) += basis(i)*physical_pts[i -1 + r * basis_size].x();
+                ret(1) += basis(i)*physical_pts[i -1 + r * basis_size].y();
+            }
+            
+        return ret;
+        }
+
+        
+        
+        //ret.col(0) = eval_basis_1d(pt).transpose()*( physical_pts.x()  ) ;
+        //ret.col(1) = eval_basis_1d(pt)*( physical_pts.y()  ) ;
+        //return ret ;
+
+    }
+    */
+
+    // ANCORA DA DEFINIRE
+    Matrix<VT, Dynamic, 1>
+    eval_gradients_1d(const VT& pt)
+    {
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size, 1);
+        
+        
+        for (size_t k = 0 ; k < basis_size ; k++ )
+        {
+            VT  bk_der = 1.0 ;
+            VT sumx = 0.0;
+            for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+            {
+                VT sumxx = 1.0 ;
+
+                if (tmpx!=k) {
+
+                    
+                    bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+                    for (size_t jx = 0 ; jx < basis_size; jx++)
+                    {
+                        if (jx!=tmpx && jx!=k)
+                        {
+                            sumxx *= ( pt-ref_nodes.at(jx).x() );
+                        }
+                    }
+                    sumx += sumxx;
+
+                }
+            }
+          
+            ret(k) = bk_der*sumx;
+        }
+        
+       
+
+        return ret;
+
+
+    }
+    
+    
+    
+    Matrix<VT, Dynamic, 1>
+    eval_double_derivative_1d(const VT& pt)
+    {
+
+         Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size, 1);
+            
+        if( basis_degree == 0)
+            exit(9) ;
+        if( basis_degree == 1)
+            return ret ;
+        if( basis_degree == 2)
+        {
+            for (size_t k = 0 ; k < basis_size ; k++ )
+            {
+                VT  bk_der = 1.0 ;
+                for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+                {
+                    if (tmpx!=k)
+                        bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+                    
+                }
+                     
+                ret(k) = bk_der*2.0;
+            }
+        
+            return ret ;
+        }
+        if( basis_degree == 3)
+        {
+            for (size_t k = 0 ; k < basis_size ; k++ )
+            {
+                VT  bk_der = 1.0 ;
+                VT b_tot = 0.0;
+                for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+                {
+                    VT b = 1.0 ;
+
+                    if (tmpx!=k)
+                    {
+
+                                
+                        bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+                        size_t jx= tmpx ;
+                        bool inserted = false ;
+                        while (!inserted)
+                        {
+                            if (jx!=k ){
+                                b *= ( pt-ref_nodes.at(jx).x() );
+                                inserted = true ;
+                            }
+                             
+                            jx++;
+                             
+                        }
+                        b_tot += 2.0*b;
+            
+                    }
+                 
+                }
+            
+                ret(k) = bk_der*b_tot;
+                 
+            }
+            return ret;
+        }
+          
+        
+        if(basis_degree == 4)
+        { // In the generic case it doesn't work since amount is fine for just (x-xj)*(x-xl), with l>j, but iif I have more than two terms it need somehting more general
+        
+        for (size_t k = 0 ; k < basis_size ; k++ ) // basis k
+        {
+            VT  bk_der = 1.0 ;
+            VT b_tot = 0.0;
+            size_t pos = 0 ; // iter
+            for( size_t amount = 0 ; amount < basis_degree -1 ; amount++)
+            {
+                if(pos == k)
+                    pos++;
+                
+                 size_t jx= pos ;
+                // starting from amount k = 0  num counts how many terms have (x-x1)*(), how many(x-x2)*() etc --> pos defines the term
+                // For k generic, it always starts from pos=0(at least that k=0) and just skip pos=k
+                for( size_t num = basis_degree - 1 -amount ; num >0 ; num-- )
+                {
+                    VT b = ( pt-ref_nodes.at(pos).x() );
+                    size_t m = 0 ;
+                   
+                    while ( m !=  basis_degree - 3)
+                    {
+                        if (jx!=k && jx!=pos){
+                            b *= ( pt-ref_nodes.at(jx).x() );
+                            m++;
+                        }
+                
+                        jx++;
+                    }
+                    b_tot += 2.0*b;
+                }
+                pos++;
+            }
+            
+            for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+            {
+                if (tmpx!=k)
+                    bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+            }
+                
+           
+            ret(k) = bk_der*b_tot;
+            
+        }
+     
+        return ret;
+        }
+    }
+    
+
+    /*
        Matrix<VT, 2, 1>
     eval_gradients_curv(const VT& pt , int r = 0 )
     {
@@ -12873,8 +13513,8 @@ public:
         //return ret ;
 
     }
-
-
+     */
+    
     size_t size() const
     {
         return basis_size;
@@ -19277,6 +19917,15 @@ struct Interface_parametrisation
        }
     }
     
+    
+    T
+    jacobian( const T& pt, const Mesh & msh,  cell_type& cl, int r = 0 ) const
+    {
+        return (this->derivative(pt, msh, cl,r)).norm();
+    }
+    
+    
+    
     Matrix<T, 2, 1>
     tangent( const T& pt, const Mesh & msh,  cell_type& cl, int r = 0 ) const
     {
@@ -19433,9 +20082,618 @@ struct Interface_parametrisation
 
     }
 };
+
+
+
+
+struct Interface_parametrisation_mesh1d
+{
+    
+    size_t basis_degree , basis_size;
+    
+   
+    
+    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(basis_degree+1) {}
+    
+    Interface_parametrisation_mesh1d(){}
+
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_basis_1d(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_basis_1d(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_gradients_1d(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_gradients_1d(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        return (this->derivative(pt,physical_pts,basis_degree)).norm();
+    }
+    
+    template<typename T>
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        return (this->derivative(pt,physical_pts)).norm();
+    }
+    
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        auto der = this->derivative(pt,physical_pts,basis_degree) ;
+        return der/der.norm();
+       
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        auto der = this->derivative(pt,physical_pts) ;
+        return der/der.norm();
+       
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, physical_pts , basis_degree)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, physical_pts)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+    template<typename T>
+    T
+    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
+        auto curv_der_norm = curv_der.norm() ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            curv_double_der(0) += basis(i)*physical_pts[i].x();
+            curv_double_der(1) += basis(i)*physical_pts[i].y();
+        }
+    
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        return ret.norm()/curv_der_norm ;
+           
+    }
+    
+    template<typename T>
+    T
+    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
+        auto curv_der_norm = curv_der.norm() ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            curv_double_der(0) += basis(i)*physical_pts[i].x();
+            curv_double_der(1) += basis(i)*physical_pts[i].y();
+        }
+    
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        return ret.norm()/curv_der_norm ;
+           
+    }
+    
+    
+};
+
+struct triangular_parametrisation_curve
+{
+    
+    size_t basis_degree , basis_size;
+    
+   
+    
+    triangular_parametrisation_curve( size_t degree ) : basis_degree(degree), basis_size((basis_degree+1.0)*(basis_degree+2.0)/2.0) {}
+    
+    triangular_parametrisation_curve(){}
+
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = (basis_degree+1.0)*(basis_degree+2.0)/2.0 ;
+        cell_basis_triangle_Lagrange<T> cb(basis_degree);
+        auto basis = cb.eval_basis(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_triangle_Lagrange<T> cb(basis_degree);
+        auto basis = cb.eval_basis(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    Matrix<T, 2, 2>
+    gradient( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 2> ret = Matrix<T, 2, 2>::Zero(2, 2);
+        size_t basis_size = (basis_degree+1.0)*(basis_degree+2.0)/2.0 ;
+        cell_basis_triangle_Lagrange <T> cb(basis_degree);
+        auto basis = cb.eval_gradients(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0,0) += basis(i,0)*physical_pts[i].x();
+            ret(0,1) += basis(i,1)*physical_pts[i].x();
+            ret(1,0) += basis(i,0)*physical_pts[i].y();
+            ret(1,1) += basis(i,1)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 2>
+    gradient( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 2> ret = Matrix<T, 2, 2>::Zero(2, 2);
+        cell_basis_triangle_Lagrange <T> cb(basis_degree);
+        auto basis = cb.eval_gradients(pt) ;
+            
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0,0) += basis(i,0)*physical_pts[i].x();
+            ret(0,1) += basis(i,1)*physical_pts[i].x();
+            ret(1,0) += basis(i,0)*physical_pts[i].y();
+            ret(1,1) += basis(i,1)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        auto grad = this->gradient(pt,physical_pts,basis_degree) ;
+        return grad(0,0)*grad(1,1) - grad(0,1)*grad(1,0) ;
+        //return (this->gradient(pt,physical_pts,basis_degree)).norm();
+    }
+    
+    template<typename T>
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        auto grad = this->gradient(pt,physical_pts,basis_degree) ;
+        return grad(0,0)*grad(1,1) - grad(0,1)*grad(1,0) ;
+        //return (this->gradient(pt,physical_pts)).norm();
+    }
     
     
     
+    
+    
+};
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
+integrate_interface_new(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where)
+{
+    assert( is_cut(msh, cl) );
+    
+    std::vector< std::pair<point<T,2>, T> > ret;
+    
+    
+    auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
+    
+    auto integration_msh = cl.user_data.integration_msh ;
+    size_t degree_int = integration_msh.degree ;
+    auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
+    
+    for (size_t i = 0; i < integration_msh.cells.size(); i++)
+    {
+        auto pts = points(integration_msh,integration_msh.cells[i]);
+        
+        for (auto itor = qps.begin(); itor != qps.end(); itor++)
+        {
+            auto qp = *itor;
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto jacobian = para_curve.jacobian( t , pts , degree ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+            // change of variable of g-l quadrature' nodes to [0,1]
+            ret.push_back( std::make_pair(t, w) );
+        }
+    }
+    
+    return ret;
+}
+
+
+
+template<typename T, size_t ET>
+std::vector< typename cuthho_mesh<T, ET>::point_type >
+collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
+                             const typename cuthho_mesh<T, ET>::cell_type& cl,
+                             const element_location& where)
+{
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+    typedef typename cuthho_mesh<T, ET>::node_type      node_type;
+
+    assert( is_cut(msh, cl) );
+    auto ns = nodes(msh, cl);
+
+    std::vector< point_type > ret;
+
+    auto node2pt = [&](const node_type& n) -> auto {
+        return msh.points.at(n.ptid);
+    };
+
+    auto insert_interface = [&](void) -> void {
+        if (where == element_location::IN_NEGATIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.begin(), cl.user_data.integration_msh.interface_vertices.end());
+        else if (where == element_location::IN_POSITIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.rbegin(), cl.user_data.integration_msh.interface_vertices.rend());
+        else
+            throw std::logic_error("If you've got here there is some issue...");
+    };
+
+    bool case1 = location(msh, ns.front()) == where && location(msh, ns.back()) != where;
+    bool case2 = location(msh, ns.front()) != where && location(msh, ns.back()) == where;
+    bool case3 = location(msh, ns.front()) != where && location(msh, ns.back()) != where;
+    //bool case4 = location(msh, ns.front()) == where && location(msh, ns.back()) == where;
+
+    if ( case1 || case2 || case3 )
+    {
+        for (size_t i = 0; i < ns.size(); i++)
+            if ( location(msh, ns[i]) == where )
+                ret.push_back( node2pt(ns[i]) );
+
+        insert_interface();
+    }
+    else // case4, the only possible remaining
+    {
+        size_t i = 0;
+        while ( i < ns.size() && location(msh, ns.at(i)) == where )
+            ret.push_back( node2pt(ns.at(i++)) );
+        insert_interface();
+        while ( i < ns.size() && location(msh, ns.at(i)) != where )
+            i++;
+        while ( i < ns.size() && location(msh, ns.at(i)) == where )
+            ret.push_back( node2pt(ns.at(i++)) );
+    }
+
+    return ret;
+}
+    
+template<typename T>
+struct temp_tri_curve
+{
+    //std::array< point<T,2>, 3 > pts;
+    std::vector< point<T,2> > pts;
+    size_t degree ;
+    size_t size;
+    
+    temp_tri_curve(size_t degree_int):degree(degree_int),size((degree_int+1)*(degree_int+2)/2.0){
+        pts.resize( size ) ;
+    }
+
+    /*
+    T area() const {
+        auto v1 = pts[1] - pts[0];
+        auto v2 = pts[2] - pts[0];
+
+        return ( v1.x()*v2.y() - v2.x()*v1.y() ) / 2.0;
+        // can be negative
+    }
+    */
+};
+
+
+template<typename T, size_t ET>
+std::vector<temp_tri_curve<T>>
+triangulate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+            element_location where)
+{
+    assert( is_cut(msh, cl) );
+
+    auto integration_msh = cl.user_data.integration_msh ;
+    size_t degree_int = integration_msh.degree ;
+    auto cl_vertices = integration_msh.interface_vertices ;
+    
+    
+    T degree_int_num = degree_int*1.0;
+    
+    
+    std::vector<temp_tri_curve<T>> tris_high_order ;
+    
+    auto tp = collect_triangulation_points_curve(msh, cl, where);
+    // auto bar = barycenter(tp);
+    auto bar = tesselation_center(msh, cl, where);
+
+    if( degree_int == 1)
+    {
+        for (size_t i = 0; i < tp.size(); i++)
+        {
+            temp_tri_curve<T> t(degree_int);
+            t.pts[0] = bar;
+            t.pts[1] = tp[i];
+            t.pts[2] = tp[(i+1)%tp.size()];
+            tris_high_order.push_back(t);
+        }
+        return tris_high_order;
+    }
+    else
+    {
+            size_t counter_vert = 0;
+            size_t pos = 0;
+            for (size_t i = 0; i < tp.size(); i++)
+            {
+                temp_tri_curve<T> t(degree_int);
+                t.pts[pos++] = bar;
+                auto tp1 = tp[i];
+                auto tp2 = tp[(i+1)%tp.size()];
+                t.pts[pos++] = tp1;
+                t.pts[pos++] = tp2;
+            
+                for(size_t i = 2 ; i < degree_int + 1 ; i++ )
+                {
+               
+                    t.pts[pos++] = bar + (i-1.0)/(degree_int_num)*(tp1-bar); // high order point
+                    if( counter_vert < cl_vertices.size() &&  tp1 == cl_vertices[counter_vert] && tp2 == cl_vertices[(counter_vert+1)%cl_vertices.size()] )
+                    {
+                    // If I'm in the curvilinear side
+                        auto pts =  points( integration_msh,integration_msh.cells[counter_vert] ) ;
+                        t.pts[pos++] = pts[i]; // high order point
+                    
+                    }
+                    else
+                        t.pts[pos++] = tp1 + (i-1.0)/(degree_int_num)*(tp2-tp1); // high order point
+               
+                    t.pts[pos++] = tp2 + (i-1.0)/(degree_int_num)*(bar-tp2); // high order point
+                    
+                
+                }
+                
+                tris_high_order.push_back(t);
+            }
+
+        return tris_high_order;
+    }
+}
+
+template<typename T, size_t ET>
+std::vector<std::pair<point<T,2>, T>>
+triangle_quadrature_curve(const temp_tri_curve<T>& tri,const typename cuthho_mesh<T, ET>::cell_type& cl, size_t deg)
+{
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+    if (deg == 0)
+        deg = 1;
+
+    if (deg > 8)
+        throw std::invalid_argument("Quadrature order too high");
+    
+    size_t degree_int = cl.user_data.integration_msh.degree;
+    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
+    triangular_parametrisation_curve curved_tri_para( degree_int );
+    
+
+    using namespace dunavant_quadratures;
+
+    std::vector<std::pair<point<T,2>, T>> ret;
+
+    ret.reserve( rules[deg].num_points );
+
+    for (size_t i = 0; i < rules[deg].num_points; i++)
+    {
+
+        point_type p = point_type(rules[deg].data[i][1] , rules[deg].data[i][2] );
+        point<T,2> qp = p;
+        // QUESTION: these points are good also for curved triangles??
+        
+
+        T qw          = 0.5*curved_tri_para.jacobian( qp, tri ) * rules[deg].data[i][3];
+        // 0.5 = Area of reference triangle
+
+        ret.push_back( std::make_pair(qp, qw) );
+    }
+
+    return ret;
+}
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
+make_integrate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where)
+{
+    std::vector< std::pair<point<T,2>, T> > ret;
+
+    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
+        return ret;
+
+    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+        return integrate(msh, cl, degree);
+    
+  
+    auto tris = triangulate_curve(msh, cl, where);
+    size_t degree_int = cl.user_data.integration_msh.degree;
+    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
+   // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
+    for (auto& tri : tris)
+    {
+        // fatto io da qua
+        /*
+        auto v0 = tri.pts[1] - tri.pts[0];
+        auto v1 = tri.pts[2] - tri.pts[0];
+        auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
+        auto counter = offset(msh,cl);
+        if(area < 0){
+               for( auto& r : cl.user_data.interface ){
+                  std::cout<<"In cella num "<<counter<<std::endl;
+                   std::cout<<"Point r: x is "<<r.x()<<", y is "<<r.y()<<std::endl;
+               }
+           
+           }
+         */
+        // a qua
+    
+        auto qpts = triangle_quadrature_curve(tri,cl, degree);
+        ret.insert(ret.end(), qpts.begin(), qpts.end());
+    }
+    
+    return ret;
+}
+
+
+template<typename Mesh>
+void
+set_integration_mesh(const Mesh& msh, size_t degree)
+{
+    for(auto& cl : msh.cells)
+    {
+        if( location(msh, cl) == element_location::ON_INTERFACE )
+            cl.user_data.integration_msh.set_cell_new(cl,degree);
+
+    }
+
+}
 
 
 template< typename Mesh , typename Fonction , typename FiniteSpace , typename T = typename Mesh::coordinate_type  >
@@ -55934,7 +57192,7 @@ int main(int argc, char **argv)
 // Interface Stokes Problem: INLET DIRICHLET BDRY CONDITIONS
 // Generic Interface: Gamma = 0 or 1/2 or generic ( SEE MAX-MAX mapping)
 // LAST UPDATE 03/11/2020 -> (GRADIENT AND NORMAL CONTINUOUS + DIVERGENCE CONT/DISC )
-#if 1 // CASE 1
+#if 0 // CASE 1
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -56190,7 +57448,7 @@ int main(int argc, char **argv)
     typedef Level_set_berstein< Mesh , Fonction , FiniteSpace , T > Level_Set;
     T degree_curve = 3 ;
     auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
-    degree_parametrisaiton_definition(msh,degree_curve);
+   
     
     //auto level_set_function = Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
     //auto level_set_function = Level_set_berstein_high_order_interpolation_grad_cont< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
@@ -56289,7 +57547,7 @@ int main(int argc, char **argv)
                 cl.user_data.integration_msh = msh_int ;
             }
             else
-                cl.user_data.integration_msh.set_cell_new2(cl,degree_curve);
+                cl.user_data.integration_msh.set_cell_new(cl,degree_curve);
             
             for(auto& cl_i : cl.user_data.integration_msh.cells)
             {
@@ -61677,6 +62935,1831 @@ int main(int argc, char **argv)
     } // End of the temporal loop
 
     plotting_in_time( time_vec , area_time , l1_err_u_n_time , linf_err_u_n_time , max_val_u_n_time , l1_err_curvature_time , linf_err_curvature_time , dt_M );
+    std::cout<<"FINAL TIME IS t = "<<tot_time<<std::endl;
+
+    tc_tot.toc();
+    std::cout<<"Simulation time 0 t = "<<tc_tot <<std::endl;
+
+    return 0;
+}
+#endif
+
+
+
+
+// Interface Stokes Problem: INLET DIRICHLET BDRY CONDITIONS
+// Generic Interface: Gamma = 0 or 1/2 or generic ( SEE MAX-MAX mapping)
+// LAST UPDATE 03/11/2020 -> (GRADIENT AND NORMAL CONTINUOUS + DIVERGENCE CONT/DISC )
+
+// NEW CURVE INTEGRATION : CHECKING
+#if 1
+int main(int argc, char **argv)
+{
+    using RealType = double;
+
+    size_t degree           = 0;
+    size_t int_refsteps     = 4;
+    size_t degree_FEM       = 0;
+
+    bool dump_debug         = false;
+    bool solve_interface    = false;
+    bool solve_fictdom      = false;
+    bool agglomeration      = false;
+
+    bool high_order = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool cut_off_active = false ; // IF FALSE IS SMOOTH, IF TRUE  CUT_OFF
+
+    mesh_init_params<RealType> mip;
+    mip.Nx = 5;
+    mip.Ny = 5;
+    size_t T_N = 0;
+    int ch;
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:ifDAdhc")) != -1 )
+    {
+        switch(ch)
+        {
+            case 'k':
+                degree = atoi(optarg);
+                break;
+
+            case 'q':
+                degree_FEM = atoi(optarg);
+                break;
+
+            case 'M':
+                mip.Nx = atoi(optarg);
+                break;
+
+            case 'N':
+                mip.Ny = atoi(optarg);
+                break;
+
+            case 'r':
+                int_refsteps = atoi(optarg);
+                break;
+
+            case 'T':
+                T_N = atoi(optarg);
+                break;
+
+            case 'i':
+                solve_interface = true;
+                break;
+
+            case 'f':
+                solve_fictdom = true;
+                break;
+
+            case 'D':
+                agglomeration = false;
+                break;
+
+            case 'A':
+                agglomeration = true;
+                break;
+
+            case 'd':
+                dump_debug = true;
+                break;
+
+            case 'h':
+                high_order = true;
+            break;
+
+            case 'c':
+                cut_off_active = true;
+            break;
+
+
+            case '?':
+            default:
+                std::cout << "wrong arguments" << std::endl;
+                exit(1);
+        }
+    }
+
+    argc -= optind;
+    argv += optind;
+
+
+
+    timecounter tc;
+
+    timecounter tc_tot;
+    tc_tot.tic();
+
+
+    /************** BUILD MESH **************/
+
+    cuthho_poly_mesh<RealType> msh(mip);
+    typedef cuthho_poly_mesh<RealType> Mesh;
+    
+    typedef typename Mesh::point_type point_type;
+    offset_definition(msh);
+    std::cout<<"Mesh size = "<<mip.Nx<<"x"<<mip.Ny<<std::endl;
+    std::cout<<"Number of refine interface points: r = "<<int_refsteps<<std::endl;
+
+    /************** FINITE ELEMENT INITIALIZATION **************/
+    auto fe_data = Finite_Element<RealType,Mesh>( msh , degree_FEM , mip ) ;
+    typedef Finite_Element<RealType,Mesh> FiniteSpace;
+    std::cout<<"Level Set (finite element approximation): degree FEM = "<<degree_FEM<<std::endl;
+
+    /*
+    auto cl = msh.cells[38];
+    cell_basis_Lagrange_1d_reference<Mesh,RealType> cb_l(msh, cl, 3);
+    RealType pt0 = 0.5;
+    RealType pt1 = 0.0;
+    RealType pt2 = 1.0;
+    auto val0l = cb_l.eval_basis_1d(pt0) ;
+    //auto val_physic0l = cb_l.eval_basis_curv(pt0);
+    std::cout<<"val0l = "<<val0l<<std::endl;
+    //std::cout<<"val_physic0l = "<<val_physic0l<<std::endl;
+    
+    auto val1l = cb_l.eval_basis_1d(pt1) ;
+    //auto val_physic1l = cb_l.eval_basis_curv(pt1);
+    std::cout<<"val1l = "<<val1l<<std::endl;
+    //std::cout<<"val_physic1l = "<<val_physic1l<<std::endl;
+    
+    auto val2l = cb_l.eval_basis_1d(pt2) ;
+    //auto val_physic2l = cb_l.eval_basis_curv(pt2);
+    std::cout<<"val2l = "<<val2l<<std::endl;
+    //std::cout<<"val_physic2l = "<<val_physic2l<<std::endl;
+              
+    auto val0ldd = cb_l.eval_double_derivative_1d(pt0) ;
+    std::cout<<"val0ldd = "<<val0ldd<<std::endl;
+    auto val1ldd = cb_l.eval_double_derivative_1d(pt1) ;
+    std::cout<<"val1ldd = "<<val1ldd<<std::endl;
+    auto val2ldd = cb_l.eval_double_derivative_1d(pt2) ;
+    std::cout<<"val2ldd = "<<val2ldd<<std::endl;
+              
+      
+              
+    auto derval0l = cb_l.eval_gradients_1d(pt0) ;
+    std::cout<<"derval0l = "<<derval0l<<std::endl;
+    //auto val_physicder0l = cb_l.eval_gradients_curv(0.0);
+    //          std::cout<<"val_physicder0l = "<<val_physicder0l<<std::endl;
+    auto derval1l = cb_l.eval_gradients_1d(pt1) ;
+    std::cout<<"derval1l = "<<derval1l<<std::endl;
+    //          auto val_physicder1l = cb_l.eval_gradients_curv(1.0);
+    //          std::cout<<"val_physicder1l = "<<val_physicder1l<<std::endl;
+    auto derval2l = cb_l.eval_gradients_1d(pt2) ;
+    std::cout<<"derval2l = "<<derval2l<<std::endl;
+      //        auto val_physicder2l = cb_l.eval_gradients_curv(-1.0);
+     //         std::cout<<"val_physicder2l = "<<val_physicder2l<<std::endl;
+   
+    */
+    
+    /**************************************TRANSPORT PROBLEM METHOD *****************************************/
+    auto method_transport_pb = Transport_problem_method<Mesh, FiniteSpace>(fe_data, msh) ;
+    //typedef  Transport_problem_method<Mesh, FiniteSpace> Method_Transport;
+
+    size_t  degree_gradient = degree_FEM - 1 ;
+    auto fe_data_gradient = Finite_Element<RealType,Mesh>( msh , degree_gradient , mip ) ;
+    auto method_transport_pb_grad = Transport_problem_method<Mesh, FiniteSpace>(fe_data_gradient, msh) ;
+
+    size_t  degree_div = degree_FEM - 1 ;
+    std::cout<<"grad deg = "<< degree_gradient <<" , div deg = " << degree_div <<std::endl;
+    auto fe_data_div = Finite_Element<RealType,Mesh>( msh , degree_div , mip ) ;
+    auto method_transport_pb_div = Transport_problem_method<Mesh, FiniteSpace>(fe_data_div, msh) ;
+
+
+    /************** ANALYTIC LEVEL SET FUNCTION  **************/
+    typedef RealType T;
+
+    bool circle = true , ellipse = false ;
+    bool flower = false ;
+    RealType radius_a , radius_b , radius ;
+    RealType x_centre = 0.5;
+    RealType y_centre = 0.5;
+    //T h = std::max( fe_data.hx , fe_data.hy) ;
+    if(circle)
+    {
+        radius = 1.0/3.0; // I ALWAYS USED 1.0/9.0
+    }
+
+    if(ellipse)
+    {
+        //radius_a = 1.0/6.0;
+        //radius_b = 1.0/12.0;
+        T eps_circ = 1e-4;
+        radius_a = 1.0/3.0-eps_circ;
+        radius_b = 1.0/3.0+eps_circ;
+        std::cout << bold << yellow << "Initial Analytic Area of the ELLIPSE: "<< M_PI*radius_a*radius_b << std::endl;
+        radius = sqrt( radius_a * radius_b ) ;
+        std::cout << bold << yellow << "Final radius expected of the circle : " << radius <<reset<<std::endl;
+    }
+
+
+
+
+    ///---------->!!!!!!!!  THIS DATA BELOW HAS TO BE UPLOAD DEPENDING ON THE PROBLEM:
+
+    // ------------------------------------ CIRCLE LEVEL SET ------------------------------------
+    
+    std::cout<<"Initial interface: CIRCLE"<<std::endl;
+    auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
+    typedef  circle_level_set<T> Fonction;
+    
+    // ------------------------------------ FLOWER LEVEL SET ------------------------------------
+    /*
+    radius = 0.31 ;
+    std::cout<<"Initial interface: FLOWER"<<std::endl;
+    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, 0.04); //0.11
+    typedef  flower_level_set<T> Fonction;
+    flower = true ;
+     
+    // ------------------------------------ ELLIPTIC LEVEL SET -----------------------------------
+    //std::cout<<"Initial interface: ELLIPSE"<<std::endl;
+    //auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
+    //typedef  elliptic_level_set<T> Fonction;
+
+    // ------------> OLD STUFF IMPLEMENTATION
+    //auto level_set_function_anal = elliptic_distance_ls<RealType>( radius_a, radius_b, x_centre, y_centre , h);
+    //typedef  elliptic_distance_ls<T> Fonction;
+    //auto level_set_function_anal = circle_distance_ls<RealType>(radius, x_centre, y_centre ,2*h );
+    //typedef  circle_distance_ls<T> Fonction;
+     
+      */
+
+
+    /**************  VELOCITY FIELD  INITIALISATION  **************/
+
+
+    size_t  degree_velocity = degree_FEM ; // std::max(degree + 1 , degree_FEM) ;
+    auto fe_data_Lagrange = Finite_Element<RealType,Mesh>( msh , degree_velocity , mip ) ;
+
+    std::cout<<"Velocity field: high order Lagrange basis: degree = "<<degree_velocity<<std::endl;
+    auto u_projected = velocity_high_order <Mesh,FiniteSpace,T> (fe_data_Lagrange , msh );
+
+
+
+    /************** LEVEL SET FUNCTION DISCRETISATION **************/
+
+
+    if(high_order)
+        std::cout<<"--------------------> USING phi^H - HIGH ORDER TRANSPORT PB "<<std::endl;
+    else
+        std::cout<<"--------------------> USING phi^L - LOW ORDER TRANSPORT PB "<<std::endl;
+
+    std::cout<<"Level set: high order Berstein x interpolated."<<std::endl;
+    auto level_set_function = Level_set_berstein< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh , fe_data_gradient , fe_data_div );
+    
+    
+    typedef Level_set_berstein< Mesh , Fonction , FiniteSpace , T > Level_Set;
+    T degree_curve = 3 ;
+    auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
+   
+    
+    //auto level_set_function = Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
+    //auto level_set_function = Level_set_berstein_high_order_interpolation_grad_cont< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
+   //auto level_set_function = Level_set_berstein_high_order_interpolation< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh);
+
+
+
+     // IF GRADIENT CONTINUOUS
+    level_set_function.gradient_continuous_setting(method_transport_pb_grad) ;
+    // IF DIVERGENCE CONTINUOUS
+    level_set_function.divergence_continuous_setting(method_transport_pb_div ) ;
+
+    /************** LEVEL SET  MAPPING **************/
+    // If mapping is false, in HIGH ORDER TRANSPORT CASE the mapping is needed
+    bool mapping = false ;
+    if(mapping)
+        level_set_function.coefficients_mapping_MAX_MAX( );
+
+    //level_set_function.iso_val_interface = 0.5 ;
+    //level_set_function.coefficients_mapping_quadratic( );
+    //level_set_function.coefficients_mapping_MAX_MAX( );
+    //level_set_function.coefficients_sfasamento( );
+
+
+
+    /************** MESH INITIALISATION FOR ROUTINE  **************/
+
+
+    auto crr_mesh =  Current_Mesh<Mesh>(msh);
+    crr_mesh.current_mesh = msh;
+    Mesh msh_i =  crr_mesh.current_mesh;      // MESH at t=t^n (FOR THE PROCESSING)
+    offset_definition(msh_i);
+
+
+    /************** INITIAL DATA INITIALISATION (t = 0) **************/
+    T  dt = 0. ;
+    T initial_area = 0. , initial_mass = 0.;
+    T d_a = 0. ;
+    T perimeter_initial = 0. ;
+    T centre_mass_x_inital = 0. , centre_mass_y_inital = 0. ;
+    T max_u_n_val_old = 1e+6 , max_u_n_val_new  = 1e+5 ;
+    T check = 10.0;
+    T tot_time = 0.;
+
+    /************** BOUNDARY CONDITIONS **************/
+    bool bdry_bottom = false , bdry_up = false ;
+    bool bdry_left = false , bdry_right = false ;
+    check_inlet( msh , fe_data , bdry_bottom , bdry_right , bdry_up , bdry_left, 1e-14 );
+
+
+    //************ DO cutHHO MESH PROCESSING **************
+    tc.tic();
+    detect_node_position3(msh_i, level_set_function); // In cuthho_geom
+    //detect_node_position3_parallel(msh_i, level_set_function); // In cuthho_geom
+    detect_cut_faces3(msh_i, level_set_function); // In cuthho_geom
+    if (agglomeration)
+    {
+        detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
+        //detect_cut_cells3_parallelized(msh_i, level_set_function); // In cuthho_geom
+        refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+        set_integration_mesh(msh_i,degree_curve) ;
+        detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
+        make_neighbors_info_cartesian(msh_i); // Non serve modificarla
+        //refine_interface_angle(msh_i, level_set_function, int_refsteps);
+        //refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+       
+        make_agglomeration_no_double_points(msh_i, level_set_function);
+        set_integration_mesh(msh_i,degree_curve) ;
+        //make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+
+    }
+    else
+    {
+        //move_nodes(msh_i, level_set_function);
+        //detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
+        detect_cut_cells3(msh_i, level_set_function);
+        //refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+        refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+    }
+
+    tc.toc();
+    std::cout << "cutHHO-specific mesh preprocessing: " << tc << " seconds" <<'\n' << std::endl;
+
+    if (dump_debug)
+    {
+        dump_mesh(msh_i);
+        output_mesh_info(msh_i, level_set_function);
+    }
+
+    
+/*
+    for(auto& cl : msh_i.cells)
+    {
+        if( location(msh_i, cl) == element_location::ON_INTERFACE )
+        {
+            if(0)
+            {
+                auto msh_int =  integration_mesh<T>(degree_curve);
+                msh_int.set_cell(cl);
+                cl.user_data.integration_msh = msh_int ;
+            }
+            else
+                cl.user_data.integration_msh.set_cell_new(cl,degree_curve);
+            
+            for(auto& cl_i : cl.user_data.integration_msh.cells)
+            {
+                std::cout<<"cl = "<<offset(cl.user_data.integration_msh,cl_i)<<std::endl;
+                auto pts = points( cl.user_data.integration_msh , cl_i);
+                auto nds = nodes( cl.user_data.integration_msh , cl_i);
+                for(auto& pt: pts)
+                    std::cout<<"pt = "<<'\n'<<pt<<std::endl;
+                for(auto& nd: nds)
+                    std::cout<<"nd = "<<'\n'<<nd<<std::endl;
+                std::cout<<'\n'<<std::endl;
+            }
+            
+        }
+        
+    }
+    */
+    /*
+    for(auto& cl : msh_i.cells)
+    {
+        if( location(msh_i, cl) == element_location::ON_INTERFACE )
+        {
+            
+            auto msh_int =  integration_mesh_cl<T,typename Mesh::cell_type >(cl,degree_curve);
+            cl.user_data.integration_msh = msh_int ;
+        }
+        
+    }
+    */
+
+    
+
+    // IN cuthho_export..Points/Nodes don't change-> it's fast
+    output_mesh_info2_pre_FEM(msh_i, level_set_function); // IN cuthho_export
+
+    /************** UPDATING  LEVEL SET  AND VELOCITY  **************/
+    // IF GRADIENT CONTINUOUS
+    level_set_function.gradient_continuous_setting(method_transport_pb_grad) ;
+    // IF DIVERGENCE CONTINUOUS
+    level_set_function.divergence_continuous_setting(method_transport_pb_div) ;
+
+    
+    //typedef Level_set_berstein_high_order_interpolation< Mesh , Fonction , FiniteSpace , T > Level_Set;
+    //typedef Level_set_berstein_high_order_interpolation_grad_cont< Mesh , Fonction , FiniteSpace , T > Level_Set;
+     //typedef Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction , FiniteSpace , T > Level_Set;
+
+    // --------------------- LS_CELL: CHOICE OF DISC/CONT ------------------------------- \\
+    // IF grad cont -> normal cont -> (divergence disc) -> divergence cont
+    auto ls_cell = LS_cell_high_order_curvature_cont< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+
+    // IF grad cont -> normal cont -> divergence disc
+    //auto ls_cell = LS_cell_high_order_grad_cont_div_disc< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+
+    // IF grad cont -> normal cont -> divergence disc
+    //auto ls_cell = LS_cell_high_order_grad_disc_div_disc< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+
+    ls_cell.radius = radius ;
+    u_projected.set_agglo_mesh( msh_i );
+
+    timecounter tc_initial ;
+    tc_initial.tic();
+    
+    
+    // ---------------------------------- CHECK bernstein 1d  -----------------------------------
+    T tot = degree_curve ; // 100
+    std::vector<Matrix<T,2,1>> interface_gamma ;
+    std::vector<Matrix<T,2,1>> tangent_gamma  , normal_gamma;
+    std::vector<T > curvature_gamma ;
+    postprocess_output<double> postoutput ;
+    auto interface_gamma_plot = std::make_shared< gnuplot_output_object<double> >("curve_interface_para.dat");
+     auto curvature_plot = std::make_shared< gnuplot_output_object<double> >("curvature_para.dat");
+    for(auto& cl : msh_i.cells)
+    {
+        ls_cell.cell_assignment(cl);
+        //u_projected.cell_assignment(cl);
+
+        if( location(msh_i, cl) == element_location::ON_INTERFACE )
+        {
+            curve.cell_assignment(cl);
+            auto pts_int = cl.user_data.interface ;
+            auto pts = points(msh, cl);
+            /*
+            std::cout<<"Cell "<<offset(msh_i,cl)<<" pts:"<<std::endl;
+            auto pts = points(msh, cl);
+            for(auto& pt : pts)
+                std::cout<<pt<<std::endl;
+            std::cout<<"Interfacea pts:"<<std::endl;
+            
+            for(auto& pt : pts_int)
+                std::cout<<pt<<std::endl;
+                       
+            std::cout<<'\n'<<std::endl;
+            */
+             if( pts_int.size() == degree_curve + 1 ) // if( curve.subcells.size()<1 )
+             {
+                //std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<std::endl;
+                for(int i= 0; i <= tot ; i++)
+                {
+                    T pos = 0.0+i/tot ;
+                     interface_gamma.push_back( curve(pos,msh_i,cl) ) ;
+                    //std::cout<<"pos = "<<pos<<" , curve(pos,msh_i,cl) = "<<curve(pos,msh_i,cl)<<std::endl;
+                    point<T,2> curv_var0 = point_type(curve(pos,msh_i,cl)(0), curve(pos,msh_i,cl)(1));
+                    interface_gamma_plot->add_data(curv_var0,0.0);
+                    curvature_plot->add_data(curv_var0,curve.curvature(pos, msh_i, cl));
+                    curvature_gamma.push_back( curve.curvature(pos,msh_i,cl) ) ;
+                    tangent_gamma.push_back( curve.tangent(pos,msh_i,cl) ) ;
+                    normal_gamma.push_back( curve.normal(pos,msh_i,cl) ) ;
+                }
+                /*
+                interface_gamma.push_back( curve(0,msh_i,cl) ) ;
+                interface_gamma.push_back( curve(1,msh_i,cl) ) ;
+                interface_gamma.push_back( curve(-1,msh_i,cl)) ;
+                point<T,2> curv_var0 = point_type(curve(0,msh_i,cl)(0), curve(0,msh_i,cl)(1));
+                point<T,2> curv_var1 = point_type(curve(1,msh_i,cl)(0), curve(1,msh_i,cl)(1));
+                point<T,2> curv_var2 = point_type(curve(-1,msh_i,cl)(0), curve(-1,msh_i,cl)(1));
+                
+                interface_gamma_plot->add_data(curv_var0,0.0);
+                interface_gamma_plot->add_data(curv_var1,0.0);
+                interface_gamma_plot->add_data(curv_var2,0.0);
+                 */
+            }
+            else
+            {
+                size_t tot_cls = (pts_int.size()-1)/ (degree_curve )  ;
+                //std::cout<<"tot_cls = "<<tot_cls<<std::endl;
+                for(size_t cell_ind = 0 ; cell_ind < tot_cls ; cell_ind++ ){
+                    //std::cout<<"curve.subcells.size() = "<<curve.subcells.size()<<" , cell_ind = "<<cell_ind<<std::endl;
+                    
+                    for(int i= 0; i <= tot ; i++)
+                    {
+                        T pos = 0.0+i/tot ;
+                        //if(i== 0 && cell_ind>0)
+                        //    continue;
+                        //std::cout<<"pos = "<<pos<<" , curve(pos,msh_i,cl) = "<<curve(pos,msh_i,cl,cell_ind)<<std::endl;
+                         interface_gamma.push_back( curve(pos,msh_i,cl,cell_ind) ) ;
+                        point<T,2> curv_var0 = point_type(curve(pos,msh_i,cl,cell_ind)(0), curve(pos,msh_i,cl,cell_ind)(1));
+                        interface_gamma_plot->add_data(curv_var0,0.0);
+                        curvature_plot->add_data(curv_var0,curve.curvature(pos, msh_i, cl,cell_ind));
+                        curvature_gamma.push_back( curve.curvature(pos,msh_i,cl,cell_ind) ) ;
+                        tangent_gamma.push_back( curve.tangent(pos,msh_i,cl,cell_ind) ) ;
+                        normal_gamma.push_back( curve.normal(pos,msh_i,cl,cell_ind) ) ;
+                        /*
+                        if(offset(msh_i,cl)==65)
+                        {
+                            std::cout<<"curvature = "<<curve.curvature(pos,msh_i,cl,cell_ind)<<" , tangent = "<<curve.tangent(pos,msh_i,cl,cell_ind)<<" , nromal = "<<curve.normal(pos,msh_i,cl,cell_ind)<<std::endl;
+                        }
+                         */
+                        
+                    }
+                    /*
+                    interface_gamma.push_back( curve(0,msh_i,cl,cell_ind) ) ;
+                    interface_gamma.push_back( curve(1,msh_i,cl,cell_ind) ) ;
+                    interface_gamma.push_back( curve(-1,msh_i,cl,cell_ind)) ;
+                    
+                    point<T,2> curv_var0 = point_type(curve(0,msh_i,cl)(0), curve(0,msh_i,cl)(1));
+                    point<T,2> curv_var1 = point_type(curve(1,msh_i,cl)(0), curve(1,msh_i,cl)(1));
+                    point<T,2> curv_var2 = point_type(curve(-1,msh_i,cl)(0), curve(-1,msh_i,cl)(1));
+                    
+                    interface_gamma_plot->add_data(curv_var0,0.0);
+                    interface_gamma_plot->add_data(curv_var1,0.0);
+                    interface_gamma_plot->add_data(curv_var2,0.0);
+                     */
+                }
+                
+            }
+            
+        }
+           
+           
+    }
+
+    postoutput.add_object(interface_gamma_plot);
+    postoutput.add_object(curvature_plot);
+    postoutput.write();
+    goal_quantities_time_fast(msh , interface_gamma , tangent_gamma  , normal_gamma , curvature_gamma  );
+    postprocess_output<double> postoutput_div_para;
+    std::string filename_curvature_para = "k0_curvature_para.dat";
+    auto test_curvature_para = std::make_shared< gnuplot_output_object<double> >(filename_curvature_para);
+
+    std::string filename_curv_var_para = "cell_limit_curv_var_para.dat";
+    auto test_curv_var_para = std::make_shared< gnuplot_output_object<double> >(filename_curv_var_para);
+
+    std::vector< point<T, 2> > interface_points_plot_para ;
+    std::vector< std::pair<T,T> > interface_normals_para ;
+    T l1_divergence_error_para = 0. , l2_divergence_error_para = 0. ;
+    T linf_divergence_error_para = -10. ;
+    size_t counter_interface_pts_para = 0;
+
+    for(auto& cl : msh_i.cells)
+    {
+       
+        if(cl.user_data.location == element_location::ON_INTERFACE)
+        {
+
+           if( cl.user_data.interface.size() == degree_FEM + 1 ) // if( curve.subcells.size()<1 )
+            {
+                for(int i= 0; i <= tot ; i++)
+                {
+                    T pos = 0.0+i/tot ;
+                    T val0 = curve.curvature(pos,msh_i,cl) ;
+                    T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                    l1_divergence_error_para += error_curvature;
+                    l2_divergence_error_para += pow(error_curvature,2) ;
+                    linf_divergence_error_para = std::max(linf_divergence_error_para , error_curvature ) ;
+                     counter_interface_pts_para++;
+                        
+                }
+            }
+            else
+            {
+                //size_t tot_cls = cl.user_data.interface.size()/ (degree_FEM + 1.0)  ;
+                size_t tot_cls = (cl.user_data.interface.size()-1)/ (degree_curve )  ;
+                //std::cout<<"tot_cls = "<<tot_cls<<std::endl;
+                for(size_t cell_ind = 0 ; cell_ind < tot_cls ; cell_ind++ ){
+                    for(int i= 0; i <= tot ; i++)
+                    {
+                        T pos = 0.0+i/tot ;
+                        T val0 = curve.curvature(pos,msh_i,cl,cell_ind) ;
+                        T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                        
+                        l1_divergence_error_para += error_curvature;
+                        l2_divergence_error_para += pow(error_curvature,2) ;
+                        linf_divergence_error_para = std::max(linf_divergence_error_para , error_curvature ) ;
+                         counter_interface_pts_para++;
+                                      
+                                    
+                    }
+                }
+            }
+          
+
+           
+
+        }
+
+
+
+    }
+
+    bool first_cut_cell_found_para = FALSE ;
+    T distance_pts_para = 0.0;
+    point<T,2> first_point_para ;
+    point<T,2> cell_end_point_para;
+    for(auto& cl : msh_i.cells)
+    {
+
+        if(cl.user_data.location == element_location::ON_INTERFACE)
+        {
+            
+            if(!first_cut_cell_found_para)
+            {
+                if( cl.user_data.interface.size() == degree_FEM + 1 ) // if( curve.subcells.size()<1 )
+                {
+                    for(int i= 0; i <= tot ; i++)
+                    {
+                        T pos = 0.0+i/tot ;
+                        T val0 = curve.curvature(pos,msh_i,cl) ;
+                        //T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                         point<T,2> curv_var = point_type(distance_pts_para , 0.0);
+                        if( pos==0)
+                            test_curvature_para->add_data(curv_var, val0);
+
+                        test_curv_var_para->add_data(curv_var, val0);
+
+                        distance_pts_para += i/tot ;
+                            
+                    }
+                }
+                else
+                {
+                    //size_t tot_cls = cl.user_data.interface.size()/ (degree_FEM + 1.0)  ;
+                    size_t tot_cls = (cl.user_data.interface.size()-1)/ (degree_curve )  ;
+                    //std::cout<<"tot_cls = "<<tot_cls<<std::endl;
+                    for(size_t cell_ind = 0 ; cell_ind < tot_cls ; cell_ind++ ){
+                        for(int i= 0; i <= tot ; i++)
+                        {
+                            T pos = 0.0+i/tot ;
+                                                   
+                            T val0 = curve.curvature(pos,msh_i,cl) ;
+                            //T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                            point<T,2> curv_var = point_type(distance_pts_para , 0.0);
+                            if( pos==0)
+                                test_curvature_para->add_data(curv_var, val0);
+
+                            test_curv_var_para->add_data(curv_var, val0);
+                            distance_pts_para += i/tot ;
+                                          
+                                        
+                        }
+                    }
+                }
+                
+                first_cut_cell_found_para = TRUE;
+                first_point_para = *cl.user_data.interface.begin() ;
+                cell_end_point_para = *(cl.user_data.interface.end() -1) ;
+            }
+            else if( first_cut_cell_found_para && !( first_point_para == cell_end_point_para  ) )
+            {
+                for(auto& cl : msh_i.cells)
+                {
+                    if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point_para ==*cl.user_data.interface.begin() )  )
+                    {
+                        if( cl.user_data.interface.size() == degree_FEM + 1 ) // if( curve.subcells.size()<1 )
+                        {
+                            for(int i= 0; i <= tot ; i++)
+                            {
+                                T pos = 0.0+i/tot ;
+                                T val0 = curve.curvature(pos,msh_i,cl) ;
+                                //T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                                 point<T,2> curv_var = point_type(distance_pts_para , 0.0);
+                                if( pos==0)
+                                    test_curvature_para->add_data(curv_var, val0);
+
+                                test_curv_var_para->add_data(curv_var, val0);
+
+                                distance_pts_para += i/tot ;
+                                
+                                    
+                            }
+                        }
+                        else
+                        {
+                           //size_t tot_cls = cl.user_data.interface.size()/ (degree_FEM + 1.0)  ;
+                            size_t tot_cls = (cl.user_data.interface.size()-1)/ (degree_curve )  ;
+                            //std::cout<<"tot_cls = "<<tot_cls<<std::endl;
+                            for(size_t cell_ind = 0 ; cell_ind < tot_cls ; cell_ind++ ){
+                                              
+                                for(int i= 0; i <= tot ; i++)
+                                {
+                                    T pos = 0.0+i/tot ;
+                                                           
+                                    T val0 = curve.curvature(pos,msh_i,cl) ;
+                                    //T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                                    point<T,2> curv_var = point_type(distance_pts_para , 0.0);
+                                    if( pos==0)
+                                        test_curvature_para->add_data(curv_var, val0);
+
+                                    test_curv_var_para->add_data(curv_var, val0);
+                                    distance_pts_para += i/tot ;
+                                                  
+                                                
+                                }
+                            }
+                        }
+                       
+                        cell_end_point_para = *(cl.user_data.interface.end() -1) ;
+                    }
+
+                }
+
+            }
+            else
+                break;
+
+        }
+
+
+    }
+    postoutput_div_para.add_object(test_curvature_para);
+    postoutput_div_para.add_object(test_curv_var_para);
+    postoutput_div_para.write();
+    l1_divergence_error_para /= counter_interface_pts_para;
+
+    l2_divergence_error_para = sqrt(l2_divergence_error_para/counter_interface_pts_para);
+    std::cout<<"Number of interface points is " << counter_interface_pts_para << std::endl;
+    std::cout<<bold<<yellow<<"The l1 error of the CURVATURE at the INTERFACE, at INITIAL time is " << l1_divergence_error_para<<reset <<std::endl;
+    std::cout<<"The l2 error of the CURVATURE at the INTERFACE, at INITIAL time is " << l2_divergence_error_para <<std::endl;
+    std::cout<<bold<<yellow<<"The linf error of the CURVATURE at the INTERFACE, at INITIAL time is " << linf_divergence_error_para<<reset <<std::endl;
+    
+    
+    /************** PLOTTINGS + GOAL QUANTITIES  **************/
+    std::vector<T> area_time , l1_err_u_n_time , linf_err_u_n_time , time_vec ;
+    std::vector<T> max_val_u_n_time , l1_err_curvature_time , linf_err_curvature_time ;
+    std::vector<T> circularity_time , flux_interface_time , perimeter_time;
+    std::vector<std::pair<T,T>> centre_mass_err_time , rise_velocity_time , min_max_vec ;
+
+    //postprocess_output<double> postoutput_vec;
+    //auto vec_normal_grad_cont = std::make_shared< gnuplot_output_object_vec<double> >("normal_interface_continuos_grad_Stokes.dat");
+
+    postprocess_output<double> postoutput_div2;
+    std::string filename_curvature_k0 = "k0_curvature_initial.dat";
+    auto test_curv_var_divergence0 = std::make_shared< gnuplot_output_object<double> >(filename_curvature_k0);
+
+    std::string filename_curv_var = "cell_limit_curv_var_initial.dat";
+    auto test_curv_var_cell = std::make_shared< gnuplot_output_object<double> >(filename_curv_var);
+
+    std::vector< point<T, 2> > interface_points_plot ;
+    std::vector< std::pair<T,T> > interface_normals ;
+    T l1_divergence_error = 0. , l2_divergence_error = 0. ;
+    T linf_divergence_error = -10. ;
+    size_t counter_interface_pts = 0;
+
+    for(auto& cl : msh_i.cells)
+    {
+        ls_cell.cell_assignment(cl);
+        //u_projected.cell_assignment(cl);
+
+        if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
+        {
+            T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+            initial_area += partial_area;
+            auto qps = integrate( msh_i , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
+            for(auto& qp:qps){
+                initial_mass += qp.second * ls_cell(qp.first);
+                centre_mass_x_inital += qp.second * qp.first.x() ;
+                centre_mass_y_inital += qp.second * qp.first.y() ;
+            }
+        }
+        if(cl.user_data.location == element_location::ON_INTERFACE)
+        {
+
+            for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+            {
+
+
+                T val0 = ls_cell.divergence( *interface_point );
+                T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                l1_divergence_error += error_curvature;
+                l2_divergence_error += pow(error_curvature,2) ;
+                linf_divergence_error = std::max(linf_divergence_error , error_curvature ) ;
+
+                Eigen::Matrix<T,2,1> normal_grad_cont = ls_cell.normal(*interface_point);
+                std::pair<T,T> normal_vec_grad_cont = std::make_pair(normal_grad_cont(0),normal_grad_cont(1));
+                interface_normals.push_back( normal_vec_grad_cont ) ;
+                //vec_normal_grad_cont->add_data(*interface_point,normal_vec_grad_cont);
+
+                perimeter_initial += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+
+
+                interface_points_plot.push_back(*(interface_point)) ;
+
+
+                counter_interface_pts++;
+
+            }
+
+            T val0 = ls_cell.divergence(*(cl.user_data.interface.end()-1));
+
+            T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+            l1_divergence_error += error_curvature;
+            l2_divergence_error += pow(error_curvature,2) ;
+            linf_divergence_error = std::max(linf_divergence_error , error_curvature ) ;
+
+
+            Eigen::Matrix<T,2,1> normal_grad_cont = ls_cell.normal(*(cl.user_data.interface.end()-1));
+            std::pair<T,T> normal_vec_grad_cont = std::make_pair(normal_grad_cont(0),normal_grad_cont(1));
+            interface_normals.push_back( normal_vec_grad_cont ) ;
+
+            //vec_normal_grad_cont->add_data(*(cl.user_data.interface.end()-1), normal_vec_grad_cont);
+
+
+            interface_points_plot.push_back(*(cl.user_data.interface.end()-1)) ;
+
+
+
+            counter_interface_pts++;
+
+        }
+
+
+
+    }
+
+    bool first_cut_cell_found = FALSE ;
+    T distance_pts = 0.0;
+    point<T,2> first_point ;
+    point<T,2> cell_end_point;
+    for(auto& cl : msh_i.cells)
+    {
+
+        if(cl.user_data.location == element_location::ON_INTERFACE)
+        {
+            ls_cell.cell_assignment(cl);
+            if(!first_cut_cell_found)
+            {
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end()-1 ; interface_point++ )
+                {
+                    T val0 = ls_cell.divergence( *interface_point );
+
+                    point<T,2> curv_var = point_type(distance_pts , 0.0);
+                    if( interface_point == cl.user_data.interface.begin() )
+                        test_curv_var_cell->add_data(curv_var, val0);
+
+                    test_curv_var_divergence0->add_data(curv_var, val0);
+
+                    distance_pts += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                }
+                first_cut_cell_found = TRUE;
+                first_point = *cl.user_data.interface.begin() ;
+                cell_end_point = *(cl.user_data.interface.end() -1) ;
+            }
+            else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+            {
+                for(auto& cl : msh_i.cells)
+                {
+                    if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point ==*cl.user_data.interface.begin() )  )
+                    {
+                        ls_cell.cell_assignment(cl);
+                        for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                        {
+
+                            T val0 = ls_cell.divergence( *interface_point );
+
+                            point<T,2> curv_var = point_type(distance_pts , 0.0);
+                            if( interface_point == cl.user_data.interface.begin() )
+                                test_curv_var_cell->add_data(curv_var, val0);
+
+                            test_curv_var_divergence0->add_data(curv_var, val0);
+
+                            distance_pts += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                        }
+                        cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    }
+
+                }
+
+            }
+            else
+                break;
+
+        }
+
+
+    }
+    postoutput_div2.add_object(test_curv_var_divergence0);
+    postoutput_div2.add_object(test_curv_var_cell);
+    postoutput_div2.write();
+
+    //postoutput_vec.add_object(vec_normal_grad_cont);
+    //postoutput_vec.write();
+
+
+
+    if( !flower) //1 ) // !flower)
+    {
+        l1_divergence_error /= counter_interface_pts;
+
+        l2_divergence_error = sqrt(l2_divergence_error/counter_interface_pts);
+        std::cout<<"Number of interface points is " << counter_interface_pts << std::endl;
+        std::cout<<bold<<yellow<<"The l1 error of the CURVATURE at the INTERFACE, at INITIAL time is " << l1_divergence_error<<reset <<std::endl;
+        std::cout<<"The l2 error of the CURVATURE at the INTERFACE, at INITIAL time is " << l2_divergence_error <<std::endl;
+        std::cout<<bold<<yellow<<"The linf error of the CURVATURE at the INTERFACE, at INITIAL time is " << linf_divergence_error<<reset <<std::endl;
+        l1_err_curvature_time.push_back(l1_divergence_error) ;
+        linf_err_curvature_time.push_back(linf_divergence_error) ;
+
+    }
+
+    std::cout <<bold<<yellow << '\n' << "Initial time, AREA  = "<< initial_area << reset << std::endl;
+    std::cout << "Initial time, MASS  = "<< initial_mass   << std::endl;
+    std::cout << "Initial time, CENTRE OF MASS  = ( "<< centre_mass_x_inital/initial_area  << " , "<< centre_mass_y_inital/initial_area <<" )." << std::endl;
+
+    d_a = sqrt(4.0*initial_area/M_PI) ;
+    std::cout<<"Initial time, PERIMETER = " << perimeter_initial <<std::endl;
+    std::cout<<"Initial time, CIRCULARITY = " << M_PI*d_a/perimeter_initial <<std::endl;
+    tc_initial.toc();
+    std::cout << "Time Machine for checking INITAL GOAL QUANTITIES: " << tc_initial << " seconds" << std::endl;
+
+    std::cout<<"OLD radius = " << radius <<std::endl;
+
+
+    if(flower)
+    {
+        T l1_divergence_error_flower = 0. , l2_divergence_error_flower = 0. ;
+        T linf_divergence_error_flower = -10. ;
+        radius = sqrt( initial_area/M_PI ) ;
+        std::cout<<"FROM AREA radius = " << radius <<std::endl;
+        for(auto& cl : msh_i.cells)
+        {
+            ls_cell.cell_assignment(cl) ;
+
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() ; interface_point++ )
+                {
+
+
+                    T val0 = ls_cell.divergence( *interface_point );
+                    T error_curvature = std::abs( std::abs(val0) - 1.0/radius) ;
+                    l1_divergence_error_flower += error_curvature;
+                    l2_divergence_error_flower += pow(error_curvature,2) ;
+                    linf_divergence_error_flower = std::max(linf_divergence_error_flower , error_curvature ) ;
+
+                }
+            }
+        }
+        l1_divergence_error_flower /= counter_interface_pts;
+
+        l2_divergence_error_flower = sqrt(l2_divergence_error_flower/counter_interface_pts);
+
+        std::cout<<"Number of interface points is " << counter_interface_pts << std::endl;
+        std::cout<<bold<<yellow<<"The l1 error of the CURVATURE at the INTERFACE, at INITIAL time is " << l1_divergence_error_flower<<reset <<std::endl;
+        std::cout<<"The l2 error of the CURVATURE at the INTERFACE, at INITIAL time is " << l2_divergence_error_flower <<std::endl;
+        std::cout<<bold<<yellow<<"The linf error of the CURVATURE at the INTERFACE, at INITIAL time is " << linf_divergence_error_flower<<reset <<std::endl;
+
+        l1_err_curvature_time.push_back(l1_divergence_error_flower) ;
+        linf_err_curvature_time.push_back(linf_divergence_error_flower) ;
+    }
+
+
+    T circularity_ref = 0.0 ;
+    T perim_ref = 0.0 ;
+    T area_ref = 0.0  ;
+
+    {
+        // calculus of circle REF in Q^k mesh N x M --> CIRCULARITY REF
+        auto level_anal_ref = circle_level_set<RealType>(radius, x_centre, y_centre );
+        std::cout<<"REF radius = " << radius <<std::endl;
+        typedef  circle_level_set<T> Fonction_REF;
+        auto level_set_ref = Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction_REF , FiniteSpace , T > (fe_data , level_anal_ref , msh);
+
+        Mesh msh_ref =  msh;
+        offset_definition(msh_ref);
+        detect_node_position3(msh_ref, level_set_ref); // In cuthho_geom
+        detect_cut_faces3(msh_ref, level_set_ref); // In cuthho_geom
+        detect_cut_cells3(msh_ref, level_set_ref); // In cuthho_geom
+        detect_cell_agglo_set(msh_ref, level_set_ref); // Non serve modificarla
+        make_neighbors_info_cartesian(msh_ref); // Non serve modificarla
+        refine_interface_pro3(msh_ref, level_set_ref, int_refsteps);
+        //make_agglomeration(msh_ref, level_set_ref); // Non serve modificarla
+        make_agglomeration_no_double_points(msh_ref, level_set_ref);
+
+        typedef Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction_REF , FiniteSpace , T > Level_Set_REF;
+        auto ls_cell_ref = LS_cell_high_order_grad_cont_fast< T , Mesh , Level_Set_REF, Fonction_REF , FiniteSpace >(level_set_ref,msh_ref);
+
+
+        for(auto& cl : msh_ref.cells)
+        {
+            ls_cell_ref.cell_assignment(cl);
+
+
+            if( location(msh_ref, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_ref, cl) == element_location::ON_INTERFACE )
+            {
+                T partial_area = measure( msh_ref, cl, element_location::IN_NEGATIVE_SIDE);
+                area_ref += partial_area;
+
+            }
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                {
+                    perim_ref += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+
+                }
+            }
+        }
+
+        T d_a_REF = sqrt(4.0*area_ref/M_PI) ;
+        std::cout<<"AREA REF = " << area_ref <<std::endl;
+        std::cout<<"PERIMETER REF = " << perim_ref <<std::endl;
+        std::cout<<"Error( perimetre_ref - perimeter_initial ) = " << perim_ref - perimeter_initial <<std::endl;
+        std::cout<<"Error( area_ref - initial_area ) = " << area_ref - initial_area <<std::endl;
+        circularity_ref = M_PI*d_a_REF/perim_ref ;
+        std::cout<<"CIRCULARITY REF = " << circularity_ref <<std::endl;
+        std::cout<<"Error( area_ref - area_analytic ) = " << area_ref - M_PI*radius*radius <<std::endl;
+
+    }
+
+
+
+
+    circularity_time.push_back(M_PI*d_a/perimeter_initial);
+    perimeter_time.push_back(perimeter_initial);
+    centre_mass_err_time.push_back(std::make_pair(centre_mass_x_inital/initial_area  , centre_mass_y_inital/initial_area) );
+
+    time_vec.push_back(0) ;
+    area_time.push_back(initial_area) ;
+
+    min_max_vec.push_back( std::make_pair( level_set_function.phi_min , level_set_function.phi_max ) );
+
+    T dt_M ;
+
+
+
+    for (size_t time_step = 0; time_step<=T_N; time_step++)
+    {
+
+        std::cout<<'\n'<<bold<<yellow<<"Starting iteration, time t = "<<tot_time<<reset <<std::endl;
+        //PLOTTING THE PROFILE y = 0.5 + min/max of level_set_function
+        //testing_level_set_time(msh,level_set_function,tot_time,time_step);
+
+
+
+        // -----------------------------------------------------------------------------------------
+        // ----------------- RESOLUTION OF THE STOKES PROBLEM (HHO) ------------------
+        // -----------------------------------------------------------------------------------------
+
+        bool sym_grad = TRUE;
+        auto prm = params<T>();
+        prm.kappa_1 = 1.0;
+        prm.kappa_2 = 1.0;
+
+        // ------------------ OLD VERSIONS ------------------
+        //auto test_case = make_test_case_eshelby(msh_i, ls_cell,  prm , sym_grad);
+        // Non serve modificare Gamma = 1/2
+        //auto test_case = make_test_case_eshelby_2(msh_i, ls_cell,  prm , sym_grad );
+        //auto test_case = make_test_case_eshelby_analytic(msh_i, ls_cell,  prm , sym_grad , radius);
+        // ------------- OLD GUILLAUME VERSIONS --------------
+        // auto test_case = make_test_case_stokes_1(msh, level_set_function);
+        // auto test_case = make_test_case_stokes_2(msh, ls_cell); //level_set_function);
+
+
+        // ----------------- ESHELBY VERSION - CORRECT BUT PRESSURE ------------------
+        //auto test_case_prova = make_test_case_eshelby_2_prova(msh_i, ls_cell,  prm , sym_grad );
+        // ----------------- ESHELBY VERSION - CORRECT (TESTING) ------------------
+        T gamma = 1.0; // 0.05
+        auto test_case_prova = make_test_case_eshelby_correct(msh_i, ls_cell,  prm , sym_grad,gamma);
+
+        //auto method = make_sym_gradrec_stokes_interface_method(msh_i, 1.0, 0.0, test_case, sym_grad);
+
+        auto method = make_sym_gradrec_stokes_interface_method(msh_i, 1.0, 0.0, test_case_prova, sym_grad);
+
+
+        //timecounter tc_u ;
+        //tc_u.tic();
+        //stokes_test_info<T> TI;
+        if(solve_interface){
+
+            //bool normal_analysis =  true ;
+            //TI = run_cuthho_interface_numerical_ls(msh_i, degree, method, test_case_prova , ls_cell ,  normal_analysis );
+            //run_cuthho_interface_velocity_parallel(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad );
+            run_cuthho_interface_velocity_prova(msh_i, degree, method,test_case_prova, ls_cell , u_projected ,sym_grad , time_step); // THE ONE CORRECT THAT I'M USING NOW
+            //run_cuthho_interface_velocity(msh_i, degree, method, test_case, ls_cell , u_projected ,sym_grad );
+
+            // OLD
+            //run_cuthho_interface_velocity_analytic(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad ,radius );
+
+            //run_cuthho_interface(msh, degree, method, test_case);
+        }
+        if (solve_fictdom)
+            run_cuthho_fictdom(msh_i, degree, test_case_prova);
+
+        //tc_u.toc();
+
+        //std::cout << "Machine Time for solving STOKES PB: " << tc_u << " seconds" << std::endl;
+
+
+
+
+
+        /************************************ FEM -  PRE-PROCESSING ******************************************/
+        // ----------------- PROJECTION OF THE VELOCITY FIELD ------------------
+        if(0)
+            std::cout<<bold<<green<<"CASE WITH VELOCITY DISCONTINUOUS: ho solo sol_HHO, sol_FEM non salvato, va cambiato il transport pb!!!"<<reset<<std::endl;
+
+        if( 1 ) //1 FIRST RESULT WITH THIS
+        {
+            std::cout<<'\n'<<"------------------>>>> NOTICE: SMOOTH OPERATOR FROM HHO TO FEM."<<std::endl;
+            u_projected.smooth_converting_into_FE_formulation( u_projected.sol_HHO );
+        }
+        if( 0 )
+        {
+            std::cout<<'\n'<<"------------------>>>> NOTICE: NON SMOOTH OPERATOR FROM HHO TO FEM."<<std::endl;
+            u_projected.converting_into_FE_formulation( u_projected.sol_HHO );
+        }
+        if( 0 )
+        {
+            std::cout<<'\n'<<"------------------>>>>NOTICE: L^2 PROJECTION FROM HHO TO FEM."<<std::endl;
+            u_projected.L2_proj_into_FE_formulation(level_set_function , msh , method_transport_pb);
+        }
+        //testing_velocity_field(msh , u_projected) ;
+
+        //auto u_prova = velocity_high_order <Mesh,FiniteSpace,T> (fe_data , msh);
+        //u_prova.sol_HHO = u_projected.sol_HHO ;
+        //u_prova.L2_proj_into_FE_formulation( level_set_function , msh );
+        //testing_velocity_field_L2projected(msh , u_prova) ;
+
+
+
+
+        // -----------------------------------------------------------------------------------------
+        // ----------------- TIME EVOLUTION (u^n,phi^n) (FEM) ------------------
+        // -----------------------------------------------------------------------------------------
+        auto level_set_tmp = Level_set_berstein< Mesh , Fonction , FiniteSpace , T > (level_set_function);
+        auto ls_cell_tmp = LS_cell_high_order_curvature_cont< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_tmp,msh_i);
+        //auto level_set_tmp = Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction , FiniteSpace , T > (level_set_function);
+        //auto ls_cell_tmp = LS_cell_high_order_grad_cont_fast< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_tmp,msh_i);
+        //auto level_set_tmp = Level_set_berstein_high_order_interpolation_grad_cont< Mesh , Fonction , FiniteSpace , T > (level_set_function);
+        //auto ls_cell_tmp = LS_cell_high_order_grad_cont< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_tmp,msh_i);
+        //testing_level_set_disc(msh, level_set_function, level_set_tmp) ;
+
+        // MACRO TIME STEP dt (before checking if it is too big, I need to find the new interface)
+        //if(tot_time < 0.75)
+        dt_M = 8*1e-3; // 4*1e-3;
+        //else
+        //    dt_M = 1e-3;
+        T eps = 0.48 ; // factor to be inside CFL stability zone
+        //T dt_one_cell = time_step_CFL( u , mip , eps ); // OLD IMPLEMENTATION
+        T dt_one_cell = time_step_CFL_new( u_projected , mip , eps );
+        //std::cout<<"dt1 is "<<dt1<<std::endl;
+        dt = std::min(dt_one_cell , dt_M);
+        std::cout<<"MACRO TIME STEP dt_MACRO = "<<dt<<", dt_heuristic (AT MAXIMUM ONE CELL DISPLACEMENT) = "<<dt_one_cell<<std::endl;
+
+        // I can create a sub-time. I solve several time the FEM problem, given a Stokes field. The amount of time is s.t. at maximum there is a displacement of a cell of the interface and no more than a maximum T
+        T sub_time = 0.;
+        T N_sub = 10 ; //10 ;
+        T sub_dt = dt / N_sub ; //std::min(4*1e-4 , dt ) ;
+
+        //T sub_dt;
+        //if(tot_time <0.132)
+        //    sub_dt = std::min(4*1e-4 , dt ) ;
+        //else
+        //    sub_dt = std::min(5*1e-5 , dt ) ;
+
+        std::cout<<"-----> Implemented sub time dt_MICRO = "<<sub_dt<<std::endl;
+        /*
+        while(  sub_time < sub_dt*N_sub  )
+        {
+            if(high_order){
+                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt , mapping );
+
+                //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_HP( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt , mapping );
+
+                //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt);
+                //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt);
+            }
+            else{
+                if(degree_velocity == degree_FEM) // IT IS FASTER
+                    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt  );
+                else
+                    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt  , fe_data_Lagrange);
+
+            }
+            //run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt);
+
+            sub_time += sub_dt ;
+
+        }
+        */
+        //std::cout<<"NOTICE: dt_MACRO = "<<dt<<" , dt_MICRO = "<< sub_dt<<" , ERROR( dt_MICRO*N_sub_loop == dt_MACRO ) = "<< std::abs( dt - N_sub * sub_dt)<<std::endl;
+
+        // ------------- NEW IMPLEMENTATION WITH FAST LEVEL SET ---------------------
+        while(  sub_time < sub_dt*N_sub  )
+        {
+            if(high_order){
+                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt , mapping );
+
+            }
+            else{
+                //if(degree_velocity == degree_FEM) // IT IS FASTER
+                    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb ,  sub_dt  );
+                //else
+                //    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt  , fe_data_Lagrange);
+
+            }
+
+
+            sub_time += sub_dt ;
+
+        }
+        tot_time += sub_time ;
+
+
+       /**************************************************   POST-PROCESSING **************************************************/
+
+
+        // Updating continuous normal function
+
+        // IF GRADIENT CONTINUOUS
+        level_set_function.gradient_continuous_setting(method_transport_pb_grad) ;
+        // IF DIVERGENCE CONTINUOUS
+        level_set_function.divergence_continuous_setting(method_transport_pb_div) ;
+
+        // Updating mesh data to check out differences in mass and areas
+        crr_mesh.current_mesh = msh;
+        msh_i =  crr_mesh.current_mesh;
+        offset_definition(msh_i);
+
+        tc.tic();
+        detect_node_position3(msh_i, level_set_function); // In cuthho_geom
+        detect_cut_faces3(msh_i, level_set_function); // In cuthho_geom
+
+
+        if (agglomeration)
+        {
+            detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
+            detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
+            make_neighbors_info_cartesian(msh_i); // Non serve modificarla
+            //refine_interface_angle(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+            refine_interface_pro3(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            make_agglomeration_no_double_points(msh_i, level_set_function); // Non serve modificarla
+           // make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+        }
+        else
+        {
+            move_nodes(msh_i, level_set_function);
+            //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection     points
+            detect_cut_cells3(msh_i, level_set_function);
+            //refine_interface2(msh_i2, level_set_function, int_refsteps);
+            //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
+            refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+        }
+
+        tc.toc();
+        std::cout<<'\n' << "cutHHO-specific mesh preprocessing: " << tc << " seconds"  << std::endl;
+
+        if (dump_debug)
+        {
+            dump_mesh(msh_i);
+            output_mesh_info(msh_i, level_set_function);
+        }
+
+        // Updating level set
+        ls_cell.level_set = level_set_function;
+        ls_cell.agglo_msh = msh_i;
+        u_projected.set_agglo_mesh( msh_i );
+
+
+        T max_u_n_val = 0.0 ;
+        T max_u_n_val_abs = 0.0 ;
+        T l1_normal_interface_status = 0. , l2_normal_interface_status = 0. ;
+
+
+        size_t counter_interface_pts = 0;
+        for(auto& cl : msh_i.cells)
+        {
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+                ls_cell.cell_assignment(cl);
+                u_projected.cell_assignment(cl);
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() ; interface_point++ )
+                {
+                    T u_n_val = u_projected(*(interface_point)).first * ls_cell.normal(*(interface_point))(0) + u_projected(*(interface_point)).second * ls_cell.normal(*(interface_point))(1) ;
+                    max_u_n_val_abs = std::max( max_u_n_val_abs , std::abs(u_n_val) ) ;
+                    if( std::abs(u_n_val) == max_u_n_val_abs )
+                        max_u_n_val = u_n_val ;
+
+                    l1_normal_interface_status += std::abs(u_n_val) ;
+                    l2_normal_interface_status += pow(u_n_val,2.0);
+                    counter_interface_pts ++ ;
+
+                }
+            }
+        }
+
+        if( time_step == 0 )
+            max_u_n_val_new = max_u_n_val ;
+
+        if(time_step > 0 )
+        {
+            max_u_n_val_old = max_u_n_val_new ;
+            max_u_n_val_new = max_u_n_val ;
+            std::cout<<bold<<yellow<<"l^{inf} u*n(t^n) = "<<max_u_n_val_old<<" , l^{inf} u*n(t^{n+1}) = "<<max_u_n_val_new<<reset <<std::endl;
+        }
+
+        std::cout<<"number of interface points is " << counter_interface_pts << std::endl;
+
+        l1_normal_interface_status /= counter_interface_pts;
+        l2_normal_interface_status = sqrt(l2_normal_interface_status/counter_interface_pts);
+        std::cout<<bold<<yellow<<"-----------------------------------> The l1 error of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << l1_normal_interface_status <<reset << std::endl;
+        std::cout<<"-----------------------------------> The l2 error of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << l2_normal_interface_status << std::endl;
+        std::cout<<bold<<yellow<<"-----------------------------------> The linf error of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << max_u_n_val_abs <<reset << std::endl;
+
+
+
+
+        if( ( std::signbit(max_u_n_val_new) ==  std::signbit(max_u_n_val_old) ) && std::abs( max_u_n_val_new )> std::abs( max_u_n_val_old ) )
+        {
+            std::cout<< "I do not know what to do precisely.. FOR THE MOMENT IT CONTINUES NORMALLY."<<std::endl;
+            //exit(9) ;
+        }
+
+        //if( ( std::signbit(max_u_n_val_new) !=  std::signbit(max_u_n_val_old) ) && std::abs(max_u_n_val_new) > std::abs(max_u_n_val_old) )
+
+        //else // IF I DO else I consider also  case in which  + + e diminuisce e - - e aumenta
+        if( (tot_time > 1.8) && (std::signbit(max_u_n_val_new) !=  std::signbit(max_u_n_val_old)) )
+        {
+
+
+
+
+            // -------- IN THIS CASE, IT MEANS THE dt_MACRO WAS TOO BIG. I CALCULATE A NEW dt_MACRO.
+            // DEVO SALVARE ULTIMA level_set (prima dello spostamento) e togliere da tot_time il sub_time!
+            T dt_M_new = dt_M + (max_u_n_val_new * dt_M )/(max_u_n_val_old - max_u_n_val_new) ;
+            T dt_new = std::min(dt_one_cell , dt_M_new);
+
+            bool forward = TRUE ;
+            if( forward ) // GO FORWARD FROM THE TIME t^n
+            {
+                dt = dt_new ;
+
+                std::cout<<bold<<yellow<<"NEW MACRO TIME STEP dt_MACRO = "<<dt_new<<reset<<std::endl;
+                std::cout<<"I go back in time of sub_time = "<<sub_time<<". NEW STARTING TIME = "<<tot_time - sub_time<<std::endl;
+                tot_time -= sub_time ; // I erase the time previously calculated
+                sub_time = 0.;
+                sub_dt =  dt / N_sub ; //std::min(4*1e-4 , dt ) ;
+
+                //T sub_dt;
+                //if(tot_time <0.132)
+                //    sub_dt = std::min(4*1e-4 , dt ) ;
+                //else
+                //    sub_dt = std::min(5*1e-5 , dt ) ;
+
+                std::cout<<"-----> Implemented sub time dt_MICRO = "<<sub_dt<<std::endl;
+                while(  sub_time < sub_dt*N_sub  )
+                {
+
+                    if(high_order){
+                        run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS( level_set_tmp.msh , fe_data , level_set_tmp , u_projected , method_transport_pb , sub_dt , mapping );
+
+                    }
+                    else{
+                        //if(degree_velocity == degree_FEM) // IT IS FASTER
+                            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_tmp.msh , fe_data , level_set_tmp , u_projected , method_transport_pb ,  sub_dt  );
+                        //else
+                        //    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_tmp.msh , fe_data , level_set_tmp , u_projected , method_transport_pb , sub_dt  , fe_data_Lagrange);
+
+
+                    }
+
+
+                    sub_time += sub_dt ;
+
+                }
+
+                tot_time += sub_time ; // the new time is substracted
+                level_set_function = level_set_tmp ;
+                std::cout<<'\n'<<std::endl;
+                //testing_level_set_disc(msh, level_set_function, level_set_tmp) ;
+            }
+            else // GO BACKWARD FROM THE TIME t^n + dt_M
+            {
+
+                dt = dt_M - dt_new ;
+                std::cout<<"NEW MACRO TIME STEP dt_MACRO = "<<dt_new<<std::endl;
+                std::cout<<"I go back in time of dt = "<<dt<<std::endl;
+                sub_time = 0.;
+                sub_dt =  dt / N_sub ; //std::min(4*1e-4 , dt ) ;
+
+                //T sub_dt;
+                //if(tot_time <0.132)
+                //    sub_dt = std::min(4*1e-4 , dt ) ;
+                //else
+                //    sub_dt = std::min(5*1e-5 , dt ) ;
+
+                std::cout<<"-----> Implemented sub time dt_MICRO = "<<sub_dt<<std::endl;
+                while(  sub_time < sub_dt*N_sub  )
+                {
+                    T neg_time = -sub_dt ;
+                    if(high_order){
+                        run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , neg_time , mapping );
+
+                    }
+                    else{
+                        //if(degree_velocity == degree_FEM) // IT IS FASTER
+                            run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb ,  neg_time  );
+                        //else
+                        //    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , neg_time  , fe_data_Lagrange);
+
+
+                    }
+
+
+
+                    sub_time += sub_dt ;
+
+                }
+                std::cout<<'\n'<<std::endl;
+                tot_time -= sub_time ; // the new time is substracted
+
+            }
+
+
+            //-------------------------- NEW CALCULATION OF U*N --------------------------
+
+            // Updating continuous normal function
+
+            // IF GRADIENT CONTINUOUS
+            level_set_function.gradient_continuous_setting(method_transport_pb_grad) ;
+            // IF DIVERGENCE CONTINUOUS
+            level_set_function.divergence_continuous_setting(method_transport_pb_div) ;
+            // Updating mesh data to check out differences in mass and areas
+            crr_mesh.current_mesh = msh;
+            msh_i =  crr_mesh.current_mesh;
+            offset_definition(msh_i);
+
+            tc.tic();
+            detect_node_position3(msh_i, level_set_function); // In cuthho_geom
+            detect_cut_faces3(msh_i, level_set_function); // In cuthho_geom
+
+
+            if (agglomeration)
+            {
+                detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
+                detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
+                make_neighbors_info_cartesian(msh_i); // Non serve modificarla
+                //refine_interface_angle(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
+                refine_interface_pro3(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+                make_agglomeration_no_double_points(msh_i, level_set_function);
+                //make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+            }
+            else
+            {
+                move_nodes(msh_i, level_set_function);
+                //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection     points
+                detect_cut_cells3(msh_i, level_set_function);
+                //refine_interface2(msh_i2, level_set_function, int_refsteps);
+                //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
+                refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+            }
+
+            tc.toc();
+            std::cout << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << std::endl;
+
+            if (dump_debug)
+            {
+                dump_mesh(msh_i);
+                output_mesh_info(msh_i, level_set_function);
+            }
+
+            // Updating level set
+            ls_cell.level_set = level_set_function;
+            ls_cell.agglo_msh = msh_i;
+            u_projected.set_agglo_mesh( msh_i );
+
+
+            max_u_n_val = 0.0 ;
+            max_u_n_val_abs = 0.0 ;
+            l1_normal_interface_status = 0. ;
+            l2_normal_interface_status = 0. ;
+
+            counter_interface_pts = 0;
+            for(auto& cl : msh_i.cells)
+            {
+                if(cl.user_data.location == element_location::ON_INTERFACE)
+                {
+                    ls_cell.cell_assignment(cl);
+                    u_projected.cell_assignment(cl);
+                    for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() ; interface_point++ )
+                    {
+                        T u_n_val = u_projected(*(interface_point)).first * ls_cell.normal(*(interface_point))(0) + u_projected(*(interface_point)).second * ls_cell.normal(*(interface_point))(1) ;
+                        max_u_n_val_abs = std::max( max_u_n_val_abs , std::abs(u_n_val) ) ;
+                        if( std::abs(u_n_val) == max_u_n_val_abs )
+                            max_u_n_val = u_n_val ;
+
+                        l1_normal_interface_status += std::abs(u_n_val) ;
+                        l2_normal_interface_status += pow(u_n_val,2.0);
+                        counter_interface_pts ++ ;
+
+                    }
+                }
+            }
+
+
+            max_u_n_val_new = max_u_n_val ;
+
+
+            std::cout<<"l^{inf} u*n(t^n) = "<<max_u_n_val_old<<" , l^{inf} u*n(t^{n+1}) = "<<max_u_n_val_new<<std::endl;
+
+
+            std::cout<<"number of interface points is " << counter_interface_pts << std::endl;
+            l1_normal_interface_status /= counter_interface_pts;
+            l2_normal_interface_status = sqrt(l2_normal_interface_status/counter_interface_pts);
+
+            std::cout<<bold<<yellow<<"-----------------------------------> The l1 error of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << l1_normal_interface_status <<reset << std::endl;
+            std::cout<<"-----------------------------------> The l2 error of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << l2_normal_interface_status << std::endl;
+            std::cout<<bold<<yellow<<"-----------------------------------> The linf error of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << max_u_n_val_abs <<reset << std::endl;
+
+            std::cout<<"-----------------------------------> The max error (with sign) of u*n over the INTERFACE, at time t = "<< tot_time <<" is " << max_u_n_val  << std::endl;
+
+
+
+        }
+
+
+        // ----------------- CHECKING GOAL QUANTITIES FOR t = t^{n+1} ------------------
+
+
+
+        check = l1_normal_interface_status ;
+        /// DA AGGIUNGERE UNA VOLTA SISTEMATO IL CODICE
+
+        //if(check < 1e-8 )
+        //{
+        //    std::cout<<" check = "<<check<<" , STOP!"<<std::endl;
+        //    return 0;
+        //}
+
+
+
+        output_mesh_info2_time(msh_i, level_set_function,tot_time,time_step);
+
+        T mass_fin = 0. , area_fin = 0. ;
+        T centre_mass_x = 0. , centre_mass_y = 0. ;
+        T l1_divergence_error_fin = 0. , l2_divergence_error_fin = 0. ;
+        T linf_divergence_error_fin = 0. ;
+        T perimeter = 0. ;
+
+
+
+        // PLOTTING OF NORMAL
+
+        //postprocess_output<double> postoutput_vec;
+        //auto vec_normal_grad_cont_fin = std::make_shared< gnuplot_output_object_vec<double> >("normal_interface_continuos_grad_Stokes_final.dat");
+
+        postprocess_output<T> postoutput_div2;
+        std::string filename_curvature_k0 = "k0_curvature_" + std::to_string(time_step) + ".dat";
+        auto test_curv_var_divergence0 = std::make_shared< gnuplot_output_object<double> >(filename_curvature_k0);
+        std::string filename_curv_var = "cell_limit_curv_var_" + std::to_string(time_step) + ".dat";
+        auto test_curv_var_cell = std::make_shared< gnuplot_output_object<double> >(filename_curv_var);
+
+        std::vector<T>  val_u_n_fin ; //val_u_nx_fin , val_u_ny_fin ;
+        std::vector< point<T, 2> > interface_points_plot_fin ;
+        std::vector< std::pair<T,T> > vec_n ; // , velocity_interface , velocity_field , points_vel_field;
+
+
+
+        T rise_vel0 = 0.0 , rise_vel1 = 0.0 ;
+        T flux_interface = 0.0 ;
+
+        for(auto& cl : msh_i.cells)
+        {
+            ls_cell.cell_assignment(cl);
+            u_projected.cell_assignment(cl);
+
+            if( (location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE) || (location(msh_i, cl) == element_location::ON_INTERFACE) )
+            {
+
+                T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+                area_fin += partial_area;
+
+                auto qps_fin = integrate( msh_i , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
+
+                for(auto& qp:qps_fin){
+                    mass_fin += qp.second * ls_cell(qp.first);
+                    centre_mass_x += qp.second * qp.first.x() ;
+                    centre_mass_y += qp.second * qp.first.y() ;
+
+                    rise_vel0 +=  qp.second * u_projected(qp.first).first;
+                    rise_vel1 +=  qp.second * u_projected(qp.first).second;
+                }
+
+            }
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+
+                for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                {
+                    T segment = ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                    perimeter += segment ;
+                    T val0 = ls_cell.divergence( *interface_point );
+                    T curvature_error = std::abs( std::abs(val0) - 1.0/radius ) ;
+                    l1_divergence_error_fin += curvature_error ;
+                    l2_divergence_error_fin += pow(curvature_error,2) ;
+                    linf_divergence_error_fin = std::max(linf_divergence_error_fin ,  curvature_error);
+
+
+
+                    Eigen::Matrix<T,2,1> normal_cont_grad = ls_cell.normal(*interface_point);
+                    std::pair<T,T> normal_vec_grad_cont = std::make_pair( normal_cont_grad(0) , normal_cont_grad(1) );
+
+                    vec_n.push_back( normal_vec_grad_cont ) ;
+
+                    T u_n_0 = u_projected(*(interface_point)).first * ls_cell.normal(*(interface_point))(0) ;
+                    T u_n_1 = u_projected(*(interface_point)).second * ls_cell.normal(*(interface_point))(1) ;
+
+                    interface_points_plot_fin.push_back( *(interface_point) ) ;
+
+                    //val_u_nx_fin.push_back( u_n_0 );
+                    //val_u_ny_fin.push_back( u_n_1 );
+                    val_u_n_fin.push_back( u_n_0 + u_n_1 );
+
+                    //velocity_interface.push_back( std::make_pair( u_projected(*(interface_point)).first , u_projected(*(interface_point)).second) ) ;
+
+                    T u_n_0_pt2 = u_projected(*(interface_point+1)).first * ls_cell.normal(*(interface_point+1))(0) ;
+                    T u_n_1_pt2 = u_projected(*(interface_point+1)).second * ls_cell.normal(*(interface_point+1))(1) ;
+
+                    flux_interface += segment * 0.5*( u_n_0 + u_n_1 + u_n_0_pt2 + u_n_1_pt2 ) ;
+                    //    counter_interface_pts++;
+                }
+
+                T val0 = ls_cell.divergence( *(cl.user_data.interface.end()-1) );
+                T curvature_error = std::abs( std::abs(val0) - 1.0/radius ) ;
+                l1_divergence_error_fin += curvature_error ;
+                l2_divergence_error_fin += pow(curvature_error,2) ;
+                linf_divergence_error_fin = std::max(linf_divergence_error_fin ,  curvature_error);
+
+                Eigen::Matrix<T,2,1> normal_grad_cont = ls_cell.normal(*(cl.user_data.interface.end()-1));
+                std::pair<T,T> normal_vec_grad_norm = std::make_pair(normal_grad_cont(0),normal_grad_cont(1));
+                vec_n.push_back( normal_vec_grad_norm ) ;
+
+                T u_n_0 = u_projected(*(cl.user_data.interface.end()-1)).first * ls_cell.normal(*(cl.user_data.interface.end()-1))(0) ;
+                T u_n_1 = u_projected(*(cl.user_data.interface.end()-1)).second * ls_cell.normal(*(cl.user_data.interface.end()-1))(1) ;
+
+
+                interface_points_plot_fin.push_back( *(cl.user_data.interface.end()-1) ) ;
+                //val_u_nx_fin.push_back( u_n_0 );
+                //val_u_ny_fin.push_back( u_n_1 );
+                val_u_n_fin.push_back( u_n_0 + u_n_1 );
+
+                //velocity_interface.push_back( std::make_pair( u_projected(*(cl.user_data.interface.end()-1)).first , u_projected(*(cl.user_data.interface.end()-1)).second) ) ;
+
+
+                //    counter_interface_pts++;
+
+            }
+            /*
+            for(auto& pt : points(msh_i,cl))
+            {
+                points_vel_field.push_back( std::make_pair(pt.x() , pt.y() ) ) ;
+                velocity_field.push_back( std::make_pair(u_projected(pt).first , u_projected(pt).second)) ;
+
+            }
+            */
+
+        }
+
+        bool first_cut_cell_found = FALSE ;
+        T distance_pts = 0.0;
+        point<T,2> first_point ;
+        point<T,2> cell_end_point;
+        for(auto& cl : msh_i.cells)
+        {
+
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+                ls_cell.cell_assignment(cl);
+                if(!first_cut_cell_found)
+                {
+                    for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end()-1 ; interface_point++ )
+                    {
+                        T val0 = ls_cell.divergence( *interface_point );
+                        point<T,2> curv_var = point_type(distance_pts , 0.0);
+                        if( interface_point == cl.user_data.interface.begin() )
+                            test_curv_var_cell->add_data(curv_var, val0);
+
+                        test_curv_var_divergence0->add_data(curv_var, val0);
+
+                        distance_pts += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                    }
+                    first_cut_cell_found = TRUE;
+                    first_point = *cl.user_data.interface.begin() ;
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                }
+                else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+                {
+                    for(auto& cl : msh_i.cells)
+                    {
+                        if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point ==*cl.user_data.interface.begin() )  )
+                        {
+                            ls_cell.cell_assignment(cl);
+                            for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                            {
+
+                                T val0 = ls_cell.divergence( *interface_point );
+                                point<T,2> curv_var = point_type(distance_pts , 0.0);
+                                if( interface_point == cl.user_data.interface.begin() )
+                                    test_curv_var_cell->add_data(curv_var, val0);
+
+                                test_curv_var_divergence0->add_data(curv_var, val0);
+
+
+                                distance_pts += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                            }
+                            cell_end_point = *(cl.user_data.interface.end() -1) ;
+                        }
+
+                    }
+
+                }
+                else
+                    break;
+
+            }
+
+        }
+
+
+        postoutput_div2.add_object(test_curv_var_divergence0);
+        postoutput_div2.add_object(test_curv_var_cell);
+        postoutput_div2.write();
+
+
+        //postoutput_vec.add_object(vec_normal_grad_cont_fin);
+        //postoutput_vec.write();
+        goal_quantities_time_fast(msh , interface_points_plot_fin , val_u_n_fin  , vec_n , time_step);
+
+        //goal_quantities_time(msh , tot_time, interface_points_plot_fin , val_u_nx_fin , val_u_ny_fin , val_u_n_fin , vec_n , velocity_interface , velocity_field , points_vel_field , time_step ) ;
+        //goal_quantities_time(msh , tot_time, interface_points_plot_fin , val_u_nx_fin , val_u_ny_fin , val_u_n_fin , interface_normals_fin ) ;
+
+        //if(time_step == T_N)
+        //    testing_level_set_time(msh,level_set_function, tot_time,time_step);
+
+        testing_level_set_max_min(msh,level_set_function , time_step , min_max_vec );
+
+        //std::cout<<"number of interface points is " << counter_interface_pts << std::endl;
+        l1_divergence_error_fin /= counter_interface_pts;
+        l2_divergence_error_fin = sqrt(l2_divergence_error_fin/counter_interface_pts);
+
+
+
+        std::cout<<"The l1 error of the CURVATURE at the INTERFACE, at time "<< tot_time <<" is " << l1_divergence_error_fin <<std::endl;
+        std::cout<<"The l2 error of the CURVATURE at the INTERFACE, at time "<< tot_time <<" is " << l2_divergence_error_fin <<std::endl;
+        std::cout<<"The linf error of the CURVATURE at the INTERFACE, at time "<< tot_time <<" is " << linf_divergence_error_fin <<std::endl;
+
+
+
+
+
+
+        std::cout<<"The PERIMETER, at time "<< tot_time <<" is " << perimeter << ", Initial PERIMETER =  "<<perimeter_initial<<std::endl;
+
+        std::cout<<"NORMALISED DIFFERENCE PERIMETER, at time "<< tot_time <<" is " << (perimeter - perimeter_initial)/perimeter_initial <<std::endl;
+
+        d_a = sqrt(4.0*area_fin/M_PI) ;
+
+        std::cout<<"The CIRCULARITY, at time "<< tot_time <<" is " << M_PI*d_a/perimeter <<std::endl;
+
+        std::cout  << "Area at time step: " <<tot_time<<" is "<< area_fin << std::endl;
+        std::cout << "Internal mass at time step: "<<tot_time<<" is "<< mass_fin << std::endl;
+
+        std::cout  << "NORMALISED Difference in AREA AT TIME "<<tot_time<<" IS "<< (area_fin - initial_area)/initial_area << std::endl;
+        std::cout << "NORMALISED Difference in INTERNAL MASS AT TIME "<<tot_time<<" IS "<< (std::abs(mass_fin - initial_mass))/(std::abs( initial_mass )) << std::endl;
+        std::cout << "CENTRE OF MASS at time step: "<<tot_time<<" is "<<" ( " << centre_mass_x/area_fin <<" , " << centre_mass_y/area_fin<<" ). " << std::endl;
+        std::cout << "TRANSLATION OF THE CENTRE OF MASS at time step: "  <<tot_time<<" is "<<" ( " << centre_mass_x/area_fin - centre_mass_x_inital/initial_area <<" , " << centre_mass_y/area_fin - centre_mass_y_inital/initial_area<<" ). " << std::endl;
+        std::cout  << "Abs error over expected radius = "<< std::abs( sqrt(area_fin/M_PI) - radius ) <<'\n' << std::endl;
+
+        time_vec.push_back(tot_time);
+        area_time.push_back(area_fin) ;
+        l1_err_u_n_time.push_back(l1_normal_interface_status) ;
+        linf_err_u_n_time.push_back(max_u_n_val_abs) ;
+
+        max_val_u_n_time.push_back(max_u_n_val) ;
+        l1_err_curvature_time.push_back(l1_divergence_error_fin) ;
+        linf_err_curvature_time.push_back(linf_divergence_error_fin) ;
+
+        //DA ADD BENE!!!! da qui
+
+        circularity_time.push_back(M_PI*d_a/perimeter);
+        perimeter_time.push_back(perimeter);
+        centre_mass_err_time.push_back(std::make_pair(centre_mass_x/area_fin  , centre_mass_y/area_fin) );
+
+        flux_interface_time.push_back(flux_interface);
+        rise_velocity_time.push_back( std::make_pair(rise_vel0/area_fin  , rise_vel1/area_fin) ) ;
+
+
+        //fino a qua
+
+
+    } // End of the temporal loop
+
+    //plotting_in_time( time_vec , area_time , l1_err_u_n_time , linf_err_u_n_time , max_val_u_n_time , l1_err_curvature_time , linf_err_curvature_time , dt_M );
+
+    plotting_in_time_complete( time_vec , area_time , l1_err_u_n_time , linf_err_u_n_time , max_val_u_n_time , l1_err_curvature_time , linf_err_curvature_time , dt_M ,min_max_vec ,  flux_interface_time , rise_velocity_time , centre_mass_err_time , perimeter_time , circularity_time , circularity_ref , perim_ref , area_ref , radius );
+
+
+
     std::cout<<"FINAL TIME IS t = "<<tot_time<<std::endl;
 
     tc_tot.toc();

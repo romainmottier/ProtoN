@@ -707,7 +707,7 @@ triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
         t.pts[0] = bar;
         t.pts[1] = tp[i];
         t.pts[2] = tp[(i+1)%tp.size()];
-
+        //std::cout<<"bar = "<<bar <<" , tp[i] = "<<tp[i]<<" , tp[(i+1)%tp.size()] = "<<tp[(i+1)%tp.size()]<<std::endl;
         tris.push_back(t);
     }
 
@@ -871,6 +871,8 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     
     return ret;
 }
+
+
 
 
 template<typename T, typename Function>
