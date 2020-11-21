@@ -753,7 +753,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     // integration -> save composite quadrature
    //  std::cout<<"WARNING: in agglomerated cells the integrations points are saved at priori (for a high degree). COMPUTATIONALLY USELESS."<<std::endl;
     //std::cout<<"----------> SONO IN AGGLO in cell"<<offset(msh,cl)<<std::endl;
-    size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
+    size_t degree_max = 6 ; //8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
   //   std::cout << bold << yellow << "Before integrate 1" << reset << std::endl;
     auto integration1_n = integrate(msh, cl1, degree_max, element_location::IN_NEGATIVE_SIDE);
   //  std::cout << bold << yellow << "Before integrate 2" << reset << std::endl;
@@ -936,7 +936,18 @@ merge_cells_no_double_pts(Mesh& msh, const typename Mesh::cell_type cl1,
     // integration -> save composite quadrature
    //  std::cout<<"WARNING: in agglomerated cells the integrations points are saved at priori (for a high degree). COMPUTATIONALLY USELESS."<<std::endl;
     //std::cout<<"----------> SONO IN AGGLO in cell"<<offset(msh,cl)<<std::endl;
-    size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
+    
+    std::cout<<"cl1 = "<<offset(msh,cl1)<<std::endl;
+    auto pts1 = points( msh , cl1);
+    for(auto& pt: pts1)
+        std::cout<<"Cell pt = "<<'\n'<<pt<<'\n'<<std::endl;
+    
+    std::cout<<"cl2 = "<<offset(msh,cl2)<<std::endl;
+        auto pts2 = points( msh , cl2);
+    for(auto& pt: pts2)
+        std::cout<<"Cell pt = "<<'\n'<<pt<<std::endl;
+    
+    size_t degree_max = 5 ; //8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
   //   std::cout << bold << yellow << "Before integrate 1" << reset << std::endl;
     auto integration1_n = integrate(msh, cl1, degree_max, element_location::IN_NEGATIVE_SIDE);
   //  std::cout << bold << yellow << "Before integrate 2" << reset << std::endl;

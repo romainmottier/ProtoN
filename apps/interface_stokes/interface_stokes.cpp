@@ -12451,723 +12451,11 @@ public:
     }
 };
 
-template<typename T>
-std::vector<point<T,1> >
-reference_nodes_ordered_01(size_t degree)
-{
-    auto comp_degree = degree + 1;
-    size_t reqd_nodes = comp_degree;
-
-    std::vector<point<T,1> > ret;
-    ret.reserve(reqd_nodes);
-
-    point<T,1>  qp , qp_1;
-    T           a1, a2;
-    T           delta_x;
-    switch(reqd_nodes)
-    {
-        case 1:
-            qp = point<T,1>({0.5});
-            ret.push_back(qp);
-            return ret;
-
-        case 2:
-            qp = point<T,1>({ 0.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( qp );
-            return ret;
-
-        case 3:
-            qp = point<T,1>({ 0.0 });
-            ret.push_back( qp );
-             qp = point<T,1>({1.0});
-            ret.push_back( qp );
-            qp = point<T,1>({0.5});
-            ret.push_back( qp );
-            return ret;
-
-        case 4:
-            a1 = 1.0/3.0;
-            qp = point<T,1>({ 0.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 1.0/3.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 2.0/3.0 });
-            ret.push_back( qp );
-            return ret;
-
-        case 5:
-            // Be carefull in what order data is inserted in ret!
-            // In Gauss Legendre the first one was 0.0, now is the last one
-            a2 = 0.5;
-            a1 = 1.0;
-            qp = point<T,1>({ 0.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( qp );
-
-            qp = point<T,1>({ 0.25 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 0.5 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 0.75 });
-            ret.push_back( qp );
-
-         //   qp = point<T,1>({ 0.0 });
-         //   ret.push_back( qp );
-            return ret;
-
-        default:
-
-            delta_x = 1.0/degree;
-            a1 = delta_x;
-            qp = point<T,1>({ 0.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( qp );
-            while (a1<1) {
-                qp = point<T,1>({ a1 });
-                ret.push_back( qp );
-                a1+=delta_x;
-
-            }
-           
-            
-            return ret;
-    }
-    return ret;
-}
-
-template<typename T>
-std::vector<point<T,2> >
-reference_nodes_triangle(size_t degree)
-{
-    auto comp_degree = degree + 1;
-    size_t reqd_nodes = comp_degree;
-
-    std::vector<point<T,2> > ret;
-    ret.reserve(reqd_nodes);
-
-    point<T,2>  qp ; // , qp_1;
-    //T           a1, a2;
-    //T           delta_x;
-    T pt0 = 0.0;
-    T pt1 = 1.0;
-    T pt2 = 0.5;
-    //T pt3 = 1.0/3.0;
-    //T pt4 = 2.0/3.0;
-    //T pt5 = 1.0/4.0;
-    //T pt6 = 3.0/4.0;
-    switch(reqd_nodes)
-    {
-            /*
-        case 1:
-            qp = point<T,1>({0.5});
-            ret.push_back(qp);
-            return ret;
-            */
-        case 2:
-           
-            qp = point<T,2>({ pt0 , pt0});
-            ret.push_back( qp );
-            qp = point<T,2>({ pt1 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , pt1 });
-            ret.push_back( qp );
-            return ret;
-
-        case 3:
-            qp = point<T,2>({ pt0 , pt0});
-            ret.push_back( qp );
-            qp = point<T,2>({ pt1 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , pt1 });
-            ret.push_back( qp );
-            qp = point<T,2>({0.5,pt0});
-            ret.push_back( qp );
-            qp = point<T,2>({0.5,0.5});
-            ret.push_back( qp );
-            qp = point<T,2>({pt0,0.5});
-            ret.push_back( qp );
-            
-            return ret;
-
-        case 4:
-            qp = point<T,2>({ pt0 , pt0});
-            ret.push_back( qp );
-            qp = point<T,2>({ pt1 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , pt1 });
-            ret.push_back( qp );
-            
-            qp = point<T,2>({ 1.0/3.0 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 2.0/3.0 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 2.0/3.0 , 1.0/3.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 1.0/3.0 , 2.0/3.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , 2.0/3.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , 1.0/3.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 1.0/3.0 , 1.0/3.0 });
-            ret.push_back( qp );
-            return ret;
-
-        case 5:
-            qp = point<T,2>({ pt0 , pt0});
-            ret.push_back( qp );
-            qp = point<T,2>({ pt1 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , pt1 });
-            ret.push_back( qp );
-
-            qp = point<T,2>({ 1.0/4.0 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 0.5 , pt0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 3.0/4.0 , pt0 });
-            ret.push_back( qp );
-            
-            qp = point<T,2>({ 3.0/4.0 , 1.0/4.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 0.5 , 0.5 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 1.0/4.0 , 3.0/4.0 });
-            ret.push_back( qp );
-            
-    
-            qp = point<T,2>({ pt0 , 3.0/4.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , 0.5 });
-            ret.push_back( qp );
-            qp = point<T,2>({ pt0 , 1.0/4.0 });
-            ret.push_back( qp );
-            
-            qp = point<T,2>({ 1.0/4.0 , 1.0/4.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 0.5 , 1.0/4.0 });
-            ret.push_back( qp );
-            qp = point<T,2>({ 1.0/4.0 , 0.5 });
-            ret.push_back( qp );
-            
-            
-            return ret;
-            
-            /*
-        default:
-
-            delta_x = 1.0/degree;
-            a1 = delta_x;
-            qp = point<T,1>({ 0.0 });
-            ret.push_back( qp );
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( qp );
-            while (a1<1) {
-                qp = point<T,1>({ a1 });
-                ret.push_back( qp );
-                a1+=delta_x;
-
-            }
-           
-            
-            return ret;
-             */
-    }
-    return ret;
-}
 
 
-template<typename VT>
-class cell_basis_triangle_Lagrange
-{
-    size_t              basis_degree, basis_size;
-    std::vector<point<VT,2> > ref_nodes ;
-    
-   
-public:
-   
-    
-    cell_basis_triangle_Lagrange(size_t degree)
-    {
-           basis_degree    = degree;
-           basis_size      = (basis_degree+1.0)*(basis_degree+2.0)/2.0;
-           ref_nodes = reference_nodes_triangle<VT>(degree) ; //{0,0},{1,0},{0,1}
-
-    }
-
-    
-
-    Matrix<VT, Dynamic, 1>
-    eval_basis(const point<VT,2>& pt)
-    {
-
-        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
-        VT xi = pt.x() ;
-        VT eta = pt.y() ;
-       
-        if( basis_degree == 1 )
-        {
-            ret(0) = 1.0 - eta - xi ;
-            ret(1) = xi ;
-            ret(2) = eta ;
-        }
-        else if( basis_degree == 2 )
-        {
-            ret(0) = (-1.0 + eta + xi)*(-1.0 + 2.0* eta + 2.0* xi) ;
-            ret(1) = xi * (-1.0 + 2.0* xi) ;
-            ret(2) = eta * (-1.0 + 2.0* eta) ;
-            ret(3) = -4.0 * xi * (-1.0 + eta + xi) ;
-            ret(4) = 4.0 * eta * xi ;
-            ret(5) = -4.0 * eta * (-1.0 + eta + xi) ;
-        }
-        else if( basis_degree == 3 )
-        {
-           ret(0) = -(1.0/2.0)* (-1.0 + eta + xi) *(-2.0 + 3.0* eta + 3.0* xi)* (-1.0 +
-           3.0* eta + 3.0* xi) ;
-            ret(1) = 1.0/2.0* xi *(-2.0 + 3.0* xi)* (-1.0 + 3.0* xi) ;
-            ret(2) = 1.0/2.0* eta* (-2.0 + 3.0* eta)* (-1.0 + 3.0* eta) ;
-            ret(3) = 9.0/2.0* xi *(-1.0 + eta + xi)* (-2.0 + 3.0* eta + 3.0* xi) ;
-            ret(4) = -9.0/2.0* xi *(-1.0 + eta + xi)* (-1.0 + 3.0* xi) ;
-            ret(5) = 9.0/2.0* eta *xi* (-1.0 + 3.0* xi) ;
-            
-             ret(6) = 9.0/2.0* eta* (-1.0 + 3 * eta)* xi ;
-             ret(7) = -9.0/2.0* eta* (-1.0 + 3 *eta)* (-1.0 + eta + xi) ;
-             ret(8) = 9.0/2.0* eta* (-1.0 + eta + xi)* (-2.0 + 3.0* eta + 3.0* xi) ;
-             ret(9) = -27.0* eta *xi* (-1.0 + eta + xi) ;
-            
-        }
-        else if( basis_degree == 4 )
-        {
-            ret(0) = 1.0/3.0 * (-1.0 + eta + xi) * (-1.0 + 2.0* eta + 2.0* xi) * (-3.0 + 4.0* eta +
-            4.0* xi) * (-1.0 + 4.0* eta + 4.0* xi);
-            ret(1) = 1.0/3.0 * xi * (-1.0 + 2.0* xi) * (-3.0 + 4.0* xi)* (-1.0 + 4.0* xi) ;
-            ret(2) = 1.0/3.0 * eta * (-1.0 + 2.0* eta) * (-3.0 + 4.0* eta)* (-1.0 + 4.0* eta) ;
-            
-            ret(3) = -(16.0/3.0)* xi * (-1.0 + eta + xi) * (-1.0 + 2.0* eta + 2.0* xi) *(-3.0 +
-            4.0* eta + 4.0* xi) ;
-            ret(4) = 4.0* xi* (-1.0 + eta + xi)* (-1.0 + 4.0* xi)* (-3.0 + 4.0* eta + 4.0* xi) ;
-            ret(5) = -(16.0/3.0)* xi* (-1.0 + eta + xi)* (-1.0 + 2.0* xi)* (-1.0 + 4.0* xi) ;
-            ret(6) = (16.0/3.0)* eta* xi* (-1.0 + 2.0* xi)* (-1.0 + 4.0* xi) ;
-            ret(7) = 4.0* eta* (-1.0 + 4.0* eta) *xi* (-1.0 + 4.0* xi) ;
-            
-            ret(8) = (16.0/3.0)* eta* (-1.0 + 2.0* eta)* (-1.0 + 4.0* eta)* xi ;
-            ret(9) =-(16.0/3.0)* eta* (-1.0 + 2.0* eta)* (-1.0 + 4.0* eta)* (-1.0 + eta + xi) ;
-            ret(10) = 4.0* eta* (-1.0 + 4.0* eta)* (-1.0 + eta + xi)* (-3.0 + 4.0* eta +
-            4.0* xi) ;
-            ret(11) = -(16.0/3.0)* eta *(-1.0 + eta + xi)* (-1.0 + 2.0* eta + 2.0* xi) *(-3.0 +
-            4.0* eta + 4.0* xi) ;
-            
-            ret(12) = 32.0* eta* xi *(-1.0 + eta + xi)* (-3.0 + 4.0* eta + 4.0* xi) ;
-            ret(13) = -32.0* eta* xi *(-1.0 + eta + xi)* (-1.0 + 4.0* xi) ;
-            ret(14) = -32.0* eta* (-1.0 + 4.0* eta) *xi* (-1.0 + eta + xi) ;
-            
-            
-            
-        }
-        else
-            exit(9);
-
-        
-       
-       
-
-        return ret;
-    }
-    
-    Matrix<VT, Dynamic, 2>
-    eval_gradients(const point<VT,2>& pt)
-    {
-
-        Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size,2);
-        VT xi = pt.x() ;
-        VT eta = pt.y() ;
-       
-        if( basis_degree == 1 )
-        {
-            ret(0,0) = -1.0;
-            ret(0,1) = -1.0 ;
-            
-            ret(1,0) = 1.0 ;
-            ret(1,1) = 0.0 ;
-            
-            ret(2,0) = 0.0 ;
-            ret(2,1) = 1.0 ;
-            
-        }
-        else if( basis_degree == 2 )
-        {
-            ret(0,0) = -3.0 + 4.0*eta + 4.0*xi ;
-            ret(0,1) = -3.0 + 4.0*eta + 4.0*xi ;
-           
-            ret(1,0) = -1.0 + 4.0*xi ;
-            ret(1,1) = 0.0 ;
-            
-            ret(2,0) = 0.0 ;
-            ret(2,1) = -1.0 + 4.0*eta ;
-            
-            ret(3,0) = -4.0 *( -1.0 + eta + 2.0 * xi) ;
-            ret(3,1) = -4.0 * xi ;
-            
-            ret(4,0) = 4.0 * eta ;
-            ret(4,1) = 4.0 * xi ;
-            
-            ret(5,0) = -4.0 * eta ;
-            ret(5,1) = -4.0*( -1.0 + 2.0*eta + xi) ;
-        }
-        else if( basis_degree == 3 )
-        {
-            ret(0,0) = -(1.0/2.0) * ( -11.0 + 36.0*xi -9.0*( eta*( -4.0+3.0*eta ) + 6.0*eta*xi + 3.0*xi*xi ) ) ;
-            ret(0,1) =  -(1.0/2.0) * ( -11.0 + 36.0*xi -9.0*( eta*( -4.0+3.0*eta ) + 6.0*eta*xi + 3.0*xi*xi ) ) ;
-            
-            ret(1,0) = 1.0 + 9.0/2.0 * xi * (-2.0 + 3.0* xi) ;
-            ret(1,1) = 0.0 ;
-            
-            ret(2,0) = 0.0 ;
-            ret(2,1) = 1.0 + 9.0/2.0* eta * (-2.0 + 3.0* eta) ;
-            
-            ret(3,0) = 9.0/2.0* (2.0 + 3.0 * eta * eta + xi *(-10.0 + 9.0* xi) + eta *(-5.0 + 12.0* xi)) ;
-            ret(3,1) = 9.0/2.0* xi* (-5.0 + 6.0* eta + 6.0* xi) ;
-            
-            
-            ret(4,0) = -9.0/2.0* (1.0 + eta * (-1.0 + 6.0* xi) + xi * (-8.0 + 9.0* xi)) ;
-            ret(4,1) = 9.0/2.0* xi * (1.0 - 3.0* xi) ;
-            
-            
-            ret(5,0) = 9.0/2.0* eta * (-1.0 + 6.0* xi) ;
-            ret(5,1) = 9.0/2.0* xi * (-1.0 + 3.0* xi) ;
-
-            
-            ret(6,0) = 9.0/2.0* eta* (-1.0 + 3.0 * eta);
-            ret(6,1) = 9.0/2.0* xi * (-1.0 + 6.0* eta) ;
-            
-            
-            ret(7,0) = 9.0/2.0* eta* (1.0 - 3.0 * eta);
-            ret(7,1) =  -9.0/2.0* (1.0 -xi + eta * (-8.0 + 9.0* eta + 6.0* xi)) ;
-            
-            ret(8,0) = 9.0/2.0* eta* (-5.0 + 6.0*eta + 6.0*xi) ;
-            ret(8,1) = 9.0/2.0* (2.0 + 9.0* eta * eta - 5.0* xi + 3.0* xi*xi + 2.0* eta* (-5.0 + 6.0* xi)) ;
-            
-            ret(9,0) = -27.0 * eta * (-1.0 + eta + 2.0*xi) ;
-            ret(9,1) = -27.0 *xi* (-1.0 + 2.0*eta + xi) ;
-            
-        }
-        else if( basis_degree == 4 )
-        {
-            ret(0,0) = 1.0/3.0 * (-5.0 + 8*eta + 8*xi) * (5.0 + 16* eta* eta + 4.0* xi * (-5.0 + 4*xi) + 4.0* eta * (-5.0 + 8*xi) ) ;
-            ret(0,1) = 1.0/3.0 * (-5.0 + 8*eta + 8*xi) * (5.0 + 16* eta* eta + 4.0* xi * (-5.0 + 4*xi) + 4.0* eta * (-5.0 + 8*xi) ) ;
-            
-            ret(1,0) = 1.0/3.0 * (-3.0 + 8.0* xi) * (1.0 + 4.0* xi * (-3.0 + 4.0* xi) );
-            ret(1,1) = 0.0 ;
-            
-            ret(2,0) = 0.0 ;
-            ret(2,1) = 1.0/3.0 * (-3.0 + 8.0* eta) * (1.0 + 4.0* eta * (-3.0 + 4.0* eta) );
-            
-            ret(3,0) = -(16.0/3.0) * (-3 + 8 *pow(eta,3) +
-            6 *pow(eta,2)* (-3 + 8*xi) + eta * (13 + 72 * (-1 + xi) *xi) +
-            2 *xi* (13 + xi * (-27 + 16 *xi))) ;
-            ret(3,1) = -(16.0/3.0)* xi * (13 + 24 *pow(eta,2) + 12 *xi* (-3 + 2 *xi) +
-            12 * eta* (-3 + 4 *xi)) ;
-            
-            ret(4,0) = 4.0* (-1.0 + eta + 2*xi)* (3.0 + 32.0*(1-xi)* xi + 4.0* eta *(-1+8*xi)) ;
-            ret(4,1) = 4.0* xi* (-1.0 + 4*xi)* (-7.0 + 8.0* eta + 8.0* xi) ;
-            
-            ret(5,0) = -(16.0/3.0)*(-1 + eta + 12 *eta * xi * (-1 + 2 *xi) +
-            2 *xi* (7 + *xi* (-21 + 16 *xi))) ;
-            ret(5,1) = -(16.0/3.0)* xi* (1.0 - xi + 8 * pow(xi,2))  ;
-            
-            ret(6,0) = (16.0/3.0)* eta* (1.0 + 12.0* xi* (-1.0 + 2.0* xi)  ) ;
-            ret(6,1) = (16.0/3.0)* xi* (1.0 - xi + 8 * pow(xi,2))  ;
-            
-            ret(7,0) = 4.0* eta* (-1.0 + 4.0* eta) * (-1.0 + 8.0* xi) ;
-            ret(7,1) = 4.0* (-1.0 + 8.0* eta) *xi* (-1.0 + 4.0* xi) ;
-            
-            ret(8,0) = (16.0/3.0)* eta* (1.0 - 6.0* eta + 8.0* eta* eta) ;
-            ret(8,1) = (16.0/3.0)* (1.0 + 12.0* eta* (-1.0 + 2.0* eta))*xi ;
-            
-            ret(9,0) = - (16.0/3.0)* eta* (1.0 - 6.0* eta + 8.0* eta* eta) ;
-            ret(9,1) = -(16.0/3.0)*(-1 + xi + 2 *eta* (7 - 6 *xi + eta* (-21 + 16 *eta + 12 *xi))) ;
-            
-            ret(10,0) = 4.0* eta* (-1.0 + 4.0* eta)* (-7.0 + 8*eta + 8*xi) ;
-            ret(10,1) = 4.0 * (-1.0 + 2.0* eta + xi)* (3.0 -4* xi + 32*eta* (-1.0 + eta + xi) ) ;
-            
-            ret(11,0) = -(16.0/3.0)* eta *(13 + 24 *pow(eta,2) + 12*xi* (-3 + 2 *xi) +
-            12 *eta* (-3 + 4 *xi));
-            ret(11,1) = -(16.0/3.0)* (-3 + 2 *eta* (13 + eta* (-27 + 16 *eta)) + 13 *xi +
-            72* (-1 +eta) *eta* xi + 6* (-3 + 8 *eta) *pow(xi,2) + 8 * pow(xi,3)) ;
-            
-            
-            ret(12,0) = 32.0* eta*(3.0 + 4*eta*eta + 2*xi* (-7.0 + 6.0* xi) + eta*(-7.0 + 16* xi)) ;
-            ret(12,1) = 32 *xi* (3 + 2* eta* (-7 + 6* eta) - 7 *xi + 16 *eta* xi + 4 *pow(xi,2) );
-            
-            ret(13,0) = -32.0* eta* (1 + 2 *xi* (-5 + 6 *xi) +eta* (-1 + 8*xi)) ;
-            ret(13,1) = -32.0* xi *(-1 + 2 *eta + xi)* (-1 + 4 *xi);
-            
-            ret(14,0) = -32.0* eta* (-1.0 + 4.0* eta) * (-1.0 + eta + 2*xi) ;
-            ret(14,1) = -32.0* eta* (1 -xi + 2 *eta* (-5 + 6*eta + 4*xi)) ;
-            
-            
-            
-        }
-        else
-            exit(9);
-
-        
-       
-       
-
-        return ret;
-    }
-   
 
 
-    size_t size() const
-    {
-        return basis_size;
-    }
 
-    size_t degree() const
-    {
-        return basis_degree;
-    }
-
-    static size_t size(size_t degree)
-    {
-        return (degree+1.0)*(degree+2.0)/2.0;
-    }
-};
-
-
-template<typename VT>
-class cell_basis_Lagrange_1d_reference_new
-{
-    size_t              basis_degree, basis_size;
-    std::vector<point<VT,1> > ref_nodes ;
-    
-   
-public:
-   
-    
-    cell_basis_Lagrange_1d_reference_new(size_t degree)
-    {
-           basis_degree    = degree;
-           basis_size      = (basis_degree+1);
-           ref_nodes = reference_nodes_ordered_01<VT>(degree) ; //[0,1]
-
-    }
-
-    
-
-    Matrix<VT, Dynamic, 1>
-    eval_basis_1d(const VT& pt)
-    {
-
-        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
-        
-        
-        for(size_t k = 0 ; k < basis_size ; k++)
-        {
-            VT bk = 1;
-            for ( size_t j = 0 ; j < basis_size ; j++ ){
-                if(j!=k){
-                    bk *= ( ( pt - ref_nodes.at(j).x() )/ ( ref_nodes.at(k).x() - ref_nodes.at(j).x() ) );
-                    //std::cout<<"ref_nodes.at(j).x() = " << ref_nodes.at(j).x() << " , ref_nodes.at(k).x() = "<<ref_nodes.at(k).x()<<std::endl;
-                }
-            }
-
-            ret(k) = bk;
-           
-        }
-        
-       
-       
-
-        return ret;
-    }
-
-   
-
-    // ANCORA DA DEFINIRE
-    Matrix<VT, Dynamic, 1>
-    eval_gradients_1d(const VT& pt)
-    {
-        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size, 1);
-        
-        
-        for (size_t k = 0 ; k < basis_size ; k++ )
-        {
-            VT  bk_der = 1.0 ;
-            VT sumx = 0.0;
-            for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
-            {
-                VT sumxx = 1.0 ;
-
-                if (tmpx!=k) {
-
-                    
-                    bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
-                    for (size_t jx = 0 ; jx < basis_size; jx++)
-                    {
-                        if (jx!=tmpx && jx!=k)
-                        {
-                            sumxx *= ( pt-ref_nodes.at(jx).x() );
-                        }
-                    }
-                    sumx += sumxx;
-
-                }
-            }
-          
-            ret(k) = bk_der*sumx;
-        }
-        
-       
-
-        return ret;
-
-
-    }
-    
-    
-    
-    Matrix<VT, Dynamic, 1>
-    eval_double_derivative_1d(const VT& pt)
-    {
-
-         Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size, 1);
-            
-        if( basis_degree == 0)
-            exit(9) ;
-        if( basis_degree == 1)
-            return ret ;
-        if( basis_degree == 2)
-        {
-            for (size_t k = 0 ; k < basis_size ; k++ )
-            {
-                VT  bk_der = 1.0 ;
-                for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
-                {
-                    if (tmpx!=k)
-                        bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
-                    
-                }
-                     
-                ret(k) = bk_der*2.0;
-            }
-        
-            return ret ;
-        }
-        if( basis_degree == 3)
-        {
-            for (size_t k = 0 ; k < basis_size ; k++ )
-            {
-                VT  bk_der = 1.0 ;
-                VT b_tot = 0.0;
-                for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
-                {
-                    VT b = 1.0 ;
-
-                    if (tmpx!=k)
-                    {
-
-                                
-                        bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
-                        size_t jx= tmpx ;
-                        bool inserted = false ;
-                        while (!inserted)
-                        {
-                            if (jx!=k ){
-                                b *= ( pt-ref_nodes.at(jx).x() );
-                                inserted = true ;
-                            }
-                             
-                            jx++;
-                             
-                        }
-                        b_tot += 2.0*b;
-            
-                    }
-                 
-                }
-            
-                ret(k) = bk_der*b_tot;
-                 
-            }
-            return ret;
-        }
-          
-        
-        if(basis_degree == 4)
-        { // In the generic case it doesn't work since amount is fine for just (x-xj)*(x-xl), with l>j, but iif I have more than two terms it need somehting more general
-        
-        for (size_t k = 0 ; k < basis_size ; k++ ) // basis k
-        {
-            VT  bk_der = 1.0 ;
-            VT b_tot = 0.0;
-            size_t pos = 0 ; // iter
-            for( size_t amount = 0 ; amount < basis_degree -1 ; amount++)
-            {
-                if(pos == k)
-                    pos++;
-                
-                 size_t jx= pos ;
-                // starting from amount k = 0  num counts how many terms have (x-x1)*(), how many(x-x2)*() etc --> pos defines the term
-                // For k generic, it always starts from pos=0(at least that k=0) and just skip pos=k
-                for( size_t num = basis_degree - 1 -amount ; num >0 ; num-- )
-                {
-                    VT b = ( pt-ref_nodes.at(pos).x() );
-                    size_t m = 0 ;
-                   
-                    while ( m !=  basis_degree - 3)
-                    {
-                        if (jx!=k && jx!=pos){
-                            b *= ( pt-ref_nodes.at(jx).x() );
-                            m++;
-                        }
-                
-                        jx++;
-                    }
-                    b_tot += 2.0*b;
-                }
-                pos++;
-            }
-            
-            for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
-            {
-                if (tmpx!=k)
-                    bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
-            }
-                
-           
-            ret(k) = bk_der*b_tot;
-            
-        }
-     
-        return ret;
-        }
-    }
-    
-
-    size_t size() const
-    {
-        return basis_size;
-    }
-
-    size_t degree() const
-    {
-        return basis_degree;
-    }
-
-    static size_t size(size_t degree)
-    {
-        return (degree+1);
-    }
-};
 
 
 template<typename Mesh, typename VT>
@@ -20086,614 +19374,12 @@ struct Interface_parametrisation
 
 
 
-struct Interface_parametrisation_mesh1d
-{
-    
-    size_t basis_degree , basis_size;
-    
-   
-    
-    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(basis_degree+1) {}
-    
-    Interface_parametrisation_mesh1d(){}
-
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        size_t basis_size = basis_degree + 1 ;
-        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
-        auto basis = cb.eval_basis_1d(pt) ;
-        
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0) += basis(i)*physical_pts[i].x();
-            ret(1) += basis(i)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
-        auto basis = cb.eval_basis_1d(pt) ;
-        
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0) += basis(i)*physical_pts[i].x();
-            ret(1) += basis(i)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        size_t basis_size = basis_degree + 1 ;
-        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
-        auto basis = cb.eval_gradients_1d(pt) ;
-       
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0) += basis(i)*physical_pts[i].x();
-            ret(1) += basis(i)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
-        auto basis = cb.eval_gradients_1d(pt) ;
-       
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0) += basis(i)*physical_pts[i].x();
-            ret(1) += basis(i)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    
-    template<typename T>
-    T
-    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-        return (this->derivative(pt,physical_pts,basis_degree)).norm();
-    }
-    
-    template<typename T>
-    T
-    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-        return (this->derivative(pt,physical_pts)).norm();
-    }
-    
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-
-        auto der = this->derivative(pt,physical_pts,basis_degree) ;
-        return der/der.norm();
-       
-        
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-
-        auto der = this->derivative(pt,physical_pts) ;
-        return der/der.norm();
-       
-        
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        auto tan_pt = (this->tangent(pt, physical_pts , basis_degree)) ;
-        ret(0) = tan_pt(1);
-        ret(1) = -tan_pt(0);
-        return ret;
-           
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        auto tan_pt = (this->tangent(pt, physical_pts)) ;
-        ret(0) = tan_pt(1);
-        ret(1) = -tan_pt(0);
-        return ret;
-           
-    }
-    
-    template<typename T>
-    T
-    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
-        
-        size_t basis_size = basis_degree + 1 ;
-        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
-        auto basis = cb.eval_double_derivative_1d(pt) ;
-    
-        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
-        auto curv_der_norm = curv_der.norm() ;
-       
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            curv_double_der(0) += basis(i)*physical_pts[i].x();
-            curv_double_der(1) += basis(i)*physical_pts[i].y();
-        }
-    
-        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
-        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
-        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
-        return ret.norm()/curv_der_norm ;
-           
-    }
-    
-    template<typename T>
-    T
-    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
-        
-        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
-        auto basis = cb.eval_double_derivative_1d(pt) ;
-    
-        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
-        auto curv_der_norm = curv_der.norm() ;
-       
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            curv_double_der(0) += basis(i)*physical_pts[i].x();
-            curv_double_der(1) += basis(i)*physical_pts[i].y();
-        }
-    
-        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
-        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
-        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
-        return ret.norm()/curv_der_norm ;
-           
-    }
-    
-    
-};
-
-struct triangular_parametrisation_curve
-{
-    
-    size_t basis_degree , basis_size;
-    
-   
-    
-    triangular_parametrisation_curve( size_t degree ) : basis_degree(degree), basis_size((basis_degree+1.0)*(basis_degree+2.0)/2.0) {}
-    
-    triangular_parametrisation_curve(){}
-
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    operator()( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        size_t basis_size = (basis_degree+1.0)*(basis_degree+2.0)/2.0 ;
-        cell_basis_triangle_Lagrange<T> cb(basis_degree);
-        auto basis = cb.eval_basis(pt) ;
-        
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0) += basis(i)*physical_pts[i].x();
-            ret(1) += basis(i)*physical_pts[i].y();
-        }
-        return ret;
-        
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 1>
-    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-
-        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-        cell_basis_triangle_Lagrange<T> cb(basis_degree);
-        auto basis = cb.eval_basis(pt) ;
-        
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0) += basis(i)*physical_pts[i].x();
-            ret(1) += basis(i)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    
-    template<typename T>
-    Matrix<T, 2, 2>
-    gradient( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-
-        Matrix<T, 2, 2> ret = Matrix<T, 2, 2>::Zero(2, 2);
-        size_t basis_size = (basis_degree+1.0)*(basis_degree+2.0)/2.0 ;
-        cell_basis_triangle_Lagrange <T> cb(basis_degree);
-        auto basis = cb.eval_gradients(pt) ;
-       
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0,0) += basis(i,0)*physical_pts[i].x();
-            ret(0,1) += basis(i,1)*physical_pts[i].x();
-            ret(1,0) += basis(i,0)*physical_pts[i].y();
-            ret(1,1) += basis(i,1)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    template<typename T>
-    Matrix<T, 2, 2>
-    gradient( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-
-        Matrix<T, 2, 2> ret = Matrix<T, 2, 2>::Zero(2, 2);
-        cell_basis_triangle_Lagrange <T> cb(basis_degree);
-        auto basis = cb.eval_gradients(pt) ;
-            
-        for(size_t i = 0 ; i < basis_size ; i++)
-        {
-            ret(0,0) += basis(i,0)*physical_pts[i].x();
-            ret(0,1) += basis(i,1)*physical_pts[i].x();
-            ret(1,0) += basis(i,0)*physical_pts[i].y();
-            ret(1,1) += basis(i,1)*physical_pts[i].y();
-        }
-        return ret;
-        
-        
-    }
-    
-    
-    template<typename T>
-    T
-    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
-    {
-        auto grad = this->gradient(pt,physical_pts,basis_degree) ;
-        return grad(0,0)*grad(1,1) - grad(0,1)*grad(1,0) ;
-        //return (this->gradient(pt,physical_pts,basis_degree)).norm();
-    }
-    
-    template<typename T>
-    T
-    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
-    {
-        auto grad = this->gradient(pt,physical_pts,basis_degree) ;
-        return grad(0,0)*grad(1,1) - grad(0,1)*grad(1,0) ;
-        //return (this->gradient(pt,physical_pts)).norm();
-    }
-    
-    
-    
-    
-    
-};
-
-
-template<typename T, size_t ET>
-std::vector< std::pair<point<T,2>, T> >
-integrate_interface_new(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where)
-{
-    assert( is_cut(msh, cl) );
-    
-    std::vector< std::pair<point<T,2>, T> > ret;
-    
-    
-    auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
-    
-    auto integration_msh = cl.user_data.integration_msh ;
-    size_t degree_int = integration_msh.degree ;
-    auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
-    
-    for (size_t i = 0; i < integration_msh.cells.size(); i++)
-    {
-        auto pts = points(integration_msh,integration_msh.cells[i]);
-        
-        for (auto itor = qps.begin(); itor != qps.end(); itor++)
-        {
-            auto qp = *itor;
-            auto t = 0.5 * qp.first.x() + 0.5;
-            auto jacobian = para_curve.jacobian( t , pts , degree ) ;
-            auto w = 0.5 * qp.second * jacobian ;
-            // change of variable of g-l quadrature' nodes to [0,1]
-            ret.push_back( std::make_pair(t, w) );
-        }
-    }
-    
-    return ret;
-}
 
 
 
-template<typename T, size_t ET>
-std::vector< typename cuthho_mesh<T, ET>::point_type >
-collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
-                             const typename cuthho_mesh<T, ET>::cell_type& cl,
-                             const element_location& where)
-{
-    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
-    typedef typename cuthho_mesh<T, ET>::node_type      node_type;
-
-    assert( is_cut(msh, cl) );
-    auto ns = nodes(msh, cl);
-
-    std::vector< point_type > ret;
-
-    auto node2pt = [&](const node_type& n) -> auto {
-        return msh.points.at(n.ptid);
-    };
-
-    auto insert_interface = [&](void) -> void {
-        if (where == element_location::IN_NEGATIVE_SIDE)
-            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.begin(), cl.user_data.integration_msh.interface_vertices.end());
-        else if (where == element_location::IN_POSITIVE_SIDE)
-            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.rbegin(), cl.user_data.integration_msh.interface_vertices.rend());
-        else
-            throw std::logic_error("If you've got here there is some issue...");
-    };
-
-    bool case1 = location(msh, ns.front()) == where && location(msh, ns.back()) != where;
-    bool case2 = location(msh, ns.front()) != where && location(msh, ns.back()) == where;
-    bool case3 = location(msh, ns.front()) != where && location(msh, ns.back()) != where;
-    //bool case4 = location(msh, ns.front()) == where && location(msh, ns.back()) == where;
-
-    if ( case1 || case2 || case3 )
-    {
-        for (size_t i = 0; i < ns.size(); i++)
-            if ( location(msh, ns[i]) == where )
-                ret.push_back( node2pt(ns[i]) );
-
-        insert_interface();
-    }
-    else // case4, the only possible remaining
-    {
-        size_t i = 0;
-        while ( i < ns.size() && location(msh, ns.at(i)) == where )
-            ret.push_back( node2pt(ns.at(i++)) );
-        insert_interface();
-        while ( i < ns.size() && location(msh, ns.at(i)) != where )
-            i++;
-        while ( i < ns.size() && location(msh, ns.at(i)) == where )
-            ret.push_back( node2pt(ns.at(i++)) );
-    }
-
-    return ret;
-}
-    
-template<typename T>
-struct temp_tri_curve
-{
-    //std::array< point<T,2>, 3 > pts;
-    std::vector< point<T,2> > pts;
-    size_t degree ;
-    size_t size;
-    
-    temp_tri_curve(size_t degree_int):degree(degree_int),size((degree_int+1)*(degree_int+2)/2.0){
-        pts.resize( size ) ;
-    }
-
-    /*
-    T area() const {
-        auto v1 = pts[1] - pts[0];
-        auto v2 = pts[2] - pts[0];
-
-        return ( v1.x()*v2.y() - v2.x()*v1.y() ) / 2.0;
-        // can be negative
-    }
-    */
-};
 
 
-template<typename T, size_t ET>
-std::vector<temp_tri_curve<T>>
-triangulate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-            element_location where)
-{
-    assert( is_cut(msh, cl) );
 
-    auto integration_msh = cl.user_data.integration_msh ;
-    size_t degree_int = integration_msh.degree ;
-    auto cl_vertices = integration_msh.interface_vertices ;
-    
-    
-    T degree_int_num = degree_int*1.0;
-    
-    
-    std::vector<temp_tri_curve<T>> tris_high_order ;
-    
-    auto tp = collect_triangulation_points_curve(msh, cl, where);
-    // auto bar = barycenter(tp);
-    auto bar = tesselation_center(msh, cl, where);
-
-    if( degree_int == 1)
-    {
-        for (size_t i = 0; i < tp.size(); i++)
-        {
-            temp_tri_curve<T> t(degree_int);
-            t.pts[0] = bar;
-            t.pts[1] = tp[i];
-            t.pts[2] = tp[(i+1)%tp.size()];
-            tris_high_order.push_back(t);
-        }
-        return tris_high_order;
-    }
-    else
-    {
-            size_t counter_vert = 0;
-            size_t pos = 0;
-            for (size_t i = 0; i < tp.size(); i++)
-            {
-                temp_tri_curve<T> t(degree_int);
-                t.pts[pos++] = bar;
-                auto tp1 = tp[i];
-                auto tp2 = tp[(i+1)%tp.size()];
-                t.pts[pos++] = tp1;
-                t.pts[pos++] = tp2;
-            
-                for(size_t i = 2 ; i < degree_int + 1 ; i++ )
-                {
-               
-                    t.pts[pos++] = bar + (i-1.0)/(degree_int_num)*(tp1-bar); // high order point
-                    if( counter_vert < cl_vertices.size() &&  tp1 == cl_vertices[counter_vert] && tp2 == cl_vertices[(counter_vert+1)%cl_vertices.size()] )
-                    {
-                    // If I'm in the curvilinear side
-                        auto pts =  points( integration_msh,integration_msh.cells[counter_vert] ) ;
-                        t.pts[pos++] = pts[i]; // high order point
-                    
-                    }
-                    else
-                        t.pts[pos++] = tp1 + (i-1.0)/(degree_int_num)*(tp2-tp1); // high order point
-               
-                    t.pts[pos++] = tp2 + (i-1.0)/(degree_int_num)*(bar-tp2); // high order point
-                    
-                
-                }
-                
-                tris_high_order.push_back(t);
-            }
-
-        return tris_high_order;
-    }
-}
-
-template<typename T, size_t ET>
-std::vector<std::pair<point<T,2>, T>>
-triangle_quadrature_curve(const temp_tri_curve<T>& tri,const typename cuthho_mesh<T, ET>::cell_type& cl, size_t deg)
-{
-    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
-    if (deg == 0)
-        deg = 1;
-
-    if (deg > 8)
-        throw std::invalid_argument("Quadrature order too high");
-    
-    size_t degree_int = cl.user_data.integration_msh.degree;
-    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
-    triangular_parametrisation_curve curved_tri_para( degree_int );
-    
-
-    using namespace dunavant_quadratures;
-
-    std::vector<std::pair<point<T,2>, T>> ret;
-
-    ret.reserve( rules[deg].num_points );
-
-    for (size_t i = 0; i < rules[deg].num_points; i++)
-    {
-
-        point_type p = point_type(rules[deg].data[i][1] , rules[deg].data[i][2] );
-        point<T,2> qp = p;
-        // QUESTION: these points are good also for curved triangles??
-        
-
-        T qw          = 0.5*curved_tri_para.jacobian( qp, tri ) * rules[deg].data[i][3];
-        // 0.5 = Area of reference triangle
-
-        ret.push_back( std::make_pair(qp, qw) );
-    }
-
-    return ret;
-}
-
-template<typename T, size_t ET>
-std::vector< std::pair<point<T,2>, T> >
-make_integrate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where)
-{
-    std::vector< std::pair<point<T,2>, T> > ret;
-
-    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
-        return ret;
-
-    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
-        return integrate(msh, cl, degree);
-    
-  
-    auto tris = triangulate_curve(msh, cl, where);
-    size_t degree_int = cl.user_data.integration_msh.degree;
-    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
-   // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
-    for (auto& tri : tris)
-    {
-        // fatto io da qua
-        /*
-        auto v0 = tri.pts[1] - tri.pts[0];
-        auto v1 = tri.pts[2] - tri.pts[0];
-        auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
-        auto counter = offset(msh,cl);
-        if(area < 0){
-               for( auto& r : cl.user_data.interface ){
-                  std::cout<<"In cella num "<<counter<<std::endl;
-                   std::cout<<"Point r: x is "<<r.x()<<", y is "<<r.y()<<std::endl;
-               }
-           
-           }
-         */
-        // a qua
-    
-        auto qpts = triangle_quadrature_curve(tri,cl, degree);
-        ret.insert(ret.end(), qpts.begin(), qpts.end());
-    }
-    
-    return ret;
-}
-
-
-template<typename Mesh>
-void
-set_integration_mesh(const Mesh& msh, size_t degree)
-{
-    for(auto& cl : msh.cells)
-    {
-        if( location(msh, cl) == element_location::ON_INTERFACE )
-            cl.user_data.integration_msh.set_cell_new(cl,degree);
-
-    }
-
-}
 
 
 template< typename Mesh , typename Fonction , typename FiniteSpace , typename T = typename Mesh::coordinate_type  >
@@ -43157,6 +41843,7 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
 
             auto qps_n = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+            RealType local_H1_err_cut_n = 0.;
             for (auto& qp : qps_n)
             {
                 /* Compute H1-error */
@@ -43168,7 +41855,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
                 H1_error += qp.second * inner_product(grad_diff , grad_diff);
-
+                local_H1_err_cut_n += qp.second * inner_product(grad_diff , grad_diff);
+                
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
@@ -43192,7 +41880,10 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
             }
 
+//            std::cout<<"H1 local error (negative cut cell) = "<<local_H1_err_cut_n<<std::endl;
+            RealType local_H1_err_cut_p = 0.;
             auto qps_p = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
+            
             for (auto& qp : qps_p)
             {
                 /* Compute H1-error */
@@ -43204,7 +41895,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
                 H1_error += qp.second * inner_product(grad_diff , grad_diff);
-
+                local_H1_err_cut_p += qp.second * inner_product(grad_diff , grad_diff);
+                
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs_p;
@@ -43224,7 +41916,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
                 p_gp->add_data( qp.first, p_num );
             }
-
+//            std::cout<<"H1 local error (positive cut cell) = "<<local_H1_err_cut_p<<std::endl;
+            
             if(normal_analysis)
             {
                 for(auto& interface_point : cl.user_data.interface)
@@ -43285,6 +41978,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
             }
             vel_cell_dofs = vel_locdata.head(cbs);
 
+            
+            RealType local_H1_err_uncut = 0.;
             auto qps = integrate(msh, cl, 2*hdi.cell_degree());
             for (auto& qp : qps)
             {
@@ -43297,7 +41992,7 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
                 H1_error += qp.second * inner_product(grad_diff , grad_diff);
-
+                local_H1_err_uncut += qp.second * inner_product(grad_diff , grad_diff);
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs;
@@ -43317,12 +42012,12 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
                 p_gp->add_data( qp.first, p_num );
             }
-
+//            std::cout<<"H1 local error (uncut cell) = "<<local_H1_err_uncut<<std::endl;
             if(normal_analysis)
             {
-                auto qps = integrate( msh , cl , degree+1 , element_location::IN_NEGATIVE_SIDE);
+                auto qps = integrate( msh , cl , degree+1 );
 
-                RealType partial_area = measure( msh, cl, element_location::IN_NEGATIVE_SIDE);
+                RealType partial_area = measure( msh, cl );
                 area_fin += partial_area;
 
                 for(auto& qp:qps){
@@ -45150,7 +43845,7 @@ void convergence_test_normal_error_numerical_ls(void)
             typedef cuthho_poly_mesh<T> Mesh;
             offset_definition(msh);     // For Original Mesh
             offset_definition(msh);     // For Agglomerated Mesh
-            size_t int_refsteps = 1;
+            size_t int_refsteps = 2;
             std::cout<<"Number of refine interface points: r = "<<int_refsteps<<std::endl;
 
             /************** FINITE ELEMENT INITIALIZATION **************/
@@ -45158,6 +43853,9 @@ void convergence_test_normal_error_numerical_ls(void)
             auto fe_data = Finite_Element<T,Mesh>( msh , degree_FEM , mip ) ;
             typedef Finite_Element<T,Mesh> FiniteSpace;
             std::cout<<"Level Set (finite element approximation): degree FEM = "<<degree_FEM<<std::endl;
+            
+            T degree_curve = 4 ;
+            auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
 
             /************** ANALYTIC LEVEL SET FUNCTION  **************/
             T radius = 1.0/3.0;
@@ -45187,18 +43885,22 @@ void convergence_test_normal_error_numerical_ls(void)
             if(1)  // AGGLOMERATION
             {
                 detect_cut_cells3(msh, level_set_function);
+                refine_interface_pro3_curve_para(msh, level_set_function, int_refsteps,degree_curve);
+                set_integration_mesh(msh,degree_curve) ;
                 detect_cell_agglo_set(msh, level_set_function);
                 make_neighbors_info_cartesian(msh);
-                refine_interface_pro3(msh, level_set_function, int_refsteps);
+                //refine_interface_pro3(msh, level_set_function, int_refsteps);
+                
                 std::cout<<"WARNING: in agglomerated cells the integrations points are saved at priori (for a high degree). COMPUTATIONALLY USELESS."<<std::endl;
-                make_agglomeration(msh, level_set_function);
+                make_agglomeration_no_double_points(msh, level_set_function);
+                set_integration_mesh(msh,degree_curve) ;
             }
             else  // NODE DISPLACEMENT
             {
                 move_nodes(msh, level_set_function);
                 detect_cut_faces3(msh, level_set_function); //do it again to update intersection points
                 detect_cut_cells3(msh, level_set_function);
-                refine_interface_pro3(msh, level_set_function, int_refsteps);
+                refine_interface_pro3_curve_para(msh, level_set_function, int_refsteps,degree_curve);
             }
 
             /************** UPDATING  LEVEL SET   **************/
@@ -57173,13 +55875,13 @@ int main(int argc, char **argv)
 
 
 // ------------------------------------ CONVERGENCE ANALYSIS -------------------------------------
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     //convergence_test(); // GUILLAUME APPLICATION
     //convergence_test_normal_error(); // STEFANO APPLICATION: STATIC BUBBLE ANALYTIC
-    //convergence_test_normal_error_numerical_ls(); // STEFANO APPLICATION: STATIC BUBBLE NUMERICAL
-    convergence_test_normal_error_case1(); // curvature const(case 1)
+    convergence_test_normal_error_numerical_ls(); // STEFANO APPLICATION: STATIC BUBBLE NUMERICAL
+    //convergence_test_normal_error_case1(); // curvature const(case 1)
     //convergence_test_normal_error_case2(); // curvature const(case 2)
     // tests_stabilization();
     // interface_residus();
@@ -62952,7 +61654,7 @@ int main(int argc, char **argv)
 // LAST UPDATE 03/11/2020 -> (GRADIENT AND NORMAL CONTINUOUS + DIVERGENCE CONT/DISC )
 
 // NEW CURVE INTEGRATION : CHECKING
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -63206,7 +61908,7 @@ int main(int argc, char **argv)
     
     
     typedef Level_set_berstein< Mesh , Fonction , FiniteSpace , T > Level_Set;
-    T degree_curve = 3 ;
+    T degree_curve = 4 ;
     auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
    
     
@@ -63264,19 +61966,142 @@ int main(int argc, char **argv)
     detect_node_position3(msh_i, level_set_function); // In cuthho_geom
     //detect_node_position3_parallel(msh_i, level_set_function); // In cuthho_geom
     detect_cut_faces3(msh_i, level_set_function); // In cuthho_geom
+    
     if (agglomeration)
     {
         detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
         //detect_cut_cells3_parallelized(msh_i, level_set_function); // In cuthho_geom
         refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
         set_integration_mesh(msh_i,degree_curve) ;
+        T area_prova = 0. , perimeter_prova0 = 0. , perimeter_prova1 = 0. , perimeter_prova2 = 0.  ;
+        T area_prova_tot = 0. , area_prova_old = 0. ;
+        T mass_prova = 0. , c_mass_prova_x = 0. , c_mass_prova_y = 0. ;
+        T mass_prova_old = 0. , c_mass_prova_x_old = 0. , c_mass_prova_y_old = 0. ;
+        for(auto& cl : msh_i.cells)
+        {
+            if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
+            {
+//                std::cout<<"cl = "<<offset(msh_i,cl)<<std::endl;
+//                auto pts = points( msh_i , cl);
+//
+//                for(auto& pt: pts)
+//                    std::cout<<"Cell pt = "<<'\n'<<pt<<std::endl;
+                T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+                T partial_area_old = measure_old( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+                area_prova += partial_area;
+                area_prova_old += partial_area_old;
+                
+                auto qps = integrate( msh_i , cl , 2*degree_FEM , element_location::IN_NEGATIVE_SIDE);
+                for(auto& qp:qps){
+                    mass_prova += qp.second * level_set_function(qp.first,msh,cl);
+                    c_mass_prova_x += qp.second * qp.first.x() ;
+                    c_mass_prova_y += qp.second * qp.first.y() ;
+                }
+                auto qps_old = integrate_old( msh_i , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
+                for(auto& qp:qps_old){
+                    mass_prova_old += qp.second * level_set_function(qp.first,msh,cl);
+                    c_mass_prova_x_old += qp.second * qp.first.x() ;
+                    c_mass_prova_y_old += qp.second * qp.first.y() ;
+                }
+                
+                if( location(msh_i, cl) == element_location::ON_INTERFACE )
+                {
+                    T partial_area_pos = measure( msh_i, cl, element_location::IN_POSITIVE_SIDE);
+                    area_prova_tot += partial_area_pos;
+                }
+                
+                
+                
+                if( location(msh_i, cl) == element_location::ON_INTERFACE )
+                {
+                    for(auto interface_point = cl.user_data.interface.begin() ; interface_point < cl.user_data.interface.end() -1 ; interface_point++ )
+                    {
+
+
+                        perimeter_prova0 += ( *(interface_point+1) - *interface_point ).to_vector().norm();
+                        
+
+
+                    }
+                    auto qps1 =integrate_interface(msh_i, cl, degree_curve, element_location::IN_NEGATIVE_SIDE);
+                    auto qps2 =  integrate_interface_old(msh_i, cl, degree_curve, element_location::IN_NEGATIVE_SIDE);
+                    for (auto& qp : qps1)
+                    {
+                        perimeter_prova1 += qp.second ;
+                
+                    }
+                    for (auto& qp : qps2)
+                    {
+                            perimeter_prova2 += qp.second ;
+                    
+                    }
+                    
+                    /*
+                    for(auto& cl_i : cl.user_data.integration_msh.cells)
+                    {
+                        std::cout<<"cl = "<<offset(cl.user_data.integration_msh,cl_i)<<std::endl;
+                        auto pts = points( cl.user_data.integration_msh , cl_i);
+                        auto nds = nodes( cl.user_data.integration_msh , cl_i);
+                        for(auto& pt: pts)
+                            std::cout<<"pt = "<<'\n'<<pt<<std::endl;
+                        for(auto& nd: nds)
+                            std::cout<<"nd = "<<'\n'<<nd<<std::endl;
+                        std::cout<<'\n'<<std::endl;
+                    }
+                    */
+                }
+            }
+            else
+            {
+                T partial_area_pos = measure( msh_i, cl);
+                area_prova_tot += partial_area_pos;
+            }
+
+            
+        }
+        area_prova_tot += area_prova;
+        std::cout<<"area_tot = "<<area_prova_tot<<std::endl;
+        std::cout<<"Err area_tot = "<<1.0 - area_prova_tot <<std::endl;
+        
+        std::cout<<"ANALYTICAL area = "<<M_PI*radius*radius<<std::endl;
+        
+        std::cout<<"ERRORE PERCENTUALE area NUOVA = "<<std::abs(M_PI*radius*radius-area_prova)/(M_PI*radius*radius)*100<<std::endl;
+        std::cout<<"ERRORE PERCENTUALE area VECCHIA = "<<std::abs(M_PI*radius*radius-area_prova_old)/(M_PI*radius*radius)*100<<std::endl;
+        std::cout<<"area NEW = "<<area_prova<<std::endl;
+        std::cout<<"ERROR area NEW = "<<std::abs(M_PI*radius*radius - area_prova)<<std::endl;
+        std::cout<<"area OLD = "<<area_prova_old<<std::endl;
+        std::cout<<"ERROR area OLD = "<<std::abs(M_PI*radius*radius - area_prova_old)<<'\n'<<std::endl;
+        
+        std::cout<<"ANALYTICAL perimiter = "<<2*M_PI*radius<<std::endl;
+        std::cout<<"perimeter NEW = "<<perimeter_prova1<<std::endl;
+        std::cout<<"ERROR perimeter NEW = "<<std::abs(2*M_PI*radius - perimeter_prova1)<<std::endl;
+        std::cout<<"perimeter OLD = "<<perimeter_prova2<<std::endl;
+        std::cout<<"ERROR perimeter OLD = "<<std::abs(2*M_PI*radius - perimeter_prova2)<<'\n'<<std::endl;
+        
+        //std::cout<<"ANALYTICAL perimiter = "<<2*M_PI*radius<<std::endl;
+        std::cout<<"mass NEW = "<<mass_prova<<std::endl;
+        //std::cout<<"ERROR perimeter NEW = "<<std::abs(2*M_PI*radius - perimeter_prova1)<<std::endl;
+        std::cout<<"mass OLD = "<<mass_prova_old<<std::endl;
+        T area_circle = M_PI*radius*radius ;
+        T m1 = c_mass_prova_x/(area_circle) ;
+        T m2 = c_mass_prova_x_old/area_circle ;
+        T m3 = c_mass_prova_y/area_circle ;
+        T m4 = c_mass_prova_y_old/area_circle ;
+        std::cout<<"c_mass_prova_x NEW = "<<m1<<std::endl;
+        std::cout<<"c_mass_prova_x_old OLD = "<<m2<<std::endl;
+        std::cout<<"c_mass_prova_y NEW = "<<m3<<std::endl;
+        std::cout<<"c_mass_prova_y_old OLD = "<<m4<<std::endl;
+        std::cout<<"DIFF c_mass_prova_x = "<<m1-m2<<std::endl;
+        std::cout<<"DIFF c_mass_prova_y = "<<m3-m4<<std::endl;
+       
+        
         detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
         make_neighbors_info_cartesian(msh_i); // Non serve modificarla
         //refine_interface_angle(msh_i, level_set_function, int_refsteps);
         //refine_interface_pro3(msh_i, level_set_function, int_refsteps);
        
         make_agglomeration_no_double_points(msh_i, level_set_function);
-        set_integration_mesh(msh_i,degree_curve) ;
+        set_integration_mesh(msh_i,degree_curve) ; // TOLTO PER IL MOMENTO SENNO RADDOPPIO
         //make_agglomeration(msh_i, level_set_function); // Non serve modificarla
 
     }
@@ -63711,9 +62536,16 @@ int main(int argc, char **argv)
 
         if( location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE || location(msh_i, cl) == element_location::ON_INTERFACE )
         {
+//            std::cout<<"cl = "<<offset(msh_i,cl)<<std::endl;
+//             auto pts = points( msh_i , cl);
+//
+//             for(auto& pt: pts)
+//                 std::cout<<"Cell pt = "<<'\n'<<pt<<std::endl;
+            
             T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+            
             initial_area += partial_area;
-            auto qps = integrate( msh_i , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
+            auto qps = integrate( msh_i , cl , 2*degree_FEM , element_location::IN_NEGATIVE_SIDE);
             for(auto& qp:qps){
                 initial_mass += qp.second * ls_cell(qp.first);
                 centre_mass_x_inital += qp.second * qp.first.x() ;
@@ -63928,12 +62760,17 @@ int main(int argc, char **argv)
         detect_node_position3(msh_ref, level_set_ref); // In cuthho_geom
         detect_cut_faces3(msh_ref, level_set_ref); // In cuthho_geom
         detect_cut_cells3(msh_ref, level_set_ref); // In cuthho_geom
+        //refine_interface_pro3(msh_ref, level_set_ref, int_refsteps);
+        refine_interface_pro3_curve_para(msh_ref, level_set_ref, int_refsteps,degree_curve);
+        set_integration_mesh(msh_ref,degree_curve) ;
         detect_cell_agglo_set(msh_ref, level_set_ref); // Non serve modificarla
         make_neighbors_info_cartesian(msh_ref); // Non serve modificarla
-        refine_interface_pro3(msh_ref, level_set_ref, int_refsteps);
+        
         //make_agglomeration(msh_ref, level_set_ref); // Non serve modificarla
+        //make_agglomeration_no_double_points(msh_ref, level_set_ref);
         make_agglomeration_no_double_points(msh_ref, level_set_ref);
-
+        set_integration_mesh(msh_ref,degree_curve) ;
+        
         typedef Level_set_berstein_high_order_interpolation_grad_cont_fast< Mesh , Fonction_REF , FiniteSpace , T > Level_Set_REF;
         auto ls_cell_ref = LS_cell_high_order_grad_cont_fast< T , Mesh , Level_Set_REF, Fonction_REF , FiniteSpace >(level_set_ref,msh_ref);
 
@@ -64189,12 +63026,17 @@ int main(int argc, char **argv)
         if (agglomeration)
         {
             detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
+            
+            refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+            set_integration_mesh(msh_i,degree_curve) ;
+            
             detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
             make_neighbors_info_cartesian(msh_i); // Non serve modificarla
             //refine_interface_angle(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
-            refine_interface_pro3(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+            //refine_interface_pro3(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
             make_agglomeration_no_double_points(msh_i, level_set_function); // Non serve modificarla
-           // make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+                       // make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+            set_integration_mesh(msh_i,degree_curve) ;
         }
         else
         {
@@ -64203,7 +63045,8 @@ int main(int argc, char **argv)
             detect_cut_cells3(msh_i, level_set_function);
             //refine_interface2(msh_i2, level_set_function, int_refsteps);
             //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
-            refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+            refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+            //refine_interface_pro3(msh_i, level_set_function, int_refsteps);
         }
 
         tc.toc();
@@ -64397,21 +63240,27 @@ int main(int argc, char **argv)
             if (agglomeration)
             {
                 detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
+                
+                refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+                set_integration_mesh(msh_i,degree_curve) ;
+                
                 detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
                 make_neighbors_info_cartesian(msh_i); // Non serve modificarla
                 //refine_interface_angle(msh_i2, level_set_function, int_refsteps); // IN cuthho_geom
-                refine_interface_pro3(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
+                //refine_interface_pro3(msh_i, level_set_function, int_refsteps); // IN cuthho_geom
                 make_agglomeration_no_double_points(msh_i, level_set_function);
                 //make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+                set_integration_mesh(msh_i,degree_curve) ;
             }
             else
             {
-                move_nodes(msh_i, level_set_function);
+                //move_nodes(msh_i, level_set_function);
                 //detect_cut_faces2(msh_i2, level_set_function); //do it again to update intersection     points
                 detect_cut_cells3(msh_i, level_set_function);
                 //refine_interface2(msh_i2, level_set_function, int_refsteps);
                 //refine_interface_angle(msh_i2, level_set_function, int_refsteps);
-                refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+                //refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+                refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
             }
 
             tc.toc();
@@ -64534,7 +63383,7 @@ int main(int argc, char **argv)
                 T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
                 area_fin += partial_area;
 
-                auto qps_fin = integrate( msh_i , cl , 2*degree_FEM+1 , element_location::IN_NEGATIVE_SIDE);
+                auto qps_fin = integrate( msh_i , cl , 2*degree_FEM , element_location::IN_NEGATIVE_SIDE);
 
                 for(auto& qp:qps_fin){
                     mass_fin += qp.second * ls_cell(qp.first);

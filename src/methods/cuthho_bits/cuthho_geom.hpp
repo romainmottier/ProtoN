@@ -24,6 +24,7 @@
 #include <iterator>
 #include "cuthho_mesh.hpp"
 
+
 template<typename T, size_t ET>
 bool
 is_cut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl)
@@ -727,14 +728,807 @@ measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_t
     for (auto& qp : qpsi)
     {
         totmeas += qp.second;
+        //std::cout<<"qpsi.first = "<<qp.first<<" , qpsi.second = "<<qp.second<<std::endl;
     }
 
     return totmeas;
 }
 
 template<typename T, size_t ET>
+T
+measure_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+        const element_location& where)
+{
+    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+        return measure(msh, cl);
+
+    T totmeas = 0.0;
+    auto qpsi = integrate_old(msh, cl, 0, where);
+    for (auto& qp : qpsi)
+    {
+        totmeas += qp.second;
+        //std::cout<<"qpsi.first = "<<qp.first<<" , qpsi.second = "<<qp.second<<std::endl;
+    }
+
+    return totmeas;
+}
+
+
+
+
+
+struct Interface_parametrisation_mesh1d
+{
+    
+    size_t basis_degree , basis_size;
+    
+   
+    
+    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(basis_degree+1) {}
+    
+    Interface_parametrisation_mesh1d(){}
+
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_basis_1d(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_basis_1d(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_gradients_1d(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_gradients_1d(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        return (this->derivative(pt,physical_pts,basis_degree)).norm();
+    }
+    
+    template<typename T>
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        return (this->derivative(pt,physical_pts)).norm();
+    }
+    
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        auto der = this->derivative(pt,physical_pts,basis_degree) ;
+        return der/der.norm();
+       
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        auto der = this->derivative(pt,physical_pts) ;
+        return der/der.norm();
+       
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, physical_pts , basis_degree)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, physical_pts)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+    template<typename T>
+    T
+    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
+        auto curv_der_norm = curv_der.norm() ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            curv_double_der(0) += basis(i)*physical_pts[i].x();
+            curv_double_der(1) += basis(i)*physical_pts[i].y();
+        }
+    
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        return ret.norm()/curv_der_norm ;
+           
+    }
+    
+    template<typename T>
+    T
+    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
+        auto curv_der_norm = curv_der.norm() ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            curv_double_der(0) += basis(i)*physical_pts[i].x();
+            curv_double_der(1) += basis(i)*physical_pts[i].y();
+        }
+    
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        return ret.norm()/curv_der_norm ;
+           
+    }
+    
+    
+};
+
+
+
+
+
+
+
+
+struct triangular_parametrisation_curve
+{
+    
+    size_t basis_degree , basis_size;
+    
+   
+    
+    triangular_parametrisation_curve( size_t degree ) : basis_degree(degree), basis_size((basis_degree+1.0)*(basis_degree+2.0)/2.0) {}
+    
+    triangular_parametrisation_curve(){}
+
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = (basis_degree+1.0)*(basis_degree+2.0)/2.0 ;
+        cell_basis_triangle_Lagrange<T> cb(basis_degree);
+        auto basis = cb.eval_basis(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 1>
+    operator()( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_triangle_Lagrange<T> cb(basis_degree);
+        auto basis = cb.eval_basis(pt) ;
+//        std::cout<<'\n'<<"basis"<<'\n'<<basis<<'\n'<<std::endl;
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+//            std::cout<<"basis(i,0) = "<<basis(i)<<std::endl;
+//            std::cout<<"physical_pts = ("<<physical_pts[i].x()<<" , "<<physical_pts[i].y()<<" ) "<<std::endl;
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+            
+        }
+//        std::cout<<"ret = "<<ret<<std::endl;
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    Matrix<T, 2, 2>
+    gradient( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 2> ret = Matrix<T, 2, 2>::Zero(2, 2);
+        size_t basis_size = (basis_degree+1.0)*(basis_degree+2.0)/2.0 ;
+        cell_basis_triangle_Lagrange <T> cb(basis_degree);
+        auto basis = cb.eval_gradients(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0,0) += basis(i,0)*physical_pts[i].x();
+            ret(0,1) += basis(i,1)*physical_pts[i].x();
+            ret(1,0) += basis(i,0)*physical_pts[i].y();
+            ret(1,1) += basis(i,1)*physical_pts[i].y();
+        }
+        
+        return ret;
+        
+        
+    }
+    
+    template<typename T>
+    Matrix<T, 2, 2>
+    gradient( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 2> ret = Matrix<T, 2, 2>::Zero(2, 2);
+        cell_basis_triangle_Lagrange <T> cb(basis_degree);
+        auto basis = cb.eval_gradients(pt) ;
+//        std::cout<<'\n'<<"basis"<<'\n'<<basis<<'\n'<<std::endl;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0,0) += basis(i,0)*physical_pts[i].x();
+//            std::cout<<"basis(i,0) = "<<basis(i,0)<<std::endl;
+//            std::cout<<"physical_pts = "<<physical_pts[i].x()<<std::endl;
+            ret(0,1) += basis(i,1)*physical_pts[i].x();
+            ret(1,0) += basis(i,0)*physical_pts[i].y();
+            ret(1,1) += basis(i,1)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    template<typename T>
+    T
+    jacobian( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        auto grad = this->gradient(pt,physical_pts,basis_degree) ;
+        return std::abs( grad(0,0)*grad(1,1) - grad(0,1)*grad(1,0) );
+        //return (this->gradient(pt,physical_pts,basis_degree)).norm();
+    }
+    
+    template<typename T>
+    T
+    jacobian( const point<T, 2>& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        auto grad = this->gradient(pt,physical_pts,basis_degree) ;
+        return std::abs( grad(0,0)*grad(1,1) - grad(0,1)*grad(1,0) );
+        //return (this->gradient(pt,physical_pts)).norm();
+    }
+    
+    
+    
+    
+    
+};
+
+
+/*
+template<typename T, size_t ET>
+std::vector< typename cuthho_mesh<T, ET>::point_type >
+collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
+                             const typename cuthho_mesh<T, ET>::cell_type& cl,
+                             const element_location& where)
+{
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+    typedef typename cuthho_mesh<T, ET>::node_type      node_type;
+
+    assert( is_cut(msh, cl) );
+    auto ns = nodes(msh, cl);
+
+    std::vector< point_type > ret;
+
+    auto node2pt = [&](const node_type& n) -> auto {
+        return msh.points.at(n.ptid);
+    };
+
+    auto insert_interface = [&](void) -> void {
+        if (where == element_location::IN_NEGATIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.begin(), cl.user_data.integration_msh.interface_vertices.end());
+        else if (where == element_location::IN_POSITIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.rbegin(), cl.user_data.integration_msh.interface_vertices.rend());
+        else
+            throw std::logic_error("If you've got here there is some issue...");
+    };
+
+    bool case1 = location(msh, ns.front()) == where && location(msh, ns.back()) != where;
+    bool case2 = location(msh, ns.front()) != where && location(msh, ns.back()) == where;
+    bool case3 = location(msh, ns.front()) != where && location(msh, ns.back()) != where;
+    //bool case4 = location(msh, ns.front()) == where && location(msh, ns.back()) == where;
+
+    if ( case1 || case2 || case3 )
+    {
+        for (size_t i = 0; i < ns.size(); i++)
+            if ( location(msh, ns[i]) == where )
+                ret.push_back( node2pt(ns[i]) );
+
+        insert_interface();
+    }
+    else // case4, the only possible remaining
+    {
+        size_t i = 0;
+        while ( i < ns.size() && location(msh, ns.at(i)) == where )
+            ret.push_back( node2pt(ns.at(i++)) );
+        insert_interface();
+        while ( i < ns.size() && location(msh, ns.at(i)) != where )
+            i++;
+        while ( i < ns.size() && location(msh, ns.at(i)) == where )
+            ret.push_back( node2pt(ns.at(i++)) );
+    }
+
+    return ret;
+}
+
+*/
+
+
+template<typename T, size_t ET>
+std::vector< typename cuthho_mesh<T, ET>::point_type >
+collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
+                             const typename cuthho_mesh<T, ET>::cell_type& cl, typename cuthho_mesh<T, ET>::point_type& bar ,
+                             const element_location& where)
+{
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+    typedef typename cuthho_mesh<T, ET>::node_type      node_type;
+
+    assert( is_cut(msh, cl) );
+    auto ns = nodes(msh, cl);
+    std::vector< node_type > n_where;
+    
+    auto node2pt = [&](const node_type& n) -> auto {
+        return msh.points.at(n.ptid);
+    };
+    
+    size_t counter = 0;
+    size_t first_node ;
+    //bool case_odd = false ;
+    //bool first_n = false ;
+    for(auto& n : ns ){
+        if(location(msh, n) == where ){
+            if( bar == node2pt(n) ){
+                first_node = counter++;
+                //case_odd = true ;
+            }
+            else
+            {
+                n_where.push_back(n);
+                counter++;
+                //if(first_n == false){
+                //    first_n = true ;
+                 //   n_where.push_back(n);
+                //}
+                //else
+                //{
+                //    counter++;
+                //    n_where.push_back(n);
+                //}
+               
+            }
+           
+        }
+    }
+    
+    std::vector< point_type > ret;
+
+    
+
+    auto insert_interface = [&](void) -> void {
+        if (where == element_location::IN_NEGATIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.begin(), cl.user_data.integration_msh.interface_vertices.end());
+        else if (where == element_location::IN_POSITIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.rbegin(), cl.user_data.integration_msh.interface_vertices.rend());
+        else
+            throw std::logic_error("If you've got here there is some issue...");
+    };
+    
+    
+    
+    if( counter == 1 )
+        insert_interface();
+
+    //if( case_odd == false && counter == 2 )
+    if( counter == 2 )
+    {
+     
+        ret.push_back( node2pt(n_where[1]) );
+        insert_interface();
+        ret.push_back( node2pt(n_where[0]) );
+    }
+    
+    //if( case_odd == true && counter == 2 )
+    if( counter == 3 )
+    {
+        if( first_node == 2 )
+            first_node = 0;
+        ret.push_back( node2pt(n_where[first_node]) );
+        insert_interface();
+        ret.push_back( node2pt(n_where[1-first_node]) );
+    }
+    
+
+    return ret;
+}
+
+
+
+    
+template<typename T>
+struct temp_tri_curve
+{
+    //std::array< point<T,2>, 3 > pts;
+    std::vector< point<T,2> > pts;
+    size_t degree ;
+    size_t size;
+    
+    temp_tri_curve(size_t degree_int):degree(degree_int),size((degree_int+1)*(degree_int+2)/2.0){
+        pts.resize( size ) ;
+    }
+
+    /*
+    T area() const {
+        auto v1 = pts[1] - pts[0];
+        auto v2 = pts[2] - pts[0];
+
+        return ( v1.x()*v2.y() - v2.x()*v1.y() ) / 2.0;
+        // can be negative
+    }
+    */
+};
+
+
+template<typename T, size_t ET>
+std::vector<std::vector< point<T,2> > >  // std::vector<temp_tri_curve<T>>
+triangulate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+            element_location where)
+{
+    assert( is_cut(msh, cl) );
+
+    auto integration_msh = cl.user_data.integration_msh ;
+    size_t degree_int = integration_msh.degree_curve ;
+    auto cl_vertices = integration_msh.interface_vertices ;
+    size_t size_vert = cl_vertices.size() - 1 ; 
+    //for(auto& vertex : cl_vertices)
+    //    std::cout<<" , vertex = "<<vertex;
+    //std::cout<<std::endl;
+    
+    T degree_int_num = degree_int*1.0;
+    T degree_size_triangle = (degree_int + 1.0 )*(degree_int +2.0 )/2.0 ;
+    //std::vector<temp_tri_curve<T> > tris_high_order ;
+    std::vector<std::vector< point<T,2> >> tris_high_order ;
+    
+    auto bar = tesselation_center(msh, cl, where);
+    auto tp = collect_triangulation_points_curve(msh, cl,bar, where);
+    
+    
+    
+//    for(auto& p : tp)
+//        std::cout<<" , point = "<<p;
+//    std::cout<<std::endl;
+//    std::cout<<"bar = "<<bar<<std::endl;
+    
+
+    if( degree_int == 1)
+    {
+        for (size_t i = 0; i < tp.size() - 1 ; i++)
+        {
+            std::vector< point<T,2> > t(degree_size_triangle);
+            t[0] = bar ;
+            t[1] = tp[i];
+            t[2] = tp[(i+1)%tp.size()];
+            //temp_tri_curve<T> t(degree_int);
+            //t.pts[0] = bar;
+            //t.pts[1] = tp[i];
+            //t.pts[2] = tp[(i+1)%tp.size()];
+            tris_high_order.push_back(t);
+        }
+        return tris_high_order;
+    }
+    else
+    {
+            size_t counter_vert = 0;
+//            if(where == element_location::IN_POSITIVE_SIDE)
+//            {
+//               std::reverse(cl_vertices.begin(), cl_vertices.end());
+//            }
+            
+            for (size_t i = 0; i < tp.size() - 1 ; i++)
+            {
+                size_t pos = 0;
+                std::vector< point<T,2> > t(degree_size_triangle);
+                //temp_tri_curve<T> t(degree_int);
+                //t.pts[pos++] = bar;
+                bool interface_side = false ;
+                t[pos++] = bar ;
+                auto tp1 = tp[i];
+                auto tp2 = tp[(i+1)%tp.size()];
+                t[pos++] = tp1;
+                t[pos++] = tp2;
+                //t.pts[pos++] = tp1;
+                //t.pts[pos++] = tp2;
+            
+                for(size_t i = 2 ; i < degree_int + 1 ; i++ )
+                {
+               
+                    t[pos++] = bar + (i-1.0)/(degree_int_num)*(tp1-bar); // high order point
+                    //t.pts[pos++] = bar + (i-1.0)/(degree_int_num)*(tp1-bar); // high order point
+                   // && counter_vert < cl_vertices.size() && ERA COSI
+                }
+                for(size_t i = 2 ; i < degree_int + 1 ; i++ )
+                {
+                    // && tp2 == cl_vertices[(counter_vert+1)%cl_vertices.size() ERA COSI
+                    if( where == element_location::IN_NEGATIVE_SIDE && counter_vert < size_vert &&  tp1 == cl_vertices[counter_vert] && tp2 == cl_vertices[(counter_vert+1)] )
+                    {
+                    // If I'm in the curvilinear side
+                        auto pts =  points( integration_msh,integration_msh.cells[counter_vert] ) ;
+                        //t.pts[pos++] = pts[i]; // high order point
+                        t[pos++] = pts[i]; // high order point
+                        interface_side = true;
+//                        counter_vert ++ ;
+                    }
+                    else if( where == element_location::IN_POSITIVE_SIDE && counter_vert < size_vert &&  tp1 == cl_vertices[size_vert-counter_vert] && tp2 == cl_vertices[size_vert-(counter_vert+1)] )
+                    {
+                    // If I'm in the curvilinear side
+                        auto pts =  points( integration_msh,integration_msh.cells[size_vert-1-counter_vert] ) ;
+                        //t.pts[pos++] = pts[i]; // high order point
+                        t[pos++] = pts[pts.size()+1-i]; // high order point
+                        interface_side = true;
+//                        counter_vert ++ ;
+                    }
+                    else
+                        t[pos++] = tp1 + (i-1.0)/(degree_int_num)*(tp2-tp1); // high order point
+                        //t.pts[pos++] = tp1 + (i-1.0)/(degree_int_num)*(tp2-tp1); // high order point
+                }
+                for(size_t i = 2 ; i < degree_int + 1 ; i++ )
+                {
+                    t[pos++] = tp2 + (i-1.0)/(degree_int_num)*(bar-tp2); // high order point
+                    //t.pts[pos++] = tp2 + (i-1.0)/(degree_int_num)*(bar-tp2); // high order point
+                    
+                
+                }
+                if( degree_int == 3 )
+                    t[pos++] = t[7] + 0.5*(t[4]-t[7]);
+                    //t[pos++] = { bar.x() + (2.0)/(degree_int_num)*(t[1].x()-bar.x()) ,  bar.y() + (2.0)/(degree_int_num)*(tp2.y()-bar.y()) } ;
+                    if( degree_int == 4 )
+                    {
+//                        std::cout<<" -------------> ANCORA SBAGLIATO CREDO, DA CONTROLLARE!!!"<<std::endl;
+                         t[pos++] = t[10] + 0.5*(t[4]-t[10]);
+                        t[pos++] = t[9] + 2.0/3.0*(t[5]-t[9]);
+                        t[pos++] = t[9] + 1.0/3.0*(t[5]-t[9]);
+                        //t[pos++] = { bar.x() + (1.0)/(degree_int_num)*(tp1.x()-bar.x()) ,  bar.y() + (1.0)/(degree_int_num)*(tp2.y()-bar.y()) } ;
+                        //t[pos++] = { bar.x() + (2.0)/(degree_int_num)*(tp1.x()-bar.x()) ,  bar.y() + (1.0)/(degree_int_num)*(tp2.y()-bar.y()) } ;
+                        //t[pos++] = { bar.x() + (1.0)/(degree_int_num)*(tp1.x()-bar.x()) ,  bar.y() + (2.0)/(degree_int_num)*(tp2.y()-bar.y()) } ;
+                        
+                    }
+                if(interface_side)
+                    counter_vert ++ ;
+                
+                tris_high_order.push_back(t);
+//                if(where == element_location::IN_POSITIVE_SIDE)
+//                {
+//                for(auto& tt : t)
+//                    std::cout<< std::setprecision(std::numeric_limits<long double>::digits10 + 1)<<" , tt = "<<tt;
+//                std::cout<<'\n'<<std::endl;
+//                }
+            }
+        
+
+        return tris_high_order;
+    }
+}
+
+template<typename T, typename Cell >
+std::vector<std::pair<point<T,2>, T>> // temp_tri_curve<T> tri
+triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, size_t deg)
+{
+    //typedef typename Cell::point_type     point_type;
+    if (deg == 0)
+        deg = 1;
+
+    if (deg > 8)
+        throw std::invalid_argument("Quadrature order too high");
+    
+    size_t degree_int = cl.user_data.integration_msh.degree_curve;
+    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
+    triangular_parametrisation_curve curved_tri_para( degree_int );
+    
+
+    using namespace dunavant_quadratures;
+
+    std::vector<std::pair<point<T,2>, T>> ret;
+
+    ret.reserve( rules[deg].num_points );
+
+    for (size_t i = 0; i < rules[deg].num_points; i++)
+    {
+
+        //point_type p = point_type(rules[deg].data[i][1] , rules[deg].data[i][2] );
+        point<T,2> qp =  { rules[deg].data[i][1] , rules[deg].data[i][2] };   // p;
+        auto p = curved_tri_para( qp , tri ) ;
+        point<T,2> pt = {p(0) , p(1)} ;
+//        std::cout<<"qp = "<<qp<<" , pt = "<<pt<<std::endl;
+//        // QUESTION: these points are good also for curved triangles??
+//        std::cout<<"Grad( "<< qp <<" ) = "<<curved_tri_para.gradient( qp, tri )<<std::endl;
+//        std::cout<<"curved_tri_para.jacobian( qp, tri ) = "<<curved_tri_para.jacobian( qp, tri ) <<std::endl;
+        T qw          = 0.5*curved_tri_para.jacobian( qp, tri ) * rules[deg].data[i][3];
+        // 0.5 = Area of reference triangle
+
+        ret.push_back( std::make_pair(pt, qw) );
+    }
+
+    return ret;
+}
+
+
+template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where)
+{
+    std::vector< std::pair<point<T,2>, T> > ret;
+
+    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
+        return ret;
+
+    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+        return integrate(msh, cl, degree);
+    
+  
+    auto tris = triangulate_curve(msh, cl, where);
+    //size_t degree_int = cl.user_data.integration_msh.degree;
+    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
+   // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
+    for (auto& tri : tris)
+    {
+        // fatto io da qua
+        /*
+        auto v0 = tri.pts[1] - tri.pts[0];
+        auto v1 = tri.pts[2] - tri.pts[0];
+        auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
+        auto counter = offset(msh,cl);
+        if(area < 0){
+               for( auto& r : cl.user_data.interface ){
+                  std::cout<<"In cella num "<<counter<<std::endl;
+                   std::cout<<"Point r: x is "<<r.x()<<", y is "<<r.y()<<std::endl;
+               }
+           
+           }
+         */
+        // a qua
+    
+        auto qpts = triangle_quadrature_curve(tri,cl, degree);
+        ret.insert(ret.end(), qpts.begin(), qpts.end());
+    }
+    
+    return ret;
+}
+
+
+
+
+
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> > // HO INVERTITO I NOMI PER FARE LA PROVA
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+          size_t degree, const element_location& where)
+{
+    
+    if ( is_cut(msh, cl) ){
+        size_t degree_int = cl.user_data.integration_msh.degree_curve;
+        degree += (degree_int-1) ;
+    }
+    
+    if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
+        return cl.user_data.integration_n;
+
+    if( cl.user_data.integration_p.size() != 0 && where == element_location::IN_POSITIVE_SIDE)
+        return cl.user_data.integration_p;
+
+    return make_integrate(msh, cl, degree, where);
+}
+
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
+make_integrate_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                size_t degree, const element_location& where)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
@@ -775,19 +1569,18 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
+    
     if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
         return cl.user_data.integration_n;
 
     if( cl.user_data.integration_p.size() != 0 && where == element_location::IN_POSITIVE_SIDE)
         return cl.user_data.integration_p;
 
-    return make_integrate(msh, cl, degree, where);
+    return make_integrate_old(msh, cl, degree, where);
 }
-
-
 
 
 template<typename T, size_t ET>
@@ -826,7 +1619,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate_interface_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                     size_t degree, element_location where)
 {
     assert( is_cut(msh, cl) );
@@ -872,6 +1665,47 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     return ret;
 }
 
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
+integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where)
+{
+    assert( is_cut(msh, cl) );
+    typedef typename cuthho_mesh<T, ET>::point_type point_type ;
+    std::vector< std::pair<point<T,2>, T> > ret;
+    
+    
+    auto integration_msh = cl.user_data.integration_msh ;
+    size_t degree_int = integration_msh.degree_curve ;
+    auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
+    
+    
+    degree += (degree_int -1) ;
+    auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
+    
+    
+    
+    for (size_t i = 0; i < integration_msh.cells.size(); i++)
+    {
+        auto pts = points(integration_msh,integration_msh.cells[i]);
+        
+        for (auto itor = qps.begin(); itor != qps.end(); itor++)
+        {
+            auto qp = *itor;
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = para_curve(t , pts , degree_int ) ;
+            point<T,2> pt = point_type( p(0) , p(1) ) ;
+            T jacobian = para_curve.jacobian( t , pts , degree_int ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+            //std::cout<<"t = "<<t << " , pt = "<<pt <<std::endl;
+            // change of variable of g-l quadrature' nodes to [0,1]
+            ret.push_back( std::make_pair(pt, w) );
+        }
+    }
+    
+    return ret;
+}
 
 
 

@@ -106,6 +106,23 @@ struct node_cuthho_info
 };
 
 
+
+template<typename Mesh>
+void
+set_integration_mesh( Mesh& msh, size_t degree)
+{
+    for(auto& cl : msh.cells)
+    {
+        if( location(msh, cl) == element_location::ON_INTERFACE )
+            cl.user_data.integration_msh.set_cell_new(cl,degree);
+
+    }
+
+}
+
+
+
+
 template<typename T, size_t ET>
 using cuthho_mesh = mesh<T, ET, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;
 

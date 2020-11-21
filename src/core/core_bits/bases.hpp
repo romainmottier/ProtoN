@@ -960,3 +960,737 @@ public:
     }
 };
 
+
+
+
+// REFERENCE NODES
+
+
+template<typename T>
+std::vector<point<T,1> >
+reference_nodes_ordered_01(size_t degree)
+{
+    auto comp_degree = degree + 1;
+    size_t reqd_nodes = comp_degree;
+
+    std::vector<point<T,1> > ret;
+    ret.reserve(reqd_nodes);
+
+    point<T,1>  qp , qp_1;
+    T           a1, a2;
+    T           delta_x;
+    switch(reqd_nodes)
+    {
+        case 1:
+            qp = point<T,1>({0.5});
+            ret.push_back(qp);
+            return ret;
+
+        case 2:
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( qp );
+            return ret;
+
+        case 3:
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+             qp = point<T,1>({1.0});
+            ret.push_back( qp );
+            qp = point<T,1>({0.5});
+            ret.push_back( qp );
+            return ret;
+
+        case 4:
+            a1 = 1.0/3.0;
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 2.0/3.0 });
+            ret.push_back( qp );
+            return ret;
+
+        case 5:
+            // Be carefull in what order data is inserted in ret!
+            // In Gauss Legendre the first one was 0.0, now is the last one
+            a2 = 0.5;
+            a1 = 1.0;
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( qp );
+
+            qp = point<T,1>({ 0.25 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 0.5 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 0.75 });
+            ret.push_back( qp );
+
+         //   qp = point<T,1>({ 0.0 });
+         //   ret.push_back( qp );
+            return ret;
+
+        default:
+
+            delta_x = 1.0/degree;
+            a1 = delta_x;
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( qp );
+            while (a1<1) {
+                qp = point<T,1>({ a1 });
+                ret.push_back( qp );
+                a1+=delta_x;
+
+            }
+           
+            
+            return ret;
+    }
+    return ret;
+}
+
+
+template<typename T>
+std::vector<point<T,2> >
+reference_nodes_triangle(size_t degree)
+{
+    auto comp_degree = degree + 1;
+    size_t reqd_nodes = comp_degree;
+
+    std::vector<point<T,2> > ret;
+    ret.reserve(reqd_nodes);
+
+    point<T,2>  qp ; // , qp_1;
+    //T           a1, a2;
+    //T           delta_x;
+    T pt0 = 0.0;
+    T pt1 = 1.0;
+    T pt2 = 0.5;
+    //T pt3 = 1.0/3.0;
+    //T pt4 = 2.0/3.0;
+    //T pt5 = 1.0/4.0;
+    //T pt6 = 3.0/4.0;
+    switch(reqd_nodes)
+    {
+            /*
+        case 1:
+            qp = point<T,1>({0.5});
+            ret.push_back(qp);
+            return ret;
+            */
+        case 2:
+           
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+            return ret;
+
+        case 3:
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+            qp = point<T,2>({0.5,pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({0.5,0.5});
+            ret.push_back( qp );
+            qp = point<T,2>({pt0,0.5});
+            ret.push_back( qp );
+            
+            return ret;
+
+        case 4:
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+            
+            qp = point<T,2>({ 1.0/3.0 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 2.0/3.0 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 2.0/3.0 , 1.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/3.0 , 2.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 2.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 1.0/3.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/3.0 , 1.0/3.0 });
+            ret.push_back( qp );
+            return ret;
+
+        case 5:
+            qp = point<T,2>({ pt0 , pt0});
+            ret.push_back( qp );
+            qp = point<T,2>({ pt1 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , pt1 });
+            ret.push_back( qp );
+
+            qp = point<T,2>({ 1.0/4.0 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 0.5 , pt0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 3.0/4.0 , pt0 });
+            ret.push_back( qp );
+            
+            qp = point<T,2>({ 3.0/4.0 , 1.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 0.5 , 0.5 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/4.0 , 3.0/4.0 });
+            ret.push_back( qp );
+            
+    
+            qp = point<T,2>({ pt0 , 3.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 0.5 });
+            ret.push_back( qp );
+            qp = point<T,2>({ pt0 , 1.0/4.0 });
+            ret.push_back( qp );
+            
+            qp = point<T,2>({ 1.0/4.0 , 1.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 0.5 , 1.0/4.0 });
+            ret.push_back( qp );
+            qp = point<T,2>({ 1.0/4.0 , 0.5 });
+            ret.push_back( qp );
+            
+            
+            return ret;
+            
+            /*
+        default:
+
+            delta_x = 1.0/degree;
+            a1 = delta_x;
+            qp = point<T,1>({ 0.0 });
+            ret.push_back( qp );
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( qp );
+            while (a1<1) {
+                qp = point<T,1>({ a1 });
+                ret.push_back( qp );
+                a1+=delta_x;
+
+            }
+           
+            
+            return ret;
+             */
+    }
+    return ret;
+}
+
+
+
+
+// LAGRANGIAN BASIS
+
+
+
+
+template<typename VT>
+class cell_basis_triangle_Lagrange
+{
+    size_t              basis_degree, basis_size;
+    std::vector<point<VT,2> > ref_nodes ;
+    
+   
+public:
+   
+    
+    cell_basis_triangle_Lagrange(size_t degree)
+    {
+           basis_degree    = degree;
+           basis_size      = (basis_degree+1.0)*(basis_degree+2.0)/2.0;
+           ref_nodes = reference_nodes_triangle<VT>(degree) ; //{0,0},{1,0},{0,1}
+
+    }
+
+    
+
+    Matrix<VT, Dynamic, 1>
+    eval_basis(const point<VT,2>& pt)
+    {
+
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
+        VT xi = pt.x() ;
+        VT eta = pt.y() ;
+       
+        if( basis_degree == 1 )
+        {
+            ret(0) = 1.0 - eta - xi ;
+            ret(1) = xi ;
+            ret(2) = eta ;
+        }
+        else if( basis_degree == 2 )
+        {
+            ret(0) = (-1.0 + eta + xi)*(-1.0 + 2.0* eta + 2.0* xi) ;
+            ret(1) = xi * (-1.0 + 2.0* xi) ;
+            ret(2) = eta * (-1.0 + 2.0* eta) ;
+            ret(3) = -4.0 * xi * (-1.0 + eta + xi) ;
+            ret(4) = 4.0 * eta * xi ;
+            ret(5) = -4.0 * eta * (-1.0 + eta + xi) ;
+        }
+        else if( basis_degree == 3 )
+        {
+           ret(0) = -(1.0/2.0)* (-1.0 + eta + xi) *(-2.0 + 3.0* eta + 3.0* xi)* (-1.0 +
+           3.0* eta + 3.0* xi) ;
+            ret(1) = 1.0/2.0* xi *(-2.0 + 3.0* xi)* (-1.0 + 3.0* xi) ;
+            ret(2) = 1.0/2.0* eta* (-2.0 + 3.0* eta)* (-1.0 + 3.0* eta) ;
+            ret(3) = 9.0/2.0* xi *(-1.0 + eta + xi)* (-2.0 + 3.0* eta + 3.0* xi) ;
+            ret(4) = -9.0/2.0* xi *(-1.0 + eta + xi)* (-1.0 + 3.0* xi) ;
+            ret(5) = 9.0/2.0* eta *xi* (-1.0 + 3.0* xi) ;
+            
+             ret(6) = 9.0/2.0* eta* (-1.0 + 3 * eta)* xi ;
+             ret(7) = -9.0/2.0* eta* (-1.0 + 3 *eta)* (-1.0 + eta + xi) ;
+             ret(8) = 9.0/2.0* eta* (-1.0 + eta + xi)* (-2.0 + 3.0* eta + 3.0* xi) ;
+             ret(9) = -27.0* eta *xi* (-1.0 + eta + xi) ;
+            
+        }
+        else if( basis_degree == 4 )
+        {
+            ret(0) = 1.0/3.0 * (-1.0 + eta + xi) * (-1.0 + 2.0* eta + 2.0* xi) * (-3.0 + 4.0* eta +
+            4.0* xi) * (-1.0 + 4.0* eta + 4.0* xi);
+            ret(1) = 1.0/3.0 * xi * (-1.0 + 2.0* xi) * (-3.0 + 4.0* xi)* (-1.0 + 4.0* xi) ;
+            ret(2) = 1.0/3.0 * eta * (-1.0 + 2.0* eta) * (-3.0 + 4.0* eta)* (-1.0 + 4.0* eta) ;
+            
+            ret(3) = -(16.0/3.0)* xi * (-1.0 + eta + xi) * (-1.0 + 2.0* eta + 2.0* xi) *(-3.0 +
+            4.0* eta + 4.0* xi) ;
+            ret(4) = 4.0* xi* (-1.0 + eta + xi)* (-1.0 + 4.0* xi)* (-3.0 + 4.0* eta + 4.0* xi) ;
+            ret(5) = -(16.0/3.0)* xi* (-1.0 + eta + xi)* (-1.0 + 2.0* xi)* (-1.0 + 4.0* xi) ;
+            ret(6) = (16.0/3.0)* eta* xi* (-1.0 + 2.0* xi)* (-1.0 + 4.0* xi) ;
+            ret(7) = 4.0* eta* (-1.0 + 4.0* eta) *xi* (-1.0 + 4.0* xi) ;
+            
+            ret(8) = (16.0/3.0)* eta* (-1.0 + 2.0* eta)* (-1.0 + 4.0* eta)* xi ;
+            ret(9) =-(16.0/3.0)* eta* (-1.0 + 2.0* eta)* (-1.0 + 4.0* eta)* (-1.0 + eta + xi) ;
+            ret(10) = 4.0* eta* (-1.0 + 4.0* eta)* (-1.0 + eta + xi)* (-3.0 + 4.0* eta +
+            4.0* xi) ;
+            ret(11) = -(16.0/3.0)* eta *(-1.0 + eta + xi)* (-1.0 + 2.0* eta + 2.0* xi) *(-3.0 +
+            4.0* eta + 4.0* xi) ;
+            
+            ret(12) = 32.0* eta* xi *(-1.0 + eta + xi)* (-3.0 + 4.0* eta + 4.0* xi) ;
+            ret(13) = -32.0* eta* xi *(-1.0 + eta + xi)* (-1.0 + 4.0* xi) ;
+            ret(14) = -32.0* eta* (-1.0 + 4.0* eta) *xi* (-1.0 + eta + xi) ;
+            
+            
+            
+        }
+        else
+            exit(9);
+
+        
+       
+       
+
+        return ret;
+    }
+    
+    Matrix<VT, Dynamic, 2>
+    eval_gradients(const point<VT,2>& pt)
+    {
+
+        Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size,2);
+        VT xi = pt.x() ;
+        VT eta = pt.y() ;
+       
+        if( basis_degree == 1 )
+        {
+            ret(0,0) = -1.0;
+            ret(0,1) = -1.0 ;
+            
+            ret(1,0) = 1.0 ;
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = 1.0 ;
+            
+        }
+        else if( basis_degree == 2 )
+        {
+            ret(0,0) = -3.0 + 4.0*eta + 4.0*xi ;
+            ret(0,1) = -3.0 + 4.0*eta + 4.0*xi ;
+           
+            ret(1,0) = -1.0 + 4.0*xi ;
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = -1.0 + 4.0*eta ;
+            
+            ret(3,0) = -4.0 *( -1.0 + eta + 2.0 * xi) ;
+            ret(3,1) = -4.0 * xi ;
+            
+            ret(4,0) = 4.0 * eta ;
+            ret(4,1) = 4.0 * xi ;
+            
+            ret(5,0) = -4.0 * eta ;
+            ret(5,1) = -4.0*( -1.0 + 2.0*eta + xi) ;
+        }
+        else if( basis_degree == 3 )
+        {
+            ret(0,0) = (1.0/2.0) * ( -11.0 + 36.0*xi -9.0*( eta*( -4.0+3.0*eta ) + 6.0*eta*xi + 3.0*xi*xi ) ) ;
+            ret(0,1) =  (1.0/2.0) * ( -11.0 + 36.0*xi -9.0*( eta*( -4.0+3.0*eta ) + 6.0*eta*xi + 3.0*xi*xi ) ) ;
+            
+            ret(1,0) = 1.0 + 9.0/2.0 * xi * (-2.0 + 3.0* xi) ;
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = 1.0 + 9.0/2.0* eta * (-2.0 + 3.0* eta) ;
+            
+            ret(3,0) = 9.0/2.0* (2.0 + 3.0 * eta * eta + xi *(-10.0 + 9.0* xi) + eta *(-5.0 + 12.0* xi)) ;
+            ret(3,1) = 9.0/2.0* xi* (-5.0 + 6.0* eta + 6.0* xi) ;
+            
+            
+            ret(4,0) = -9.0/2.0* (1.0 + eta * (-1.0 + 6.0* xi) + xi * (-8.0 + 9.0* xi)) ;
+            ret(4,1) = 9.0/2.0* xi * (1.0 - 3.0* xi) ;
+            
+            
+            ret(5,0) = 9.0/2.0* eta * (-1.0 + 6.0* xi) ;
+            ret(5,1) = 9.0/2.0* xi * (-1.0 + 3.0* xi) ;
+
+            
+            ret(6,0) = 9.0/2.0* eta* (-1.0 + 3.0 * eta);
+            ret(6,1) = 9.0/2.0* xi * (-1.0 + 6.0* eta) ;
+            
+            
+            ret(7,0) = 9.0/2.0* eta* (1.0 - 3.0 * eta);
+            ret(7,1) =  -9.0/2.0* (1.0 -xi + eta * (-8.0 + 9.0* eta + 6.0* xi)) ;
+            
+            ret(8,0) = 9.0/2.0* eta* (-5.0 + 6.0*eta + 6.0*xi) ;
+            ret(8,1) = 9.0/2.0* (2.0 + 9.0* eta * eta - 5.0* xi + 3.0* xi*xi + 2.0* eta* (-5.0 + 6.0* xi)) ;
+            
+            ret(9,0) = -27.0 * eta * (-1.0 + eta + 2.0*xi) ;
+            ret(9,1) = -27.0 *xi* (-1.0 + 2.0*eta + xi) ;
+            
+        }
+        else if( basis_degree == 4 )
+        {
+            ret(0,0) = 1.0/3.0 * (-5.0 + 8.0*eta + 8.0*xi) * (5.0 + 16.0* eta* eta + 4.0* xi * (-5.0 + 4.0*xi) + 4.0* eta * (-5.0 + 8.0*xi) ) ;
+            ret(0,1) = 1.0/3.0 * (-5.0 + 8.0*eta + 8.0*xi) * (5.0 + 16.0* eta* eta + 4.0* xi * (-5.0 + 4.0*xi) + 4.0* eta * (-5.0 + 8.0*xi) ) ;
+            
+            ret(1,0) = 1.0/3.0 * (-3.0 + 8.0* xi) * (1.0 + 4.0* xi * (-3.0 + 4.0* xi) );
+            ret(1,1) = 0.0 ;
+            
+            ret(2,0) = 0.0 ;
+            ret(2,1) = 1.0/3.0 * (-3.0 + 8.0* eta) * (1.0 + 4.0* eta * (-3.0 + 4.0* eta) );
+            
+            ret(3,0) = -(16.0/3.0) * (-3.0 + 8.0 *pow(eta,3) +
+            6.0 *pow(eta,2)* (-3.0 + 8.0*xi) + eta * (13.0 + 72.0 * (-1.0 + xi) *xi) +
+            2.0 *xi* (13.0 + xi * (-27.0 + 16.0 *xi))) ;
+            ret(3,1) = -(16.0/3.0)* xi * (13.0 + 24.0 *pow(eta,2) + 12.0 *xi* (-3.0 + 2.0 *xi) +
+            12.0 * eta* (-3.0 + 4.0 *xi)) ;
+            
+            ret(4,0) = 4.0* (-1.0 + eta + 2.0*xi)* (3.0 + 32.0*(-1.0+xi)* xi + 4.0* eta *(-1.0+8.0*xi)) ;
+            ret(4,1) = 4.0* xi* (-1.0 + 4.0*xi)* (-7.0 + 8.0* eta + 8.0* xi) ;
+            
+            ret(5,0) = -(16.0/3.0)*(-1.0 + eta + 12.0 *eta * xi * (-1.0 + 2.0 *xi) +
+            2.0 *xi* (7.0 + xi * (-21.0 + 16.0 *xi))) ;
+            ret(5,1) = -(16.0/3.0)* xi* (1.0 - 6.0*xi + 8.0 * pow(xi,2))  ;
+            
+            ret(6,0) = (16.0/3.0)* eta* (1.0 + 12.0* xi* (-1.0 + 2.0* xi)  ) ;
+            ret(6,1) = (16.0/3.0)* xi* (1.0 - 6.0*xi + 8.0 * pow(xi,2))  ;
+            
+            ret(7,0) = 4.0* eta* (-1.0 + 4.0* eta) * (-1.0 + 8.0* xi) ;
+            ret(7,1) = 4.0* (-1.0 + 8.0* eta) *xi* (-1.0 + 4.0* xi) ;
+            
+            ret(8,0) = (16.0/3.0)* eta* (1.0 - 6.0* eta + 8.0* eta* eta) ;
+            ret(8,1) = (16.0/3.0)* (1.0 + 12.0* eta* (-1.0 + 2.0* eta))*xi ;
+            
+            ret(9,0) = - (16.0/3.0)* eta* (1.0 - 6.0* eta + 8.0* eta* eta) ;
+            ret(9,1) = -(16.0/3.0)*(-1.0 + xi + 2.0 *eta* (7.0 - 6.0 *xi + eta* (-21.0 + 16.0 *eta + 12.0 *xi))) ;
+            
+            ret(10,0) = 4.0* eta* (-1.0 + 4.0* eta)* (-7.0 + 8.0*eta + 8.0*xi) ;
+            ret(10,1) = 4.0 * (-1.0 + 2.0* eta + xi)* (3.0 -4.0* xi + 32.0*eta* (-1.0 + eta + xi) ) ;
+            
+            ret(11,0) = -(16.0/3.0)* eta *(13.0 + 24.0 *pow(eta,2) + 12.0*xi* (-3.0 + 2.0 *xi) +
+            12.0 *eta* (-3.0 + 4.0 *xi));
+            ret(11,1) = -(16.0/3.0)* (-3.0 + 2.0 *eta* (13.0 + eta* (-27.0 + 16.0 *eta)) + 13.0 *xi +
+            72.0* (-1 +eta) *eta* xi + 6.0* (-3.0 + 8.0 *eta) *pow(xi,2) + 8.0 * pow(xi,3)) ;
+            
+            
+            ret(12,0) = 32.0* eta*(3.0 + 4*eta*eta + 2*xi* (-7.0 + 6.0* xi) + eta*(-7.0 + 16* xi)) ;
+            ret(12,1) = 32.0 *xi* (3.0 + 2.0* eta* (-7.0 + 6.0* eta) - 7.0 *xi + 16.0 *eta* xi + 4.0 *pow(xi,2) );
+            
+            ret(13,0) = -32.0* eta* (1.0 + 2.0 *xi* (-5.0 + 6.0 *xi) +eta* (-1.0 + 8.0*xi)) ;
+            ret(13,1) = -32.0* xi *(-1.0 + 2.0 *eta + xi)* (-1.0 + 4.0 *xi);
+            
+            ret(14,0) = -32.0* eta* (-1.0 + 4.0* eta) * (-1.0 + eta + 2.0*xi) ;
+            ret(14,1) = -32.0* xi* (1.0 -xi + 2.0 *eta* (-5.0 + 6.0*eta + 4.0*xi)) ;
+            
+            
+            
+        }
+        else
+            exit(9);
+
+        
+       
+       
+
+        return ret;
+    }
+   
+
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return (degree+1.0)*(degree+2.0)/2.0;
+    }
+};
+
+
+
+
+
+template<typename VT>
+class cell_basis_Lagrange_1d_reference_new
+{
+    size_t              basis_degree, basis_size;
+    std::vector<point<VT,1> > ref_nodes ;
+    
+   
+public:
+   
+    
+    cell_basis_Lagrange_1d_reference_new(size_t degree)
+    {
+           basis_degree    = degree;
+           basis_size      = (basis_degree+1);
+           ref_nodes = reference_nodes_ordered_01<VT>(degree) ; //[0,1]
+
+    }
+
+    
+
+    Matrix<VT, Dynamic, 1>
+    eval_basis_1d(const VT& pt)
+    {
+
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
+        
+        
+        for(size_t k = 0 ; k < basis_size ; k++)
+        {
+            VT bk = 1;
+            for ( size_t j = 0 ; j < basis_size ; j++ ){
+                if(j!=k){
+                    bk *= ( ( pt - ref_nodes.at(j).x() )/ ( ref_nodes.at(k).x() - ref_nodes.at(j).x() ) );
+                    //std::cout<<"ref_nodes.at(j).x() = " << ref_nodes.at(j).x() << " , ref_nodes.at(k).x() = "<<ref_nodes.at(k).x()<<std::endl;
+                }
+            }
+
+            ret(k) = bk;
+           
+        }
+        
+       
+       
+
+        return ret;
+    }
+
+   
+
+    // ANCORA DA DEFINIRE
+    Matrix<VT, Dynamic, 1>
+    eval_gradients_1d(const VT& pt)
+    {
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size, 1);
+        
+        
+        for (size_t k = 0 ; k < basis_size ; k++ )
+        {
+            VT  bk_der = 1.0 ;
+            VT sumx = 0.0;
+            for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+            {
+                VT sumxx = 1.0 ;
+
+                if (tmpx!=k) {
+
+                    
+                    bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+                    for (size_t jx = 0 ; jx < basis_size; jx++)
+                    {
+                        if (jx!=tmpx && jx!=k)
+                        {
+                            sumxx *= ( pt-ref_nodes.at(jx).x() );
+                        }
+                    }
+                    sumx += sumxx;
+
+                }
+            }
+          
+            ret(k) = bk_der*sumx;
+        }
+        
+       
+
+        return ret;
+
+
+    }
+    
+    
+    
+    Matrix<VT, Dynamic, 1>
+    eval_double_derivative_1d(const VT& pt)
+    {
+
+         Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size, 1);
+            
+        if( basis_degree == 0)
+            exit(9) ;
+        if( basis_degree == 1)
+            return ret ;
+        if( basis_degree == 2)
+        {
+            for (size_t k = 0 ; k < basis_size ; k++ )
+            {
+                VT  bk_der = 1.0 ;
+                for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+                {
+                    if (tmpx!=k)
+                        bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+                    
+                }
+                     
+                ret(k) = bk_der*2.0;
+            }
+        
+            return ret ;
+        }
+        if( basis_degree == 3)
+        {
+            for (size_t k = 0 ; k < basis_size ; k++ )
+            {
+                VT  bk_der = 1.0 ;
+                VT b_tot = 0.0;
+                for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+                {
+                    VT b = 1.0 ;
+
+                    if (tmpx!=k)
+                    {
+
+                                
+                        bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+                        size_t jx= tmpx ;
+                        bool inserted = false ;
+                        while (!inserted)
+                        {
+                            if (jx!=k ){
+                                b *= ( pt-ref_nodes.at(jx).x() );
+                                inserted = true ;
+                            }
+                             
+                            jx++;
+                             
+                        }
+                        b_tot += 2.0*b;
+            
+                    }
+                 
+                }
+            
+                ret(k) = bk_der*b_tot;
+                 
+            }
+            return ret;
+        }
+          
+        
+        if(basis_degree == 4)
+        { // In the generic case it doesn't work since amount is fine for just (x-xj)*(x-xl), with l>j, but iif I have more than two terms it need somehting more general
+        
+        for (size_t k = 0 ; k < basis_size ; k++ ) // basis k
+        {
+            VT  bk_der = 1.0 ;
+            VT b_tot = 0.0;
+            size_t pos = 0 ; // iter
+            for( size_t amount = 0 ; amount < basis_degree -1 ; amount++)
+            {
+                if(pos == k)
+                    pos++;
+                
+                 size_t jx= pos ;
+                // starting from amount k = 0  num counts how many terms have (x-x1)*(), how many(x-x2)*() etc --> pos defines the term
+                // For k generic, it always starts from pos=0(at least that k=0) and just skip pos=k
+                for( size_t num = basis_degree - 1 -amount ; num >0 ; num-- )
+                {
+                    VT b = ( pt-ref_nodes.at(pos).x() );
+                    size_t m = 0 ;
+                   
+                    while ( m !=  basis_degree - 3)
+                    {
+                        if (jx!=k && jx!=pos){
+                            b *= ( pt-ref_nodes.at(jx).x() );
+                            m++;
+                        }
+                
+                        jx++;
+                    }
+                    b_tot += 2.0*b;
+                }
+                pos++;
+            }
+            
+            for (size_t tmpx = 0 ; tmpx < basis_size; tmpx++)
+            {
+                if (tmpx!=k)
+                    bk_der *= ( 1.0/ ( ref_nodes.at(k).x()  - ref_nodes.at(tmpx).x() )  );
+            }
+                
+           
+            ret(k) = bk_der*b_tot;
+            
+        }
+     
+        return ret;
+        }
+    }
+    
+
+    size_t size() const
+    {
+        return basis_size;
+    }
+
+    size_t degree() const
+    {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree)
+    {
+        return (degree+1);
+    }
+};

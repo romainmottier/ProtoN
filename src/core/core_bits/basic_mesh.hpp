@@ -537,7 +537,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
    
     
 
-    
+
     mesh_impl& operator=( const mesh_impl& other)
     {
          
@@ -545,9 +545,9 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         {
             points = other.points ;
             cells = other.cells ;
-            //cl = other.cl ;
-            //size_cls = other.size_cls ;
+            nodes= other.nodes ;
             degree_curve = other.degree_curve ;
+            interface_vertices = other.interface_vertices ;
            
         
         }
@@ -559,10 +559,9 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     {
         points = other.points ;
         cells = other.cells ;
-        //cl = other.cl ;
-        //size_cls = other.size_cls ;
+        nodes= other.nodes ;
         degree_curve = other.degree_curve ;
-       
+        interface_vertices = other.interface_vertices ;
         
     
     }
@@ -599,6 +598,8 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
     
     }
     */
+    
+    /*
     template<typename Cell>
     void
     set_cell(Cell& other_cl){
@@ -649,16 +650,30 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         nodes.erase(last, nodes.end());
         
     }
-    
+    */
     template<typename Cell>
     void
     set_cell_new(Cell& other_cl,size_t m_degree){
-        degree_curve = m_degree;
         
-    
+        points.clear();
+        cells.clear();
+        nodes.clear();
+        interface_vertices.clear();
+        
+        degree_curve = m_degree;
         points = other_cl.user_data.interface ;
+        
         auto size_cls = (points.size()-1)/degree_curve ;
-        size_t point_num = 0;
+        
+        
+        for(size_t point_num = 0; point_num < points.size() ; point_num++ )
+        {
+            node_type n;
+            n.ptid = point_num;
+            nodes.push_back(n);
+            
+        }
+        
         //size_t vertices = degree_curve;
         for(size_t pos = 0 ; pos < size_cls ; pos++ )
         {
@@ -666,17 +681,11 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
             auto pt0 = 0 + pos*degree_curve ;
             auto pt1 = degree_curve + pos*degree_curve ;
             cl.ptids = {{ pt0 , pt1 }};
-            node_type n;
-            n.ptid = point_num++;
-            nodes.push_back(n);
-            n.ptid = point_num++;
-            nodes.push_back(n);
+            
             for (size_t i = 1 ; i < degree_curve ; i++)
             {
                 auto pt_high_order = i + pos*degree_curve ;
                 cl.ptids.push_back( pt_high_order ) ;
-                n.ptid = point_num++;
-                nodes.push_back(n);
             }
             cells.push_back(cl);
         }
@@ -689,7 +698,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
      
                 
     }
-    
+    /*
     template<typename Cell>
     void
     set_cell_new2(Cell& other_cl,size_t m_degree){
@@ -738,7 +747,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         
                 
     }
-    
+    */
     
 };
 
