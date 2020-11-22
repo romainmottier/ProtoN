@@ -39464,7 +39464,7 @@ run_cuthho_interface_velocity_analytic(const Mesh& msh, size_t degree, meth meth
                 RealType p_num = p_phi.dot(P_locdata_n);
                 RealType p_diff = test_case_cell.sol_p( qp.first ) - p_num; // era test_case STE
                 L2_pressure_error += qp.second * p_diff * p_diff;
-
+                std::cout<<"Local error pressure (NEGATIVE CUT) = "<<qp.second * p_diff * p_diff <<std::endl;
                 p_gp->add_data( qp.first, p_num );
             }
 
@@ -39495,7 +39495,7 @@ run_cuthho_interface_velocity_analytic(const Mesh& msh, size_t degree, meth meth
                 RealType p_num = p_phi.dot(P_locdata_p);
                 RealType p_diff = test_case_cell.sol_p( qp.first ) - p_num; // era test_case STE
                 L2_pressure_error += qp.second * p_diff * p_diff;
-
+                std::cout<<"Local error pressure (POSITIVE CUT) = "<<qp.second * p_diff * p_diff <<std::endl;
                 p_gp->add_data( qp.first, p_num );
             }
         }
@@ -39611,7 +39611,7 @@ run_cuthho_interface_velocity_analytic(const Mesh& msh, size_t degree, meth meth
                 RealType p_num = p_phi.dot(P_locdata);
                 RealType p_diff = test_case_cell.sol_p( qp.first ) - p_num; // era test_case STE
                 L2_pressure_error += qp.second * p_diff * p_diff;
-
+                std::cout<<"Local error pressure (UNCUT) = "<<qp.second * p_diff * p_diff <<std::endl;
                 p_gp->add_data( qp.first, p_num );
             }
         }
@@ -41840,7 +41840,17 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
             vel_cell_dofs_n = vel_locdata_n.head(cbs);
             vel_cell_dofs_p = vel_locdata_p.head(cbs);
-
+            
+//             if( cl.user_data.offset_subcells[0] == 83 || cl.user_data.offset_subcells[0] == 163 )
+//             {
+//                 std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) <<"cell = "<<offset(msh,cl)<<" , vertices:"<<std::endl;
+//                 for(auto& pt:points(msh,cl))
+//                     std::cout<<" pt = "<<pt;
+//                 std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) <<'\n'<<"Interface points:"<<std::endl;
+//                 for(auto& pt: cl.user_data.integration_msh.points)
+//                     std::cout<<" pt = "<<pt;
+//                 std::cout<<std::endl;
+//             }
 
             auto qps_n = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
             RealType local_H1_err_cut_n = 0.;
@@ -41874,7 +41884,10 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
                 auto p_prova = test_case.sol_p( qp.first ) ;
                 //std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
                 L2_pressure_error += qp.second * p_diff * p_diff;
-
+                
+                if( std::abs(qp.second * p_diff * p_diff) > 1e-15 )
+//                    std::cout<<"L2 local pressure error (NEGATIVE CUT) = "<<qp.second * p_diff * p_diff<<std::endl;
+                
                 p_gp->add_data( qp.first, p_num );
 
 
@@ -41883,6 +41896,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 //            std::cout<<"H1 local error (negative cut cell) = "<<local_H1_err_cut_n<<std::endl;
             RealType local_H1_err_cut_p = 0.;
             auto qps_p = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
+           
+            
             
             for (auto& qp : qps_p)
             {
@@ -41913,7 +41928,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
                 auto p_prova = test_case.sol_p( qp.first ) ;
                 //std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
                 L2_pressure_error += qp.second * p_diff * p_diff;
-
+                if( std::abs(qp.second * p_diff * p_diff) > 1e-15 )
+//                    std::cout<<"L2 local pressure error (POSITIVE CUT) = "<<qp.second * p_diff * p_diff<<std::endl;
                 p_gp->add_data( qp.first, p_num );
             }
 //            std::cout<<"H1 local error (positive cut cell) = "<<local_H1_err_cut_p<<std::endl;
@@ -42009,7 +42025,8 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
                 auto p_prova = test_case.sol_p( qp.first ) ;
                 //std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
                 L2_pressure_error += qp.second * p_diff * p_diff;
-
+                if( std::abs(qp.second * p_diff * p_diff) > 1e-15 )
+//                    std::cout<<"L2 local pressure error (UNCUT) = "<<qp.second * p_diff * p_diff<<std::endl;
                 p_gp->add_data( qp.first, p_num );
             }
 //            std::cout<<"H1 local error (uncut cell) = "<<local_H1_err_uncut<<std::endl;
@@ -42033,10 +42050,10 @@ run_cuthho_interface_numerical_ls(const Mesh& msh, size_t degree, meth& method, 
 
 
 
-    //postoutput.add_object(uT1_gp);
-    //postoutput.add_object(uT2_gp);
-    //postoutput.add_object(p_gp);
-    //postoutput.write();
+    postoutput.add_object(uT1_gp);
+    postoutput.add_object(uT2_gp);
+    postoutput.add_object(p_gp);
+    postoutput.write();
 
 
 
@@ -43854,7 +43871,7 @@ void convergence_test_normal_error_numerical_ls(void)
             typedef Finite_Element<T,Mesh> FiniteSpace;
             std::cout<<"Level Set (finite element approximation): degree FEM = "<<degree_FEM<<std::endl;
             
-            T degree_curve = 4 ;
+            T degree_curve = 2 ;
             auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
 
             /************** ANALYTIC LEVEL SET FUNCTION  **************/

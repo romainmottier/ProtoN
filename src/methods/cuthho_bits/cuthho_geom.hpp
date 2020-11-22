@@ -757,6 +757,7 @@ measure_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 
 
 
+
 struct Interface_parametrisation_mesh1d
 {
     
@@ -1159,9 +1160,10 @@ collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
 */
 
 
+
 template<typename T, size_t ET>
 std::vector< typename cuthho_mesh<T, ET>::point_type >
-collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
+collect_triangulation_points_curve_old(const cuthho_mesh<T, ET>& msh,
                              const typename cuthho_mesh<T, ET>::cell_type& cl, typename cuthho_mesh<T, ET>::point_type& bar ,
                              const element_location& where)
 {
@@ -1226,10 +1228,10 @@ collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
     //if( case_odd == false && counter == 2 )
     if( counter == 2 )
     {
-     
         ret.push_back( node2pt(n_where[1]) );
         insert_interface();
         ret.push_back( node2pt(n_where[0]) );
+        
     }
     
     //if( case_odd == true && counter == 2 )
@@ -1245,10 +1247,86 @@ collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
 
     return ret;
 }
+    
+    
 
 
 
     
+    
+template<typename T, size_t ET>
+std::vector< typename cuthho_mesh<T, ET>::point_type >
+collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh< T , ET>::cell_type& cl, typename cuthho_mesh<T, ET>::point_type& bar , const element_location& where )
+ {
+        
+    typedef typename cuthho_mesh<T, ET>::point_type     point_type;
+    typedef typename cuthho_mesh<T, ET>::node_type      node_type;
+
+    assert( is_cut(msh, cl) );
+    
+    
+    
+        
+    auto node2pt = [&](const node_type& n) -> auto {
+        return msh.points.at(n.ptid);
+    };
+        
+   
+    
+    std::vector< point_type > ret;
+
+    auto insert_interface = [&](void) -> void {
+        if (where == element_location::IN_NEGATIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.begin(), cl.user_data.integration_msh.interface_vertices.end());
+        else if (where == element_location::IN_POSITIVE_SIDE)
+            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.rbegin(), cl.user_data.integration_msh.interface_vertices.rend());
+        else
+            throw std::logic_error("If you've got here there is some issue...");
+    };
+        
+
+       
+    std::vector<size_t> fc_numb ;
+    node_type n_first , n_second ;
+    
+    for(auto& fc: faces(msh, cl))
+    {
+        if( fc.user_data.location == element_location::ON_INTERFACE && fc.user_data.intersection_point == cl.user_data.integration_msh.interface_vertices.front() ){
+            if (where == element_location::IN_NEGATIVE_SIDE)
+                n_first = nodes(msh, fc)[fc.user_data.node_inside] ;
+            else
+                n_second = nodes(msh, fc)[1-fc.user_data.node_inside] ;
+        }
+    
+        if( fc.user_data.location == element_location::ON_INTERFACE && fc.user_data.intersection_point == cl.user_data.integration_msh.interface_vertices.back() )
+        {
+            if (where == element_location::IN_NEGATIVE_SIDE)
+                n_second = nodes(msh, fc)[fc.user_data.node_inside] ;
+            else
+                n_first = nodes(msh, fc)[1-fc.user_data.node_inside] ;
+    
+        }
+
+    }
+    
+    
+    if( n_first == n_second )
+        insert_interface();
+
+    else
+    {
+        ret.push_back( node2pt(n_first) );
+        insert_interface();
+        ret.push_back( node2pt(n_second) );
+            
+    }
+
+    return ret;
+    
+}
+    
+    
+
 template<typename T>
 struct temp_tri_curve
 {
@@ -1302,7 +1380,7 @@ triangulate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
 //        std::cout<<" , point = "<<p;
 //    std::cout<<std::endl;
 //    std::cout<<"bar = "<<bar<<std::endl;
-    
+//
 
     if( degree_int == 1)
     {
@@ -1413,6 +1491,9 @@ triangulate_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
     }
 }
 
+    
+    
+    
 template<typename T, typename Cell >
 std::vector<std::pair<point<T,2>, T>> // temp_tri_curve<T> tri
 triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, size_t deg)
