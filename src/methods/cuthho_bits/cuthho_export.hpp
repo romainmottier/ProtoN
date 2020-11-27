@@ -369,6 +369,7 @@ public:
             l1_normal_vel = 0.0 ;
             l2_normal_vel = 0.0 ;
             linf_normal_vel = 0.0 ;
+            flux_interface = 0.0 ;
         }
     T H1_vel; // H1-error for velocity
     T L2_vel; // L2-error for velocity
@@ -377,4 +378,5 @@ public:
     T l1_normal_vel ; // L2-error for the normal velocity at the interface
     T l2_normal_vel ; // L2-error for the normal velocity at the interface
     T linf_normal_vel ; // Linf-error for the normal velocity at the interface
+    T flux_interface ;
 };

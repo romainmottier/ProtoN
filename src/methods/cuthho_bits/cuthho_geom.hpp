@@ -65,6 +65,11 @@ location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::node_
     return n.user_data.location;
 }
 
+size_t
+degree_det_jacobian(size_t degree)
+{
+    return degree + 2 ;
+}
 
 template<typename T, typename Function>
 point<T, 2>
@@ -762,10 +767,10 @@ struct Interface_parametrisation_mesh1d
 {
     
     size_t basis_degree , basis_size;
-    
+    size_t degree_det ;
    
     
-    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(basis_degree+1) {}
+    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(degree+1) ,degree_det(2*degree){}
     
     Interface_parametrisation_mesh1d(){}
 
@@ -1539,7 +1544,7 @@ triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, 
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where)
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
 
@@ -1549,6 +1554,11 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
         return integrate(msh, cl, degree);
     
+    if(!used_from_integrate_fc){
+        size_t degree_int = cl.user_data.integration_msh.degree_curve;
+        degree += degree_det_jacobian(degree_int) ;
+    }
+        
   
     auto tris = triangulate_curve(msh, cl, where);
     //size_t degree_int = cl.user_data.integration_msh.degree;
@@ -1593,7 +1603,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell
     
     if ( is_cut(msh, cl) ){
         size_t degree_int = cl.user_data.integration_msh.degree_curve;
-        degree += (degree_int-1) ;
+        degree += degree_det_jacobian(degree_int) ;
     }
     
     if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
@@ -1602,7 +1612,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell
     if( cl.user_data.integration_p.size() != 0 && where == element_location::IN_POSITIVE_SIDE)
         return cl.user_data.integration_p;
 
-    return make_integrate(msh, cl, degree, where);
+    return make_integrate(msh, cl, degree, where,true);
 }
 
 
@@ -1750,7 +1760,7 @@ integrate_interface_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mes
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where)
+integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
 {
     assert( is_cut(msh, cl) );
     typedef typename cuthho_mesh<T, ET>::point_type point_type ;
@@ -1762,7 +1772,7 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
     
     
-    degree += (degree_int -1) ;
+    degree += (degree_int + 1 ) ;
     auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
     
     
@@ -1788,7 +1798,23 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     return ret;
 }
 
+template<typename T, size_t ET>
+T
+measure_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where )
+{
+    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+        exit(9);
 
+    T totmeas = 0.0;
+    auto qpsi = integrate_interface(msh, cl, 0, where);
+    for (auto& qp : qpsi)
+    {
+        totmeas += qp.second;
+        
+    }
+
+    return totmeas;
+}
 
 template<typename T, typename Function>
 std::vector< typename cuthho_quad_mesh<T>::point_type >

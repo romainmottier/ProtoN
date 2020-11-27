@@ -49,6 +49,12 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
         }
 
         //// another criterion on the area of the cell
+//        std::cout<<"measure(msh, cl, element_location::IN_NEGATIVE_SIDE) = "<<measure(msh, cl, element_location::IN_NEGATIVE_SIDE)<<std::endl;
+//         std::cout<<"measure OLD (msh, cl, element_location::IN_NEGATIVE_SIDE) = "<<measure_old(msh, cl, element_location::IN_NEGATIVE_SIDE)<<std::endl;
+//        std::cout<<"measure(msh, cl, element_location::IN_POSITIVE_SIDE) = "<<measure(msh, cl, element_location::IN_POSITIVE_SIDE)<<std::endl;
+//        std::cout<<"measure OLD (msh, cl, element_location::IN_POSITIVE_SIDE) = "<<measure_old(msh, cl, element_location::IN_POSITIVE_SIDE)<<std::endl;
+//        std::cout<<"measure(msh, cl) = "<<measure(msh, cl)<<std::endl;
+        
         if( measure(msh, cl, element_location::IN_NEGATIVE_SIDE)
             < threshold_cells * measure(msh, cl) )
         {
@@ -779,7 +785,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
 template<typename Mesh>
 std::pair<   typename Mesh::cell_type, std::vector<typename Mesh::face_type> >
 merge_cells_no_double_pts(Mesh& msh, const typename Mesh::cell_type cl1,
-            const typename Mesh::cell_type cl2)
+            const typename Mesh::cell_type cl2 , size_t degree_det_jac_curve)
 {
     //////////////////  TESTS ON INPUTS  //////////////////
     // verify that the two cells are different
@@ -937,17 +943,17 @@ merge_cells_no_double_pts(Mesh& msh, const typename Mesh::cell_type cl1,
    //  std::cout<<"WARNING: in agglomerated cells the integrations points are saved at priori (for a high degree). COMPUTATIONALLY USELESS."<<std::endl;
     //std::cout<<"----------> SONO IN AGGLO in cell"<<offset(msh,cl)<<std::endl;
     
-    std::cout<<"cl1 = "<<offset(msh,cl1)<<std::endl;
-    auto pts1 = points( msh , cl1);
-    for(auto& pt: pts1)
-        std::cout<<"Cell pt = "<<'\n'<<pt<<'\n'<<std::endl;
-    
-    std::cout<<"cl2 = "<<offset(msh,cl2)<<std::endl;
-        auto pts2 = points( msh , cl2);
-    for(auto& pt: pts2)
-        std::cout<<"Cell pt = "<<'\n'<<pt<<std::endl;
-    
-    size_t degree_max = 5 ; //8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
+//    std::cout<<"cl1 = "<<offset(msh,cl1)<<std::endl;
+//    auto pts1 = points( msh , cl1);
+//    for(auto& pt: pts1)
+//        std::cout<<"Cell pt = "<<'\n'<<pt<<'\n'<<std::endl;
+//    
+//    std::cout<<"cl2 = "<<offset(msh,cl2)<<std::endl;
+//        auto pts2 = points( msh , cl2);
+//    for(auto& pt: pts2)
+//        std::cout<<"Cell pt = "<<'\n'<<pt<<std::endl;
+//    size_t degree_j = degree_det_jacobian(cl1.user_data.integration_msh.degree_curve) ;
+    size_t degree_max = 8 - degree_det_jacobian(cl1.user_data.integration_msh.degree_curve) ; //8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
   //   std::cout << bold << yellow << "Before integrate 1" << reset << std::endl;
     auto integration1_n = integrate(msh, cl1, degree_max, element_location::IN_NEGATIVE_SIDE);
   //  std::cout << bold << yellow << "Before integrate 2" << reset << std::endl;
@@ -1676,7 +1682,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
 
 template<typename Mesh, typename Function>
 void
-make_agglomeration_no_double_points(Mesh& msh, const Function& level_set_function)
+make_agglomeration_no_double_points(Mesh& msh, const Function& level_set_function, size_t degree_det_jac_curve)
 {
     // initiate lists to store the agglomeration infos
     std::vector<int> agglo_table_neg, agglo_table_pos;
@@ -1890,7 +1896,7 @@ make_agglomeration_no_double_points(Mesh& msh, const Function& level_set_functio
             //std::cout<<"The cell number "<<offset(msh,cl)<<" is aggloremated with the cell num "<<offset(msh,neigh)<<std::endl;
            
             // create a new local agglomeration
-            auto MC = merge_cells_no_double_pts(msh, cl, neigh);
+            auto MC = merge_cells_no_double_pts(msh, cl, neigh,degree_det_jac_curve);
 
             loc_agglos.push_back( loc_agglo<typename Mesh::cell_type>(offset(msh,cl),offset(msh,neigh),cl, neigh, MC.first) );
 
@@ -1929,7 +1935,7 @@ make_agglomeration_no_double_points(Mesh& msh, const Function& level_set_functio
             if(CC.first)
             {
                 auto offset_added_cell = offset(msh, CC.second);
-                auto MC_bis = merge_cells_no_double_pts(msh, CC.second, cl1);
+                auto MC_bis = merge_cells_no_double_pts(msh, CC.second, cl1,degree_det_jac_curve);
                 loc_agglos.at(agglo_offset).add_cell(CC.second, offset_added_cell,
                                                          MC_bis.first);
                 for(size_t i=0; i<MC_bis.second.size(); i++)
@@ -1940,7 +1946,7 @@ make_agglomeration_no_double_points(Mesh& msh, const Function& level_set_functio
             }
 
             // end the merge procedure
-            auto MC = merge_cells_no_double_pts(msh, cl2, loc_agglos.at(agglo_offset).new_cell);
+            auto MC = merge_cells_no_double_pts(msh, cl2, loc_agglos.at(agglo_offset).new_cell,degree_det_jac_curve);
 
             loc_agglos.at(agglo_offset).add_cell(cl2, offset_cl2, MC.first);
 
