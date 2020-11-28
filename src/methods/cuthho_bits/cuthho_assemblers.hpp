@@ -2906,7 +2906,7 @@ public:
 
         Matrix<T, Dynamic, Dynamic> lhs_sc;
         Matrix<T, Dynamic, 1> rhs_sc;
-        if( facdeg == 0 & !double_unknowns ) // condensate only cell velocity dofs
+        if( (facdeg == 0) & !double_unknowns ) // condensate only cell velocity dofs
         {
             auto mat_sc = stokes_static_condensation_compute(lhs_A, lhs_B, rhs_A, rhs_B,
                                                              cbs, f_dofs);

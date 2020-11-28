@@ -10,5 +10,7 @@ set(waves_headers ${waves_headers}
 	${CMAKE_CURRENT_SOURCE_DIR}/analytical_functions.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/newmark_hho_scheme.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/dirk_butcher_tableau.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/erk_butcher_tableau.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/dirk_hho_scheme.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/erk_hho_scheme.hpp
 PARENT_SCOPE)
