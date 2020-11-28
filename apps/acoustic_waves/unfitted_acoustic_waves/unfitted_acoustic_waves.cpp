@@ -1104,6 +1104,7 @@ int main(int argc, char **argv)
 
 //    HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
     HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
+//    HeterogeneousElowerICutHHOFirstOrder(argc, argv);
     
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
 //    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
@@ -1742,7 +1743,7 @@ void ECutHHOFirstOrder(int argc, char **argv){
     
     bool report_energy_Q = true;
     bool direct_solver_Q = true;
-    bool sc_Q = true;
+
     size_t degree           = 0;
     size_t l_divs          = 0;
     size_t nt_divs       = 0;
@@ -1829,15 +1830,14 @@ void ECutHHOFirstOrder(int argc, char **argv){
     Matrix<RealType, Dynamic, 1> x_dof, rhs;
     tc.tic();
     size_t n_face_dof, n_face_basis;
-    if (sc_Q) {
-        size_t n_dof = Kg.rows();
-        size_t n_cell_dof = 0;
-        for (auto &chunk : cell_basis_data) {
-            n_cell_dof += chunk.second;
-        }
-        n_face_dof = n_dof - n_cell_dof;
-        n_face_basis = face_basis<mesh_type,RealType>::size(degree);
+    size_t n_dof = Kg.rows();
+    size_t n_cell_dof = 0;
+    for (auto &chunk : cell_basis_data) {
+        n_cell_dof += chunk.second;
     }
+    n_face_dof = n_dof - n_cell_dof;
+    n_face_basis = face_basis<mesh_type,RealType>::size(degree);
+    
     erk_hho_scheme<RealType> analysis(Kg,rhs,Mg,n_face_dof);
     analysis.Kcc_inverse_irregular_blocks(cell_basis_data);
     analysis.Sff_inverse(std::make_pair(n_face_dof, n_face_basis));
@@ -2494,7 +2494,6 @@ void HeterogeneousFlowerECutHHOFirstOrder(int argc, char **argv){
     
     bool report_energy_Q = false;
     bool direct_solver_Q = true;
-    bool sc_Q = true;
     
     size_t degree           = 0;
     size_t l_divs          = 0;
@@ -2581,15 +2580,14 @@ void HeterogeneousFlowerECutHHOFirstOrder(int argc, char **argv){
     Matrix<RealType, Dynamic, 1> x_dof, rhs;
     tc.tic();
     size_t n_face_dof, n_face_basis;
-    if (sc_Q) {
-        size_t n_dof = Kg.rows();
-        size_t n_cell_dof = 0;
-        for (auto &chunk : cell_basis_data) {
-            n_cell_dof += chunk.second;
-        }
-        n_face_dof = n_dof - n_cell_dof;
-        n_face_basis = face_basis<mesh_type,RealType>::size(degree);
+    size_t n_dof = Kg.rows();
+    size_t n_cell_dof = 0;
+    for (auto &chunk : cell_basis_data) {
+        n_cell_dof += chunk.second;
     }
+    n_face_dof = n_dof - n_cell_dof;
+    n_face_basis = face_basis<mesh_type,RealType>::size(degree);
+    
     erk_hho_scheme<RealType> analysis(Kg,rhs,Mg,n_face_dof);
     analysis.Kcc_inverse_irregular_blocks(cell_basis_data);
     analysis.Sff_inverse(std::make_pair(n_face_dof, n_face_basis));
