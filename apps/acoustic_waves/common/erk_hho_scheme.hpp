@@ -135,7 +135,7 @@ class erk_hho_scheme
                     size_t stride_eq = cell_ind * n_cbs + stride_n_block_eq;
                     size_t stride_l = cell_ind * n_cbs * n_cbs + stride_n_block_l;
 
-                    SparseMatrix<T> K_cc_loc = m_Kcc.block(stride_eq, stride_eq, n_cbs, n_cbs);
+                    SparseMatrix<T> K_cc_loc = m_Mc.block(stride_eq, stride_eq, n_cbs, n_cbs);
                     SparseLU<SparseMatrix<T>> analysis_cc;
                     analysis_cc.analyzePattern(K_cc_loc);
                     analysis_cc.factorize(K_cc_loc);
@@ -163,7 +163,7 @@ class erk_hho_scheme
             size_t cell_ind = chunk.first;
             size_t n_cbs   = chunk.second;
             
-            SparseMatrix<T> K_cc_loc = m_Kcc.block(stride_eq, stride_eq, n_cbs, n_cbs);
+            SparseMatrix<T> K_cc_loc = m_Mc.block(stride_eq, stride_eq, n_cbs, n_cbs);
             SparseLU<SparseMatrix<T>> analysis_cc;
             analysis_cc.analyzePattern(K_cc_loc);
             analysis_cc.factorize(K_cc_loc);

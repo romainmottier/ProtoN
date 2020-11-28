@@ -1362,6 +1362,10 @@ public:
         
         return cell_basis_data;
     }
+    
+    size_t get_n_faces(){
+        return this->num_other_faces;
+    }
             
 };
 
