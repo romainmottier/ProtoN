@@ -309,7 +309,7 @@ template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
                            const typename cuthho_mesh<T, ET>::cell_type& cl,
-                           const hho_degree_info& di, element_location where)
+                           const hho_degree_info& di, element_location where, bool scaled_Q = true)
 {
     if ( !is_cut(msh, cl) )
         return make_hho_naive_stabilization(msh, cl, di);
@@ -357,8 +357,12 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
 
 
         oper.block(0, 0, fbs, cbs) = mass.ldlt().solve(trace);
-
-        data += oper.transpose() * mass * oper * (1./hT);
+        
+        if (scaled_Q) {
+            data += oper.transpose() * mass * oper * (1./hT);
+        }else{
+            data += oper.transpose() * mass * oper;
+        }
     }
 
     return data;
@@ -411,7 +415,7 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
                                  const typename cuthho_mesh<T, ET>::cell_type& cl,
                                  const Function& level_set_function,
                                  const hho_degree_info& di,
-                                 const params<T>& parms = params<T>())
+                                 const params<T>& parms = params<T>(), bool scaled_Q = true)
 {
     if ( !is_cut(msh, cl) )
         throw std::invalid_argument("The cell is not cut ...");
@@ -434,8 +438,8 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
     auto hT = diameter(msh, cl);
 
 
-    const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE);
-    const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE);
+    const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE, scaled_Q);
+    const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE, scaled_Q);
 
     // cells--cells
     data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);

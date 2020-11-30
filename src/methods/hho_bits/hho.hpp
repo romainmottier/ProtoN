@@ -168,7 +168,7 @@ make_hho_mixed_laplacian(const Mesh& msh, const typename Mesh::cell_type& cl, co
 
 template<typename Mesh>
 Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
-make_hho_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
+make_hho_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di, bool scaled_Q = true)
 {
     using T = typename Mesh::coordinate_type;
 
@@ -211,8 +211,12 @@ make_hho_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl
         }
 
         oper.block(0, 0, fbs, cbs) = mass.llt().solve(trace);
-
-        data += oper.transpose() * mass * oper * (1./h);
+        
+        if (scaled_Q) {
+            data += oper.transpose() * mass * oper * (1./h);
+        }else{
+            data += oper.transpose() * mass * oper;
+        }
     }
 
     return data;
