@@ -68,7 +68,7 @@ location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::node_
 size_t
 degree_det_jacobian(size_t degree)
 {
-    return degree + 2 ;
+    return degree ;
 }
 
 template<typename T, typename Function>
@@ -760,7 +760,10 @@ measure_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 
 
 
-
+    
+    template <typename T> int sgn(T val) {
+        return (T(0) < val) - (val < T(0));
+    }
 
 
 struct Interface_parametrisation_mesh1d
@@ -939,7 +942,15 @@ struct Interface_parametrisation_mesh1d
         T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
         ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
         ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
-        return ret.norm()/curv_der_norm ;
+        int sign_curv ;
+        auto n = this->normal( pt, physical_pts , basis_degree );
+        
+        if( (sgn( n(0) ) == sgn( ret(0) ) ) && (sgn( n(1) ) == sgn( ret(1) ) ) )
+            sign_curv = 1.0 ;
+        else
+            sign_curv =  -1.0 ;
+       
+        return sign_curv * ret.norm()/curv_der_norm ;
            
     }
     
@@ -1507,7 +1518,7 @@ triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, 
     if (deg == 0)
         deg = 1;
 
-    if (deg > 8)
+    if (deg > 9)
         throw std::invalid_argument("Quadrature order too high");
     
     size_t degree_int = cl.user_data.integration_msh.degree_curve;
@@ -1772,7 +1783,7 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
     
     
-    degree += (degree_int + 1 ) ;
+    degree += (degree_int) ;
     auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
     
     
@@ -1815,6 +1826,8 @@ measure_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
 
     return totmeas;
 }
+    
+
 
 template<typename T, typename Function>
 std::vector< typename cuthho_quad_mesh<T>::point_type >

@@ -1508,12 +1508,51 @@ make_vector_flux_jump(const cuthho_mesh<T, ET>& msh,
         std::cout<<qp.first<<" , ";
     std::cout<<'\n'<<std::endl;
     */
+    auto msh_int = cl.user_data.integration_msh ;
+    size_t degree_curve = msh_int.degree_curve ;
+    Interface_parametrisation_mesh1d curve(degree_curve) ;
+    degree += 2*degree_curve ; // TO BE CHECKED
+    auto qps = edge_quadrature<T>(degree);
+    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+    {
+        auto pts = points(msh_int,msh_int.cells[i_cell]);
+        for(auto& qp:qps)
+        {
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = para_curve(t , pts , degree_curve ) ;
+            point<T,2> pt = point_type( p(0) , p(1) ) ;
+            T jacobian = curve.jacobian( t , pts , degree_curve ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+            
+            auto phi = cb.eval_basis(pt);
+            ret += w * phi * flux_jump(t , pts );
+            
+        }
+    }
+            
+
+    return ret;
+}
+
+            
+template<typename T, size_t ET, typename F1>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
+make_vector_flux_jump_reference_pts(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location where, const F1& flux_jump)
+{
+    vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
+    auto cbs = cb.size();
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+
+    if( location(msh, cl) != element_location::ON_INTERFACE )
+            return ret;
+            
+    auto qpsi = integrate_interface(msh, cl, 2*degree , element_location::IN_NEGATIVE_SIDE);
+    
     for (auto& qp : qpsi)
     {
-        auto phi = cb.eval_basis(qp.first);
-        ret += qp.second * phi * flux_jump(qp.first);
+        auto phi = cb.eval_basis(qp.first.first);
+        ret += qp.second * phi * flux_jump(qp.first.second);
     }
-
     return ret;
 }
 
