@@ -378,7 +378,7 @@ template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh,
                                const typename cuthho_mesh<T, ET>::cell_type& cl,
-                               const hho_degree_info& di, const T eta)
+                               const hho_degree_info& di, const T eta, bool scaled_Q = true)
 {
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
@@ -399,7 +399,12 @@ make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh,
     {
         const auto c_phi  = cb.eval_basis(qp.first);
 
-        data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
+        if (scaled_Q) {
+            data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
+        }else{
+            data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
+        }
+        
     }
 
     return data;

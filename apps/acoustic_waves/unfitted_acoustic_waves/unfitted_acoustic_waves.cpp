@@ -552,7 +552,7 @@ public:
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, stab_parms, false);
         
         T penalty_scale = std::min(1.0/(parms.c_1*parms.kappa_1), 1.0/(parms.c_2*parms.kappa_2));
-        Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
+        Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta, false).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += penalty_scale* penalty;
         stab.block(0, cbs, cbs, cbs) -= penalty_scale * penalty;
         stab.block(cbs, 0, cbs, cbs) -= penalty_scale * penalty;
@@ -1142,7 +1142,7 @@ mesh_type SquareCutMesh(level_set<RealType> & level_set_function, size_t l_divs,
     tc.toc();
     std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
 
-    CutMesh(msh,level_set_function,int_refsteps, false);
+    CutMesh(msh,level_set_function,int_refsteps, true);
     return msh;
 }
 
@@ -2056,9 +2056,31 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
                 
                 RealType h_T = std::numeric_limits<RealType>::max();
                 for (auto cell : msh.cells) {
+                    
                     RealType h = diameter(msh, cell);
-                    if (h < h_T) {
-                        h_T = h;
+                    if ( location(msh, cell) == element_location::ON_INTERFACE )
+                    {
+                        auto qps_n = integrate(msh, cell, 2, element_location::IN_NEGATIVE_SIDE);
+                        RealType h_n = 0.0;
+                        for (auto& qp : qps_n)
+                        {
+                            h_n += qp.second;
+                        }
+                        auto qps_p = integrate(msh, cell, 2, element_location::IN_POSITIVE_SIDE);
+                        RealType h_p = 0.0;
+                        for (auto& qp : qps_p)
+                        {
+                            h_p += qp.second;
+                        }
+                        h = std::sqrt(std::min(h_n, h_p));
+                        if (h < h_T) {
+                          h_T = h;
+                        }
+                    }
+                    else{
+                        if (h < h_T) {
+                            h_T = h;
+                        }
                     }
                 }
                 
