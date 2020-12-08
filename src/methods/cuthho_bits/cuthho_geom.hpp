@@ -761,9 +761,11 @@ measure_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 
 
     
-    template <typename T> int sgn(T val) {
-        return (T(0) < val) - (val < T(0));
-    }
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
+
 
 
 struct Interface_parametrisation_mesh1d
@@ -773,7 +775,39 @@ struct Interface_parametrisation_mesh1d
     size_t degree_det ;
    
     
-    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(degree+1) ,degree_det(2*degree){}
+    Interface_parametrisation_mesh1d( size_t degree ) : basis_degree(degree), basis_size(degree+1) ,degree_det(2*degree){
+//        size_t n_dof =  DA DEFINIRE
+//        Matrix<T, Dynamic, 1> RHS =  Matrix<T, Dynamic, 1>::Zero( n_dof );
+//        SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+//        solver_global_mass.compute(method.Global_Mass);
+//
+//        for(auto cl : msh.cells )
+//        {
+//            auto local_RHS = make_bernstein_local_RHS_VEC( msh , cl , degree_FEM , *this );
+//            size_t cell_offset = offset(msh,cl);
+//            for (size_t i = 0; i < local_dim; i++)
+//            {
+//                size_t asm_map_i = connectivity_matrix[cell_offset][i].first ;
+//                RHS1(asm_map_i) += local_RHS.first(i) ;
+//            }
+//
+//        }
+//        sol_FEM.first = solver_global_mass.solve(RHS1);
+//
+//        for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
+//        {
+//            for (size_t i = 0; i < local_dim; i++){
+//                size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
+//                sol_HHO.first(i,counter_bis) = sol_FEM.first( asm_map );
+//            }
+//
+//        }
+//
+//
+    }
+    
+    
+
     
     Interface_parametrisation_mesh1d(){}
 
@@ -855,6 +889,8 @@ struct Interface_parametrisation_mesh1d
         
     }
     
+  
+    
     
     template<typename T>
     T
@@ -905,6 +941,9 @@ struct Interface_parametrisation_mesh1d
         return ret;
            
     }
+    
+   
+   
     
     template<typename T>
     Matrix<T, 2, 1>
@@ -984,8 +1023,1025 @@ struct Interface_parametrisation_mesh1d
 };
 
 
+// ---------- FUNCTIONS TO PRESCRIBE CONTINUITY IN NORMAL / CURAVATURE
 
 
+
+template< typename T = double >
+Matrix<T, Dynamic, Dynamic>
+make_local_mass_matrix_curve( size_t degree, size_t basis_degree, const std::vector<point<T,2>>& pts, size_t di = 1)
+{
+    
+    cell_basis_Lagrange_1d_reference_new <T> cb(degree);
+    Interface_parametrisation_mesh1d curve(basis_degree) ;
+    auto cbs = cb.size();
+    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
+    size_t int_deg = 2*degree + 2*basis_degree ;
+    if (degree == 0)
+        int_deg = 2;
+    auto qps = edge_quadrature<T>( int_deg );
+    
+    for(auto& qp:qps)
+    {
+        auto t = 0.5 * qp.first.x() + 0.5;
+        auto w = 0.5 * qp.second * curve.jacobian( t , pts , basis_degree ) ;
+        auto phi = cb.eval_basis_1d(t);
+        ret += w * phi * phi.transpose();
+        
+
+    }
+    
+    
+    return ret;
+}
+
+template< typename T >
+std::pair< Matrix<T, Dynamic, 1> , Matrix<T, Dynamic, 1> >
+make_local_RHS_derivative( size_t dev_degree , size_t degree , const std::vector<point<T,2>>& pts  , size_t di = 0)
+{
+
+    cell_basis_Lagrange_1d_reference_new <T> cb(dev_degree);
+    auto cbs = cb.size();
+
+    Matrix<T, Dynamic, 1> ret0 = Matrix<T, Dynamic, 1>::Zero(cbs, 1) ;
+    Matrix<T, Dynamic, 1> ret1 = Matrix<T, Dynamic, 1>::Zero(cbs, 1) ;
+
+    Interface_parametrisation_mesh1d curve(degree);
+    
+    size_t int_deg = 3*degree - 1 + dev_degree ;
+    if (degree == 1)
+        int_deg = 2;
+
+    auto qps = edge_quadrature<T>( int_deg );
+
+    for (auto& qp : qps)
+    {
+        auto t = 0.5 * qp.first.x() + 0.5;
+        auto w = 0.5 * qp.second * curve.jacobian( t , pts , degree ) ;
+        
+        auto b = cb.eval_basis_1d(t);
+    
+        Matrix<T, 2, 1> der_val = curve.derivative(t,pts,degree) ;
+
+        ret0 += w * der_val(0) * b.transpose() ;
+        ret1 += w * der_val(1) * b.transpose() ;
+    }
+
+    return std::make_pair(ret0,ret1) ;
+}
+
+template< typename T >
+Matrix<T, Dynamic, 1>
+make_local_RHS_curvature(size_t dev_degree ,  size_t degree , const std::vector<point<T,2>>& pts  , size_t di = 0)
+{
+
+    cell_basis_Lagrange_1d_reference_new <T> cb(dev_degree);
+    auto cbs = cb.size();
+
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs, 1) ;
+
+    Interface_parametrisation_mesh1d curve(degree);
+
+    size_t int_deg = 3*degree - 1 + dev_degree ;
+    if (degree == 1)
+        int_deg = 2;
+
+    auto qps = edge_quadrature<T>(int_deg) ; //(   2*degree + dev_degree );
+
+    for (auto& qp : qps)
+    {
+        auto t = 0.5 * qp.first.x() + 0.5;
+        auto w = 0.5 * qp.second * curve.jacobian( t , pts , degree ) ;
+        
+        auto b = cb.eval_basis_1d(t);
+//        std::cout<<"t = "<<t<<" , b = "<<b<<std::endl;
+        auto curvature_val = curve.curvature(t,pts,degree) ;
+//        std::cout<<"w = "<<w<<std::endl;
+//        std::cout<<"qp.second = "<<qp.second<<std::endl;
+        ret += w * curvature_val * b.transpose() ;
+//        std::cout<<"ret = "<<ret<<std::endl;
+    }
+
+    return ret;
+}
+
+
+
+
+
+template<typename Mesh, typename T = typename Mesh::coordinate_type >
+struct Interface_parametrisation_mesh1d_global
+{
+    
+    size_t basis_degree , basis_size;
+    size_t degree_det ;
+    
+    std::vector< std::vector<size_t> > connectivity_matrix ;
+    std::vector< std::vector<size_t> > connectivity_cells ;
+    size_t ndof ;
+    size_t counter_subcls = 0;
+    size_t der_degree ;
+    size_t der_size ;
+    
+    std::vector< std::vector<size_t> > connectivity_matrix_dd ;
+    std::vector< std::vector<size_t> > connectivity_cells_dd ;
+    size_t ndof_dd ;
+    size_t counter_subcls_dd = 0;
+    size_t dd_degree ;
+    size_t dd_size ;
+    
+    Eigen::Matrix<T, Dynamic, 1> derivative_FE0 ;
+    Eigen::Matrix<T, Dynamic, 1> derivative_FE1 ;
+
+    Eigen::Matrix<T, Dynamic, Dynamic> derivative_HHO0 ;
+    Eigen::Matrix<T, Dynamic, Dynamic> derivative_HHO1 ;
+   
+    Eigen::Matrix<T, Dynamic, 1> curvature_FE ;
+    Eigen::Matrix<T, Dynamic, Dynamic> curvature_HHO ;
+    
+    Interface_parametrisation_mesh1d_global();
+
+    
+//    Interface_parametrisation_mesh1d_global(const Mesh& msh , size_t degree ) : basis_degree(degree), basis_size(degree+1) ,degree_det(2*degree),connectivity_cells(msh.cells.size()),der_degree(degree),der_size(degree+1)
+//    {
+//        // DEFINITION OF GLOBAL connectivity_matrix
+//        space_definition_derivative(msh ,der_degree, der_size );
+//
+//    }
+    
+    Interface_parametrisation_mesh1d_global(const Mesh& msh , size_t degree ) : basis_degree(degree), basis_size(degree+1) ,degree_det(2*degree),connectivity_cells(msh.cells.size()),connectivity_cells_dd(msh.cells.size()), der_degree(degree-1), der_size(degree), dd_degree(degree-1), dd_size(degree)
+    {
+        // DEFINITION OF GLOBAL connectivity_matrix
+//        if( basis_degree == 1 ){
+//            der_degree = 0;
+//            der_size = 1 ;
+//            dd_degree = 0;
+//            dd_size = 1 ;
+//        }
+        std::cout<<'\n'<<"Space Definition DERIVATIVE: order = "<<der_degree<<std::endl;
+    
+        space_definition_derivative(msh ,der_degree, der_size );
+        std::cout<<'\n'<<"Space Definition CURVATURE: order = "<<dd_degree<<std::endl;
+        space_definition_curvature(msh ,dd_degree, dd_size );
+        std::cout<<'\n'<<std::endl;
+    }
+    
+    
+    std::vector<size_t>
+    get_global_cells_interface(const Mesh& msh , const typename Mesh::cell_type& cl)
+    {
+        size_t k_cl = offset(msh,cl);
+        return connectivity_cells[k_cl] ;
+    }
+    
+    void
+    space_definition_derivative(const Mesh& msh , size_t deg , size_t deg_size)
+    {
+        size_t counter_cut_cls = 0;
+        size_t counter = 0;
+        for(auto& cl : msh.cells)
+        {
+            if(location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                counter_cut_cls++;
+                for (size_t i_cell = 0; i_cell < cl.user_data.integration_msh.cells.size(); i_cell++)
+                {
+//                    connectivity_cells[counter].push_back(counter_subcls);
+                    counter_subcls++;
+                }
+                
+            }
+            counter++;
+        }
+        std::cout<<"Amount of cut cells = "<<counter_cut_cls<<std::endl;
+        std::cout<<"Amount of subcells = "<<counter_subcls<<std::endl;
+        
+        if (deg == 0)
+            ndof = counter_subcls ;
+        else
+            ndof = counter_subcls * deg ;
+        
+        connectivity_matrix.resize( counter_subcls , std::vector<size_t>(deg_size) ) ;
+         
+        size_t i_cl_global = 0 ;
+        size_t i_inner = 2 ;
+        point<T,2> first_point ;
+        point<T,2> cell_end_point ;
+        bool first_cut_cell_found = FALSE ;
+        
+        if( deg == 0 )
+        {
+            for(auto& cl : msh.cells)
+            {
+                if(location(msh, cl) == element_location::ON_INTERFACE )
+                {
+                    size_t k_offset = offset(msh,cl); // ADD ORA
+                    auto msh_int = cl.user_data.integration_msh ;
+                    
+                    if(!first_cut_cell_found)
+                    {
+                
+                        for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                        {
+                            connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                            connectivity_matrix[i_cl_global][0] = i_cl_global;
+                            i_cl_global++;
+                        
+                        }
+                        first_cut_cell_found = TRUE;
+                        first_point = *cl.user_data.interface.begin() ;
+                        cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    }
+                    else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+                    {
+                        for(auto& cl : msh.cells)
+                        {
+                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() ) && !( first_point == cell_end_point)  )
+                            {
+                                size_t k_offset = offset(msh,cl); // ADD ORA
+                                auto msh_int = cl.user_data.integration_msh ;
+                                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                                {
+                                    connectivity_cells[k_offset].push_back(i_cl_global);
+                                    connectivity_matrix[i_cl_global][0] = i_cl_global;
+                                    i_cl_global++;
+                                }
+                                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                                     
+                            }
+                        }
+                        
+                    }
+                    else
+                        break;
+                         
+                 
+                }
+            }
+            
+        }
+        
+        else
+        {
+            for(auto& cl : msh.cells)
+            {
+                if(location(msh, cl) == element_location::ON_INTERFACE )
+                {
+                    size_t k_offset = offset(msh,cl); // ADD ORA
+                    auto msh_int = cl.user_data.integration_msh ;
+                    if(!first_cut_cell_found)
+                    {
+                        for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                        {
+                            if(i_local == 0 || i_local == 1)
+                                connectivity_matrix[0][i_local] = i_local;
+                            else
+                                connectivity_matrix[0][i_local] = i_inner++;
+                        }
+                        connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                        i_cl_global++;
+                        for (size_t i_cell = 1; i_cell < msh_int.cells.size(); i_cell++)
+                        {
+                            for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                            {
+                                if(i_local == 0)
+                                    connectivity_matrix[i_cl_global][0] = connectivity_matrix[i_cl_global - 1][1];
+                                else if(i_local == 1)
+                                    connectivity_matrix[i_cl_global][1] = i_inner++ ;
+                                else
+                                    connectivity_matrix[i_cl_global][i_local] = i_inner++;
+                            }
+                            connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                            i_cl_global++;
+                        }
+                        first_cut_cell_found = TRUE;
+                        first_point = *cl.user_data.interface.begin() ;
+                        cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    }
+                    else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+                    {
+                        for(auto& cl : msh.cells)
+                        {
+                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() ) && !( first_point == cell_end_point)  )
+                            {
+                                size_t k_offset = offset(msh,cl); // ADD ORA
+                                auto msh_int = cl.user_data.integration_msh ;
+                                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                                {
+                                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                                    {
+                                        if(i_local == 0)
+                                            connectivity_matrix[i_cl_global][0] = connectivity_matrix[i_cl_global - 1][1];
+                                        else if(i_local == 1)
+                                             connectivity_matrix[i_cl_global][1] = i_inner++ ;
+                                        else
+                                            connectivity_matrix[i_cl_global][i_local] = i_inner++;
+                                    }
+                                    connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                                    i_cl_global++;
+                                }
+                                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                                 
+                            }
+                        }
+                     
+                    }
+                    else
+                        break;
+                     
+             
+                }
+            }
+            connectivity_matrix[counter_subcls-1][1] = 0 ;
+            for( size_t i_local = 2 ; i_local < deg_size ; i_local++)
+                connectivity_matrix[counter_subcls-1][i_local] -= 1 ;
+            
+
+            
+        }
+        
+        
+//        std::cout<<"Beginning of connectivity matrix"<<std::endl;
+//        for(size_t i = 0 ; i< counter_subcls ; i++)
+//        {
+//            for(size_t j = 0 ; j< deg_size ; j++)
+//            {
+//                std::cout<<" ( "<<connectivity_matrix[i][j] << " ) " ;
+//            }
+//            std::cout<<std::endl;
+//        }
+//        std::cout<<std::endl;
+//        std::cout<<"End of connectivity matrix"<<std::endl;
+//        std::cout<<"Beginning of connectivity cell"<<std::endl;
+//        for(size_t i = 0 ; i< msh.cells.size() ; i++)
+//        {
+//            std::cout<<"Cell = "<<offset(msh, msh.cells[i])<<" : ";
+//            for(size_t j = 0 ; j< connectivity_cells[i].size() ; j++)
+//            {
+//                std::cout<<" ( "<<connectivity_cells[i][j] << " ) " ;
+//            }
+//            std::cout<<std::endl;
+//        }
+//        std::cout<<std::endl;
+//        std::cout<<"End of connectivity cell"<<std::endl;
+
+        // DEFINITION OF THE MASS MATRIX -> USEFUL FOR L2 PROJ
+        derivative_FE0 = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof );
+        derivative_FE1 = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof );
+        
+        derivative_HHO0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+        derivative_HHO1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+
+//        curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof );
+//
+//        curvature_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+
+    }
+    
+    
+    void
+    space_definition_curvature(const Mesh& msh , size_t deg , size_t deg_size)
+    {
+        size_t counter_cut_cls = 0;
+        size_t counter = 0;
+        for(auto& cl : msh.cells)
+        {
+            if(location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                counter_cut_cls++;
+                for (size_t i_cell = 0; i_cell < cl.user_data.integration_msh.cells.size(); i_cell++)
+                {
+    //                    connectivity_cells[counter].push_back(counter_subcls);
+                    counter_subcls_dd++;
+                }
+                    
+            }
+            counter++;
+        }
+        std::cout<<"Amount of cut cells = "<<counter_cut_cls<<std::endl;
+        std::cout<<"Amount of subcells = "<<counter_subcls_dd<<std::endl;
+            
+        
+        if (deg == 0)
+            ndof_dd = counter_subcls_dd ;
+        else
+            ndof_dd = counter_subcls_dd * deg ;
+        
+        connectivity_matrix_dd.resize( counter_subcls_dd , std::vector<size_t>(deg_size) ) ;
+             
+        size_t i_cl_global = 0 ;
+        size_t i_inner = 2 ;
+        point<T,2> first_point ;
+        point<T,2> cell_end_point ;
+        bool first_cut_cell_found = FALSE ;
+        
+        if( deg == 0 )
+        {
+            for(auto& cl : msh.cells)
+            {
+                if(location(msh, cl) == element_location::ON_INTERFACE )
+                {
+                    size_t k_offset = offset(msh,cl); // ADD ORA
+                    auto msh_int = cl.user_data.integration_msh ;
+                    
+                    if(!first_cut_cell_found)
+                    {
+                
+                        for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                        {
+                            connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
+                            connectivity_matrix_dd[i_cl_global][0] = i_cl_global;
+                            i_cl_global++;
+                        
+                        }
+                        first_cut_cell_found = TRUE;
+                        first_point = *cl.user_data.interface.begin() ;
+                        cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    }
+                    else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+                    {
+                        for(auto& cl : msh.cells)
+                        {
+                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() ) && !( first_point == cell_end_point)  )
+                            {
+                                size_t k_offset = offset(msh,cl); // ADD ORA
+                                auto msh_int = cl.user_data.integration_msh ;
+                                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                                {
+                                    connectivity_cells_dd[k_offset].push_back(i_cl_global);
+                                    connectivity_matrix_dd[i_cl_global][0] = i_cl_global;
+                                    i_cl_global++;
+                                }
+                                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                                     
+                            }
+                        }
+                        
+                    }
+                    else
+                        break;
+                         
+                 
+                }
+            }
+            
+        }
+        
+        else
+        {
+            for(auto& cl : msh.cells)
+            {
+                if(location(msh, cl) == element_location::ON_INTERFACE )
+                {
+                    size_t k_offset = offset(msh,cl); // ADD ORA
+                    auto msh_int = cl.user_data.integration_msh ;
+                    if(!first_cut_cell_found)
+                    {
+                        for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                        {
+                            if(i_local == 0 || i_local == 1)
+                                connectivity_matrix_dd[0][i_local] = i_local;
+                            else
+                                connectivity_matrix_dd[0][i_local] = i_inner++;
+                        }
+                        connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
+                        i_cl_global++;
+                        for (size_t i_cell = 1; i_cell < msh_int.cells.size(); i_cell++)
+                        {
+                            for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                            {
+                                if(i_local == 0)
+                                    connectivity_matrix_dd[i_cl_global][0] = connectivity_matrix_dd[i_cl_global - 1][1];
+                                else if(i_local == 1)
+                                    connectivity_matrix_dd[i_cl_global][1] = i_inner++ ;
+                                else
+                                    connectivity_matrix_dd[i_cl_global][i_local] = i_inner++;
+                            }
+                            connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
+                            i_cl_global++;
+                        }
+                        first_cut_cell_found = TRUE;
+                        first_point = *cl.user_data.interface.begin() ;
+                        cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    }
+                    else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+                    {
+                        for(auto& cl : msh.cells)
+                        {
+                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() ) && !( first_point == cell_end_point)  )
+                            {
+                                size_t k_offset = offset(msh,cl); // ADD ORA
+                                auto msh_int = cl.user_data.integration_msh ;
+                                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                                {
+                                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                                    {
+                                        if(i_local == 0)
+                                            connectivity_matrix_dd[i_cl_global][0] = connectivity_matrix_dd[i_cl_global - 1][1];
+                                        else if(i_local == 1)
+                                                connectivity_matrix_dd[i_cl_global][1] = i_inner++ ;
+                                        else
+                                            connectivity_matrix_dd[i_cl_global][i_local] = i_inner++;
+                                    }
+                                    connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
+                                    i_cl_global++;
+                                }
+                                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                                     
+                            }
+                        }
+                        
+                    }
+                    else
+                        break;
+                         
+                 
+                }
+            }
+            connectivity_matrix_dd[counter_subcls_dd-1][1] = 0 ;
+            for( size_t i_local = 2 ; i_local < deg_size ; i_local++)
+                connectivity_matrix_dd[counter_subcls_dd-1][i_local] -= 1 ;
+
+            
+        }
+                    
+            
+//        std::cout<<"Beginning of connectivity matrix"<<std::endl;
+//        for(size_t i = 0 ; i< counter_subcls_dd ; i++)
+//        {
+//            for(size_t j = 0 ; j< deg_size ; j++)
+//            {
+//                std::cout<<" ( "<<connectivity_matrix_dd[i][j] << " ) " ;
+//            }
+//            std::cout<<std::endl;
+//        }
+//        std::cout<<std::endl;
+//        std::cout<<"End of connectivity matrix"<<std::endl;
+//        std::cout<<"Beginning of connectivity cell"<<std::endl;
+//        for(size_t i = 0 ; i< msh.cells.size() ; i++)
+//        {
+//            std::cout<<"Cell = "<<offset(msh, msh.cells[i])<<" : ";
+//            for(size_t j = 0 ; j< connectivity_cells_dd[i].size() ; j++)
+//            {
+//                std::cout<<" ( "<<connectivity_cells_dd[i][j] << " ) " ;
+//            }
+//            std::cout<<std::endl;
+//        }
+//        std::cout<<std::endl;
+//        std::cout<<"End of connectivity cell"<<std::endl;
+
+        // DEFINITION OF THE MASS MATRIX -> USEFUL FOR L2 PROJ
+//        derivative_FE0 = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof );
+//        derivative_FE1 = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof );
+//
+//        derivative_HHO0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+//        derivative_HHO1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+
+        curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
+            
+        curvature_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls_dd);
+
+    }
+    
+    
+    
+    
+    void
+    make_L2_proj_para_derivative( const Mesh& msh , size_t di = 1)
+    {
+        
+        SparseMatrix<T> Global_Mass = SparseMatrix<T>( ndof, ndof );
+        std::vector< Triplet<T> >       triplets;
+        Matrix<T, Dynamic, 1>  RHS0 = Matrix<T, Dynamic, 1>::Zero( ndof , 1);
+        Matrix<T, Dynamic, 1>  RHS1 = Matrix<T, Dynamic, 1>::Zero( ndof , 1);
+        size_t counter = 0;
+        for( const auto& cl : msh.cells )
+        {
+            if( location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                auto msh_int = cl.user_data.integration_msh ;
+                for (size_t i_cl = 0; i_cl < msh_int.cells.size(); i_cl++)
+                {
+                    auto pts = points(msh_int,msh_int.cells[i_cl]);
+                    auto local_mass = make_local_mass_matrix_curve( der_degree ,basis_degree, pts );
+//                    std::cout<<"local_mass = "<<local_mass<<std::endl;
+                    auto local_RHS = make_local_RHS_derivative( der_degree , basis_degree , pts );
+//                    std::cout<<"local_RHS[0] = "<<local_RHS.first<<std::endl;
+//                    std::cout<<"local_RHS[1] = "<<local_RHS.second<<std::endl;
+                    size_t global_i_cl = connectivity_cells[counter][i_cl] ;
+//                    std::cout<<"i_cl = "<<i_cl<<" , global i_cl = "<<global_i_cl<<std::endl;
+                    for (size_t i = 0; i < der_size ; i++)
+                    {
+                        size_t asm_map_i = connectivity_matrix[global_i_cl][i];
+//                        std::cout<<"i = "<<i<<" , asm_map_i = "<<asm_map_i<<std::endl;
+                        for (size_t j = 0; j < der_size ; j++)
+                        {
+                            size_t asm_map_j = connectivity_matrix[global_i_cl][j] ;
+//                            std::cout<<"j = "<<j<<" , asm_map_j = "<<asm_map_j<<std::endl;
+                            triplets.push_back(Triplet<T>(asm_map_i,asm_map_j, local_mass(i,j)));
+                        }
+                        RHS0(asm_map_i) += local_RHS.first(i) ;
+                        RHS1(asm_map_i) += local_RHS.second(i) ;
+
+                    }
+                }
+            }
+            counter++;
+        }
+
+        Global_Mass.setFromTriplets( triplets.begin(), triplets.end() );
+        triplets.clear();
+//        std::cout<<"RHS0 = "<<RHS0<<std::endl;
+//        std::cout<<"RHS1 = "<<RHS1<<std::endl;
+        SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+        solver_global_mass.compute(Global_Mass);
+        derivative_FE0 = solver_global_mass.solve(RHS0);
+        derivative_FE1 = solver_global_mass.solve(RHS1);
+        
+        for(size_t counter_bis = 0 ; counter_bis < counter_subcls ;counter_bis++)
+        {
+            for (size_t i = 0; i < der_size; i++)
+            {
+                size_t asm_map =  connectivity_matrix[counter_bis][i] ;
+                derivative_HHO0(i,counter_bis) = derivative_FE0( asm_map ) ;
+                derivative_HHO1(i,counter_bis) = derivative_FE1( asm_map ) ;
+                
+//                std::cout<<"asm_map = "<<asm_map<<" , i = "<<i<<" , counter_bis = "<<counter_bis <<std::endl;
+//                std::cout<< "derivative_HHO0(i,counter_bis) = "<<derivative_HHO0(i,counter_bis)<<" , derivative_HHO1(i,counter_bis) = "<<derivative_HHO1(i,counter_bis) <<std::endl;
+            }
+
+        }
+    
+                                            
+    }
+    
+    void
+    make_L2_proj_para_curvature( const Mesh& msh , size_t di = 1)
+    {
+        std::cout<<"THE CURVAURE IS MADE CONTINUOUS BY THE DISCRETE CURVATURE"<<std::endl;
+        SparseMatrix<T> Global_Mass = SparseMatrix<T>( ndof_dd, ndof_dd );
+        std::vector< Triplet<T> >       triplets;
+        Matrix<T, Dynamic, 1>  RHS = Matrix<T, Dynamic, 1>::Zero( ndof_dd , 1);
+        size_t counter = 0;
+        for( const auto& cl : msh.cells )
+        {
+            if( location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                auto msh_int = cl.user_data.integration_msh ;
+                for (size_t i_cl = 0; i_cl < msh_int.cells.size(); i_cl++)
+                {
+                    auto pts = points(msh_int,msh_int.cells[i_cl]);
+                    auto local_mass = make_local_mass_matrix_curve( dd_degree,basis_degree , pts );
+//                    std::cout<<"local_mass = "<<local_mass<<std::endl;
+                   
+                    auto local_RHS = make_local_RHS_curvature( dd_degree , basis_degree , pts );
+//                    std::cout<<"local_RHS = "<<local_RHS<<std::endl;
+                    size_t global_i_cl = connectivity_cells_dd[counter][i_cl] ;
+//                    std::cout<<"i_cl = "<<i_cl<<" , global i_cl = "<<global_i_cl<<std::endl;
+                    for (size_t i = 0; i < dd_size ; i++)
+                    {
+                        size_t asm_map_i = connectivity_matrix_dd[global_i_cl][i];
+//                        std::cout<<"i = "<<i<<" , asm_map_i = "<<asm_map_i<<std::endl;
+                        for (size_t j = 0; j < dd_size ; j++)
+                        {
+                            size_t asm_map_j = connectivity_matrix_dd[global_i_cl][j] ;
+//                            std::cout<<"j = "<<j<<" , asm_map_j = "<<asm_map_j<<std::endl;
+                            triplets.push_back(Triplet<T>(asm_map_i,asm_map_j, local_mass(i,j)));
+                        }
+                        RHS(asm_map_i) += local_RHS(i) ;
+
+                    }
+                }
+            }
+            counter++;
+        }
+
+        Global_Mass.setFromTriplets( triplets.begin(), triplets.end() );
+        triplets.clear();
+//        std::cout<<"RHS = "<<RHS<<std::endl;
+        SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+        solver_global_mass.compute(Global_Mass);
+        curvature_FE = solver_global_mass.solve(RHS);
+        
+        for(size_t counter_bis = 0 ; counter_bis < counter_subcls_dd ;counter_bis++)
+        {
+            for (size_t i = 0; i < dd_size; i++)
+            {
+                size_t asm_map =  connectivity_matrix_dd[counter_bis][i] ;
+                curvature_HHO(i,counter_bis) = curvature_FE( asm_map ) ;
+                
+//                std::cout<<"asm_map = "<<asm_map<<" , i = "<<i<<" , counter_bis = "<<counter_bis <<std::endl;
+//                 std::cout<< "curvature_HHO(i,counter_bis) = "<<curvature_HHO(i,counter_bis) <<std::endl;
+            }
+
+        }
+    
+                                            
+    }
+    
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_basis_1d(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_basis_1d(pt) ;
+        
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+    
+   
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_gradients_1d(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+   
+    
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_gradients_1d(pt) ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            ret(0) += basis(i)*physical_pts[i].x();
+            ret(1) += basis(i)*physical_pts[i].y();
+        }
+        return ret;
+        
+        
+    }
+    
+  
+    
+   
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        return (this->derivative(pt,physical_pts,basis_degree)).norm();
+    }
+    
+   
+    T
+    jacobian( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        return (this->derivative(pt,physical_pts)).norm();
+    }
+    
+    
+    
+    Matrix<T, 2, 1>
+    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        auto der = this->derivative(pt,physical_pts,basis_degree) ;
+        return der/der.norm();
+       
+        
+    }
+    
+   
+    Matrix<T, 2, 1>
+    tangent( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        auto der = this->derivative(pt,physical_pts) ;
+        return der/der.norm();
+       
+        
+    }
+    
+   
+    Matrix<T, 2, 1>
+    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, physical_pts , basis_degree)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+   
+   
+    
+  
+    Matrix<T, 2, 1>
+    normal( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, physical_pts)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+   
+    T
+    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts , size_t basis_degree ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        size_t basis_size = basis_degree + 1 ;
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
+        auto curv_der_norm = curv_der.norm() ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            curv_double_der(0) += basis(i)*physical_pts[i].x();
+            curv_double_der(1) += basis(i)*physical_pts[i].y();
+        }
+    
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        int sign_curv ;
+        auto n = this->normal( pt, physical_pts , basis_degree );
+        
+        if( (sgn( n(0) ) == sgn( ret(0) ) ) && (sgn( n(1) ) == sgn( ret(1) ) ) )
+            sign_curv = 1.0 ;
+        else
+            sign_curv =  -1.0 ;
+       
+        return sign_curv * ret.norm()/curv_der_norm ;
+           
+    }
+    
+    
+    T
+    curvature( const T& pt , const std::vector<point<T, 2>>& physical_pts ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, physical_pts , basis_degree )) ;
+        auto curv_der_norm = curv_der.norm() ;
+       
+        for(size_t i = 0 ; i < basis_size ; i++)
+        {
+            curv_double_der(0) += basis(i)*physical_pts[i].x();
+            curv_double_der(1) += basis(i)*physical_pts[i].y();
+        }
+    
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        return ret.norm()/curv_der_norm ;
+           
+    }
+    
+    
+    Matrix<T, 2, 1>
+    derivative_cont( const T& pt , size_t i_cl ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(der_degree);
+        auto basis_eval = cb.eval_basis_1d(pt) ;
+           
+        auto values_cell0 = derivative_HHO0.col(i_cl);
+        auto values_cell1 = derivative_HHO1.col(i_cl);
+        ret(0) = values_cell0.dot( basis_eval );
+        ret(1) = values_cell1.dot( basis_eval );
+           
+           
+        return ret;
+           
+           
+    }
+    
+    
+    T
+    jacobian_cont( const T& pt , size_t i_cl ) const
+    {
+        return (this->derivative_cont(pt,i_cl)).norm();
+    }
+    
+    
+    Matrix<T, 2, 1>
+    tangent_cont( const T& pt , size_t i_cl ) const
+    {
+
+        auto der = this->derivative_cont(pt,i_cl) ;
+        return der/der.norm();
+       
+        
+    }
+    
+    
+    
+    Matrix<T, 2, 1>
+    normal_cont( const T& pt , size_t i_cl ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent_cont(pt, i_cl)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+    
+    
+    T
+    curvature_der_cont( const T& pt , size_t i_cl ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        cell_basis_Lagrange_1d_reference_new <T> cb(der_degree);
+        auto basis_eval = cb.eval_gradients_1d(pt) ;
+    
+        auto curv_der = (this->derivative_cont( pt, i_cl ) ) ;
+        auto curv_der_norm = curv_der.norm() ;
+        
+        auto values_cell0 = derivative_HHO0.col(i_cl);
+        auto values_cell1 = derivative_HHO1.col(i_cl);
+        
+        curv_double_der(0) = values_cell0.dot( basis_eval );
+        curv_double_der(1) = values_cell1.dot( basis_eval );
+       
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+       
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        int sign_curv ;
+        auto n = this->normal_cont( pt, i_cl );
+        
+        if( (sgn( n(0) ) == sgn( ret(0) ) ) && (sgn( n(1) ) == sgn( ret(1) ) ) )
+            sign_curv = 1.0 ;
+        else
+            sign_curv =  -1.0 ;
+       
+        return sign_curv * ret.norm()/curv_der_norm ;
+           
+    }
+    
+    T
+    curvature_cont( const T& pt , size_t i_cl ) const
+    {
+        cell_basis_Lagrange_1d_reference_new <T> cb(dd_degree);
+        return (curvature_HHO.col(i_cl) ).dot( cb.eval_basis_1d(pt) ) ;
+    }
+    
+    
+};
 
 
 
@@ -1517,8 +2573,11 @@ triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, 
     //typedef typename Cell::point_type     point_type;
     if (deg == 0)
         deg = 1;
+    
+    if (deg == 10)
+           deg = 11;
 
-    if (deg > 9)
+    if (deg > 12)
         throw std::invalid_argument("Quadrature order too high");
     
     size_t degree_int = cl.user_data.integration_msh.degree_curve;

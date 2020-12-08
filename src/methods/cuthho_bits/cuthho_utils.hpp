@@ -81,6 +81,7 @@ make_hho_laplacian(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
     if ( !is_cut(msh, cl) )
         return make_hho_laplacian(msh, cl, di);
 
+    std::cout<<"make_hho_laplacian: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     auto recdeg = di.reconstruction_degree();
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
@@ -151,6 +152,109 @@ make_hho_laplacian(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 }
 
 
+
+
+template<typename T, size_t ET, typename Function>
+std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, Dynamic>  >
+make_hho_laplacian_ref_pts(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+                   const Function& level_set_function, hho_degree_info di,
+                   element_location where)
+{
+
+    if ( !is_cut(msh, cl) )
+        return make_hho_laplacian(msh, cl, di);
+
+    auto recdeg = di.reconstruction_degree();
+    auto celdeg = di.cell_degree();
+    auto facdeg = di.face_degree();
+
+    cell_basis<cuthho_mesh<T, ET>,T>     cb(msh, cl, recdeg);
+
+    auto rbs = cell_basis<cuthho_mesh<T, ET>,T>::size(recdeg);
+    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+
+    auto fcs = faces(msh, cl);
+    auto num_faces = fcs.size();
+
+    Matrix<T, Dynamic, Dynamic> stiff = Matrix<T, Dynamic, Dynamic>::Zero(rbs, rbs);
+    Matrix<T, Dynamic, Dynamic> gr_lhs = Matrix<T, Dynamic, Dynamic>::Zero(rbs, rbs);
+    Matrix<T, Dynamic, Dynamic> gr_rhs = Matrix<T, Dynamic, Dynamic>::Zero(rbs, cbs + num_faces*fbs);
+
+    /* Cell term (cut) */
+    auto qps = integrate(msh, cl, 2*recdeg, where);
+    for (auto& qp : qps)
+    {
+        auto dphi = cb.eval_gradients(qp.first);
+        stiff += qp.second * dphi * dphi.transpose();
+    }
+
+    auto hT = diameter(msh, cl);
+
+    /* Interface term */
+    auto msh_int = cl.user_data.integration_msh ;
+    size_t degree_curve = msh_int.degree_curve ;
+    Interface_parametrisation_mesh1d curve(degree_curve) ;
+    size_t degree = 2*recdeg;
+    //    degree += 2*degree_curve ; // TO BE CHECKED
+    auto qpsi = edge_quadrature<T>(degree);
+        
+    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+    {
+        auto pts = points(msh_int,msh_int.cells[i_cell]);
+        for(auto& qp:qpsi)
+        {
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = curve(t , pts , degree_curve ) ;
+            point<T,2> pt = typename cuthho_mesh<T, ET>::point_type( p(0) , p(1) ) ;
+            T jacobian = curve.jacobian( t , pts , degree_curve ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+                
+                
+                
+            auto phi    = cb.eval_basis(pt);
+            auto dphi   = cb.eval_gradients(pt);
+
+            Matrix<T,2,1> n = curve.normal(t , pts , degree_curve ) ;
+//            Matrix<T,2,1> n      = level_set_function.normal(qp.first);
+
+            stiff -= w * phi * (dphi * n).transpose();
+            stiff -= w * (dphi * n) * phi.transpose();
+            stiff += w * phi * phi.transpose() * cell_eta(msh, cl) / hT;
+                
+        }
+    }
+    
+    gr_lhs.block(0, 0, rbs, rbs) = stiff;
+    gr_rhs.block(0, 0, rbs, cbs) = stiff.block(0, 0, rbs, cbs);
+
+    auto ns = normals(msh, cl);
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        auto fc = fcs[i];
+        auto n = ns[i];
+
+        // face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg);
+        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
+        /* Terms on faces */
+        auto qps = integrate(msh, fc, 2*recdeg, where);
+        for (auto& qp : qps)
+        {
+            auto c_phi = cb.eval_basis(qp.first);
+            auto f_phi = fb.eval_basis(qp.first);
+            auto r_dphi_tmp = cb.eval_gradients(qp.first);
+            auto r_dphi = r_dphi_tmp.block(0, 0, rbs, 2);
+            gr_rhs.block(0, cbs+i*fbs, rbs, fbs) += qp.second * (r_dphi * n) * f_phi.transpose();
+            gr_rhs.block(0, 0, rbs, cbs) -= qp.second * (r_dphi * n) * c_phi.transpose();
+        }
+    }
+
+    Matrix<T, Dynamic, Dynamic> oper = gr_lhs.llt().solve(gr_rhs);
+    Matrix<T, Dynamic, Dynamic> data = gr_rhs.transpose() * oper;
+    return std::make_pair(oper, data);
+}
+
+
 template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, Dynamic>  >
 make_hho_laplacian_interface(const cuthho_mesh<T, ET>& msh,
@@ -165,6 +269,7 @@ make_hho_laplacian_interface(const cuthho_mesh<T, ET>& msh,
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
 
+    std::cout<<"make_hho_laplacian_interface: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T>     cb(msh, cl, recdeg);
 
     auto rbs = cell_basis<cuthho_mesh<T, ET>,T>::size(recdeg);
@@ -445,6 +550,7 @@ make_hho_gradrec_vector(const cuthho_mesh<T, ET>& msh, const typename cuthho_mes
     if ( !is_cut(msh, cl) )
         return make_hho_gradrec_vector(msh, cl, di);
 
+    std::cout<<"make_hho_gradrec_vector: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
 
@@ -539,6 +645,7 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh,
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
 
+    std::cout<<"make_hho_gradrec_vector_interface: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
@@ -638,7 +745,7 @@ make_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::c
 {
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
-
+    std::cout<<"make_Nitsche: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     auto cbs = cb.size();
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
@@ -677,7 +784,7 @@ make_NS_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
 {
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
-
+    std::cout<<"make_NS_Nitsche: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     auto cbs = cb.size();
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
@@ -813,7 +920,7 @@ make_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 {
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
-
+    std::cout<<"make_GR_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, degree-1);
     auto gbs = gb.size();
 
@@ -848,7 +955,7 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
     {
         cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
         auto cbs = cb.size();
-
+        std::cout<<"make_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
         auto hT = diameter(msh, cl);
 
         Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
@@ -893,7 +1000,7 @@ make_Dirichlet_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-
+    std::cout<<"make_Dirichlet_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
 
@@ -933,7 +1040,7 @@ make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-
+    std::cout<<"make_flux_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
 
@@ -1369,6 +1476,7 @@ make_vector_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
+    std::cout<<"make_vector_GR_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     size_t gbs;
     if( sym_grad )
         gbs = sym_matrix_cell_basis<cuthho_mesh<T, ET>,T>::size(degree-1);
@@ -1448,7 +1556,7 @@ make_vector_Dirichlet_jump(const cuthho_mesh<T, ET>& msh,
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-
+    std::cout<<"make_vector_Dirichlet_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
 
@@ -1482,7 +1590,7 @@ make_vector_Dirichlet_jump(const cuthho_mesh<T, ET>& msh,
 
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_vector_flux_jump(const cuthho_mesh<T, ET>& msh,
+make_vector_flux_jump_reference_pts(const cuthho_mesh<T, ET>& msh,
                       const typename cuthho_mesh<T, ET>::cell_type& cl,
                       size_t degree, const element_location where, const F1& flux_jump)
 {
@@ -1493,25 +1601,11 @@ make_vector_flux_jump(const cuthho_mesh<T, ET>& msh,
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
     
-    /*
-    std::cout<<"cl = "<<offset(msh,cl)<<" points = "<<'\n';
-    for(auto& pt : points(msh,cl) )
-        std::cout<<pt<<" , ";
-    std::cout<<'\n'<<std::endl;
-    */
-    
-    //std::cout<<"WARNING: interface integration points made by linear approximation. Integration error h^2 order. To be developped higher order integration."<<std::endl;
-    //std::cout<<"WARNING: check integration points: it seems there is a repetition in agglomerated cells."<<std::endl;
-    auto qpsi = integrate_interface(msh, cl, 2*degree , element_location::IN_NEGATIVE_SIDE); 
-    /*
-    for(auto& qp : qpsi )
-        std::cout<<qp.first<<" , ";
-    std::cout<<'\n'<<std::endl;
-    */
+   
     auto msh_int = cl.user_data.integration_msh ;
     size_t degree_curve = msh_int.degree_curve ;
     Interface_parametrisation_mesh1d curve(degree_curve) ;
-    degree += 2*degree_curve ; // TO BE CHECKED
+    degree += 3*degree_curve -4 ; // 2*degree_curve ; // TO BE CHECKED
     auto qps = edge_quadrature<T>(degree);
     for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
     {
@@ -1519,8 +1613,8 @@ make_vector_flux_jump(const cuthho_mesh<T, ET>& msh,
         for(auto& qp:qps)
         {
             auto t = 0.5 * qp.first.x() + 0.5;
-            auto p = para_curve(t , pts , degree_curve ) ;
-            point<T,2> pt = point_type( p(0) , p(1) ) ;
+            auto p = curve(t , pts , degree_curve ) ;
+            point<T,2> pt = typename cuthho_mesh<T, ET>::point_type( p(0) , p(1) ) ;
             T jacobian = curve.jacobian( t , pts , degree_curve ) ;
             auto w = 0.5 * qp.second * jacobian ;
             
@@ -1537,21 +1631,22 @@ make_vector_flux_jump(const cuthho_mesh<T, ET>& msh,
             
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_vector_flux_jump_reference_pts(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location where, const F1& flux_jump)
+make_vector_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location where, const F1& flux_jump)
 {
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-
+//    std::cout<<"make_vector_flux_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
             return ret;
+    
             
     auto qpsi = integrate_interface(msh, cl, 2*degree , element_location::IN_NEGATIVE_SIDE);
     
     for (auto& qp : qpsi)
     {
-        auto phi = cb.eval_basis(qp.first.first);
-        ret += qp.second * phi * flux_jump(qp.first.second);
+        auto phi = cb.eval_basis(qp.first);
+        ret += qp.second * phi * flux_jump(qp.first);
     }
     return ret;
 }
@@ -1591,6 +1686,7 @@ make_hho_divergence_reconstruction(const cuthho_mesh<T, ET>& msh,
     if ( !is_cut(msh, cl) )
         return make_hho_divergence_reconstruction(msh, cl, di);
 
+    std::cout<<"make_hho_divergence_reconstruction: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     const auto celdeg = di.cell_degree();
     const auto facdeg = di.face_degree();
     const auto pdeg = di.face_degree();
@@ -1680,7 +1776,7 @@ make_hho_divergence_reconstruction_interface
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     //typedef Matrix<T, Dynamic, 1>       vector_type;
-
+//    std::cout<<"make_hho_divergence_reconstruction_interface: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto pdeg    = facdeg;
@@ -1766,6 +1862,129 @@ make_hho_divergence_reconstruction_interface
     return std::make_pair(oper, dr_rhs);
 }
 
+//// make_hho_divergence_reconstruction_interface_ref_pts
+// return the divergence reconstruction for the interface pb
+// coeff -> scales the interface term
+//Parametric interface to handlethe normal
+template<typename T, size_t ET, typename Function>
+std::pair<   Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,
+             Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>  >
+make_hho_divergence_reconstruction_interface_ref_pts
+(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+ const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff)
+{
+
+    if ( !is_cut(msh, cl) )
+        throw std::invalid_argument("The cell is not cut");
+
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+    //typedef Matrix<T, Dynamic, 1>       vector_type;
+
+    const auto celdeg  = di.cell_degree();
+    const auto facdeg  = di.face_degree();
+    const auto pdeg    = facdeg;
+
+    vector_cell_basis<cuthho_mesh<T, ET>,T>   cb(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T>          pb(msh, cl, pdeg);
+
+
+    auto cbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = vector_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto pbs = cell_basis<cuthho_mesh<T, ET>,T>::size(pdeg);
+
+    const auto num_faces = faces(msh, cl).size();
+
+    matrix_type       rhs_tmp = matrix_type::Zero(pbs, cbs + num_faces * fbs);
+    matrix_type        dr_lhs = matrix_type::Zero(pbs, pbs);
+    matrix_type        dr_rhs = matrix_type::Zero(pbs, 2*cbs + 2*num_faces * fbs);
+
+    const auto qps = integrate(msh, cl, celdeg - 1 + pdeg, where);
+    for (auto& qp : qps)
+    {
+        const auto v_phi     = cb.eval_basis(qp.first);
+        const auto s_phi   = pb.eval_basis(qp.first);
+        const auto s_dphi  = pb.eval_gradients(qp.first);
+
+        dr_lhs += qp.second * s_phi * s_phi.transpose();
+        rhs_tmp.block(0, 0, pbs, cbs) -= qp.second * s_dphi * v_phi.transpose();
+    }
+
+    const auto fcs = faces(msh, cl);
+    const auto ns = normals(msh, cl);
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        const auto fc = fcs[i];
+        const auto n  = ns[i];
+        cut_vector_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
+
+        const auto qps_f = integrate(msh, fc, pdeg + std::max(facdeg, celdeg), where);
+        for (auto& qp : qps_f)
+        {
+            const matrix_type f_phi      = fb.eval_basis(qp.first);
+            const auto        s_phi      = pb.eval_basis(qp.first);
+            const matrix_type qp_s_phi_n = qp.second * s_phi * n.transpose();
+
+            rhs_tmp.block(0, cbs + i * fbs, pbs, fbs) += qp_s_phi_n * f_phi.transpose();
+        }
+    }
+
+    // term on the interface
+    matrix_type        interface_term = matrix_type::Zero(pbs, cbs);
+    auto msh_int = cl.user_data.integration_msh ;
+    size_t degree_curve = msh_int.degree_curve ;
+    Interface_parametrisation_mesh1d curve(degree_curve) ;
+    size_t degree =  celdeg + pdeg;
+    degree += + 2*degree_curve - 2 ; // 2*degree_curve ; // TO BE CHECKED
+    auto qpsi = edge_quadrature<T>(degree);
+        
+    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+    {
+        auto pts = points(msh_int,msh_int.cells[i_cell]);
+        for(auto& qp:qpsi)
+        {
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = curve(t , pts , degree_curve ) ;
+            point<T,2> pt = typename cuthho_mesh<T, ET>::point_type( p(0) , p(1) ) ;
+            T jacobian = curve.jacobian( t , pts , degree_curve ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+            
+            const auto v_phi        = cb.eval_basis(pt);
+            const auto s_phi        = pb.eval_basis(pt);
+
+//            Matrix<T,2,1> n = level_set_function.normal(qp.first);
+            Matrix<T,2,1> n = curve.normal(t , pts , degree_curve ) ;
+            const matrix_type qp_s_phi_n = w * s_phi * n.transpose();
+
+            interface_term += qp_s_phi_n * v_phi.transpose();
+                
+            
+               
+            }
+        }
+    
+
+    // finalize rhs
+    if(where == element_location::IN_NEGATIVE_SIDE)
+    {
+        dr_rhs.block(0, 0, pbs, cbs) += rhs_tmp.block(0, 0, pbs, cbs);
+        dr_rhs.block(0, 2*cbs, pbs, num_faces*fbs)
+            += rhs_tmp.block(0, cbs, pbs, num_faces*fbs);
+        dr_rhs.block(0, 0, pbs, cbs) += (1.0 - coeff) * interface_term;
+        dr_rhs.block(0, cbs, pbs, cbs) += coeff * interface_term;
+    }
+    else if( where == element_location::IN_POSITIVE_SIDE)
+    {
+        dr_rhs.block(0, cbs, pbs, cbs) += rhs_tmp.block(0, 0, pbs, cbs);
+        dr_rhs.block(0, 2*cbs + num_faces*fbs, pbs, num_faces*fbs)
+                     += rhs_tmp.block(0, cbs, pbs, num_faces*fbs);
+        dr_rhs.block(0, 0, pbs, cbs) -= coeff * interface_term;
+        dr_rhs.block(0, cbs, pbs, cbs) += (coeff-1.0) * interface_term;
+    }
+
+    matrix_type oper = dr_lhs.ldlt().solve(dr_rhs);
+
+    return std::make_pair(oper, dr_rhs);
+}
 
 ///////////////////////   Stokes Stabilization
 
@@ -1779,7 +1998,7 @@ make_stokes_interface_stabilization
 
     auto celdeg = di.cell_degree();
     auto pdeg = di.face_degree();
-
+//    std::cout<<"make_stokes_interface_stabilization: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     cell_basis<cuthho_mesh<T, ET>,T>        pb(msh, cl, pdeg);
 
@@ -1831,6 +2050,92 @@ make_stokes_interface_stabilization
     return ret;
 }
 
+template<typename T, size_t ET, typename F1>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
+make_stokes_interface_stabilization_ref_pts
+(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+ const hho_degree_info& di, const F1& level_set_function)
+{
+    auto hT = diameter(msh, cl);
+
+    auto celdeg = di.cell_degree();
+    auto pdeg = di.face_degree();
+
+    vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T>        pb(msh, cl, pdeg);
+
+    auto cbs = cb.size();
+    auto pbs = pb.size();
+
+    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero( 2*(cbs+pbs), 2*(cbs+pbs));
+    Matrix<T, Dynamic, Dynamic> ret_temp = Matrix<T, Dynamic, Dynamic>::Zero( cbs+pbs, cbs+pbs  );
+
+    
+    auto msh_int = cl.user_data.integration_msh ;
+    size_t degree_curve = msh_int.degree_curve ;
+    Interface_parametrisation_mesh1d curve(degree_curve) ;
+    size_t degree = celdeg - 1 + pdeg;
+    if(degree_curve == 1)
+        degree += 2;
+    else
+        degree += 3*degree_curve - 4 ; //  2*degree_curve ; // TO BE CHECKED
+    
+    auto qpsi = edge_quadrature<T>(degree);
+        
+    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+    {
+        auto pts = points(msh_int,msh_int.cells[i_cell]);
+        for(auto& qp:qpsi)
+        {
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = curve(t , pts , degree_curve ) ;
+            point<T,2> pt = typename cuthho_mesh<T, ET>::point_type( p(0) , p(1) ) ;
+            T jacobian = curve.jacobian( t , pts , degree_curve ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+                
+                
+            Matrix<T,2,1> n = curve.normal(t , pts , degree_curve ) ;
+            
+            const auto v_dphi = cb.eval_gradients(pt);
+            const auto s_phi  = pb.eval_basis(pt);
+//           const auto n = level_set_function.normal(pt);
+            const Matrix<T, Dynamic, Dynamic> v_dphi_n = outer_product(v_dphi, n);
+            const Matrix<T, Dynamic, Dynamic> s_phi_n = s_phi * n.transpose();
+
+            ret_temp.block(0, 0, cbs, cbs) += w * v_dphi_n * v_dphi_n.transpose();
+            ret_temp.block(cbs, 0, pbs, cbs) += w * s_phi_n * v_dphi_n.transpose();
+            ret_temp.block(cbs, cbs, pbs, pbs) += w * s_phi_n * s_phi_n.transpose();
+                
+        }
+    }
+    
+
+    // vel -- vel
+    ret.block(0, 0, cbs, cbs)     += hT * ret_temp.block(0, 0, cbs, cbs);
+    ret.block(0, cbs, cbs, cbs)   -= hT * ret_temp.block(0, 0, cbs, cbs);
+    ret.block(cbs, 0, cbs, cbs)   -= hT * ret_temp.block(0, 0, cbs, cbs);
+    ret.block(cbs, cbs, cbs, cbs) += hT * ret_temp.block(0, 0, cbs, cbs);
+
+    // vel -- p
+    ret.block(0, 2*cbs, cbs, pbs)       -= hT * ret_temp.block(cbs, 0, pbs, cbs).transpose();
+    ret.block(0, 2*cbs + pbs, cbs, pbs) += hT * ret_temp.block(cbs, 0, pbs, cbs).transpose();
+    ret.block(cbs, 2*cbs, cbs, pbs)     += hT * ret_temp.block(cbs, 0, pbs, cbs).transpose();
+    ret.block(cbs, 2*cbs+pbs, cbs, pbs) -= hT * ret_temp.block(cbs, 0, pbs, cbs).transpose();
+
+    // p -- vel
+    ret.block(2*cbs, 0, pbs, cbs)       -= hT * ret_temp.block(cbs, 0, pbs, cbs);
+    ret.block(2*cbs, cbs, pbs, cbs)     += hT * ret_temp.block(cbs, 0, pbs, cbs);
+    ret.block(2*cbs+pbs, 0, pbs, cbs)   += hT * ret_temp.block(cbs, 0, pbs, cbs);
+    ret.block(2*cbs+pbs, cbs, pbs, cbs) -= hT * ret_temp.block(cbs, 0, pbs, cbs);
+
+    // p -- p
+    ret.block(2*cbs, 2*cbs, pbs, pbs)         += hT * ret_temp.block(cbs, cbs, pbs, pbs);
+    ret.block(2*cbs, 2*cbs+pbs, pbs, pbs)     -= hT * ret_temp.block(cbs, cbs, pbs, pbs);
+    ret.block(2*cbs+pbs, 2*cbs, pbs, pbs)     -= hT * ret_temp.block(cbs, cbs, pbs, pbs);
+    ret.block(2*cbs+pbs, 2*cbs+pbs, pbs, pbs) += hT * ret_temp.block(cbs, cbs, pbs, pbs);
+
+    return ret;
+}
 
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -1842,7 +2147,7 @@ make_stokes_interface_stabilization_RHS
 
     auto celdeg = di.cell_degree();
     auto pdeg = di.face_degree();
-
+//    std::cout<<"make_stokes_interface_stabilization_RHS: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     cell_basis<cuthho_mesh<T, ET>,T>        pb(msh, cl, pdeg);
 
@@ -1867,6 +2172,64 @@ make_stokes_interface_stabilization_RHS
     return ret;
 }
 
+template<typename T, size_t ET, typename F1, typename F2>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
+make_stokes_interface_stabilization_RHS_ref_pts
+(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+ const hho_degree_info& di, const F1& level_set_function, const F2& neumann_jump)
+{
+    auto hT = diameter(msh, cl);
+
+    auto celdeg = di.cell_degree();
+    auto pdeg = di.face_degree();
+
+    vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T>        pb(msh, cl, pdeg);
+
+    auto cbs = cb.size();
+    auto pbs = pb.size();
+
+    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero( 2*(cbs + 2*pbs) );
+    
+    auto msh_int = cl.user_data.integration_msh ;
+    size_t degree_curve = msh_int.degree_curve ;
+    Interface_parametrisation_mesh1d curve(degree_curve) ;
+    size_t degree = celdeg ; // 2*celdeg ;
+    if(degree_curve == 1)
+        degree += 2;
+    else
+        degree += 4 * degree_curve -6 ;// 2*degree_curve ; // TO BE CHECKED (3* degree_curve - 4) ?
+    auto qps = edge_quadrature<T>(degree);
+    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+    {
+        auto pts = points(msh_int,msh_int.cells[i_cell]);
+        for(auto& qp:qps)
+        {
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = curve(t , pts , degree_curve ) ;
+            point<T,2> pt = typename cuthho_mesh<T, ET>::point_type( p(0) , p(1) ) ;
+            T jacobian = curve.jacobian( t , pts , degree_curve ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+            
+            auto v_dphi = cb.eval_gradients(pt);
+            auto s_phi  = pb.eval_basis(pt);
+            
+//            auto n = level_set_function.normal(pt);
+            auto n = curve.normal(t , pts , degree_curve ) ;
+            
+            const Matrix<T, Dynamic, Dynamic> v_dphi_n = outer_product(v_dphi, n);
+            const Matrix<T, Dynamic, Dynamic> s_phi_n = s_phi * n.transpose();
+
+            ret.head(cbs) += hT * w * v_dphi_n * neumann_jump(t , pts);
+            ret.tail(pbs) -= hT * w * s_phi_n  * neumann_jump(t , pts);
+            
+        }
+    }
+       
+    
+
+    return ret;
+}
 
 ///////////////////////   RHS  pressure
 template<typename T, size_t ET, typename F1, typename F2>
@@ -1881,7 +2244,7 @@ make_pressure_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
         Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
         return ret;
     }
-
+    std::cout<<"make_pressure_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
@@ -1916,7 +2279,7 @@ make_hho_gradrec_sym_matrix
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     //typedef Matrix<T, Dynamic, 1>       vector_type;
-
+    std::cout<<"make_hho_gradrec_sym_matrix: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
@@ -2004,7 +2367,7 @@ make_hho_gradrec_sym_matrix_interface
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     //typedef Matrix<T, Dynamic, 1>       vector_type;
-
+//    std::cout<<"make_hho_gradrec_sym_matrix_interface: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
@@ -2090,3 +2453,128 @@ make_hho_gradrec_sym_matrix_interface
     return std::make_pair(oper, data);
 }
 
+
+
+//// make_hho_gradrec_sym_matrix_interface_ref_pts
+// return the gradient reconstruction for the interface pb
+// coeff -> scales the interface term
+// Use the normal provided by the parametric curve
+template<typename T, size_t ET, typename Function>
+std::pair<   Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,
+             Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>  >
+make_hho_gradrec_sym_matrix_interface_ref_pts
+(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+ const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff)
+{
+    if ( !is_cut(msh, cl) )
+        throw std::invalid_argument("The cell is not cut");
+
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+    //typedef Matrix<T, Dynamic, 1>       vector_type;
+
+    const auto celdeg  = di.cell_degree();
+    const auto facdeg  = di.face_degree();
+    const auto graddeg = di.grad_degree();
+
+    vector_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
+    sym_matrix_cell_basis<cuthho_mesh<T, ET>,T>    gb(msh, cl, graddeg);
+
+
+    auto cbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = vector_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = sym_matrix_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
+    const auto num_faces = faces(msh, cl).size();
+
+    matrix_type       rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
+    matrix_type        gr_lhs = matrix_type::Zero(gbs, gbs);
+    matrix_type        gr_rhs = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
+
+    const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
+    for (auto& qp : qps)
+    {
+        const auto c_dphi = cb.eval_gradients(qp.first);
+        const auto g_phi  = gb.eval_basis(qp.first);
+
+        gr_lhs.block(0, 0, gbs, gbs) += qp.second * inner_product(g_phi, g_phi);
+        rhs_tmp.block(0, 0, gbs, cbs) += qp.second * inner_product(g_phi, c_dphi);
+    }
+
+    const auto fcs = faces(msh, cl);
+    const auto ns = normals(msh, cl);
+    for (size_t i = 0; i < fcs.size(); i++)
+    {
+        const auto fc = fcs[i];
+        const auto n  = ns[i];
+        cut_vector_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
+
+        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), where);
+        for (auto& qp : qps_f)
+        {
+            const matrix_type c_phi      = cb.eval_basis(qp.first);
+            const matrix_type f_phi      = fb.eval_basis(qp.first);
+            const auto        g_phi      = gb.eval_basis(qp.first);
+            const matrix_type qp_g_phi_n = qp.second * outer_product(g_phi, n);
+
+            rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
+            rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+        }
+    }
+
+    // term on the interface
+    matrix_type        interface_term = matrix_type::Zero(gbs, 2*cbs);
+    
+    auto msh_int = cl.user_data.integration_msh ;
+    size_t degree_curve = msh_int.degree_curve ;
+    Interface_parametrisation_mesh1d curve(degree_curve) ;
+    size_t degree = celdeg + graddeg;
+    degree += 2*degree_curve - 2 ; //  2*degree_curve ; // TO BE CHECKED
+    auto qpsi = edge_quadrature<T>(degree);
+    
+    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+    {
+        auto pts = points(msh_int,msh_int.cells[i_cell]);
+        for(auto& qp:qpsi)
+        {
+            auto t = 0.5 * qp.first.x() + 0.5;
+            auto p = curve(t , pts , degree_curve ) ;
+            point<T,2> pt = typename cuthho_mesh<T, ET>::point_type( p(0) , p(1) ) ;
+            T jacobian = curve.jacobian( t , pts , degree_curve ) ;
+            auto w = 0.5 * qp.second * jacobian ;
+            
+            
+            
+            const auto c_phi        = cb.eval_basis(pt);
+            const auto g_phi        = gb.eval_basis(pt);
+
+//            Matrix<T,2,1> n = level_set_function.normal(qp.first);
+            Matrix<T,2,1> n = curve.normal(t , pts , degree_curve ) ;
+            const matrix_type qp_g_phi_n = w * outer_product(g_phi, n);
+
+            interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+            interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
+            
+        }
+    }
+    
+    gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
+
+    // other terms
+    if(where == element_location::IN_NEGATIVE_SIDE)
+    {
+        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
+        gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs)
+            += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
+    }
+    else if( where == element_location::IN_POSITIVE_SIDE)
+    {
+        gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
+        gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs)
+                     += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
+    }
+
+    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
+    matrix_type data = 2 * gr_rhs.transpose() * oper;
+
+    return std::make_pair(oper, data);
+}
