@@ -810,6 +810,54 @@ class test_case_stokes_ref_pts
 
 
 
+template<typename T, typename Function, typename Mesh , typename Para_Interface >
+class test_case_stokes_ref_pts_cont
+{
+   public:
+    Function level_set_;
+    Para_Interface parametric_interface;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel;
+    std::function<T(const typename Mesh::point_type&)> sol_p;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel;
+    std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump;
+    std::function<Eigen::Matrix<T, 2, 1>(const T&,const size_t&)> neumann_jump;
+    
+    struct params<T> parms;
+
+    test_case_stokes_ref_pts_cont(const test_case_stokes_ref_pts_cont& other){
+        level_set_ = other.level_set_;
+        parametric_interface = other.parametric_interface;
+        sol_vel = other.sol_vel;
+        sol_p = other.sol_p;
+        rhs_fun = other.rhs_fun;
+        bcs_vel = other.bcs_vel;
+        vel_grad = other.vel_grad;
+        dirichlet_jump = other.dirichlet_jump;
+        neumann_jump = other.neumann_jump;
+        
+    }
+    
+    test_case_stokes_ref_pts_cont(){}
+
+    test_case_stokes_ref_pts_cont
+    (Function& level_set__, Para_Interface& para_interface ,  params<T> parms_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel_,
+     std::function<T(const typename Mesh::point_type&)> sol_p_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel_,
+     std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump_,
+     std::function<Eigen::Matrix<T, 2, 1>(const T&,const size_t& )> neumann_jump_)
+    : level_set_(level_set__),parametric_interface(para_interface), sol_vel(sol_vel_), sol_p(sol_p_), rhs_fun(rhs_fun_),
+      bcs_vel(bcs_vel_), parms(parms_), vel_grad(vel_grad_), dirichlet_jump(dirichlet_jump_),
+      neumann_jump(neumann_jump_){}
+};
+
+
+
+
 ///// test_case_stokes_1
 // exact solution : X^2 (X^2 - 2X + 1) Y (4Y^2 - 6Y + 2) in the whole domain for vel_component 1
 //                 -Y^2 (Y^2 - 2Y + 1) X (4X^2 - 6X + 2) in the whole domain for vel_component 2

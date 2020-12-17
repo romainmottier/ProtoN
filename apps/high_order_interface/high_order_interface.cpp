@@ -7426,6 +7426,29 @@ pt_in_subcell(const Mesh& msh, const point<T,2>& point_to_find, const typename M
 
 }
 
+template<typename T, typename Mesh>
+std::vector<size_t>
+pt_in_subcell_skeleton(const Mesh& msh, const point<T,2>& point_to_find, const typename Mesh::cell_type& agglocl)
+{
+    std::vector<size_t> cells_offset;
+    for (auto& offset_subcells : agglocl.user_data.offset_subcells)
+    {
+        //std::cout<<"OFFSET ORIGINAL CELL "<<offset_subcells<<std::endl;
+        auto cl = msh.cells[offset_subcells];
+        if( pt_in_cell(msh,point_to_find,cl) )
+            cells_offset.push_back(offset_subcells);
+            
+    }
+    // IF IT ARRIVES HERE, IT DIDN'T FIND THE POINT IN THE CELL.
+    if( cells_offset.size() == 2  )
+        return cells_offset ;
+    else{
+        std::cout<<"IT IS NOT A SKELETON POINT: pt = "<<point_to_find<<". DIDN'T FIND THE POINT IN AGGLO CELL: "<<offset(msh,agglocl)<<std::endl;
+        throw std::invalid_argument("Invalid point-> NOT IN AGGLO_CELL");
+    }
+
+}
+
 // SOSPETTO SIA UNITILE
 /*
 template<typename T , typename Mesh>
