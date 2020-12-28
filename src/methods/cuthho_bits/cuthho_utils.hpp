@@ -294,10 +294,10 @@ make_hho_laplacian_ref_pts_cont(const cuthho_mesh<T, ET>& msh, const typename cu
     /* Interface term */
     auto global_cells_i = parametric_interface.get_global_cells_interface(msh , cl);
     auto msh_int = cl.user_data.integration_msh ;
-    size_t degree_curve = parametric_interface.der_degree ;
+//    size_t degree_curvature = parametric_interface.der_degree ;
 
     size_t degree = 2*recdeg;
-    degree += 2*degree_curve ; // TO BE CHECKED
+    degree += (parametric_interface.der_degree + parametric_interface.degree_det ); // TO BE CHECKED
     auto qpsi = edge_quadrature<T>(degree);
         
     for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
@@ -1748,9 +1748,9 @@ make_vector_flux_jump_reference_pts_cont(const cuthho_mesh<T, ET>& msh,
     auto msh_int = cl.user_data.integration_msh ;
     auto global_cells_i = parametric_interface.get_global_cells_interface(msh , cl);
     
-    size_t degree_curve = parametric_interface.der_degree ;
+//    size_t degree_curvature = parametric_interface.der_degree ;
     
-    degree += 4*degree_curve -3 ; // 2*degree_curve ; // TO BE CHECKED
+    degree += (parametric_interface.der_degree + parametric_interface.dd_degree + parametric_interface.degree_det) ; //3*degree_curvature vs 4*degree_curvature -3  TO BE CHECKED
     auto qps = edge_quadrature<T>(degree);
     for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
     {
@@ -2204,10 +2204,10 @@ make_hho_divergence_reconstruction_interface_ref_pts_cont
     matrix_type        interface_term = matrix_type::Zero(pbs, cbs);
     auto global_cells_i = parametric_interface.get_global_cells_interface(msh , cl);
     auto msh_int = cl.user_data.integration_msh ;
-    size_t degree_curve = parametric_interface.der_degree ;
+//    size_t degree_curvature = parametric_interface.der_degree ;
     
     size_t degree =  celdeg + pdeg;
-    degree += + 3*degree_curve - 2 ; // 3*degree_curve - 3 SAREBBE
+    degree += (parametric_interface.der_degree + parametric_interface.degree_det)  ; //2*degree_curvature vs  3*degree_curve - 2 IT WAS
     auto qpsi = edge_quadrature<T>(degree);
         
     for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
@@ -2436,12 +2436,12 @@ make_stokes_interface_stabilization_ref_pts_cont
     
     auto msh_int = cl.user_data.integration_msh ;
     auto global_cells_i = parametric_interface.get_global_cells_interface(msh , cl);
-    size_t degree_curve = parametric_interface.der_degree ;
+//    size_t degree_curvature = parametric_interface.der_degree ;
   
     size_t degree = celdeg - 1 + pdeg;
     
     
-    degree += 4*degree_curve - 3 ; //  2*degree_curve ; // TO BE CHECKED
+    degree += (2 * parametric_interface.der_degree + parametric_interface.degree_det ); // 3 * degree_curvature vs 4*degree_curvature - 3 TO BE CHECKED
     
     auto qpsi = edge_quadrature<T>(degree);
         
@@ -2619,12 +2619,12 @@ make_stokes_interface_stabilization_RHS_ref_pts_cont
     auto global_cells_i = parametric_interface.get_global_cells_interface(msh , cl);
     
     
-    size_t degree_curve = parametric_interface.der_degree ;
+//    size_t degree_curvature = parametric_interface.der_degree ;
     
     size_t degree = celdeg ; // 2*celdeg ;
     
     
-    degree += (5 * degree_curve -4) ;
+    degree += (2*parametric_interface.der_degree + parametric_interface.dd_degree + parametric_interface.degree_det ); // 4*degree_curvature  (5 * degree_curve -4) ;
     
     auto qps = edge_quadrature<T>(degree);
     for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
@@ -3081,9 +3081,9 @@ make_hho_gradrec_sym_matrix_interface_ref_pts_cont
     
     auto global_cells_i = parametric_interface.get_global_cells_interface(msh , cl);
     auto msh_int = cl.user_data.integration_msh ;
-    size_t degree_curve = parametric_interface.der_degree ;
+//    size_t degree_normal = parametric_interface.der_degree ;
     size_t degree = celdeg + graddeg;
-    degree += 3*degree_curve - 2 ; //  3*degree_curve - 3 IT WOULD BE
+    degree += (parametric_interface.der_degree + parametric_interface.degree_det) ; // IT WAS 3* degree_curvature -2
     auto qpsi = edge_quadrature<T>(degree);
     
    

@@ -241,8 +241,17 @@ triangle_quadrature(const point<T,2>& p0, const point<T,2>& p1, const point<T,2>
 {
     if (deg == 0)
         deg = 1;
+    
+    if(deg == 10) // CASE deg = 10 has 3 negative points -> it could be a problem.
+        deg = 11 ;
+    
+    if (deg == 14 || deg == 15)
+        deg = 16;
+    
+    if (deg == 17)
+        deg = 18;
 
-    if (deg > 12)
+    if (deg > 18)
         throw std::invalid_argument("Quadrature order too high");
 
     auto v0 = p1 - p0;
@@ -260,8 +269,7 @@ triangle_quadrature(const point<T,2>& p0, const point<T,2>& p1, const point<T,2>
 
     std::vector<std::pair<point<T,2>, T>> ret;
     
-    if(deg == 10) // CASE deg = 10 has 3 negative points -> it could be a problem.
-        deg = 11 ;
+    
     
     ret.reserve( rules[deg].num_points );
 
