@@ -544,7 +544,6 @@ make_vector_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
         auto phi = cb.eval_basis(qp.first);
         ret += qp.second * phi * f(qp.first);
     }
-
     return ret;
 }
 

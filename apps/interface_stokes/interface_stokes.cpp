@@ -40073,6 +40073,191 @@ auto make_sym_gradrec_stokes_interface_method_ref_pts_cont(const cuthho_mesh<T, 
 }
 
 
+template<typename T, size_t ET, typename testType>
+class stokes_interface_method_old
+{
+    using Mat  = Matrix<T, Dynamic, Dynamic>;
+    using Vect = Matrix<T, Dynamic, 1>;
+    using Mesh = cuthho_mesh<T, ET>;
+
+protected:
+    bool sym_grad;
+
+    stokes_interface_method_old(bool sym)
+        : sym_grad(sym) {}
+
+    virtual std::pair<Mat, Vect>
+    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                     const testType test_case, const hho_degree_info hdi)
+    {
+    }
+
+public:
+    std::pair<Mat, Vect>
+    make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                       const hho_degree_info hdi, const testType test_case)
+    {
+        T kappa;
+        if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
+            kappa = test_case.parms.kappa_1;
+        else
+            kappa = test_case.parms.kappa_2;
+
+        Mat gr2;
+        if(sym_grad)
+            gr2 = make_hho_gradrec_sym_matrix(msh, cl, hdi).second;
+        else
+            gr2 = make_hho_gradrec_matrix(msh, cl, hdi).second;
+        Mat stab = make_hho_vector_naive_stabilization(msh, cl, hdi);
+        Mat lc = kappa * (gr2 + stab);
+        auto dr = make_hho_divergence_reconstruction(msh, cl, hdi);
+        Mat f = make_vector_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+
+        size_t v_size = gr2.rows();
+        size_t p_size = dr.first.rows();
+        size_t loc_size = v_size + p_size;
+        Mat lhs = Mat::Zero( loc_size, loc_size );
+        Vect rhs = Vect::Zero( loc_size );
+
+        lhs.block(0, 0, v_size, v_size) = lc;
+        lhs.block(0, v_size, v_size, p_size) = -dr.second.transpose();
+        lhs.block(v_size, 0, p_size, v_size) = -dr.second;
+
+        rhs.head(f.rows()) = f;
+        return std::make_pair(lhs, rhs);
+    }
+
+
+    std::pair<Mat, Vect>
+    make_contrib(const Mesh& msh, const typename Mesh::cell_type& cl,
+                 const testType test_case, const hho_degree_info hdi)
+    {
+        if( location(msh, cl) != element_location::ON_INTERFACE )
+            return make_contrib_uncut(msh, cl, hdi, test_case);
+        else // on interface
+            return make_contrib_cut(msh, cl, test_case, hdi);
+    }
+};
+
+template<typename T, size_t ET, typename testType>
+class Sym_gradrec_stokes_interface_method_old : public stokes_interface_method_old<T, ET, testType>
+{
+    using Mat = Matrix<T, Dynamic, Dynamic>;
+    using Vect = Matrix<T, Dynamic, 1>;
+    using Mesh = cuthho_mesh<T, ET>;
+
+public:
+    T eta, gamma_0;
+
+    Sym_gradrec_stokes_interface_method_old(T eta_, T gamma_, bool sym)
+        : stokes_interface_method_old<T,ET,testType>(sym), eta(eta_), gamma_0(gamma_) {}
+
+    std::pair<Mat, Vect>
+    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                     const testType test_case, const hho_degree_info hdi)
+    {
+        auto parms = test_case.parms;
+        auto level_set_function = test_case.level_set_;
+
+        ///////////////   LHS
+        auto celdeg = hdi.cell_degree();
+        auto pdeg = hdi.face_degree();
+        auto cbs = vector_cell_basis<Mesh,T>::size(celdeg);
+        auto pbs = cell_basis<Mesh,T>::size(pdeg);
+
+        // GR
+        Mat gr2_n, gr2_p;
+        if(this->sym_grad)
+        {
+            gr2_n = make_hho_gradrec_sym_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_NEGATIVE_SIDE, 0.5).second;
+            gr2_p = make_hho_gradrec_sym_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_POSITIVE_SIDE, 0.5).second;
+        }
+        else
+        {
+            gr2_n = make_hho_gradrec_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_NEGATIVE_SIDE, 0.5).second;
+            gr2_p = make_hho_gradrec_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_POSITIVE_SIDE, 0.5).second;
+        }
+
+        // stab
+        Mat stab = make_hho_vector_stabilization_interface(msh, cl, level_set_function, hdi,parms);
+
+        Mat penalty = make_hho_cut_interface_vector_penalty(msh, cl, hdi, eta).block(0,0,cbs,cbs);
+        stab.block(0, 0, cbs, cbs) += parms.kappa_2 * penalty;
+        stab.block(0, cbs, cbs, cbs) -= parms.kappa_2 * penalty;
+        stab.block(cbs, 0, cbs, cbs) -= parms.kappa_2 * penalty;
+        stab.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * penalty;
+
+        Mat lc = stab + parms.kappa_1 * gr2_n + parms.kappa_2 * gr2_p;
+
+        // DR
+        auto dr_n = make_hho_divergence_reconstruction_interface
+            (msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 0.5);
+        auto dr_p = make_hho_divergence_reconstruction_interface
+            (msh, cl, level_set_function, hdi, element_location::IN_POSITIVE_SIDE, 0.5);
+
+
+        Mat lhs = Mat::Zero(lc.rows() + 2*pbs, lc.rows() + 2*pbs);
+        lhs.block(0, 0, lc.rows(), lc.rows()) = lc;
+        lhs.block(0, lc.rows(), lc.rows(), pbs) -= dr_n.second.transpose();
+        lhs.block(0, lc.rows() + pbs, lc.rows(), pbs) -= dr_p.second.transpose();
+        lhs.block(lc.rows(), 0, pbs, lc.rows()) -= dr_n.second;
+        lhs.block(lc.rows() + pbs, 0, pbs, lc.rows()) -= dr_p.second;
+
+
+        // stokes stabilization terms
+        auto stokes_stab = make_stokes_interface_stabilization(msh, cl, hdi, level_set_function);
+        lhs.block(0, 0, 2*cbs, 2*cbs) -= gamma_0 * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
+        lhs.block(0, lc.rows(), 2*cbs, 2*pbs) -= gamma_0 * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
+        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs) -= gamma_0 * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
+        lhs.block(lc.rows(), lc.rows(), 2*pbs, 2*pbs)
+            -= gamma_0 * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
+
+
+
+        ////////////////    RHS
+
+        Vect f = Vect::Zero(lc.rows());
+        // neg part
+        f.block(0, 0, cbs, 1) += make_vector_rhs(msh, cl, celdeg, test_case.rhs_fun,
+                                                 element_location::IN_NEGATIVE_SIDE);
+        f.head(cbs) += 0.5*make_vector_flux_jump(msh,cl,celdeg, element_location::IN_NEGATIVE_SIDE,
+                                                 test_case.neumann_jump);
+
+        // pos part
+        f.block(cbs, 0, cbs, 1) += make_vector_rhs(msh, cl, celdeg, test_case.rhs_fun,
+                                                   element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1)
+            += 0.5 * make_vector_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
+                                           test_case.neumann_jump);
+
+
+        Vect rhs = Vect::Zero(lc.rows() + 2*pbs);
+        rhs.head(lc.rows()) = f;
+
+        // stokes stabilization rhs
+        auto stab_rhs = make_stokes_interface_stabilization_RHS
+            (msh, cl, hdi, level_set_function, test_case.neumann_jump);
+
+        rhs.head(2*cbs) -= gamma_0 * stab_rhs.head(2*cbs);
+        rhs.tail(2*pbs) -= gamma_0 * stab_rhs.tail(2*pbs);
+
+        return std::make_pair(lhs, rhs);
+    }
+};
+
+template<typename T, size_t ET, typename testType>
+auto make_sym_gradrec_stokes_interface_method_old(const cuthho_mesh<T, ET>& msh, const T eta_,
+                                              const T gamma_, testType test_case, bool sym)
+{
+    return Sym_gradrec_stokes_interface_method_old<T, ET, testType>(eta_, gamma_, sym);
+}
+
+
+
 
 ////////////////////////  GRADREC INTERFACE METHOD BIS (same with kappa_1 > kappa_2)
 // the roles of kappa_1 and kappa_2 are reversed
@@ -40195,6 +40380,127 @@ auto make_gradrec_stokes_interface_method_bis(const cuthho_mesh<T, ET>& msh, con
 
     return gradrec_stokes_interface_method_bis<T, ET, testType>(eta_, gamma_, sym);
 }
+
+
+template<typename T, size_t ET, typename testType>
+class gradrec_stokes_interface_method_bis_old : public stokes_interface_method_old<T, ET, testType>
+{
+    using Mat = Matrix<T, Dynamic, Dynamic>;
+    using Vect = Matrix<T, Dynamic, 1>;
+    using Mesh = cuthho_mesh<T, ET>;
+
+public:
+    T eta, gamma_0;
+
+    gradrec_stokes_interface_method_bis_old(T eta_, T gamma_, bool sym)
+        : stokes_interface_method_old<T,ET,testType>(sym), eta(eta_), gamma_0(gamma_) {}
+
+    std::pair<Mat, Vect>
+    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                     const testType test_case, const hho_degree_info hdi)
+    {
+        auto parms = test_case.parms;
+        auto level_set_function = test_case.level_set_;
+
+        ///////////////   LHS
+        auto celdeg = hdi.cell_degree();
+        auto pdeg = hdi.face_degree();
+        auto cbs = vector_cell_basis<Mesh,T>::size(celdeg);
+        auto pbs = cell_basis<Mesh,T>::size(pdeg);
+
+        // GR
+        Mat gr2_n, gr2_p;
+        if(this->sym_grad)
+        {
+            gr2_n = make_hho_gradrec_sym_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_NEGATIVE_SIDE, 0.0).second;
+            gr2_p = make_hho_gradrec_sym_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_POSITIVE_SIDE, 1.0).second;
+        }
+        else
+        {
+            gr2_n = make_hho_gradrec_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_NEGATIVE_SIDE, 0.0).second;
+            gr2_p = make_hho_gradrec_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_POSITIVE_SIDE, 1.0).second;
+        }
+
+        // stab
+        Mat stab = make_hho_vector_stabilization_interface(msh, cl, level_set_function, hdi,parms);
+
+        Mat penalty = make_hho_cut_interface_vector_penalty(msh, cl, hdi, eta).block(0,0,cbs,cbs);
+        stab.block(0, 0, cbs, cbs) += parms.kappa_2 * penalty;
+        stab.block(0, cbs, cbs, cbs) -= parms.kappa_2 * penalty;
+        stab.block(cbs, 0, cbs, cbs) -= parms.kappa_2 * penalty;
+        stab.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * penalty;
+
+        Mat lc = stab + parms.kappa_1 * gr2_n + parms.kappa_2 * gr2_p;
+
+        // DR
+        auto dr_n = make_hho_divergence_reconstruction_interface
+            (msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 0.0);
+        auto dr_p = make_hho_divergence_reconstruction_interface
+            (msh, cl, level_set_function, hdi, element_location::IN_POSITIVE_SIDE, 1.0);
+
+
+        Mat lhs = Mat::Zero(lc.rows() + 2*pbs, lc.rows() + 2*pbs);
+        lhs.block(0, 0, lc.rows(), lc.rows()) = lc;
+        lhs.block(0, lc.rows(), lc.rows(), pbs) -= dr_n.second.transpose();
+        lhs.block(0, lc.rows() + pbs, lc.rows(), pbs) -= dr_p.second.transpose();
+        lhs.block(lc.rows(), 0, pbs, lc.rows()) -= dr_n.second;
+        lhs.block(lc.rows() + pbs, 0, pbs, lc.rows()) -= dr_p.second;
+
+
+        // stokes stabilization terms
+        T coeff_stab = gamma_0 / parms.kappa_1;
+        auto stokes_stab = make_stokes_interface_stabilization(msh, cl, hdi, level_set_function);
+        lhs.block(0, 0, 2*cbs, 2*cbs) -= coeff_stab * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
+        lhs.block(0, lc.rows(), 2*cbs, 2*pbs)
+            -= coeff_stab * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
+        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs)
+            -= coeff_stab * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
+        lhs.block(lc.rows(), lc.rows(), 2*pbs, 2*pbs)
+            -= coeff_stab * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
+
+
+        ////////////////    RHS
+
+        Vect f = Vect::Zero(lc.rows());
+        // neg part
+        f.block(0, 0, cbs, 1) += make_vector_rhs(msh, cl, celdeg, test_case.rhs_fun,
+                                                 element_location::IN_NEGATIVE_SIDE);
+        f.block(0, 0, cbs, 1)
+            += make_vector_flux_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE,
+                                     test_case.neumann_jump);
+
+        // pos part
+        f.block(cbs, 0, cbs, 1) += make_vector_rhs(msh, cl, celdeg, test_case.rhs_fun,
+                                                   element_location::IN_POSITIVE_SIDE);
+
+        Vect rhs = Vect::Zero(lc.rows() + 2*pbs);
+        rhs.head(lc.rows()) = f;
+
+        // stokes stabilization rhs
+        auto stab_rhs = make_stokes_interface_stabilization_RHS
+            (msh, cl, hdi, level_set_function, test_case.neumann_jump);
+
+        rhs.head(2*cbs) -= coeff_stab * stab_rhs.head(2*cbs);
+        rhs.tail(2*pbs) -= coeff_stab * stab_rhs.tail(2*pbs);
+
+        return std::make_pair(lhs, rhs);
+    }
+};
+
+template<typename T, size_t ET, typename testType>
+auto make_gradrec_stokes_interface_method_bis_old(const cuthho_mesh<T, ET>& msh, const T eta_,
+                                              const T gamma_, testType test_case, bool sym)
+{
+    if(test_case.parms.kappa_1 < test_case.parms.kappa_2)
+        std::cout << "WARNING : kappa_1 < kappa_2 used with method_bis" << std::endl;
+
+    return gradrec_stokes_interface_method_bis_old<T, ET, testType>(eta_, gamma_, sym);
+}
+
 
 
 template<typename T, size_t ET, typename testType>
@@ -40322,6 +40628,129 @@ auto make_sym_gradrec_stokes_interface_method_analytic(const cuthho_mesh<T, ET>&
     return Sym_gradrec_stokes_interface_method_analytic<T, ET, testType>(eta_, gamma_, sym);
 }
 
+
+////////////////////////  GRADREC INTERFACE METHOD (method used in the article)
+
+
+template<typename T, size_t ET, typename testType>
+class gradrec_stokes_interface_method : public stokes_interface_method<T, ET, testType>
+{
+    using Mat = Matrix<T, Dynamic, Dynamic>;
+    using Vect = Matrix<T, Dynamic, 1>;
+    using Mesh = cuthho_mesh<T, ET>;
+
+public:
+    T eta, gamma_0;
+
+    gradrec_stokes_interface_method(T eta_, T gamma_, bool sym)
+        : stokes_interface_method<T,ET,testType>(sym), eta(eta_), gamma_0(gamma_) {}
+
+    std::pair<Mat, Vect>
+    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                     const testType test_case, const hho_degree_info hdi)
+    {
+        auto parms = test_case.parms;
+        auto level_set_function = test_case.level_set_;
+
+        ///////////////   LHS
+        auto celdeg = hdi.cell_degree();
+        auto pdeg = hdi.face_degree();
+        auto cbs = vector_cell_basis<Mesh,T>::size(celdeg);
+        auto pbs = cell_basis<Mesh,T>::size(pdeg);
+
+        // GR
+        Mat gr2_n, gr2_p;
+        if(this->sym_grad)
+        {
+            gr2_n = make_hho_gradrec_sym_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_NEGATIVE_SIDE, 1.0).second;
+            gr2_p = make_hho_gradrec_sym_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_POSITIVE_SIDE, 0.0).second;
+        }
+        else
+        {
+            gr2_n = make_hho_gradrec_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_NEGATIVE_SIDE, 1.0).second;
+            gr2_p = make_hho_gradrec_matrix_interface
+                (msh, cl, level_set_function, hdi,element_location::IN_POSITIVE_SIDE, 0.0).second;
+        }
+
+        // stab
+        Mat stab = make_hho_vector_stabilization_interface(msh, cl, level_set_function, hdi,parms);
+
+        Mat penalty = make_hho_cut_interface_vector_penalty(msh, cl, hdi, eta).block(0,0,cbs,cbs);
+        stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
+        stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
+        stab.block(cbs, 0, cbs, cbs) -= parms.kappa_1 * penalty;
+        stab.block(cbs, cbs, cbs, cbs) += parms.kappa_1 * penalty;
+
+        Mat lc = stab + parms.kappa_1 * gr2_n + parms.kappa_2 * gr2_p;
+
+        // DR
+        auto dr_n = make_hho_divergence_reconstruction_interface
+            (msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
+        auto dr_p = make_hho_divergence_reconstruction_interface
+            (msh, cl, level_set_function, hdi, element_location::IN_POSITIVE_SIDE, 0.0);
+
+
+        Mat lhs = Mat::Zero(lc.rows() + 2*pbs, lc.rows() + 2*pbs);
+        lhs.block(0, 0, lc.rows(), lc.rows()) = lc;
+        lhs.block(0, lc.rows(), lc.rows(), pbs) -= dr_n.second.transpose();
+        lhs.block(0, lc.rows() + pbs, lc.rows(), pbs) -= dr_p.second.transpose();
+        lhs.block(lc.rows(), 0, pbs, lc.rows()) -= dr_n.second;
+        lhs.block(lc.rows() + pbs, 0, pbs, lc.rows()) -= dr_p.second;
+
+
+        // stokes stabilization terms
+        T coeff_stab = gamma_0/parms.kappa_2;
+        auto stokes_stab = make_stokes_interface_stabilization(msh, cl, hdi, level_set_function);
+        lhs.block(0, 0, 2*cbs, 2*cbs) -= coeff_stab * stokes_stab.block(0, 0, 2*cbs, 2*cbs);
+        lhs.block(0, lc.rows(), 2*cbs, 2*pbs)
+            -= coeff_stab * stokes_stab.block(0,2*cbs,2*cbs,2*pbs);
+        lhs.block(lc.rows(), 0, 2*pbs, 2*cbs)
+            -= coeff_stab * stokes_stab.block(2*cbs,0,2*pbs,2*cbs);
+        lhs.block(lc.rows(), lc.rows(), 2*pbs, 2*pbs)
+             -= coeff_stab * stokes_stab.block(2*cbs, 2*cbs, 2*pbs, 2*pbs);
+
+
+
+        ////////////////    RHS
+
+        Vect f = Vect::Zero(lc.rows());
+        // neg part
+        f.block(0, 0, cbs, 1) += make_vector_rhs(msh, cl, celdeg, test_case.rhs_fun,
+                                                 element_location::IN_NEGATIVE_SIDE);
+
+        // pos part
+        f.block(cbs, 0, cbs, 1) += make_vector_rhs(msh, cl, celdeg, test_case.rhs_fun,
+                                                   element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1)
+            += make_vector_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
+                                     test_case.neumann_jump);
+
+
+        Vect rhs = Vect::Zero(lc.rows() + 2*pbs);
+        rhs.head(lc.rows()) = f;
+
+        // stokes stabilization rhs
+        auto stab_rhs = make_stokes_interface_stabilization_RHS
+            (msh, cl, hdi, level_set_function, test_case.neumann_jump);
+
+        rhs.head(2*cbs) -= coeff_stab * stab_rhs.head(2*cbs);
+        rhs.tail(2*pbs) -= coeff_stab * stab_rhs.tail(2*pbs);
+
+        return std::make_pair(lhs, rhs);
+    }
+};
+
+template<typename T, size_t ET, typename testType>
+auto make_gradrec_stokes_interface_method(const cuthho_mesh<T, ET>& msh, const T eta_,
+                                              const T gamma_, testType test_case, bool sym)
+{
+    if(test_case.parms.kappa_1 > test_case.parms.kappa_2)
+        std::cout << "WARNING : kappa_1 < kappa_2 used with main method" << std::endl;
+    return gradrec_stokes_interface_method<T, ET, testType>(eta_, gamma_, sym);
+}
 
 
 
@@ -42494,6 +42923,338 @@ run_cuthho_interface_velocity_new(const Mesh& msh, size_t degree, meth& method, 
     return TI;
 }
 
+template<typename Mesh, typename testType, typename meth>
+stokes_test_info<typename Mesh::coordinate_type>
+run_cuthho_interface_old(const Mesh& msh, size_t degree, meth method, testType test_case)
+{
+    using RealType = typename Mesh::coordinate_type;
+
+    auto level_set_function = test_case.level_set_;
+
+    auto rhs_fun = test_case.rhs_fun;
+    auto sol_vel = test_case.sol_vel;
+    auto sol_p = test_case.sol_p;
+    auto vel_grad = test_case.vel_grad;
+    auto bcs_vel = test_case.bcs_vel;
+    auto neumann_jump = test_case.neumann_jump;
+    struct params<RealType> parms = test_case.parms;
+
+    timecounter tc;
+
+    bool sc = true; // static condensation
+
+
+    /************** ASSEMBLE PROBLEM **************/
+    hho_degree_info hdi(degree+1, degree);
+
+    tc.tic();
+    auto assembler = make_stokes_interface_assembler(msh, bcs_vel, hdi);
+    auto assembler_sc = make_stokes_interface_condensed_assembler(msh, bcs_vel, hdi);
+    for (auto& cl : msh.cells)
+    {
+        auto contrib = method.make_contrib(msh, cl, test_case, hdi);
+        auto lc = contrib.first;
+        auto f = contrib.second;
+
+        if( sc )
+            assembler_sc.assemble(msh, cl, lc, f);
+        else
+            assembler.assemble(msh, cl, lc, f);
+    }
+
+    if( sc )
+        assembler_sc.finalize();
+    else
+        assembler.finalize();
+
+    tc.toc();
+    std::cout << bold << yellow << "Matrix assembly: " << tc << " seconds" << reset << std::endl;
+
+    if( sc )
+        std::cout << "System unknowns: " << assembler_sc.LHS.rows() << std::endl;
+    else
+        std::cout << "System unknowns: " << assembler.LHS.rows() << std::endl;
+
+    std::cout << "Cells: " << msh.cells.size() << std::endl;
+    std::cout << "Faces: " << msh.faces.size() << std::endl;
+
+    /************** SOLVE **************/
+    tc.tic();
+#if 1
+    SparseLU<SparseMatrix<RealType>>  solver;
+    Matrix<RealType, Dynamic, 1> sol;
+
+    if( sc )
+    {
+        solver.analyzePattern(assembler_sc.LHS);
+        solver.factorize(assembler_sc.LHS);
+        sol = solver.solve(assembler_sc.RHS);
+    }
+    else
+    {
+        solver.analyzePattern(assembler.LHS);
+        solver.factorize(assembler.LHS);
+        sol = solver.solve(assembler.RHS);
+    }
+#endif
+#if 0
+    Matrix<RealType, Dynamic, 1> sol;
+    cg_params<RealType> cgp;
+    cgp.histfile = "cuthho_cg_hist.dat";
+    cgp.verbose = true;
+    cgp.apply_preconditioner = true;
+    if( sc )
+    {
+        sol = Matrix<RealType, Dynamic, 1>::Zero(assembler_sc.RHS.rows());
+        cgp.max_iter = assembler_sc.LHS.rows();
+        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+    }
+    else
+    {
+        sol = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows());
+        cgp.max_iter = assembler.LHS.rows();
+        conjugated_gradient(assembler.LHS, assembler.RHS, sol, cgp);
+    }
+#endif
+    tc.toc();
+    std::cout << bold << yellow << "Linear solver: " << tc << " seconds" << reset << std::endl;
+
+    /************** POSTPROCESS **************/
+
+
+    postprocess_output<RealType>  postoutput;
+
+    auto uT1_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT1.dat");
+    auto uT2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT2.dat");
+    auto uT_l2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT_norm.dat");
+    auto p_gp    = std::make_shared< gnuplot_output_object<RealType> >("interface_p.dat");
+
+    tc.tic();
+    RealType    H1_error = 0.0;
+    RealType    L2_error = 0.0;
+    RealType    L2_pressure_error = 0.0;
+    for (auto& cl : msh.cells)
+    {
+        vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi.cell_degree());
+        cell_basis<cuthho_poly_mesh<RealType>, RealType> pb(msh, cl, hdi.face_degree());
+        auto cbs = cb.size();
+        auto pbs = pb.size();
+
+        Matrix<RealType, Dynamic, 1> vel_locdata_n, vel_locdata_p, vel_locdata;
+        Matrix<RealType, Dynamic, 1> P_locdata_n, P_locdata_p, P_locdata;
+        Matrix<RealType, Dynamic, 1> vel_cell_dofs_n, vel_cell_dofs_p, vel_cell_dofs;
+
+        if (location(msh, cl) == element_location::ON_INTERFACE)
+        {
+            if( sc )
+            {
+                vel_locdata_n = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+                vel_locdata_p = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+                P_locdata_n = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+                P_locdata_p = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+            }
+            else
+            {
+                vel_locdata_n = assembler.take_velocity(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+                vel_locdata_p = assembler.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+                P_locdata_n = assembler.take_pressure(msh,cl, sol, element_location::IN_NEGATIVE_SIDE);
+                P_locdata_p = assembler.take_pressure(msh,cl, sol, element_location::IN_POSITIVE_SIDE);
+            }
+
+            vel_cell_dofs_n = vel_locdata_n.head(cbs);
+            vel_cell_dofs_p = vel_locdata_p.head(cbs);
+
+
+            auto qps_n = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+            for (auto& qp : qps_n)
+            {
+                /* Compute H1-error */
+                auto t_dphi = cb.eval_gradients( qp.first );
+                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+                for (size_t i = 1; i < cbs; i++ )
+                    grad += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                
+                H1_error += qp.second * test_case.parms.kappa_1 * inner_product(grad_sym_diff , grad_sym_diff);
+
+
+                /* Compute L2-error */
+                auto t_phi = cb.eval_basis( qp.first );
+                auto v = t_phi.transpose() * vel_cell_dofs_n;
+                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+                L2_error += qp.second * test_case.parms.kappa_1 * sol_diff.dot(sol_diff);
+
+                uT1_gp->add_data( qp.first, v(0) );
+                uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
+
+                /* L2 - pressure - error */
+                auto p_phi = pb.eval_basis( qp.first );
+                RealType p_num = p_phi.dot(P_locdata_n);
+                RealType p_diff = test_case.sol_p( qp.first ) - p_num;
+                L2_pressure_error += qp.second * p_diff * p_diff / test_case.parms.kappa_1;
+
+                p_gp->add_data( qp.first, p_num );
+            }
+
+            auto qps_p = integrate(msh, cl, 2*hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
+            for (auto& qp : qps_p)
+            {
+                /* Compute H1-error */
+                auto t_dphi = cb.eval_gradients( qp.first );
+                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+                for (size_t i = 1; i < cbs; i++ )
+                    grad += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                H1_error += qp.second * test_case.parms.kappa_2 * inner_product(grad_sym_diff , grad_sym_diff);
+
+                /* Compute L2-error */
+                auto t_phi = cb.eval_basis( qp.first );
+                auto v = t_phi.transpose() * vel_cell_dofs_p;
+                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+                L2_error += qp.second * test_case.parms.kappa_2 * sol_diff.dot(sol_diff);
+
+                uT1_gp->add_data( qp.first, v(0) );
+                uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
+
+                /* L2 - pressure - error */
+                auto p_phi = pb.eval_basis( qp.first );
+                RealType p_num = p_phi.dot(P_locdata_p);
+                RealType p_diff = test_case.sol_p( qp.first ) - p_num;
+                L2_pressure_error += qp.second * p_diff * p_diff / test_case.parms.kappa_2;
+
+                p_gp->add_data( qp.first, p_num );
+            }
+        }
+        else
+        {
+            if( sc )
+            {
+                vel_locdata = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+                P_locdata = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+            }
+            else
+            {
+                vel_locdata = assembler.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+                P_locdata = assembler.take_pressure(msh,cl, sol, element_location::IN_POSITIVE_SIDE);
+            }
+            vel_cell_dofs = vel_locdata.head(cbs);
+
+            RealType kappa = test_case.parms.kappa_1;
+            if( location(msh, cl) == element_location::IN_POSITIVE_SIDE )
+                kappa = test_case.parms.kappa_2;
+
+            auto qps = integrate(msh, cl, 2*hdi.cell_degree());
+            for (auto& qp : qps)
+            {
+                /* Compute H1-error */
+                auto t_dphi = cb.eval_gradients( qp.first );
+                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+                for (size_t i = 1; i < cbs; i++ )
+                    grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+//                H1_error += qp.second * kappa * inner_product(grad_diff , grad_diff);
+                H1_error += qp.second * kappa * inner_product(grad_sym_diff , grad_sym_diff);
+                
+                /* Compute L2-error */
+                auto t_phi = cb.eval_basis( qp.first );
+                auto v = t_phi.transpose() * vel_cell_dofs;
+                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+                L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
+
+                uT1_gp->add_data( qp.first, v(0) );
+                uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
+
+                /* L2 - pressure - error */
+                auto p_phi = pb.eval_basis( qp.first );
+                RealType p_num = p_phi.dot(P_locdata);
+                RealType p_diff = test_case.sol_p( qp.first ) - p_num;
+                L2_pressure_error += qp.second * p_diff * p_diff / kappa;
+
+                p_gp->add_data( qp.first, p_num );
+            }
+        }
+
+    }
+
+    std::cout << bold << green << "Energy-norm absolute error:           " << std::sqrt(H1_error) << std::endl;
+    std::cout << bold << green << "L2-norm absolute error:               " << std::sqrt(L2_error) << std::endl;
+    std::cout << bold << green << "Pressure L2-norm absolute error:      " << std::sqrt(L2_pressure_error) << std::endl;
+
+    postoutput.add_object(uT1_gp);
+    postoutput.add_object(uT2_gp);
+    postoutput.add_object(uT_l2_gp);
+    postoutput.add_object(p_gp);
+    postoutput.write();
+
+
+
+    stokes_test_info<RealType> TI;
+    TI.H1_vel = std::sqrt(H1_error);
+    TI.L2_vel = std::sqrt(L2_error);
+    TI.L2_p = std::sqrt(L2_pressure_error);
+
+    if (false)
+    {
+        /////////////// compute condition number
+        SparseMatrix<RealType> Mat;
+        // Matrix<RealType, Dynamic, Dynamic> Mat;
+        if (sc)
+            Mat = assembler_sc.LHS;
+        else
+            Mat = assembler.LHS;
+
+
+        RealType sigma_max, sigma_min;
+
+        // Construct matrix operation object using the wrapper class SparseSymMatProd
+        Spectra::SparseSymMatProd<RealType> op(Mat);
+        // Construct eigen solver object, requesting the largest eigenvalue
+        Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,
+                                Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 10);
+        max_eigs.init();
+        max_eigs.compute();
+        if(max_eigs.info() == Spectra::SUCCESSFUL)
+            sigma_max = max_eigs.eigenvalues()(0);
+
+
+        // Construct eigen solver object, requesting the smallest eigenvalue
+        Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN,
+                                Spectra::SparseSymMatProd<RealType> > min_eigs(&op, 1, 10);
+
+        min_eigs.init();
+        min_eigs.compute();
+        if(min_eigs.info() == Spectra::SUCCESSFUL)
+            sigma_min = min_eigs.eigenvalues()(0);
+
+        // compute condition number
+        RealType cond = sigma_max / sigma_min;
+        TI.cond = cond;
+        std::cout << "sigma_max = " << sigma_max << "   sigma_min = "
+                  << sigma_min << "  cond = " << cond
+                  << std::endl;
+    }
+    else
+        TI.cond = 0.0;
+
+    tc.toc();
+    std::cout << bold << yellow << "Postprocessing: " << tc << " seconds" << reset << std::endl;
+
+
+    return TI;
+}
+
 
 /*
 template<typename Mesh, typename testType, typename meth , typename Fonction , typename Velocity>
@@ -43022,7 +43783,7 @@ run_cuthho_interface_velocity_parallel(const Mesh& msh, size_t degree, meth meth
 
 template<typename Mesh, typename testType, typename meth>
 stokes_test_info<typename Mesh::coordinate_type>
-run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_case , bool normal_analysis = FALSE )
+run_cuthho_interface(const Mesh& msh, size_t degree, meth& method, testType& test_case , bool normal_analysis = FALSE )
 {
     using RealType = typename Mesh::coordinate_type;
 
@@ -43123,6 +43884,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
 
     auto uT1_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT1.dat");
     auto uT2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT2.dat");
+    auto uT_l2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT_norm.dat");
     auto p_gp    = std::make_shared< gnuplot_output_object<RealType> >("interface_p.dat");
 
     tc.tic();
@@ -43177,17 +43939,23 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                     grad += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                
+                H1_error += qp.second * test_case.parms.kappa_1 * inner_product(grad_sym_diff , grad_sym_diff);
+                
 
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs_n;
                 Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-                L2_error += qp.second * sol_diff.dot(sol_diff);
-
+//                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * test_case.parms.kappa_1 * sol_diff.dot(sol_diff);
+                
                 uT1_gp->add_data( qp.first, v(0) );
                 uT2_gp->add_data( qp.first, v(1) );
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
 
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
@@ -43195,8 +43963,8 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                 RealType p_diff = test_case.sol_p( qp.first ) - p_num;
                 auto p_prova = test_case.sol_p( qp.first ) ;
                 //std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
-                L2_pressure_error += qp.second * p_diff * p_diff;
-
+//                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / test_case.parms.kappa_1;
                 p_gp->add_data( qp.first, p_num );
 
 
@@ -43213,25 +43981,29 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                     grad += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                H1_error += qp.second * test_case.parms.kappa_2 * inner_product(grad_sym_diff , grad_sym_diff);
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs_p;
                 Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-                L2_error += qp.second * sol_diff.dot(sol_diff);
+//                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * test_case.parms.kappa_2 * sol_diff.dot(sol_diff);
 
                 uT1_gp->add_data( qp.first, v(0) );
                 uT2_gp->add_data( qp.first, v(1) );
-
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
+                
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
                 RealType p_num = p_phi.dot(P_locdata_p);
                 RealType p_diff = test_case.sol_p( qp.first ) - p_num;
                 auto p_prova = test_case.sol_p( qp.first ) ;
                 //std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
-                L2_pressure_error += qp.second * p_diff * p_diff;
-
+//                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / test_case.parms.kappa_2;
                 p_gp->add_data( qp.first, p_num );
             }
 
@@ -43265,6 +44037,10 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
             }
             vel_cell_dofs = vel_locdata.head(cbs);
 
+            RealType kappa = test_case.parms.kappa_1;
+            if( location(msh, cl) == element_location::IN_POSITIVE_SIDE )
+                kappa = test_case.parms.kappa_2;
+            
             auto qps = integrate(msh, cl, 2*hdi.cell_degree());
             for (auto& qp : qps)
             {
@@ -43276,25 +44052,30 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                     grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
 
                 Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * ( grad_diff + grad_diff.transpose() );
+                H1_error += qp.second * kappa * inner_product(grad_sym_diff , grad_sym_diff);
 
                 /* Compute L2-error */
                 auto t_phi = cb.eval_basis( qp.first );
                 auto v = t_phi.transpose() * vel_cell_dofs;
                 Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-                L2_error += qp.second * sol_diff.dot(sol_diff);
-
+//                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
+                
                 uT1_gp->add_data( qp.first, v(0) );
                 uT2_gp->add_data( qp.first, v(1) );
-
+                uT_l2_gp->add_data( qp.first, std::sqrt( v(0)*v(0) + v(1)*v(1) ) );
+                
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
                 RealType p_num = p_phi.dot(P_locdata);
                 RealType p_diff = test_case.sol_p( qp.first ) - p_num;
                 auto p_prova = test_case.sol_p( qp.first ) ;
                 //std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
-                L2_pressure_error += qp.second * p_diff * p_diff;
-
+//                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / kappa;
+                
                 p_gp->add_data( qp.first, p_num );
             }
         }
@@ -43308,6 +44089,8 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
     // Stefano: I dont want plots (in the code uTi_gp and p_gp still present). Just commented these.
     postoutput.add_object(uT1_gp);
     postoutput.add_object(uT2_gp);
+    postoutput.add_object(uT_l2_gp);
+    
     postoutput.add_object(p_gp);
     postoutput.write();
 
@@ -48740,7 +49523,7 @@ check_goal_quantities_final_para( Mesh& msh_i ,Level_Set& ls_cell ,  Para_Interf
 
 /////////////////////////   AUTOMATIC TESTS  //////////////////////////
 
-
+// GUILLAUME CASE: It uses copy to pass test case and method classes
 void convergence_test(void)
 {
     using T = double;
@@ -48748,18 +49531,19 @@ void convergence_test(void)
     std::vector<size_t> mesh_sizes, pol_orders;
 
     // meshes
-//    mesh_sizes.push_back(8);
-//    mesh_sizes.push_back(16);
-//    mesh_sizes.push_back(32);
-    mesh_sizes.push_back(64);
+    mesh_sizes.push_back(8);
+    mesh_sizes.push_back(16);
+    mesh_sizes.push_back(32);
+//    mesh_sizes.push_back(64);
+    
     // mesh_sizes.push_back(128);
     // mesh_sizes.push_back(256);
 
     // polynomial orders
-//    pol_orders.push_back(0);
-//    pol_orders.push_back(1);
-//    pol_orders.push_back(2);
-    pol_orders.push_back(3);
+    pol_orders.push_back(0);
+    pol_orders.push_back(1);
+    pol_orders.push_back(2);
+//    pol_orders.push_back(3);
 
 
     // export to files ...
@@ -48835,20 +49619,27 @@ void convergence_test(void)
                 // auto test_case = make_test_case_stokes_1(msh, level_set_function);
                 //auto test_case = make_test_case_stokes_2(msh, level_set_function);
                 
-//                T gamma = 1.0 ; //1.0 ; //0.05 ;
-//                auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, gamma , level_set_function) ;  // DELETED TO CHECK FAST IMPLEMENTATION
-//                //TI = run_cuthho_fictdom(msh, k, test_case);
-//                auto method = make_sym_gradrec_stokes_interface_method_analytic(msh, 1.0, 0.0, test_case, true);
+                // -------------------- TEST CASE: pressure jump --------------------
+                T gamma = 1.0 ; //1.0 ; //0.05 ;
+                auto test_case = make_test_case_static_bubble_old(msh, radius, 0.5, 0.5, gamma ) ;
+                auto method = make_sym_gradrec_stokes_interface_method_old(msh, 1.0, 0.0, test_case, true);
+                TI = run_cuthho_interface_old(msh, k, method, test_case);
                 
-                auto prm = params<T>();
-                prm.kappa_1 = 1.0 ;
-                prm.kappa_2 = 1.0;
-                bool sym_grad = true;
-                std::cout<<"Viscosity nu_int = "<<prm.kappa_2<<" , nu_ext = "<<prm.kappa_1<<std::endl;
-                auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, prm, sym_grad,level_set_function); // it works only for circular interface with R = radius and center in (0.5, 0.5)
-                auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
                 
-                TI = run_cuthho_interface(msh, k, method, test_case);
+               
+                // -------------------- TEST CASE: velocity kink --------------------
+//                auto prm = params<T>();
+//                prm.kappa_1 = 1.0 ;
+//                prm.kappa_2 = 1.0;
+//                bool sym_grad = true;
+//                std::cout<<"Viscosity nu_int = "<<prm.kappa_2<<" , nu_ext = "<<prm.kappa_1<<std::endl;
+//
+//                auto test_case = make_test_case_kink_velocity_old(msh, radius, 0.5, 0.5, prm, sym_grad);
+//                auto method = make_gradrec_stokes_interface_method_bis_old(msh, 1.0, 0.0, test_case, sym_grad); // to be used if kappa_1 > kappa_2
+//                auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);  // to be used if kappa_2 > kappa_1
+//                 TI = run_cuthho_interface_old(msh, k, method, test_case);
+         
+                
             }
 
             // report info in the file
@@ -48958,19 +49749,14 @@ void convergence_test_normal_error(size_t degree_curve , size_t int_refsteps , i
 //            size_t int_refsteps = 1;
             std::cout<<"Number of refine interface points: r = "<<int_refsteps<<std::endl;
             T radius = 1.0/3.0;
-            //auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
-
+            
             // auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
             auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
             // auto level_set_function = square_level_set<T>(1.05, -0.05, -0.05, 1.05);
             // auto level_set_function = square_level_set<T>(1.0, -0.0, -0.0, 1.0);
             //auto level_set_function = square_level_set<T>(0.76, 0.24, 0.24, 0.76);
             
-            
-            
-            
-            
-            
+       
             // TEST ORDER INTEGRATION
 //            {
 //                using namespace dunavant_quadratures;
@@ -48983,6 +49769,8 @@ void convergence_test_normal_error(size_t degree_curve , size_t int_refsteps , i
 //
 //                }
 //            }
+            
+            
 //            T degree_curve = 2 ;
             auto curve = Interface_parametrisation<  Mesh > (msh , degree_curve); // degree_FEM
             std::cout<<"Parametric Interface: degree = "<<degree_curve<<std::endl;
@@ -49022,12 +49810,16 @@ void convergence_test_normal_error(size_t degree_curve , size_t int_refsteps , i
                 // auto test_case = make_test_case_stokes_1(msh, level_set_function);
                 //auto test_case = make_test_case_stokes_2(msh, level_set_function);
                 
-                // --------- STATIC BUBBLE TEST CASE  ---------
-//                T gamma = 1.0 ; // 0.05  // IT WAS make_test_case_static_bubble (CHECKING ERROR)
+                bool sym_grad = true;
+                bool normal_analysis =  true ;
+                // ------------------ STATIC BUBBLE TEST CASE  ------------------
+//                T gamma = 1.0 ; // 0.05
 //                auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, gamma , level_set_function) ;
-                 // --------- KINK VELOCITY TEST CASE  ---------
-                auto prm = params<T>();
+//                auto method = make_sym_gradrec_stokes_interface_method_analytic(msh, 1.0, 0.0, test_case, sym_grad);
                 
+                 // ------------------ KINK VELOCITY TEST CASE  ------------------
+                auto prm = params<T>();
+
                 if(test_case_kappa == 1)
                     prm.kappa_1 = 1.0 ;
                 else if(test_case_kappa == 2)
@@ -49038,20 +49830,15 @@ void convergence_test_normal_error(size_t degree_curve , size_t int_refsteps , i
                     prm.kappa_1 = 1000000.0 ;
                 else
                     prm.kappa_1 = 1.0 ;
-                // NOTICE kappa_1 = \nu_2 & kappa_2 = \nu_1 in paper Guillaume!
-//                prm.kappa_1 = 1.0 ; // 1e+4 ; // 1.0; // 1e+6;
-//                prm.kappa_1 = 100.0;
+
                 prm.kappa_2 = 1.0;
-                bool sym_grad = true;
                 std::cout<<"Viscosity nu_int = "<<prm.kappa_2<<" , nu_ext = "<<prm.kappa_1<<std::endl;
                 auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, prm, sym_grad,level_set_function); // it works only for circular interface with R = radius and center in (0.5, 0.5)
-
-                //TI = run_cuthho_fictdom(msh, k, test_case);
-//                auto method = make_sym_gradrec_stokes_interface_method_analytic(msh, 1.0, 0.0, test_case, sym_grad);
                 auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
-                
-                bool normal_analysis =  true ;
+           
+                // ------------------ RUN CUTHHO  ------------------
                 TI = run_cuthho_interface(msh, k, method, test_case , normal_analysis );
+                //TI = run_cuthho_fictdom(msh, k, test_case);
             }
 
             // report info in the file
@@ -61641,8 +62428,9 @@ int main(int argc, char **argv)
     argc -= optind;
     argv += optind;
 
-//    convergence_test(); // GUILLAUME APPLICATION
-    convergence_test_normal_error(degree_para,int_refsteps,test_case_viscosity); // STEFANO APPLICATION: STATIC BUBBLE ANALYTIC
+//    convergence_test(); // GUILLAUME APPLICATION : test case and method passed by COPY in cuthho
+    
+    convergence_test_normal_error(degree_para,int_refsteps,test_case_viscosity); // test case and method passed by REFERENCE in cuthho
     
 //    convergence_test_normal_error_numerical_ls(degree_FEM,degree_para,int_refsteps); // STEFANO APPLICATION: STATIC BUBBLE NUMERICAL
     

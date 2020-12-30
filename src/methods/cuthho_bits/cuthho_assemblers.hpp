@@ -1547,7 +1547,7 @@ public:
             if( loc_zone != element_location::ON_INTERFACE );
             {
                 element_location loc_fc = location(msh, fc);
-                in_dom = (loc_fc == element_location::ON_INTERFACE ||
+                bool in_dom = (loc_fc == element_location::ON_INTERFACE ||
                                loc_fc == loc_zone);
             }
 
