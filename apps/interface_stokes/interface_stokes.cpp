@@ -4655,14 +4655,21 @@ testing_level_set(const Mesh& msh , const FonctionD& level_set_disc )
 
             }
             
-            node = point_type(px,0.5);
-            valueD = level_set_disc(node,msh,cl);
-            test_profile_disc->add_data(node,valueD);
+            
 
             
 
         }
     }
+    
+    for(size_t i = 0 ; i<= 100 ; i++ )
+    {
+        double px = i*( (1.0)/100.0);
+        node = point_type(px,0.5);
+        valueD = level_set_disc(node);
+        test_profile_disc->add_data(node,valueD);
+    }
+    
     postoutput1.add_object(test_disc);
 
 
@@ -4677,7 +4684,171 @@ testing_level_set(const Mesh& msh , const FonctionD& level_set_disc )
 
 }
 
+template< typename FonctionD , typename Mesh  >
+void
+testing_level_set_mapped(const Mesh& msh , const FonctionD& level_set_disc )
+{
+    typedef typename Mesh::point_type       point_type;
+    postprocess_output<double> postoutput1;
+    double valueD , derDx , derDy ;
+    Eigen::Matrix<double,2,1> derD ;
+    point<double,2> node;
+    size_t N, M;
+    
+    N = 4; //80 points to see also the interface!!!
+    M = 4; //80 points to see also the interface!!!
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc_mapped.dat");
 
+
+    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX_mapped.dat");
+
+    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY_mapped.dat");
+
+    auto test_profile_disc  = std::make_shared< gnuplot_output_object<double> >("test_profile_disc_mapped.dat");
+
+    for(auto& cl : msh.cells)
+    {
+        auto pts = points(msh, cl);
+        auto pt0_x = pts[0].x();
+        auto pt1_x = pts[1].x();
+        auto pt0_y = pts[0].y();
+        auto pt1_y = pts[3].y();
+        for(size_t i = 0 ; i<= N ; i++ )
+        {
+            double px = pt0_x + i*( (pt1_x - pt0_x)/N);
+            for (size_t j = 0 ; j<= M ; j++ )
+            {
+                
+                double py = pt0_y + j*( (pt1_y - pt0_y)/M);
+                node = point_type(px,py);
+                valueD = level_set_disc(node,msh,cl);
+                derD = level_set_disc.gradient(node,msh,cl);
+
+
+
+                
+
+                derDx = derD(0);
+                derDy = derD(1);
+
+
+                test_disc->add_data(node,valueD);
+
+                test_disc_gradX->add_data(node,derDx);
+                test_disc_gradY->add_data(node,derDy);
+
+
+            }
+            
+            
+            
+
+        }
+    }
+    
+    for(size_t i = 0 ; i<= 100 ; i++ )
+    {
+        double px = i*( (1.0)/100.0);
+        node = point_type(px,0.5);
+        valueD = level_set_disc(node);
+        test_profile_disc->add_data(node,valueD);
+    }
+    
+    postoutput1.add_object(test_disc);
+
+
+    postoutput1.add_object(test_disc_gradX);
+
+    postoutput1.add_object(test_disc_gradY);
+
+    postoutput1.add_object(test_profile_disc);
+
+
+    postoutput1.write();
+
+}
+
+template< typename FonctionD , typename Mesh  >
+void
+testing_level_set_inverse_mapped(const Mesh& msh , const FonctionD& level_set_disc )
+{
+    typedef typename Mesh::point_type       point_type;
+    postprocess_output<double> postoutput1;
+    double valueD , derDx , derDy ;
+    Eigen::Matrix<double,2,1> derD ;
+    point<double,2> node;
+    size_t N, M;
+    
+    N = 4; //80 points to see also the interface!!!
+    M = 4; //80 points to see also the interface!!!
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc_inverse_mapped.dat");
+
+
+    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX_inverse_mapped.dat");
+
+    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY_inverse_mapped.dat");
+
+    auto test_profile_disc  = std::make_shared< gnuplot_output_object<double> >("test_profile_disc_inverse_mapped.dat");
+
+    for(auto& cl : msh.cells)
+    {
+        auto pts = points(msh, cl);
+        auto pt0_x = pts[0].x();
+        auto pt1_x = pts[1].x();
+        auto pt0_y = pts[0].y();
+        auto pt1_y = pts[3].y();
+        for(size_t i = 0 ; i<= N ; i++ )
+        {
+            double px = pt0_x + i*( (pt1_x - pt0_x)/N);
+            for (size_t j = 0 ; j<= M ; j++ )
+            {
+                
+                double py = pt0_y + j*( (pt1_y - pt0_y)/M);
+                node = point_type(px,py);
+                valueD = level_set_disc(node,msh,cl);
+                derD = level_set_disc.gradient(node,msh,cl);
+
+
+
+                
+
+                derDx = derD(0);
+                derDy = derD(1);
+
+
+                test_disc->add_data(node,valueD);
+
+                test_disc_gradX->add_data(node,derDx);
+                test_disc_gradY->add_data(node,derDy);
+
+
+            }
+            
+           
+        }
+    }
+    
+    for(size_t i = 0 ; i<= 100 ; i++ )
+    {
+        double px = i*( (1.0)/100.0);
+        node = point_type(px,0.5);
+        valueD = level_set_disc(node);
+        test_profile_disc->add_data(node,valueD);
+    }
+    
+    postoutput1.add_object(test_disc);
+
+
+    postoutput1.add_object(test_disc_gradX);
+
+    postoutput1.add_object(test_disc_gradY);
+
+    postoutput1.add_object(test_profile_disc);
+
+
+    postoutput1.write();
+
+}
 
 template< typename FonctionD , typename Mesh , typename FonctionA >
 void
@@ -20450,9 +20621,9 @@ struct Level_set_berstein: public level_set<T>
             size_t ct = 0;
             for (auto& pt : nodes )
             {
-                if( std::abs(phi_max) >= std::abs(phi_min))
-                    RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl )+ phi_max) /( 2.0*phi_max );
-                else
+//                if( std::abs(phi_max) >= std::abs(phi_min))
+//                    RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl )+ phi_max) /( 2.0*phi_max );
+//                else
                     RHS_vandermonde(ct) =  ( (*this)(pt , msh , cl )-phi_min ) /( -2.0*phi_min );
 
                 ct++;
@@ -20788,9 +20959,9 @@ struct Level_set_berstein: public level_set<T>
             size_t ct = 0;
             for (auto& pt : nodes )
             {
-                if( std::abs(phi_max) >= std::abs(phi_min))
-                    RHS_vandermonde(ct) = -phi_max + (*this)(pt , msh , cl )* ( 2.0 * phi_max );
-                else
+//                if( std::abs(phi_max) >= std::abs(phi_min))
+//                    RHS_vandermonde(ct) = -phi_max + (*this)(pt , msh , cl )* ( 2.0 * phi_max );
+//                else
                     RHS_vandermonde(ct) = phi_min - (*this)(pt , msh , cl )* ( 2.0 * phi_min );
 
                 ct++;
@@ -21057,8 +21228,10 @@ struct Level_set_berstein: public level_set<T>
         //std::cout<<"Res 0 = "<< values_cell.dot(cb.eval_divergence(pt)) / (grad_norm) + divergence_correction ;
         //std::cout<<"Res 1 = "<< - (values_cell.dot(cb.eval_divergence(pt)) / (grad_norm) + divergence_correction  );
 
-        return -( (values_cell.dot(cb.eval_divergence(pt)) ) / (grad_norm) + divergence_correction );
-
+//        return -( (values_cell.dot(cb.eval_divergence(pt)) ) / (grad_norm) + divergence_correction );
+        
+        return ( (values_cell.dot(cb.eval_divergence(pt)) ) / (grad_norm) + divergence_correction );
+        // tolto il meno!!!!
     }
 
     /*
@@ -21492,7 +21665,8 @@ struct Level_set_berstein: public level_set<T>
         //std::cout<<"Res 0 = "<< values_cell.dot(cb.eval_divergence(pt)) / (grad_norm) + divergence_correction ;
         //std::cout<<"Res 1 = "<< - (values_cell.dot(cb.eval_divergence(pt)) / (grad_norm) + divergence_correction  );
 
-        return -( (values_cell0.dot(grad_eval.col(0)) + values_cell1.dot(grad_eval.col(1)) ) / (grad_norm) + divergence_correction );
+//        return -( (values_cell0.dot(grad_eval.col(0)) + values_cell1.dot(grad_eval.col(1)) ) / (grad_norm) + divergence_correction );
+        return ( (values_cell0.dot(grad_eval.col(0)) + values_cell1.dot(grad_eval.col(1)) ) / (grad_norm) + divergence_correction ); // tolto il meno
 
     }
 
@@ -30986,10 +31160,13 @@ struct non_linear_entropy_new: public entropy<T,Mesh>
         phi_min = phi.phi_min;
         E_values = Matrix<T, Dynamic, 1 >::Zero(phi.ndof_FE , 1 );
         Eigen::Matrix<T, Dynamic, 1 > One = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        Eigen::Matrix<T, Dynamic, 1 > Log10 = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        Log10 *= std::log(10);
+        
         E_values = -(( ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).cwiseAbs() + eps*One ).array().log10() );
 
         E_der = Matrix<T, Dynamic, 1 >::Zero(phi.ndof_FE , 1 );
-        E_der = ((-One.cwiseQuotient( ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).cwiseAbs() + eps*One ) ) ) ;//.cwiseProduct(  ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).array().sign() )).cwiseProduct( One -2*phi.sol_FEM ) ;
+        E_der = (-One.cwiseQuotient( ( ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).cwiseAbs() + eps*One ).cwiseProduct(Log10) ) ) ;//.cwiseProduct(  ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).array().sign() )).cwiseProduct( One -2*phi.sol_FEM ) ;
         E_der = (E_der.array().cwiseProduct(  ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).array().sign() )) ;
         E_der = (E_der.cwiseProduct(  One -2*phi.sol_FEM)) ;
         //E_der = -1./( ( std::abs( (1-phi(pt,msh,cl))*phi(pt,msh,cl)  ) +eps )*std::log(10) ) * sgn( (1-phi(pt,msh,cl))*phi(pt,msh,cl)  ) * ( 1 - 2*phi(pt,msh,cl)  ) ;
@@ -31015,6 +31192,56 @@ struct non_linear_entropy_new: public entropy<T,Mesh>
 };
 
 
+
+template<typename T , typename Fonction , typename Mesh>
+struct non_linear_entropy_new_phimin_phimax: public entropy<T,Mesh>
+{
+    T eps;
+    Fonction phi;
+    T phi_max , phi_min ;
+    Mesh msh;
+    Eigen::Matrix<T, Dynamic, 1 > E_values , E_der ;
+
+    non_linear_entropy_new_phimin_phimax(T eps , const Fonction& phi ,const Mesh& msh): eps(eps),phi(phi),msh(msh)
+    {
+        phi_max = phi.phi_max;
+        phi_min = phi.phi_min;
+        E_values = Matrix<T, Dynamic, 1 >::Zero(phi.ndof_FE , 1 );
+        Eigen::Matrix<T, Dynamic, 1 > One = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        Eigen::Matrix<T, Dynamic, 1 > Log10 = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        Log10 *= std::log(10);
+        Eigen::Matrix<T, Dynamic, 1 > PHI_MAX = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        Eigen::Matrix<T, Dynamic, 1 > PHI_MIN = Matrix<T, Dynamic, 1 >::Ones(phi.ndof_FE , 1 );
+        PHI_MAX *= phi_max;
+        PHI_MIN *= phi_min;
+       
+        E_values = -(( ( (phi.sol_FEM - PHI_MIN).cwiseProduct( PHI_MAX - phi.sol_FEM ) ).cwiseAbs() + eps*One ).array().log10() );
+
+        E_der = Matrix<T, Dynamic, 1 >::Zero(phi.ndof_FE , 1 );
+        E_der = (-One.cwiseQuotient( ( ( (phi.sol_FEM - PHI_MIN).cwiseProduct( PHI_MAX - phi.sol_FEM ) ).cwiseAbs() + eps*One ).cwiseProduct(Log10) ) ) ;//.cwiseProduct(  ( (phi.sol_FEM).cwiseProduct( One - phi.sol_FEM ) ).array().sign() )).cwiseProduct( One -2*phi.sol_FEM ) ;
+        E_der = (E_der.array().cwiseProduct(  ( (phi.sol_FEM - PHI_MIN).cwiseProduct( PHI_MAX - phi.sol_FEM ) ).array().sign() )) ;
+        E_der = (E_der.cwiseProduct(  PHI_MAX + PHI_MIN  -2*phi.sol_FEM)) ;
+        //E_der = -1./( ( std::abs( (1-phi(pt,msh,cl))*phi(pt,msh,cl)  ) +eps )*std::log(10) ) * sgn( (1-phi(pt,msh,cl))*phi(pt,msh,cl)  ) * ( 1 - 2*phi(pt,msh,cl)  ) ;
+
+    }
+
+    T operator()(const Fonction& f, const point<T,2>& pt, const typename Mesh::cell_type& cl) const
+    {
+        return -std::log10( std::abs( (f(pt,msh,cl)-phi_min )*(phi_max-f(pt,msh,cl)) ) + eps );
+    }
+
+    T operator()(const point<T,2>& pt , const typename Mesh::cell_type& cl) const
+    {
+        return -std::log10( std::abs( (phi(pt,msh,cl)-phi_min )*(phi_max-phi(pt,msh,cl)) ) + eps );
+    }
+
+    T derivative(const point<T,2>& pt, const typename Mesh::cell_type& cl) const
+    {
+       // std::cout<<"il segno di "<<((phi_max-phi(pt,msh,cl))*(phi(pt,msh,cl)-phi_min ))<<" is "<< sgn( (phi_max-phi(pt,msh,cl))*(phi(pt,msh,cl)-phi_min ) )<<std::endl;
+        return -1./( ( std::abs( (phi_max-phi(pt,msh,cl))*(phi(pt,msh,cl)-phi_min )  ) +eps )*std::log(10) ) * sgn( (phi_max-phi(pt,msh,cl))*(phi(pt,msh,cl)-phi_min )  ) * (phi_max + phi_min - 2*phi(pt,msh,cl)  ) ;
+    }
+
+};
 
 
 template<typename T , typename Fonction , typename Mesh>
@@ -32704,7 +32931,7 @@ void
 run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , const Method_Transport& method , T& dt , bool mapping )
 {
     // Starting time for FE calculation
-    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (new D - INLET - COMPRESSED) -----------"<<reset<<std::endl;
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (new D - INLET - COMPRESSED - M_consitent -  limiting) -----------"<<reset<<std::endl;
     //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
 
     timecounter tc;
@@ -32717,10 +32944,10 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh,
     auto S_i = fe_data.S_i;
 
 
-    if(!mapping){
-        phi.coefficients_mapping_MAX_MAX( );
-        //phi.coefficients_mapping();
-    }
+//    if(!mapping){
+//        phi.coefficients_mapping_MAX_MAX( );
+//        //phi.coefficients_mapping();
+//    }
     //phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
     //phi_exact.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
 
@@ -32732,15 +32959,20 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh,
     auto u1_cellwise = u.sol_HHO.second ;
 
 
-
-    // NON LINEAR ENTROPY INITIALISATION
     T eps = 1e-14 ; //constant into entropy
-    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
-    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+    // NON LINEAR ENTROPY INITIALISATION [0,1]
+   
+//    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+//    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+//    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    // NON LINEAR ENTROPY INITIALISATION [phi_min, phi_max]
+    non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> Entropy_func;
     entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
 
     // PHI TILDE INITIALISATION --> (FOR HIGH ORDER METHOD)
-    auto phi_tilde = L2_projection< T, Mesh , FiniteSpace> ( fe_data , msh );
+//    auto phi_tilde = L2_projection< T, Mesh , FiniteSpace> ( fe_data , msh );
 
 
     // SAVING OF USEFUL MATRICES
@@ -32862,8 +33094,8 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh,
     //std::cout<<"vec1  "<<'\n'<<mass_phi_old<<std::endl;
 
     // CONVOLUTION TERM
-    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
-
+//    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    Matrix<T, Dynamic, 1> conv_global = (flux0.transpose()*global_cij_x + flux1.transpose()*global_cij_y).transpose();
 
 
     // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
@@ -33069,7 +33301,10 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh,
                 //triplets_dE_ij.push_back( Triplet<T>(counter, elem, value_E ) );
 
                 auto value_1 = 0.5*( phi_FEM(counter) + phi_FEM(elem) );
-                auto value_2 = std::max( value_1*(1.0 -value_1) , 0.0 );
+                // IN [phi_min,phi_max]
+                auto value_2 = std::max( (value_1 - phi.phi_min)*(phi.phi_max - value_1) , 0.0 );
+//                auto value_2 = std::max( value_1*(1.0 -value_1) , 0.0 ); // IN [0,1]
+                
                 //triplets_phi_ij.push_back( Triplet<T>(counter, elem, value_bis ) );
                 //T value = 0.0;
                 bool check_else = FALSE;
@@ -33179,27 +33414,27 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh,
 
 
     // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
-    size_t counter_dir = 0 ;
-
-    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
-    {
-        if(dir_elem){
-            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
-            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
-            phi_new(counter_dir) = phi_FEM(counter_dir) ;
-        }
-        counter_dir++ ;
-    }
+//    size_t counter_dir = 0 ;
+//
+//    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+//    {
+//        if(dir_elem){
+//            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+//            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+//            phi_new(counter_dir) = phi_FEM(counter_dir) ;
+//        }
+//        counter_dir++ ;
+//    }
 
 
     // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
     phi.sol_FEM = phi_new ;
     phi.converting_into_HHO_formulation(phi_new);
 
-    if(!mapping){
-        phi.coefficients_inverse_mapping_MAX_MAX( );
-        //phi.coefficients_inverse_mapping();
-    }
+//    if(!mapping){
+//        phi.coefficients_inverse_mapping_MAX_MAX( );
+//        //phi.coefficients_inverse_mapping();
+//    }
     //phi.coefficients_inverse_mapping();
     //phi_exact.coefficients_inverse_mapping();
 
@@ -33241,7 +33476,968 @@ run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh & msh,
 
 }
 
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename Method_Transport , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS_M_CONS_LIMITED(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , const Method_Transport& method , T& dt , bool mapping )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (new D - INLET - M_consitent -  limiting) -----------"<<reset<<std::endl;
+    //std::cout<<yellow<<bold<<"PROVA--- USO MIXC LAGRANGE- BERNSTEIN"<<reset<<std::endl;
 
+    timecounter tc;
+    tc.tic();
+
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+    //size_t n_cls = fe_data.n_cls ;
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+
+    
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+
+
+
+    // NON LINEAR ENTROPY INITIALISATION
+    T eps = 1e-14 ; //constant into entropy
+//    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+//    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+//    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    
+    non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> Entropy_func;
+    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+
+    // SAVING OF USEFUL MATRICES
+    auto global_mass = method.Global_Mass ;
+    Matrix<T, Dynamic, 1> global_lumped_mass = method.Global_Mass_Lumped;
+
+    auto global_cij_x = method.Global_c_term_x ;
+    auto global_cij_y = method.Global_c_term_y ;
+    auto local_vandermonde = method.local_vandermonde ;
+
+    auto cij_norm = method.cij_norm ;
+    auto nij0 = method.nij0 ;
+    auto nij1 = method.nij1 ;
+
+    auto cji_norm = method.cij_norm ;
+    auto nji0 = method.nji0 ;
+    auto nji1 = method.nji1 ;
+
+
+
+    // INITIALISATION OF THE SOLVER (CONJUGATE GRADIENT)
+    /*
+    ConjugateGradient<SparseMatrix<T> > solver_prova;
+    solver_prova.compute(global_mass);
+    if(solver_prova.info()!=Success){
+           std::cout<<"FAILED SOLVER PROVA."<<std::endl;
+           exit(1);
+       }
+    */
+    timecounter tc_solver;
+    tc_solver.tic();
+
+    SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+    solver_global_mass.compute(global_mass); // use solver_global_mass to solve M^-1
+
+    if(solver_global_mass.info()!=Success){
+        std::cout<<"FAILED SOLVER LLT."<<std::endl;
+        exit(1);
+    }
+
+    tc_solver.toc();
+    std::cout << "Inversion consistent mass matrix with Cholesky method. Time needed = " << tc_solver << " seconds." << reset << std::endl;
+
+
+    /*
+    timecounter tc_solver1_bis;
+    tc_solver1_bis.tic();
+    ConjugateGradient<SparseMatrix<double>, Lower|Upper> solver2_bis;
+    solver2_bis.compute(global_mass);
+    if(solver2_bis.info()!=Success) {
+        std::cout<<"FAILED SOLVER2 PROVA ->phi_tilde"<<std::endl;
+        return;
+    }
+
+    tc_solver1_bis.toc();
+    std::cout << bold << yellow << "INVERSION WITH ITERATIVE CG METHOD, t = " << tc_solver1_bis << " seconds" << reset << std::endl;
+
+    */
+
+
+
+
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+
+        }
+
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+
+        }
+
+
+        i_fl++;
+    }
+
+
+    tc_solver2.toc();
+    std::cout << "Direct inversion of the local Vandermonde matrix." << std::endl;
+
+
+
+   
+
+    // RESOLUTION OF phi_tilde (GLOBALLY)    ( with cij(phi_j) )
+    Matrix<T, Dynamic, 1> mass_phi_old = global_mass * phi_FEM ;
+    //std::cout<<"vec1  "<<'\n'<<mass_phi_old<<std::endl;
+
+    // CONVOLUTION TERM
+//    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    Matrix<T, Dynamic, 1> conv_global = (flux0.transpose()*global_cij_x + flux1.transpose()*global_cij_y).transpose();
+
+
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+
+    // TERM R_i^n
+    //Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Emax_global *= -1e20;
+    //Emin_global *= 1e20;
+
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+
+
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        T N_i_entropic = 0.0;
+        T D_i_entropic0 = 0.0;
+        T D_i_entropic1 = 0.0;
+        for(auto& elem:row_i)
+        {
+
+            //Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            //Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            N_i_entropic += ( (q_entropy.values0(elem) - E.E_der(counter_row)*flux0(elem) )*global_cij_x.coeff(counter_row,elem) + (q_entropy.values1(elem) - E.E_der(counter_row)*flux1(elem) )*global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic0 += ( q_entropy.values0(elem) * global_cij_x.coeff(counter_row,elem) + q_entropy.values1(elem) * global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic1 += ( flux0(elem)*global_cij_x.coeff(counter_row,elem) + flux1(elem)*global_cij_y.coeff(counter_row,elem) ) ;
+
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+
+            sum_row += val_dij ;
+
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+
+
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+
+
+        counter_row++;
+
+    }
+
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+
+
+
+    std::cout << "Resolution of the low order transport." << std::endl;
+
+
+    // CHECK TIME STEP dt
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+
+   
+
+
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    T c_e = 1.0;
+    T c_comp = 1.0;
+
+
+    SparseMatrix<T> dC_ij =  SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dC_ij;
+
+    Matrix<T, Dynamic, 1> term_dij_no_entropy =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+
+    size_t counter = 0;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+
+            if(elem!=counter)
+            {
+
+               auto value_E = dij.coeff( counter , elem ) * std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) ) ;
+                
+                // COMPRESSION -> IF ADDING TO BE DONE BETWEEN [phi_min,phi_max]
+
+            
+                triplets_dC_ij.push_back( Triplet<T>(counter, elem, value_E ) );
+
+                term_dij_no_entropy(counter) += dij.coeff(counter,elem)*(phi_FEM(elem)-phi_FEM(counter));
+
+                term_dij(counter) += value_E*(phi_FEM(elem)-phi_FEM(counter));
+
+
+            }
+
+
+        }
+        counter++;
+    }
+
+    dC_ij.setFromTriplets( triplets_dC_ij.begin(), triplets_dC_ij.end() );
+    triplets_dC_ij.clear();
+
+    std::cout<< "Entropic process."<< std::endl;
+
+
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+
+
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_L = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij_no_entropy.cwiseQuotient(global_lumped_mass);
+
+
+    
+    // RESOLUTION HIGH ORDER -> NO MIN MAX PRINCIPLE PRESERVING
+    Matrix<T, Dynamic, 1> b_phiH = mass_phi_old - dt * conv_global + dt * term_dij ;
+    Matrix<T, Dynamic, 1> phi_H = solver_global_mass.solve(b_phiH);
+
+   
+//    T relative_error0 = (global_mass*phi_H - b_phiH).norm() / b_phiH.norm();
+//    std::cout << "The relative error is: " << relative_error0 << std::endl;
+    
+   
+    // EXTENSION: MAXIMUM PRINCIPLE PRESERVING
+
+    Matrix<T, Dynamic, 1> delta_phi = phi_H - phi_FEM;
+
+    Matrix<T, Dynamic, 1> f_i = f_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , dt , dij , dC_ij , phi_FEM , S_i );
+
+    // CORRECTION TERM: Boris–Book–Zalesak’s limiting for scalar equations
+    Matrix<T, Dynamic, 1> correction_fi = alfaf_ij_creator_SPARSE( global_lumped_mass , global_mass , delta_phi , phi_L , dt , dij , dC_ij , phi_FEM , S_i );
+    Matrix<T, Dynamic, 1>  phi_new = phi_L + correction_fi.cwiseQuotient(global_lumped_mass);
+
+
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS
+//    size_t counter_dir = 0 ;
+//
+//    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+//    {
+//        if(dir_elem){
+//            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+//            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+//            phi_new(counter_dir) = phi_FEM(counter_dir) ;
+//        }
+//        counter_dir++ ;
+//    }
+
+
+    // SAVING AND UPLOAD phi_L  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_new ;
+    phi.converting_into_HHO_formulation(phi_new);
+
+   
+
+
+   
+    std::cout  << "Extension to preserving HO." << std::endl;
+
+    tc.toc();
+    std::cout << "FEM method, time resolution: " << tc << " seconds" << std::endl;
+
+
+
+    /// PLOTTING SOLUTION (GNUPLOT) + SAVING FOR HHO (MISCHIATO PER POTERE PLOTTARE ENTRAMBE).
+    //postprocess_output<double> postoutput5;
+    //auto test_phi_new = std::make_shared< gnuplot_output_object<double> >("phi_new.dat");
+
+
+
+    /*
+    for(auto& cl :msh.cells)
+    {
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (auto pt : pts){
+            //std::cout<<pt<<std::endl;
+            //test_phi_h->add_data( pt , phi.sol_HHO(iii , counter_cl ) );
+            test_phi_new->add_data( pt , phi(pt, msh , cl ) );
+        }
+    }
+    postoutput5.add_object(test_phi_new);
+    postoutput5.write();
+    */
+
+
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+
+
+
+    //return phi_tilde;
+
+}
+
+
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename Method_Transport , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS_M_LUMPED_NO_LIMITING(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , const Method_Transport& method , T& dt , bool mapping )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (new D - INLET - M_lumped - No limiting) -----------"<<reset<<std::endl;
+    
+
+    timecounter tc;
+    tc.tic();
+
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+  
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+
+
+//    if(!mapping){
+////        phi.coefficients_mapping_MAX_MAX( );
+//        phi.coefficients_mapping();
+//    }
+    
+    //phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+    //phi_exact.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+
+
+
+    // NON LINEAR ENTROPY INITIALISATION
+    T eps = 1e-14 ; //constant into entropy
+//    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+//    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+//    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> Entropy_func;
+    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+
+
+    // SAVING OF USEFUL MATRICES
+    Matrix<T, Dynamic, 1> global_lumped_mass = method.Global_Mass_Lumped;
+
+    auto global_cij_x = method.Global_c_term_x ;
+    auto global_cij_y = method.Global_c_term_y ;
+    auto local_vandermonde = method.local_vandermonde ;
+
+    auto cij_norm = method.cij_norm ;
+    auto nij0 = method.nij0 ;
+    auto nij1 = method.nij1 ;
+
+    auto cji_norm = method.cij_norm ;
+    auto nji0 = method.nji0 ;
+    auto nji1 = method.nji1 ;
+
+
+
+
+
+
+
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+
+        }
+
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+
+        }
+
+
+        i_fl++;
+    }
+
+
+    tc_solver2.toc();
+    std::cout << "Direct inversion of the local Vandermonde matrix." << std::endl;
+
+
+    // CONVOLUTION TERM
+//    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    Matrix<T, Dynamic, 1> conv_global = (flux0.transpose()*global_cij_x + flux1.transpose()*global_cij_y).transpose();
+
+
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+
+    // TERM R_i^n
+    //Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Emax_global *= -1e20;
+    //Emin_global *= 1e20;
+
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+
+
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        T N_i_entropic = 0.0;
+        T D_i_entropic0 = 0.0;
+        T D_i_entropic1 = 0.0;
+        for(auto& elem:row_i)
+        {
+
+            //Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            //Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            N_i_entropic += ( (q_entropy.values0(elem) - E.E_der(counter_row)*flux0(elem) )*global_cij_x.coeff(counter_row,elem) + (q_entropy.values1(elem) - E.E_der(counter_row)*flux1(elem) )*global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic0 += ( q_entropy.values0(elem) * global_cij_x.coeff(counter_row,elem) + q_entropy.values1(elem) * global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic1 += ( flux0(elem)*global_cij_x.coeff(counter_row,elem) + flux1(elem)*global_cij_y.coeff(counter_row,elem) ) ;
+
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+
+            sum_row += val_dij ;
+
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+
+
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+
+
+        counter_row++;
+
+    }
+
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+
+
+
+//    tc_case00.toc();
+    std::cout << "Resolution of the low order transport." << std::endl;
+
+
+    // CHECK TIME STEP dt
+
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+
+
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+
+    size_t counter = 0;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+
+            if(elem!=counter)
+            {
+                auto R_ij = std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) ) ;
+//                auto R_ij = 1.0 ;
+                auto value_E = dij.coeff( counter , elem ) * R_ij ;
+//                std::cout<<"R_ij = "<<std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) )<<std::endl;
+                term_dij(counter) += value_E*(phi_FEM(elem)-phi_FEM(counter));
+
+
+            }
+
+
+        }
+        counter++;
+    }
+
+   
+    std::cout<< "Entropic process."<< std::endl;
+
+
+
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+
+
+    // RESOLUTION FIRST ORDER
+    Matrix<T, Dynamic, 1> phi_E = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij.cwiseQuotient(global_lumped_mass);
+
+
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS -> NO INLET BDRY CONDITIONS!
+//    size_t counter_dir = 0 ;
+//
+//    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+//    {
+//        if(dir_elem){
+//            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+//            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+//            phi_new(counter_dir) = phi_FEM(counter_dir) ;
+//        }
+//        counter_dir++ ;
+//    }
+
+
+    // SAVING AND UPLOAD phi_E  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_E ;
+    phi.converting_into_HHO_formulation(phi_E);
+
+//    if(!mapping){
+////        phi.coefficients_inverse_mapping_MAX_MAX( );
+//        phi.coefficients_inverse_mapping();
+//    }
+    //phi.coefficients_inverse_mapping();
+    //phi_exact.coefficients_inverse_mapping();
+
+
+   
+    tc.toc();
+    std::cout << "FEM method, time resolution: " << tc << " seconds" << std::endl;
+
+
+
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+
+
+}
+
+template < typename Fonction, typename Mesh, typename Vel_Field , typename FiniteSpace , typename Method_Transport , typename T = typename Mesh::coordinate_type >
+void
+run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS_M_CONSISTENT_NO_LIMITING(const Mesh & msh, const FiniteSpace& fe_data, Fonction & phi , Vel_Field& u , const Method_Transport& method , T& dt , bool mapping )
+{
+    // Starting time for FE calculation
+    std::cout<<yellow<<bold<<"----------- STARTING TRANSPORT PROBLEM (new D - INLET - M_consitent - No limiting) -----------"<<reset<<std::endl;
+    
+
+    timecounter tc;
+    tc.tic();
+
+    size_t degree = fe_data.order; // finite element order
+    size_t dim = fe_data.ndof_FE ;
+  
+    size_t local_ndof = fe_data.local_ndof ; // local degrees of freedom
+    auto S_i = fe_data.S_i;
+
+
+//    if(!mapping){
+////        phi.coefficients_mapping_MAX_MAX( );
+//        phi.coefficients_mapping();
+//    }
+    
+    //phi.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+    //phi_exact.coefficients_mapping(); // mapping of phi to have a phi between 0 and 1
+
+    // SAVING PHI AND VELOCITY COEFFS
+    auto phi_FEM = phi.sol_FEM ;
+    auto u0 = u.sol_FEM.first ;
+    auto u1 = u.sol_FEM.second ;
+    auto u0_cellwise = u.sol_HHO.first ;
+    auto u1_cellwise = u.sol_HHO.second ;
+
+
+
+    // NON LINEAR ENTROPY INITIALISATION
+    T eps = 1e-14 ; //constant into entropy
+//    non_linear_entropy_new<T,Fonction,Mesh> E(eps , phi ,msh );
+//    typedef non_linear_entropy_new<T,Fonction,Mesh> Entropy_func;
+//    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+    non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> E(eps , phi ,msh );
+    typedef non_linear_entropy_new_phimin_phimax<T,Fonction,Mesh> Entropy_func;
+    entropy_flux<Entropy_func,Fonction,Mesh,Vel_Field,T> q_entropy(E , phi , u , msh );
+    
+
+
+    // SAVING OF USEFUL MATRICES
+    Matrix<T, Dynamic, 1> global_lumped_mass = method.Global_Mass_Lumped;
+    auto global_mass = method.Global_Mass ;
+    auto global_cij_x = method.Global_c_term_x ;
+    auto global_cij_y = method.Global_c_term_y ;
+    auto local_vandermonde = method.local_vandermonde ;
+
+    auto cij_norm = method.cij_norm ;
+    auto nij0 = method.nij0 ;
+    auto nij1 = method.nij1 ;
+
+    auto cji_norm = method.cij_norm ;
+    auto nji0 = method.nji0 ;
+    auto nji1 = method.nji1 ;
+
+
+    timecounter tc_solver;
+    tc_solver.tic();
+
+    SimplicialLLT<SparseMatrix<T> >solver_global_mass;
+    solver_global_mass.compute(global_mass); // use solver_global_mass to solve M^-1
+
+    if(solver_global_mass.info()!=Success){
+        std::cout<<"FAILED SOLVER LLT."<<std::endl;
+        exit(1);
+    }
+
+    tc_solver.toc();
+    std::cout << "Inversion consistent mass matrix with Cholesky method. Time needed = " << tc_solver << " seconds." << reset << std::endl;
+
+
+
+
+    // ALTERNATIVE VANDERMONDE MATRIX
+    size_t i_fl = 0 ;
+    Matrix<T, Dynamic, 1> flux0_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+    Matrix<T, Dynamic, 1> flux1_loc = Matrix<T, Dynamic, 1>::Zero(local_ndof) ;
+
+    Matrix<T, Dynamic, 1> flux0 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+    Matrix<T, Dynamic, 1> flux1 = Matrix<T, Dynamic, 1>::Zero(dim) ;
+
+    timecounter tc_solver2;
+    tc_solver2.tic();
+
+    CompleteOrthogonalDecomposition<Matrix<T, Dynamic, Dynamic > > cod(local_vandermonde);
+
+    for(auto& cl : msh.cells)
+    {
+        // FLUX TERM : flux is a pair flux0 and flux1
+        auto pts = equidistriduted_nodes_ordered_bis<T,Mesh>( msh, cl, degree );
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+            flux0_loc(i) = u0_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+            flux1_loc(i) = u1_cellwise(i,i_fl) * phi(pts[i] , msh , cl );
+
+        }
+
+        Matrix<T, Dynamic, 1> sol0 = cod.solve(flux0_loc);
+        Matrix<T, Dynamic, 1> sol1 = cod.solve(flux1_loc);
+        if (cod.info() != Success)
+        {
+            std::cout<<"Not positive"<<std::endl;
+            assert(0);
+        }
+
+        for (size_t i = 0; i < local_ndof ; i++)
+        {
+
+            size_t asm_map =  phi.connectivity_matrix[i_fl][i].first ;
+            flux0(asm_map) = sol0(i) ;
+            flux1(asm_map) = sol1(i) ;
+
+        }
+
+
+        i_fl++;
+    }
+
+
+    tc_solver2.toc();
+    std::cout << "Direct inversion of the local Vandermonde matrix." << std::endl;
+
+
+    // CONVOLUTION TERM
+//    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+    Matrix<T, Dynamic, 1> conv_global = (flux0.transpose()*global_cij_x + flux1.transpose()*global_cij_y).transpose();
+
+
+    // TERM d_ij + CALCULATION OF MAX AND MIN OF THE ENTROPY
+    SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
+    std::vector< Triplet<T> >   triplets_dij;
+
+    // TERM R_i^n
+    //Matrix<T, Dynamic, 1> Emax_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Matrix<T, Dynamic, 1> Emin_global = Eigen::Matrix<T, Dynamic, 1>::Ones(dim, 1);
+    //Emax_global *= -1e20;
+    //Emin_global *= 1e20;
+
+    // TERM R_i^n
+    Matrix<T, Dynamic, 1> R_i = Eigen::Matrix<T, Dynamic, 1>::Zero(dim, 1);
+
+
+    size_t counter_row = 0;
+    for(auto& row_i:S_i)
+    {
+        T sum_row = 0.0 ;
+        T N_i_entropic = 0.0;
+        T D_i_entropic0 = 0.0;
+        T D_i_entropic1 = 0.0;
+        for(auto& elem:row_i)
+        {
+
+            //Emax_global(counter_row) = std::max ( E.E_values(elem) , Emax_global(counter_row) );
+            //Emin_global(counter_row) = std::min ( E.E_values(elem) , Emin_global(counter_row) );
+            N_i_entropic += ( (q_entropy.values0(elem) - E.E_der(counter_row)*flux0(elem) )*global_cij_x.coeff(counter_row,elem) + (q_entropy.values1(elem) - E.E_der(counter_row)*flux1(elem) )*global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic0 += ( q_entropy.values0(elem) * global_cij_x.coeff(counter_row,elem) + q_entropy.values1(elem) * global_cij_y.coeff(counter_row,elem) );
+            D_i_entropic1 += ( flux0(elem)*global_cij_x.coeff(counter_row,elem) + flux1(elem)*global_cij_y.coeff(counter_row,elem) ) ;
+
+            T value0 = std::abs( u0(counter_row) * nij0.coeff(counter_row,elem) + u1(counter_row) * nij1.coeff(counter_row,elem) );
+            T value1 = std::abs( u0(elem) * nij0.coeff(counter_row,elem) + u1(elem) * nij1.coeff(counter_row,elem) );
+            T value = std::max(value0 , value1);
+
+            T value_adj0 = std::abs( u0(counter_row) * nji0.coeff(counter_row,elem) + u1(counter_row) * nji1.coeff(counter_row,elem) );
+            T value_adj1 = std::abs( u0(elem) * nji0.coeff(counter_row,elem) + u1(elem) * nji1.coeff(counter_row,elem) );
+            T value_adj = std::max(value_adj0 , value_adj1);
+
+            T lambda_max = value * cij_norm.coeff(counter_row,elem) ;
+            T lambda_max_adj = value_adj * cji_norm.coeff(counter_row,elem) ;
+
+            T val_dij = std::max( lambda_max , lambda_max_adj );
+
+            if( counter_row == elem )
+                val_dij = 0.0 ;
+
+            sum_row += val_dij ;
+
+            if( counter_row != elem )
+                triplets_dij.push_back( Triplet<T>(counter_row, elem, val_dij ) );
+
+
+        }
+        triplets_dij.push_back( Triplet<T>(counter_row, counter_row, -sum_row ) );
+
+        T D_i = std::abs(D_i_entropic0) + std::abs(D_i_entropic1)*std::abs(E.E_der(counter_row)) ;
+
+        if( std::abs(N_i_entropic)<1e-20 && std::abs(D_i) < 1e-20 ){
+            R_i(counter_row) = std::abs(N_i_entropic)/(D_i + 1e-18);
+            std::cout<<"R_i = "<<R_i(counter_row)<<" , R_i^{OLD} = "<<std::abs(N_i_entropic)/D_i<<std::endl;
+        }
+        else
+            R_i(counter_row) = std::abs(N_i_entropic)/D_i ;
+
+
+        counter_row++;
+
+    }
+
+    dij.setFromTriplets( triplets_dij.begin(), triplets_dij.end() );
+    triplets_dij.clear();
+
+
+
+//    tc_case00.toc();
+    std::cout << "Resolution of the low order transport." << std::endl;
+
+
+    // CHECK TIME STEP dt
+
+    T CFL_numb = time_step_CFL_L2_velocity_NEW( dij.diagonal() , global_lumped_mass , fe_data.Dirichlet_boundary , dt );
+
+
+    // ENTROPIC SOLUTION: MINIMUM BETWEEN d_ij AND R_i --> d^E_ij MATRIX
+    Matrix<T, Dynamic, 1> term_dij            =  Eigen::Matrix<T,Dynamic,1>::Zero(dim, 1);
+
+    size_t counter = 0;
+    for(auto& row_i:S_i)
+    {
+        for(auto& elem:row_i)
+        {
+
+            if(elem!=counter)
+            {
+                auto R_ij = std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) ) ;
+//                auto R_ij = 1.0 ;
+                auto value_E = dij.coeff( counter , elem ) * R_ij ;
+//                std::cout<<"R_ij = "<<std::max( std::abs(R_i(counter)),std::abs(R_i(elem)) )<<std::endl;
+                term_dij(counter) += value_E*(phi_FEM(elem)-phi_FEM(counter));
+
+
+            }
+
+
+        }
+        counter++;
+    }
+
+   
+    std::cout<< "Entropic process."<< std::endl;
+
+
+
+    ///********* RESOLUTION OF THE SYSTEM: **********//
+
+
+    // RESOLUTION FIRST ORDER
+//    Matrix<T, Dynamic, 1> phi_E = phi_FEM - dt * conv_global.cwiseQuotient(global_lumped_mass)  + dt * term_dij.cwiseQuotient(global_lumped_mass);
+    
+    // RESOLUTION HIGH ORDER -> NO MIN MAX PRINCIPLE PRESERVING
+    Matrix<T, Dynamic, 1> mass_phi_old = global_mass * phi_FEM ;
+    
+    Matrix<T, Dynamic, 1> b_phiE = mass_phi_old - dt * conv_global + dt * term_dij ;
+    Matrix<T, Dynamic, 1> phi_E = solver_global_mass.solve(b_phiE);
+
+       //auto prova1 = solver_prova.solve(b_phiH); // SAVE THE L2 projection
+
+      
+
+       //std::cout << "mass_phi_old =  " << mass_phi_old << " , conv_global =  "<< conv_global << " , term_dij = "<< term_dij << " , dt = "<< dt << std::endl;
+
+       T relative_error0 = (global_mass*phi_E - b_phiE).norm() / b_phiE.norm();
+       std::cout << "The relative error in solving the transport problem (mass consistent) is: " << relative_error0 << std::endl;
+
+
+    // IMPOSITION DIRICHLET BOUNDARY CONDITIONS -> NO INLET BDRY CONDITIONS!
+//    size_t counter_dir = 0 ;
+//
+//    for ( const auto& dir_elem : fe_data.Dirichlet_boundary_inlet )
+//    {
+//        if(dir_elem){
+//            //phi_L(counter_dir) = phi_FEM(counter_dir) ;
+//            //phi_H(counter_dir) = phi_FEM(counter_dir) ;
+//            phi_new(counter_dir) = phi_FEM(counter_dir) ;
+//        }
+//        counter_dir++ ;
+//    }
+
+
+    // SAVING AND UPLOAD phi_E  INTO CLASS projected_level_set
+    phi.sol_FEM = phi_E ;
+    phi.converting_into_HHO_formulation(phi_E);
+
+//    if(!mapping){
+////        phi.coefficients_inverse_mapping_MAX_MAX( );
+//        phi.coefficients_inverse_mapping();
+//    }
+    //phi.coefficients_inverse_mapping();
+    //phi_exact.coefficients_inverse_mapping();
+
+
+   
+    tc.toc();
+    std::cout << "FEM method, time resolution: " << tc << " seconds" << std::endl;
+
+
+
+    std::cout<<yellow<<bold<<"----------- FINE TRANSPORT PROBLEM -----------"<<reset<<std::endl;
+
+
+}
 
 
 
@@ -35493,9 +36689,10 @@ run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS(const Mesh & 
 
 
     // CONVOLUTION TERM
-    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
-
-
+//    Matrix<T, Dynamic, 1> conv_global = global_cij_x * flux0  + global_cij_y * flux1 ;
+//    Matrix<T, Dynamic, 1> conv_global = flux0.dot(global_cij_x) + flux1.dot(global_cij_y);
+    Matrix<T, Dynamic, 1> conv_global = (flux0.transpose()*global_cij_x + flux1.transpose()*global_cij_y).transpose();
+    
 
     // TERM d_ij
     SparseMatrix<T> dij = SparseMatrix<T>( dim , dim );
@@ -46606,9 +47803,9 @@ public:
            T R = level_set__.radius ;
 
             if( level_set__(pt) < 0 )
-                return gamma / R - M_PI * R * gamma;
+                return - gamma / R + M_PI * R * gamma;
             else
-                return -M_PI * R * gamma;
+                return M_PI * R * gamma;
 
 
        },
@@ -49798,7 +50995,7 @@ check_goal_quantities_final_para( Mesh& msh_i ,Level_Set& ls_cell ,  Para_Interf
                         for(auto& qp:qps)
                         {
                             auto t = 0.5 * qp.first.x() + 0.5;
-                            auto curv_err = std::abs( para_interface.curvature_cont(t , global_cl_i ) + 1.0/radius);
+                            auto curv_err = std::abs( para_interface.curvature_cont(t , global_cl_i ) - 1.0/radius);
                             T jacobian = para_interface.jacobian_cont( t , global_cl_i ) ;
                             auto w = 0.5 * qp.second * jacobian ;
                             L1_divergence_error_fin += curv_err*w ;
@@ -49809,7 +51006,7 @@ check_goal_quantities_final_para( Mesh& msh_i ,Level_Set& ls_cell ,  Para_Interf
                         {
                             T pos = 0.0+i/tot_error ;
                             T val0 = para_interface.curvature_cont(pos, global_cl_i) ;
-                            T error_curvature = std::abs( val0 + 1.0/radius) ;
+                            T error_curvature = std::abs( val0 - 1.0/radius) ;
                             
                             linf_divergence_error_fin = std::max(linf_divergence_error_fin ,  error_curvature);
                             l1_divergence_error_fin += error_curvature ;
@@ -74689,6 +75886,7 @@ int main(int argc, char **argv)
 
     bool high_order = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
     bool entropic = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool entropic_mass_consistent = false;
     bool compressed = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
     bool cut_off_active = false ; // IF FALSE IS SMOOTH, IF TRUE  CUT_OFF
 
@@ -74697,7 +75895,7 @@ int main(int argc, char **argv)
     mip.Ny = 5;
     size_t T_N = 0;
     int ch;
-    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:l:p:ifDAdhegc")) != -1 )
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:l:p:ifDAdhesgc")) != -1 )
     {
         switch(ch)
         {
@@ -74759,6 +75957,10 @@ int main(int argc, char **argv)
                 
             case 'e':
                 entropic = true;
+            break;
+                
+            case 's':
+                entropic_mass_consistent = true;
             break;
                 
             case 'g':
@@ -74926,10 +76128,20 @@ int main(int argc, char **argv)
 
     /************** LEVEL SET  MAPPING **************/
     // If mapping is false, in HIGH ORDER TRANSPORT CASE the mapping is needed
-    bool mapping = false ;
-    if(mapping)
+   
+//    testing_level_set(msh , level_set_function ) ;
+    bool mapping = false ; // true ; // false ;
+//    auto check1 = level_set_function.sol_FEM;
+    if(mapping){
         level_set_function.coefficients_mapping_MAX_MAX( );
-
+//        testing_level_set_mapped(msh , level_set_function ) ;
+//
+//        // ADD TO CHECK INVERSE MAPPING
+//        level_set_function.coefficients_inverse_mapping_MAX_MAX( );
+//        testing_level_set_inverse_mapped(msh , level_set_function ) ;
+//        auto check2 = level_set_function.sol_FEM;
+//        std::cout<< (check1 - check2).template lpNorm<Eigen::Infinity>();
+    }
     //level_set_function.iso_val_interface = 0.5 ;
     //level_set_function.coefficients_mapping_quadratic( );
     //level_set_function.coefficients_mapping_MAX_MAX( );
@@ -75167,14 +76379,15 @@ int main(int argc, char **argv)
 
         // ----------------- ESHELBY VERSION - CORRECT BUT PRESSURE ------------------
         //auto test_case_prova = make_test_case_eshelby_2_prova(msh_i, ls_cell,  prm , sym_grad );
-
+        // PRESSURE SIGN NOT CORRECT
         // ---------------------- ESHELBY VERSION LEVEL SET - CORRECT ------------------------
 //        auto test_case = make_test_case_eshelby_correct(msh_i, ls_cell,  prm , sym_grad,gamma);
-        
+         // PRESSURE SIGN NOT CORRECT
          // -------------------- ESHELBY VERSION PARAMETRIC (DISC) - CORRECT -------------------
 //        auto test_case = make_test_case_eshelby_correct_parametric(msh_i, ls_cell,  prm , sym_grad,gamma);
+         // PRESSURE SIGN NOT CORRECT
         // -------------------- ESHELBY VERSION PARAMETRIC (CONT) - CORRECT -------------------
-        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma );
+        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma ); // SIGN OF PRESSURE HAS TO BE CHANGED CONFORMING TO THE CHANGE  OF SIGN OF THE CURVATURE. HERE DONE: CORRECT 25/01/2021
         
         
         // ------------------------ HHO METHOD FOR LEVEL SET  ---------------------------
@@ -75388,7 +76601,7 @@ int main(int argc, char **argv)
         
         // ------> ADAPTIVE SCHEME
         dt_M = dt_one_cell * 0.1 ;
-        dt = std::min(5e-3 , dt_M); //5e-2 for mesh 32x32, 0.1 for  mesh 16x16, 8x8
+        dt = std::min(5e-2 , dt_M); //5e-2 for mesh 32x32, 0.1 for  mesh 16x16, 8x8
         T N_sub = 10 ; //N_sub = 20 for BOH, N_sub = 10 for  mesh 16x16, 8x8, 32x32
         // ------> FIXED  SCHEME
 //        dt_M =  8*1e-3; // FOR LS low phi_L order-> 8*1e-3; // FOR LS high order phi_H ->  2*1e-3;
@@ -75404,9 +76617,9 @@ int main(int argc, char **argv)
         T sub_dt = dt / N_sub ; //std::min(4*1e-4 , dt ) ;
                
         // ------> ADAPTIVE SCHEME
-        if(sub_dt > 5e-5) // It is > 1e-3 for 16x16 and 8x8; > 5e-4 for 32x32
+        if(sub_dt > 1e-4) // It is > 1e-3 for 16x16 and 8x8; > 5e-4 for 32x32
         {
-            sub_dt = 5e-5 ;
+            sub_dt = 1e-4 ;
             N_sub = dt/sub_dt ; // N_sub varies between 10 and 100 depending on sub_dt
 
         }
@@ -75418,23 +76631,23 @@ int main(int argc, char **argv)
         // ------------- NEW IMPLEMENTATION WITH FAST LEVEL SET ---------------------
         while(  sub_time < sub_dt*N_sub  )
         {
+           
             if(high_order){
-                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt , mapping );
+                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS_M_CONS_LIMITED( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt , mapping ); // CORRECT 25/01/21
 
             }
             else if (entropic)
-                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt , mapping );
-
+                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS_M_LUMPED_NO_LIMITING ( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt , mapping ); // CORRECT 25/01/21
+            
+            else if (entropic_mass_consistent)
+            run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS_M_CONSISTENT_NO_LIMITING ( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt , mapping ); // CORRECT 25/01/21
                                   
-            else if (compressed)
-                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_HP( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt , mapping );
-
-                //run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt);
-                //run_FEM_BERNSTEIN_CORRECT_FAST( level_set_function.msh , fe_data , level_set_function , u_projected , sub_dt);
+            else if (compressed) //Compression not in the book ( I mixed book-article methods)
+                run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt , mapping ); // CORRECT 25/01/21
             else{
-                //if(degree_velocity == degree_FEM) // IT IS FASTER
-                    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb ,  sub_dt  );
-                //else // IT WORKS BUT IT'S MUCH SLOWER
+//                if(degree_velocity == degree_FEM) // IT IS FASTER
+                    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb ,  sub_dt  ); // CORRECT 25/01/21
+//                else // IT WORKS BUT IT'S MUCH SLOWER
 //                    run_FEM_BERNSTEIN_LOW_ORDER_CORRECT_FAST_NEW_DIRICHLET_COND_NEW_LS( level_set_function.msh , fe_data , level_set_function , u_projected , method_transport_pb , sub_dt  , fe_data_Lagrange);
 
                 }
