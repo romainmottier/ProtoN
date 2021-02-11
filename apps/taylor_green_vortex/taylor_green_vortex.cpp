@@ -16740,9 +16740,9 @@ Eigen::Matrix<T, Dynamic, Dynamic> positive_part(const Eigen::Matrix<T, Dynamic,
 */
 
 
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
+//template <typename T> int sgn(T val) {
+//    return (T(0) < val) - (val < T(0));
+//}
 
 template<typename T, typename Mesh>
 class entropy

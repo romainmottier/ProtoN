@@ -18613,6 +18613,16 @@ struct LS_cell_high_order_grad_cont: public Level_set_berstein_high_order_interp
 
     //LS_cell()=default;
     
+    LS_cell_high_order_grad_cont()=default;
+
+    LS_cell_high_order_grad_cont(const LS_cell_high_order_grad_cont& other ){
+        agglo_msh = other.agglo_msh;
+        level_set = other.level_set;
+        iso_val_interface  = other.iso_val_interface;
+        radius  = other.radius;
+
+    }
+    
     T operator()(const point<T,2>& pt) const
     {
         
@@ -19448,6 +19458,8 @@ struct projected_level_set: public level_set<T>
     
     
 };
+
+
 
 
 template<typename T>
@@ -20455,9 +20467,9 @@ Eigen::Matrix<T, Dynamic, Dynamic> positive_part(const Eigen::Matrix<T, Dynamic,
 */
 
 
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
+//template <typename T> int sgn(T val) {
+//    return (T(0) < val) - (val < T(0));
+//}
 
 template<typename T, typename Mesh>
 class entropy
@@ -40704,13 +40716,17 @@ int main(int argc, char **argv)
     detect_cut_faces3(msh, level_set_function); // In cuthho_geom
     //detect_cut_faces2(msh_i, level_set_function); //do it again to update intersection points
     detect_cut_cells3(msh, level_set_function);
-    //refine_interface2(msh_i, level_set_function, int_refsteps);
-    //refine_interface_angle(msh_i, level_set_function, int_refsteps);
+    
     refine_interface_pro3(msh, level_set_function, int_refsteps);
     
     fe_data.msh = msh ;
     
     //************ DO cutHHO MESH PROCESSING **************
+//    T degree_curve = 2 ;
+//    auto curve = Interface_parametrisation<  Mesh > (msh_i , degree_curve); // degree_FEM
+//    std::cout<<"Parametric Interface: degree = "<<degree_curve<<std::endl;
+//    size_t degree_det_jac_curve = curve.degree_det ;
+    
     tc.tic();
     // NOTICE: The sequential detect_node_position3 is faster than the parallel one: PROVED IN DEBUG MOD, IN RELEASE WILL IT BE THE SAME???
     detect_node_position3(msh_i, level_set_function); // In cuthho_geom
@@ -40722,11 +40738,15 @@ int main(int argc, char **argv)
     {
         detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
         //detect_cut_cells3_parallelized(msh_i, level_set_function); // In cuthho_geom
+        refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+//        set_integration_mesh(msh_i,degree_curve) ;
         detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
         make_neighbors_info_cartesian(msh_i); // Non serve modificarla
         //refine_interface_angle(msh_i, level_set_function, int_refsteps);
-        refine_interface_pro3(msh_i, level_set_function, int_refsteps);
+        
         make_agglomeration(msh_i, level_set_function); // Non serve modificarla
+//        make_agglomeration_no_double_points(msh_i, level_set_function,degree_det_jac_curve);
+//        set_integration_mesh(msh_i,degree_curve) ;
              
     }
     else
@@ -41028,6 +41048,22 @@ int main(int argc, char **argv)
     u_HHO.set_agglo_mesh(msh_i) ; 
     run_cuthho_interface_velocity_prova(msh_i, degree, method_initial, test_case_initial, ls_cell, u_projected , sym_grad , tot_time , u_HHO ) ;
     
+    // THIS PROJECTION IT IS USEFUL JUST FOR THE CFL CALCULATION THAT USE sol_FEM AND WITHOUT, IT IS STILL 0!
+    if( 1 )
+    {
+        std::cout<<yellow<<bold<<"------------------>>>>NOTICE: SMOOTH OPERATOR FROM HHO TO FEM."<<reset<<std::endl;
+        u_projected.smooth_converting_into_FE_formulation( u_projected.sol_HHO );
+    }
+    if( 0 )
+    {
+        std::cout<<yellow<<bold<<"------------------>>>>NOTICE: OLD OPERATOR FROM HHO TO FEM."<<reset<<std::endl;
+        u_projected.converting_into_FE_formulation( u_projected.sol_HHO );
+    }
+    if( 0 )
+    {
+        std::cout<<yellow<<bold<<"------------------>>>>NOTICE: L^2 PROJECTION FROM HHO TO FEM."<<reset<<std::endl;
+        u_projected.L2_proj_into_FE_formulation(level_set_function , msh);
+    }
    
    
     for (size_t time_step = 0; time_step<=T_N; time_step++)
