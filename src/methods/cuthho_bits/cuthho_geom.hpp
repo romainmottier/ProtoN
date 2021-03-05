@@ -23,6 +23,7 @@
 #pragma once
 #include <iterator>
 #include "cuthho_mesh.hpp"
+#include <boost/range/adaptor/reversed.hpp>
 
 
 size_t
@@ -1463,7 +1464,9 @@ struct Interface_parametrisation_mesh1d_global
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
         bool first_cut_cell_found = FALSE ;
-            
+    
+//        size_t last_k_offset ;
+//        bool come_back = false ;
         if( deg == 0 )
         {
             for(auto& cl : msh.cells)
@@ -1534,6 +1537,7 @@ struct Interface_parametrisation_mesh1d_global
                                 connectivity_matrix[0][i_local] = i_inner++;
                         }
                         connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+//                        last_k_offset = k_offset;
                         i_cl_global++;
                         for (size_t i_cell = 1; i_cell < msh_int.cells.size(); i_cell++)
                         {
@@ -1555,11 +1559,14 @@ struct Interface_parametrisation_mesh1d_global
                     }
                     else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
                     {
+                        
                         for(auto& cl : msh.cells)
                         {
-                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() ) && !( first_point == cell_end_point)  )
+                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() )   )
+                            //&& !( first_point == cell_end_point)
                             {
                                 size_t k_offset = offset(msh,cl); // ADD ORA
+                               
                                 auto msh_int = cl.user_data.integration_msh ;
                                 for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
                                 {
@@ -1579,6 +1586,8 @@ struct Interface_parametrisation_mesh1d_global
                                      
                             }
                         }
+                        
+                        
                          
                     }
                     else
@@ -1586,6 +1595,76 @@ struct Interface_parametrisation_mesh1d_global
                          
                  
                 }
+                else if( first_cut_cell_found && !( first_point == cell_end_point  ) )
+                {
+//                    if(!come_back)
+//                    {
+                        for(auto& cl : msh.cells)
+                        {
+                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() )   )
+                                        //&& !( first_point == cell_end_point)
+                            {
+                                size_t k_offset = offset(msh,cl); // ADD ORA
+//                                last_k_offset = k_offset;
+//                                if( last_k_offset > k_offset ){
+//                                    std::cout<<"I am coming back! last_k_offset = "<<last_k_offset<<" , k_offset = "<<k_offset<<std::endl;
+//                                    come_back = true ;
+//
+//                                }
+                                auto msh_int = cl.user_data.integration_msh ;
+                                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                                {
+                                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                                    {
+                                        if(i_local == 0)
+                                            connectivity_matrix[i_cl_global][0] = connectivity_matrix[i_cl_global - 1][1];
+                                        else if(i_local == 1)
+                                            connectivity_matrix[i_cl_global][1] = i_inner++ ;
+                                        else
+                                            connectivity_matrix[i_cl_global][i_local] = i_inner++;
+                                    }
+                                    connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                                    i_cl_global++;
+                                }
+                                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                                                
+                            }
+                        }
+//                    }
+//                    else{
+//                        for(auto& cl : boost::adaptors::reverse(msh.cells) )
+//                        {
+//                            std::cout<<"DOING REVERSE LOOP (FASTER?)"<<std::endl;
+//                            if((cl.user_data.location == element_location::ON_INTERFACE)&& (cell_end_point == *cl.user_data.interface.begin() )   )
+//                                        //&& !( first_point == cell_end_point)
+//                            {
+//                                size_t k_offset = offset(msh,cl); // ADD ORA
+//                                last_k_offset = k_offset;
+//
+//                                auto msh_int = cl.user_data.integration_msh ;
+//                                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+//                                {
+//                                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+//                                    {
+//                                        if(i_local == 0)
+//                                            connectivity_matrix[i_cl_global][0] = connectivity_matrix[i_cl_global - 1][1];
+//                                        else if(i_local == 1)
+//                                            connectivity_matrix[i_cl_global][1] = i_inner++ ;
+//                                        else
+//                                            connectivity_matrix[i_cl_global][i_local] = i_inner++;
+//                                    }
+//                                    connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+//                                    i_cl_global++;
+//                                }
+//                                cell_end_point = *(cl.user_data.interface.end() -1) ;
+//
+//                            }
+//                        }
+//                    }
+                                    
+                }
+                else if( first_cut_cell_found && first_point == cell_end_point  )
+                    break;
             }
             connectivity_matrix[counter_subcls-1][1] = 0 ;
             for( size_t i_local = 2 ; i_local < deg_size ; i_local++)
