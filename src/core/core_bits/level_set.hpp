@@ -80,6 +80,52 @@ struct circle_level_set: public level_set<T>
 
 
 template<typename T>
+struct circle_level_set_signed_distance: public level_set<T>
+{
+    T radius, alpha, beta , eps;
+   
+    
+    circle_level_set_signed_distance(T r, T a, T b , T eps = 0.0)
+        : radius(r), alpha(a), beta(b) , eps(eps)
+    {}
+    
+    circle_level_set_signed_distance(){}
+    
+    circle_level_set_signed_distance(const circle_level_set_signed_distance& other){
+        radius = other.radius ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        eps = other.eps ;
+        
+    }
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+//        return sqrt( (x-alpha)*(x-alpha) + (y-beta)*(y-beta) ) - radius ;
+        return sqrt( (x-alpha)*(x-alpha) + (y-beta)*(y-beta) + eps*eps ) - sqrt(radius*radius + eps*eps) ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret ; // ret_pos , ret_neg;
+        T x = pt.x();
+        T y = pt.y();
+        
+        ret(0) = (x - alpha)/(sqrt((x-alpha)*(x-alpha) + (y-beta)*(y-beta)+ eps*eps )) ;
+        ret(1) = (y - beta)/(sqrt((x-alpha)*(x-alpha) + (y-beta)*(y-beta) + eps*eps )) ;
+        
+        return ret ;
+        
+        
+    }
+};
+
+
+
+
+template<typename T>
 struct circle_distance_ls: public level_set<T>
 {
     T radius, alpha, beta;

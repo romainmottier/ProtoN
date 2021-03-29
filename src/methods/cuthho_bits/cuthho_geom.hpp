@@ -1411,12 +1411,19 @@ struct Interface_parametrisation_mesh1d_global
     //        std::cout<<'\n'<<"CI VUOLE UN COPY CONSTUCTORRRR"<<std::endl;
             std::cout<<'\n'<<"Interface coefficient definition: order = "<<basis_degree<<std::endl;
             std::cout<<"Degree jacobian along interface = "<<degree_det<<std::endl;
+//            space_definition_interface_OLD(msh ,basis_degree, basis_size );
+            
             space_definition_interface(msh ,basis_degree, basis_size );
             
             std::cout<<'\n'<<"Space Definition DERIVATIVE: order = "<<der_degree<<std::endl;
         
+//            space_definition_derivative_OLD(msh ,der_degree, der_size );
+            
             space_definition_derivative(msh ,der_degree, der_size );
+            
             std::cout<<'\n'<<"Space Definition CURVATURE: order = "<<dd_degree<<std::endl;
+//            space_definition_curvature_OLD(msh ,dd_degree, dd_size );
+            
             space_definition_curvature(msh ,dd_degree, dd_size );
             std::cout<<'\n'<<std::endl;
         }
@@ -1431,7 +1438,7 @@ struct Interface_parametrisation_mesh1d_global
     
     
     void
-    space_definition_interface(const Mesh& msh , size_t deg , size_t deg_size)
+    space_definition_interface_OLD(const Mesh& msh , size_t deg , size_t deg_size)
     {
         size_t counter_cut_cls = 0;
         size_t counter = 0;
@@ -1704,10 +1711,156 @@ struct Interface_parametrisation_mesh1d_global
         
     }
     
+    void
+    space_definition_interface(const Mesh& msh , size_t deg , size_t deg_size)
+    {
+        std::vector<size_t> cut_cell_cointainer ;
+        size_t counter_cut_cls = 0;
+        size_t counter = 0;
+        for(auto& cl : msh.cells)
+        {
+            if(location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                cut_cell_cointainer.push_back(offset(msh,cl));
+                counter_cut_cls++;
+                for (size_t i_cell = 0; i_cell < cl.user_data.integration_msh.cells.size(); i_cell++)
+                {
+    //                   connectivity_cells[counter].push_back(counter_subcls);
+                    counter_subcls++;
+                }
+                    
+            }
+            counter++;
+        }
+        std::cout<<"Amount of cut cells = "<<counter_cut_cls<<std::endl;
+        std::cout<<"Amount of subcells = "<<counter_subcls<<std::endl;
+            
+        if (deg == 0)
+            throw std::logic_error("error, order zero for interface too slow, at least order 1.");
+            
+        else
+            ndof = counter_subcls * deg ;
+            
+        connectivity_matrix.resize( counter_subcls , std::vector<size_t>(deg_size) ) ;
+             
+        size_t i_cl_global = 0 ;
+        size_t i_inner = 2 ;
+        point<T,2> first_point ;
+        point<T,2> cell_end_point ;
+        bool first_cut_cell_found = FALSE ;
+        
+       
+    
+        size_t cl_i = 0;
+        while(cut_cell_cointainer.size()>0)
+        {
+            if(cl_i > cut_cell_cointainer.size()-1 )
+                std::cout<<"stop: first_pt = "<<first_point<<" pt_to_find = "<<cell_end_point<<std::endl;
+            size_t k_offset =  cut_cell_cointainer[cl_i];
+            auto cl = msh.cells[k_offset];
+            auto msh_int = cl.user_data.integration_msh ;
+            
+            if(!first_cut_cell_found)
+            {
+                cut_cell_cointainer.erase(cut_cell_cointainer.begin() ); //pop_front();
+                for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                {
+                    if(i_local == 0 || i_local == 1)
+                        connectivity_matrix[0][i_local] = i_local;
+                    else
+                        connectivity_matrix[0][i_local] = i_inner++;
+                }
+                connectivity_cells[k_offset].push_back(i_cl_global);
+                i_cl_global++;
+                for (size_t i_cell = 1; i_cell < msh_int.cells.size(); i_cell++)
+                {
+                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                    {
+                        if(i_local == 0)
+                            connectivity_matrix[i_cl_global][0] = connectivity_matrix[i_cl_global - 1][1];
+                        else if(i_local == 1)
+                            connectivity_matrix[i_cl_global][1] = i_inner++ ;
+                        else
+                            connectivity_matrix[i_cl_global][i_local] = i_inner++;
+                    }
+                    connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                    i_cl_global++;
+                }
+                    
+                first_cut_cell_found = TRUE;
+                first_point = *cl.user_data.interface.begin() ;
+                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                cl_i = 0;
+            }
+            else if( first_cut_cell_found && cell_end_point == *cl.user_data.interface.begin() && !( first_point == cell_end_point  ) )
+            {
+                cut_cell_cointainer.erase(cut_cell_cointainer.begin() + cl_i );
+//                cut_cell_cointainer.pop_front();
+                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                {
+                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                    {
+                        if(i_local == 0)
+                            connectivity_matrix[i_cl_global][0] = connectivity_matrix[i_cl_global - 1][1];
+                        else if(i_local == 1)
+                                connectivity_matrix[i_cl_global][1] = i_inner++ ;
+                        else
+                            connectivity_matrix[i_cl_global][i_local] = i_inner++;
+                    }
+                    connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
+                    i_cl_global++;
+                }
+                cell_end_point = *(cl.user_data.interface.end() -1) ;
+                cl_i = 0;
+  
+            }
+            else if (first_point == cell_end_point)
+                break;
+            else
+                cl_i++;
+                         
+        }
+        connectivity_matrix[counter_subcls-1][1] = 0 ;
+        for( size_t i_local = 2 ; i_local < deg_size ; i_local++)
+            connectivity_matrix[counter_subcls-1][i_local] -= 1 ;
+                
+
+                
+        
+            
+            
+        interface0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+        interface1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+
+        Interface_parametrisation_mesh1d curve(deg);
+        auto ref_nodes = reference_nodes_ordered_01<T>(deg);
+        for( const auto& cl : msh.cells )
+        {
+            if( location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                auto msh_int = cl.user_data.integration_msh ;
+               
+                auto T_cells =  get_global_cells_interface(msh , cl);
+                size_t loc_counter = 0 ;
+                for(auto& Tj : T_cells )
+                {
+                    auto pts = points(msh_int,msh_int.cells[loc_counter]);
+                    for (size_t i = 0; i < deg_size; i++){
+                        auto interface = curve(ref_nodes[i].x(),pts) ;
+                        interface0(i,Tj) = interface(0) ;
+                        interface1(i,Tj) = interface(1) ;
+                    }
+                    
+                    loc_counter++;
+                }
+            }
+        }
+        
+    }
     
     
     void
-    space_definition_derivative(const Mesh& msh , size_t deg , size_t deg_size)
+    space_definition_derivative_OLD(const Mesh& msh , size_t deg , size_t deg_size)
     {
 //        size_t counter_cut_cls = 0;
 //        size_t counter = 0;
@@ -1909,9 +2062,163 @@ struct Interface_parametrisation_mesh1d_global
 
     }
     
+    void
+    space_definition_derivative(const Mesh& msh , size_t deg , size_t deg_size)
+    {
+
+        std::vector<size_t> cut_cell_cointainer ;
+        for(auto& cl : msh.cells)
+        {
+            if(location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                cut_cell_cointainer.push_back(offset(msh,cl));
+                    
+            }
+           
+        }
+ 
+        
+        if (deg == 0)
+            ndof_der = counter_subcls ;
+        else
+            ndof_der = counter_subcls * deg ;
+        
+        connectivity_matrix_der.resize( counter_subcls , std::vector<size_t>(deg_size) ) ;
+         
+        size_t i_cl_global = 0 ;
+        size_t i_inner = 2 ;
+        point<T,2> first_point ;
+        point<T,2> cell_end_point ;
+        bool first_cut_cell_found = FALSE ;
+        
+        if( deg == 0 )
+        {
+            size_t cl_i = 0;
+            while(cut_cell_cointainer.size()>0)
+            {
+                size_t k_offset =  cut_cell_cointainer[cl_i];
+                auto cl = msh.cells[k_offset];
+                auto msh_int = cl.user_data.integration_msh ;
+                    
+                if(!first_cut_cell_found)
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() );
+                    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        connectivity_matrix_der[i_cl_global][0] = i_cl_global;
+                        i_cl_global++;
+                        
+                    }
+                    first_cut_cell_found = TRUE;
+                    first_point = *cl.user_data.interface.begin() ;
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+                else if( first_cut_cell_found && cell_end_point == *cl.user_data.interface.begin() && !( first_point == cell_end_point  ) )
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() + cl_i );
+                           
+                    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        connectivity_matrix_der[i_cl_global][0] = i_cl_global;
+                        i_cl_global++;
+                    }
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+                else if (first_point == cell_end_point)
+                    break;
+                else
+                    cl_i++;
+            }
+         
+            
+        }
+        
+        else
+        {
+            size_t cl_i = 0;
+            while(cut_cell_cointainer.size()>0)
+            {
+                size_t k_offset =  cut_cell_cointainer[cl_i];
+                auto cl = msh.cells[k_offset];
+                auto msh_int = cl.user_data.integration_msh ;
+                if(!first_cut_cell_found)
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() );
+                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                    {
+                        if(i_local == 0 || i_local == 1)
+                            connectivity_matrix_der[0][i_local] = i_local;
+                        else
+                            connectivity_matrix_der[0][i_local] = i_inner++;
+                    }
+                    i_cl_global++;
+                    for (size_t i_cell = 1; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                        {
+                            if(i_local == 0)
+                                connectivity_matrix_der[i_cl_global][0] = connectivity_matrix_der[i_cl_global - 1][1];
+                            else if(i_local == 1)
+                                connectivity_matrix_der[i_cl_global][1] = i_inner++ ;
+                            else
+                                connectivity_matrix_der[i_cl_global][i_local] = i_inner++;
+                        }
+                        i_cl_global++;
+                    }
+                    first_cut_cell_found = TRUE;
+                    first_point = *cl.user_data.interface.begin() ;
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+                else if( first_cut_cell_found && cell_end_point == *cl.user_data.interface.begin() && !( first_point == cell_end_point  ) )
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() + cl_i );
+                    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                        {
+                            if(i_local == 0)
+                                connectivity_matrix_der[i_cl_global][0] = connectivity_matrix_der[i_cl_global - 1][1];
+                            else if(i_local == 1)
+                                connectivity_matrix_der[i_cl_global][1] = i_inner++ ;
+                            else
+                                connectivity_matrix_der[i_cl_global][i_local] = i_inner++;
+                        }
+                        i_cl_global++;
+                    }
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+                else if (first_point == cell_end_point)
+                    break;
+                else
+                    cl_i++;
+                     
+             
+            }
+            connectivity_matrix_der[counter_subcls-1][1] = 0 ;
+            for( size_t i_local = 2 ; i_local < deg_size ; i_local++)
+                connectivity_matrix_der[counter_subcls-1][i_local] -= 1 ;
+            
+        }
+        
+       
+            
+
+       
+        
+        derivative0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+        derivative1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+        
+        normal0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+        normal1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+
+    }
     
     void
-    space_definition_curvature(const Mesh& msh , size_t deg , size_t deg_size)
+    space_definition_curvature_OLD(const Mesh& msh , size_t deg , size_t deg_size)
     {
 //        size_t counter_cut_cls = 0;
 //        size_t counter = 0;
@@ -2104,6 +2411,160 @@ struct Interface_parametrisation_mesh1d_global
         // DEFINITION OF THE MASS MATRIX -> USEFUL FOR L2 PROJ
 
 //        curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
+            
+        curvature_field = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
+
+    }
+    
+    
+    void
+    space_definition_curvature(const Mesh& msh , size_t deg , size_t deg_size)
+    {
+
+        std::vector<size_t> cut_cell_cointainer ;
+        for(auto& cl : msh.cells)
+        {
+            if(location(msh, cl) == element_location::ON_INTERFACE )
+            {
+                cut_cell_cointainer.push_back(offset(msh,cl));
+                    
+            }
+           
+        }
+        
+        if (deg == 0)
+            ndof_dd = counter_subcls ;
+        else
+            ndof_dd = counter_subcls * deg ;
+        
+        connectivity_matrix_dd.resize( counter_subcls , std::vector<size_t>(deg_size) ) ;
+             
+        size_t i_cl_global = 0 ;
+        size_t i_inner = 2 ;
+        point<T,2> first_point ;
+        point<T,2> cell_end_point ;
+        bool first_cut_cell_found = FALSE ;
+        
+        if( deg == 0 )
+        {
+            size_t cl_i = 0;
+            while(cut_cell_cointainer.size()>0)
+            {
+                size_t k_offset =  cut_cell_cointainer[cl_i];
+                auto cl = msh.cells[k_offset];
+                auto msh_int = cl.user_data.integration_msh ;
+                    
+                if(!first_cut_cell_found)
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() );
+                    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        connectivity_matrix_dd[i_cl_global][0] = i_cl_global;
+                        i_cl_global++;
+                        
+                    }
+                    first_cut_cell_found = TRUE;
+                    first_point = *cl.user_data.interface.begin() ;
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+                else if( first_cut_cell_found && cell_end_point == *cl.user_data.interface.begin() && !( first_point == cell_end_point  ) )
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() + cl_i );
+                    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        connectivity_matrix_dd[i_cl_global][0] = i_cl_global;
+                        i_cl_global++;
+                    }
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+                else if (first_point == cell_end_point)
+                    break;
+                else
+                    cl_i++;
+                        
+            
+            }
+                        
+        }
+        else
+        {
+            size_t cl_i = 0;
+            while(cut_cell_cointainer.size()>0)
+            {
+                size_t k_offset =  cut_cell_cointainer[cl_i];
+                auto cl = msh.cells[k_offset];
+                auto msh_int = cl.user_data.integration_msh ;
+                if(!first_cut_cell_found)
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() );
+                    for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                    {
+                        if(i_local == 0 || i_local == 1)
+                            connectivity_matrix_dd[0][i_local] = i_local;
+                        else
+                            connectivity_matrix_dd[0][i_local] = i_inner++;
+                    }
+                    i_cl_global++;
+                    for (size_t i_cell = 1; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                        {
+                            if(i_local == 0)
+                                connectivity_matrix_dd[i_cl_global][0] = connectivity_matrix_dd[i_cl_global - 1][1];
+                            else if(i_local == 1)
+                                connectivity_matrix_dd[i_cl_global][1] = i_inner++ ;
+                            else
+                                connectivity_matrix_dd[i_cl_global][i_local] = i_inner++;
+                        }
+//                            connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
+                            i_cl_global++;
+                    }
+                    first_cut_cell_found = TRUE;
+                    first_point = *cl.user_data.interface.begin() ;
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                }
+           
+                
+                else if( first_cut_cell_found && cell_end_point == *cl.user_data.interface.begin() && !( first_point == cell_end_point  ) )
+                {
+                    cut_cell_cointainer.erase(cut_cell_cointainer.begin() + cl_i );
+                    for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++)
+                    {
+                        for( size_t i_local = 0 ; i_local < deg_size ; i_local++)
+                        {
+                            if(i_local == 0)
+                                connectivity_matrix_dd[i_cl_global][0] = connectivity_matrix_dd[i_cl_global - 1][1];
+                            else if(i_local == 1)
+                                connectivity_matrix_dd[i_cl_global][1] = i_inner++ ;
+                            else
+                                connectivity_matrix_dd[i_cl_global][i_local] = i_inner++;
+                        }
+ 
+                        i_cl_global++;
+                    }
+                    
+                    cell_end_point = *(cl.user_data.interface.end() -1) ;
+                    cl_i = 0;
+                            
+                }
+                else if (first_point == cell_end_point)
+                    break;
+                else
+                    cl_i++;
+                        
+            }
+    
+            connectivity_matrix_dd[counter_subcls-1][1] = 0 ;
+            for( size_t i_local = 2 ; i_local < deg_size ; i_local++)
+                connectivity_matrix_dd[counter_subcls-1][i_local] -= 1 ;
+
+            
+        }
+                    
+ 
             
         curvature_field = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( deg_size, counter_subcls);
 
@@ -3400,6 +3861,71 @@ struct Interface_parametrisation_mesh1d_global
                                                
     }
     
+    
+
+    void
+    make_smooth_filter_curvature()
+    {
+        std::cout<<"Filtering of curvature."<<std::endl;
+           
+               
+        // new_HHO contains the discontinuous curvature field
+        Matrix<T, Dynamic, Dynamic>  new_HHO = Matrix<T, Dynamic, Dynamic>::Zero( dd_size, counter_subcls );
+        Interface_parametrisation_mesh1d curve(basis_degree);
+        auto ref_nodes = reference_nodes_ordered_01<T>(dd_degree);
+           
+                
+        size_t counter_old , counter_next ;
+        for(size_t counter_bis = 0 ; counter_bis < counter_subcls ;counter_bis++)
+        {
+            if(counter_bis == 0){
+                counter_old = counter_subcls - 1;
+                counter_next = counter_bis + 1;
+            }
+            else if(counter_bis == counter_subcls - 1){
+                counter_old = counter_bis - 1;
+                counter_next = 0;
+            }
+            else{
+                counter_old = counter_bis - 1;
+                counter_next = counter_bis + 1;
+            }
+                    
+//            std::cout<<"Cell Tj = "<<counter_bis<<" , cell old = "<<counter_old<<std::endl;
+            if(dd_size < 2)
+                throw std::logic_error("error, order zero for interface too slow, at least order 1.");
+            else if(dd_size == 2)
+            {
+                curvature_field(0,counter_bis) =  0.5*curvature_field(0,counter_bis) + 0.25*curvature_field(1,counter_bis) + 0.25*curvature_field(0,counter_old);
+//                curvature_field(1,counter_bis) =  0.5*curvature_field(1,counter_bis) + 0.25*curvature_field(0,counter_bis) + 0.25*curvature_field(1,counter_next);
+                
+                
+            }
+            
+            else if(dd_size == 3)
+            {
+                curvature_field(0,counter_bis) =  0.5*curvature_field(0,counter_bis) + 0.25*curvature_field(2,counter_bis) + 0.25*curvature_field(2,counter_old);
+                curvature_field(2,counter_bis) =  0.5*curvature_field(2,counter_bis) + 0.25*curvature_field(0,counter_bis) + 0.25*curvature_field(1,counter_bis);
+//                curvature_field(1,counter_bis) =  0.5*curvature_field(1,counter_bis) + 0.25*curvature_field(2,counter_bis) + 0.25*curvature_field(2,counter_next);
+            }
+            else
+            {
+                curvature_field(0,counter_bis) =  0.5*curvature_field(0,counter_bis) + 0.25*curvature_field(2,counter_bis) + 0.25*curvature_field(2,counter_old);
+                curvature_field(2,counter_bis) =  0.5*curvature_field(2,counter_bis) + 0.25*curvature_field(0,counter_bis) + 0.25*curvature_field(3,counter_bis);
+                
+                for (size_t i = 3; i < dd_size - 1 ; i++)
+                {
+                    curvature_field(i,counter_bis) =  0.5*curvature_field(i,counter_bis) + 0.25*curvature_field(i-1,counter_bis) + 0.25*curvature_field(i+1,counter_bis);
+                    
+                }
+                curvature_field(dd_size - 1,counter_bis) =  0.5*curvature_field(dd_size - 1,counter_bis) + 0.25*curvature_field(dd_size - 2,counter_bis) + 0.25*curvature_field(1,counter_bis);
+                
+            }
+
+            
+        }
+                                               
+    }
     
     
     Matrix<T, 2, 1>
