@@ -68,9 +68,9 @@ static_condensation_compute(const Matrix<T, Dynamic, Dynamic> lhs, const Matrix<
 
 template<typename T>
 Matrix<T, Dynamic, 1>
-static_condensation_recover(const Matrix<T, Dynamic, Dynamic> lhs, const Matrix<T, Dynamic, 1> rhs,
+static_condensation_recover(const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs,
                             const size_t cell_size, const size_t face_size,
-                            const Matrix<T, Dynamic, 1> solF)
+                            const Matrix<T, Dynamic, 1>& solF)
 {
     size_t size_tot = cell_size + face_size;
     assert(lhs.cols() == size_tot && lhs.rows() == size_tot);
@@ -1123,12 +1123,12 @@ const size_t cell_size, const size_t face_size)
 template<typename T>
 Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_v
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, Dynamic> lhs_C,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, Dynamic>& lhs_C,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  //const Matrix<T, Dynamic, 1> mult,
- const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
- const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
+ const Matrix<T, Dynamic, 1>& mult, const T coeff_cell,
+ const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1>& sol_sc)
 {
     using matrix = Matrix<T, Dynamic, Dynamic>;
     using vector = Matrix<T, Dynamic, 1>;

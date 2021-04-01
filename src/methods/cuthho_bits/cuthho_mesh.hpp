@@ -60,7 +60,8 @@ struct cell_cuthho_info
     
     std::vector< std::pair<point<T,2>, T> > integration_n; // composite integration rules
     std::vector< std::pair<point<T,2>, T> > integration_p;
-
+    
+    std::vector<point<T, 2> > Lagrange_nodes_Qk ;
     bool                        highlight; // for tests
     
     std::vector<size_t>         offset_subcells;

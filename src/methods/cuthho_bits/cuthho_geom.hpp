@@ -1394,13 +1394,13 @@ struct Interface_parametrisation_mesh1d_global
     {
       
 //        std::cout<<'\n'<<"CI VUOLE UN COPY CONSTUCTORRRR"<<std::endl;
-        std::cout<<'\n'<<"Interface coefficient definition: order = "<<basis_degree<<std::endl;
+        std::cout<<'\n'<<"Parametric interface: local order = "<<basis_degree<<std::endl;
         space_definition_interface(msh ,basis_degree, basis_size );
         
-        std::cout<<'\n'<<"Space Definition DERIVATIVE: order = "<<der_degree<<std::endl;
+        std::cout<<'\n'<<"Parametric DERIVATIVE: local order = "<<der_degree<<std::endl;
     
         space_definition_derivative(msh ,der_degree, der_size );
-        std::cout<<'\n'<<"Space Definition CURVATURE: order = "<<dd_degree<<std::endl;
+        std::cout<<'\n'<<"Parametric CURVATURE: local order = "<<dd_degree<<std::endl;
         space_definition_curvature(msh ,dd_degree, dd_size );
         std::cout<<'\n'<<std::endl;
     }
@@ -1409,25 +1409,81 @@ struct Interface_parametrisation_mesh1d_global
         {
           
     //        std::cout<<'\n'<<"CI VUOLE UN COPY CONSTUCTORRRR"<<std::endl;
-            std::cout<<'\n'<<"Interface coefficient definition: order = "<<basis_degree<<std::endl;
+            std::cout<<'\n'<<"Parametric interface: local order = "<<basis_degree<<std::endl;
             std::cout<<"Degree jacobian along interface = "<<degree_det<<std::endl;
 //            space_definition_interface_OLD(msh ,basis_degree, basis_size );
             
             space_definition_interface(msh ,basis_degree, basis_size );
             
-            std::cout<<'\n'<<"Space Definition DERIVATIVE: order = "<<der_degree<<std::endl;
+            std::cout<<"Parametric DERIVATIVE: local order = "<<der_degree<<std::endl;
         
 //            space_definition_derivative_OLD(msh ,der_degree, der_size );
             
             space_definition_derivative(msh ,der_degree, der_size );
             
-            std::cout<<'\n'<<"Space Definition CURVATURE: order = "<<dd_degree<<std::endl;
+            std::cout<<"Parametric CURVATURE: local order = "<<dd_degree<<std::endl;
 //            space_definition_curvature_OLD(msh ,dd_degree, dd_size );
             
             space_definition_curvature(msh ,dd_degree, dd_size );
             std::cout<<'\n'<<std::endl;
         }
 
+    
+    template< typename Level_Set , typename OUTPUT >
+    void
+    updating_parametric_interface(const Mesh& msh, Level_Set& ls_cell,bool l2proj,bool avg,bool l2proj_para,bool disc)
+    {
+        std::cout<<"Parametric interface updating."<<std::endl;
+        space_definition_interface(msh ,basis_degree, basis_size );
+        space_definition_derivative(msh ,der_degree, der_size );
+        space_definition_curvature(msh ,dd_degree, dd_size );
+        this->make_L2_proj_para_derivative(msh);
+        //---------------------------- L2 global Normal from LS  ----------------------- //
+        if(l2proj){
+            if(!disc)
+                this->make_L2_proj_para_normal(msh,ls_cell);
+            else
+                this->make_L2_proj_para_normal_disc(msh,ls_cell);
+        }
+                              
+        //---------------------------- Avg Normal from LS  ---------------------------- //
+        if(avg){
+            if(!disc)
+                this->make_avg_L2_local_proj_para_normal(msh, ls_cell);
+            else
+                this->make_avg_L2_local_proj_para_normal_disc(msh, ls_cell);
+        }
+                       
+        // *********************** CURVATURE PARA *************************//
+                       
+        //------------- L2 cont curvature from parametric interface  r ---------- //
+        if(l2proj_para)
+            this->make_L2_proj_para_curvature(msh);
+
+                        
+        //---------------------------- L2 global Curvature from LS  ----------------------- //
+        if(l2proj){
+            if(!disc)
+                this->make_L2_proj_para_curvature(msh,ls_cell);
+            else
+                this->make_L2_proj_para_curvature_disc(msh,ls_cell);
+        }
+                      
+        //---------------------------- Avg Curvature from LS  ---------------------------- //
+        if(avg){
+            if(!disc)
+                this->make_avg_L2_local_proj_para_curvature(msh, ls_cell);
+            else
+                this->make_avg_L2_local_proj_para_curvature_disc(msh, ls_cell);
+                 
+        }
+        
+        
+    }
+    
+    
+
+    
     
     std::vector<size_t>
     get_global_cells_interface(const Mesh& msh , const typename Mesh::cell_type& cl) const
@@ -1717,6 +1773,7 @@ struct Interface_parametrisation_mesh1d_global
         std::vector<size_t> cut_cell_cointainer ;
         size_t counter_cut_cls = 0;
         size_t counter = 0;
+        counter_subcls=0 ; 
         for(auto& cl : msh.cells)
         {
             if(location(msh, cl) == element_location::ON_INTERFACE )
@@ -1742,7 +1799,8 @@ struct Interface_parametrisation_mesh1d_global
             ndof = counter_subcls * deg ;
             
         connectivity_matrix.resize( counter_subcls , std::vector<size_t>(deg_size) ) ;
-             
+        connectivity_cells.clear();
+        connectivity_cells.resize(msh.cells.size()) ;
         size_t i_cl_global = 0 ;
         size_t i_inner = 2 ;
         point<T,2> first_point ;
@@ -2799,7 +2857,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_normal_bis( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS NORMAL BY AVERAGE OF DISCONTINUITY."<<std::endl;
+        std::cout<<"---> Parametric normal smooth: CONTINUITY BY AVG."<<std::endl;
         // new_HHO contains the discontinuous curvature field
         Matrix<T, Dynamic, Dynamic>  new_HHO0 = Matrix<T, Dynamic, Dynamic>::Zero( der_size, counter_subcls );
         Matrix<T, Dynamic, Dynamic>  new_HHO1 = Matrix<T, Dynamic, Dynamic>::Zero( der_size, counter_subcls );
@@ -2982,7 +3040,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_normal( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS NORMAL BY AVERAGE OF DISCONTINUITY."<<std::endl;
+        std::cout<<"---> Parametric normal smooth: CONTINUITY BY AVG."<<std::endl;
         // new_HHO contains the discontinuous curvature field
         Matrix<T, Dynamic, Dynamic>  new_HHO0 = Matrix<T, Dynamic, Dynamic>::Zero( der_size, counter_subcls );
         Matrix<T, Dynamic, Dynamic>  new_HHO1 = Matrix<T, Dynamic, Dynamic>::Zero( der_size, counter_subcls );
@@ -3111,7 +3169,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_normal_disc( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-          std::cout<<"CONTINUOUS NORMAL BY AVERAGE OF DISCONTINUITY."<<std::endl;
+        std::cout<<"---> Parametric normal smooth: CONTINUITY BY AVG."<<std::endl;
           // new_HHO contains the discontinuous curvature field
           Matrix<T, Dynamic, Dynamic>  new_HHO0 = Matrix<T, Dynamic, Dynamic>::Zero( der_size, counter_subcls );
           Matrix<T, Dynamic, Dynamic>  new_HHO1 = Matrix<T, Dynamic, Dynamic>::Zero( der_size, counter_subcls );
@@ -3241,7 +3299,8 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_L2_proj_para_curvature( const Mesh& msh , size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY L2 PROJECTION OF THE DISCRETE PARAMETRIC CURVATURE"<<std::endl;
+
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY L2 proj of parametric curvature."<<std::endl;
         SparseMatrix<T> Global_Mass = SparseMatrix<T>( ndof_dd, ndof_dd );
         std::vector< Triplet<T> >       triplets;
         Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
@@ -3308,7 +3367,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_L2_proj_para_curvature( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY L2 PROJECTION OF THE DISCRETE CURVATURE."<<std::endl;
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY L2 proj of LS discrete curvature."<<std::endl;
         SparseMatrix<T> Global_Mass = SparseMatrix<T>( ndof_dd, ndof_dd );
         std::vector< Triplet<T> >       triplets;
         Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
@@ -3374,7 +3433,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_L2_proj_para_curvature_disc( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY L2 PROJECTION OF THE DISCRETE CURVATURE."<<std::endl;
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY L2 proj of LS discrete curvature."<<std::endl;
         SparseMatrix<T> Global_Mass = SparseMatrix<T>( ndof_dd, ndof_dd );
         std::vector< Triplet<T> >       triplets;
         Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
@@ -3441,9 +3500,8 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_curvature( const Mesh& msh , size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY AVERAGE OF DISCONTINUITY AND LOCAL L2 PROJECTION OF THE DISCRETE PARAMETRIC CURVATURE."<<std::endl;
 //        Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
-        
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY AVG of LS discrete curvature."<<std::endl;
        
         // new_HHO contains the discontinuous curvature field
 //        Matrix<T, Dynamic, 1>  new_FEM = Matrix<T, Dynamic, 1>::Zero( ndof_dd , 1);
@@ -3506,7 +3564,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_curvature_bis( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY AVERAGE OF DISCONTINUITY."<<std::endl;
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY AVG of parametric curvature."<<std::endl;
 //        Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
        
            
@@ -3648,7 +3706,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_curvature( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY AVERAGE OF DISCONTINUITY."<<std::endl;
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY AVG proj of parametric curvature."<<std::endl;
     //        Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
            
                
@@ -3757,7 +3815,7 @@ struct Interface_parametrisation_mesh1d_global
     void
     make_avg_L2_local_proj_para_curvature_disc( const Mesh& msh , Level_Set& ls_cell, size_t di = 1)
     {
-        std::cout<<"CONTINUOUS CURVAURE BY AVERAGE OF DISCONTINUITY."<<std::endl;
+        std::cout<<"---> Parametric CURVATURE smooth: CONTINUITY BY AVG of parametric curvature."<<std::endl;
     //        Matrix<T, Dynamic, 1> curvature_FE = Eigen::Matrix<T, Dynamic, 1>::Zero( ndof_dd );
            
                
@@ -3867,7 +3925,7 @@ struct Interface_parametrisation_mesh1d_global
     make_smooth_filter_curvature()
     {
         std::cout<<"Filtering of curvature."<<std::endl;
-           
+        std::cout<<"---> Parametric CURVATURE FILTER: AVG (3 elements) of parametric curvature values."<<std::endl;
                
         // new_HHO contains the discontinuous curvature field
         Matrix<T, Dynamic, Dynamic>  new_HHO = Matrix<T, Dynamic, Dynamic>::Zero( dd_size, counter_subcls );
@@ -3897,6 +3955,8 @@ struct Interface_parametrisation_mesh1d_global
             else if(dd_size == 2)
             {
                 curvature_field(0,counter_bis) =  0.5*curvature_field(0,counter_bis) + 0.25*curvature_field(1,counter_bis) + 0.25*curvature_field(0,counter_old);
+                
+                curvature_field(1,counter_old) = curvature_field(0,counter_bis) ;
 //                curvature_field(1,counter_bis) =  0.5*curvature_field(1,counter_bis) + 0.25*curvature_field(0,counter_bis) + 0.25*curvature_field(1,counter_next);
                 
                 
@@ -3906,12 +3966,14 @@ struct Interface_parametrisation_mesh1d_global
             {
                 curvature_field(0,counter_bis) =  0.5*curvature_field(0,counter_bis) + 0.25*curvature_field(2,counter_bis) + 0.25*curvature_field(2,counter_old);
                 curvature_field(2,counter_bis) =  0.5*curvature_field(2,counter_bis) + 0.25*curvature_field(0,counter_bis) + 0.25*curvature_field(1,counter_bis);
+                curvature_field(1,counter_old) = curvature_field(0,counter_bis) ;
 //                curvature_field(1,counter_bis) =  0.5*curvature_field(1,counter_bis) + 0.25*curvature_field(2,counter_bis) + 0.25*curvature_field(2,counter_next);
             }
             else
             {
                 curvature_field(0,counter_bis) =  0.5*curvature_field(0,counter_bis) + 0.25*curvature_field(2,counter_bis) + 0.25*curvature_field(2,counter_old);
                 curvature_field(2,counter_bis) =  0.5*curvature_field(2,counter_bis) + 0.25*curvature_field(0,counter_bis) + 0.25*curvature_field(3,counter_bis);
+                curvature_field(1,counter_old) = curvature_field(0,counter_bis) ;
                 
                 for (size_t i = 3; i < dd_size - 1 ; i++)
                 {
