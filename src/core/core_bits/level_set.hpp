@@ -25,6 +25,8 @@ template<typename T>
 class level_set
 {
    public:
+    size_t grad_deg = 0 ;
+    size_t div_deg = 0;
     virtual T operator()(const point<T,2>& pt) const
     {
     }
@@ -259,6 +261,44 @@ struct elliptic_level_set: public level_set<T>
     }
 };
 
+
+template<typename T>
+struct elliptic_level_set_signed_distance: public level_set<T>
+{
+    T radius_a, radius_b, alpha, beta;
+
+    elliptic_level_set_signed_distance(T r_a, T r_b , T a, T b)
+        : radius_a(r_a), radius_b(r_b), alpha(a), beta(b)
+    {}
+    
+    elliptic_level_set_signed_distance(){}
+    
+    elliptic_level_set_signed_distance(const elliptic_level_set_signed_distance& other){
+        radius_a = other.radius_a ;
+        radius_b = other.radius_b ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        
+    }
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+
+        return sqrt(radius_b*radius_b*(x-alpha)*(x-alpha) + radius_a*radius_a*(y-beta)*(y-beta)) - sqrt(radius_a*radius_a*radius_b*radius_b) ;
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        ret(0) = 2*radius_b*radius_b*(pt.x() - alpha);
+        ret(1) = 2*radius_a*radius_a*(pt.y() - beta);
+        return ret;
+    }
+};
+
+
 template<typename T>
 struct elliptic_level_set_new: public level_set<T>
 {
@@ -466,6 +506,68 @@ struct flower_level_set: public level_set<T>
 };
 
 
+template<typename T>
+struct flower_level_set_signed_distance: public level_set<T>
+{
+    T radius, alpha, beta, a;
+    size_t N;
+
+    flower_level_set_signed_distance(T r, T al, T b, size_t N_, T a_)
+        : radius(r), alpha(al), beta(b), N(N_), a(a_)
+    {}
+
+    flower_level_set_signed_distance(){}
+    
+    flower_level_set_signed_distance(const flower_level_set_signed_distance& other){
+        radius = other.radius ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        a = other.a ;
+        
+    }
+    
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+
+        T theta;
+        if(x == alpha && y < beta)
+            theta = - M_PI / 2.0;
+        else if(x == alpha && y >= beta)
+            theta = M_PI / 2.0;
+        else
+            theta = atan((y-beta)/(x-alpha));
+
+        if(x < alpha)
+            theta = theta + M_PI;
+
+        return sqrt((x-alpha)*(x-alpha) + (y-beta)*(y-beta)) - sqrt(radius*radius
+            - a * std::cos(N*theta + M_PI) );
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto X = pt.x() - alpha;
+        auto Y = pt.y() - beta;
+
+        T theta;
+        if(X == 0 && Y < 0)
+            theta = - M_PI / 2.0;
+        else if(X == 0 && Y >= 0)
+            theta = M_PI / 2.0;
+        else
+            theta = atan( Y / X );
+
+        if(pt.x() < alpha)
+            theta = theta + M_PI;
+        
+        ret(0) = 2*X - a * N * std::sin(N * theta) * Y / (X*X + Y*Y);
+        ret(1) = 2*Y + a * N * std::sin(N * theta) * X / (X*X + Y*Y);
+        return ret;
+    }
+};
 
 /*
 

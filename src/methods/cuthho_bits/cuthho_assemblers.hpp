@@ -27,7 +27,7 @@
 ////////////////////////  STATIC CONDENSATION  //////////////////////////
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
-static_condensation_compute(const Matrix<T, Dynamic, Dynamic> lhs, const Matrix<T, Dynamic, 1> rhs,
+static_condensation_compute(const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs,
                             const size_t cell_size, const size_t face_size)
 {
     size_t size_tot = cell_size + face_size;
@@ -161,7 +161,7 @@ public:
     Matrix<T, Dynamic, 1>   RHS;
 
 
-    virt_scalar_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
+    virt_scalar_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info& hdi)
         : dir_func(dirichlet_bf), di(hdi)
     {
     }
@@ -427,7 +427,7 @@ class virt_fict_assembler : public virt_scalar_assembler<Mesh, Function>
 public:
 
     virt_fict_assembler(const Mesh& msh, const Function& dirichlet_bf,
-                        hho_degree_info hdi, element_location where)
+                        hho_degree_info& hdi, element_location where)
         : virt_scalar_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         if( where != element_location::IN_NEGATIVE_SIDE
@@ -483,7 +483,7 @@ class fict_assembler : public virt_fict_assembler<Mesh, Function>
 
 public:
     fict_assembler(const Mesh& msh, const Function& dirichlet_bf,
-                    hho_degree_info hdi, element_location where)
+                   hho_degree_info& hdi, element_location where)
         : virt_fict_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where)
     {
         this->loc_cbs = cell_basis<Mesh,T>::size( this->di.cell_degree() );
@@ -529,8 +529,8 @@ public:
 
 
 template<typename Mesh, typename Function>
-auto make_fict_assembler(const Mesh& msh, const Function dirichlet_bf,
-                          hho_degree_info hdi, element_location where)
+auto make_fict_assembler(const Mesh& msh, const Function& dirichlet_bf,
+                         hho_degree_info& hdi, element_location where)
 {
     return fict_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where);
 }
@@ -547,7 +547,7 @@ class fict_condensed_assembler : public virt_fict_assembler<Mesh, Function>
 
 public:
     fict_condensed_assembler(const Mesh& msh, const Function& dirichlet_bf,
-                              hho_degree_info hdi, element_location where)
+                             hho_degree_info& hdi, element_location where)
         : virt_fict_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where)
     {
         this->loc_cbs = 0;
@@ -612,8 +612,8 @@ public:
 
 
 template<typename Mesh, typename Function>
-auto make_fict_condensed_assembler(const Mesh& msh, const Function dirichlet_bf,
-                                    hho_degree_info hdi, element_location where)
+auto make_fict_condensed_assembler(const Mesh& msh, const Function& dirichlet_bf,
+                                   hho_degree_info& hdi, element_location where)
 {
     return fict_condensed_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where);
 }
@@ -630,7 +630,7 @@ class virt_interface_assembler : public virt_scalar_assembler<Mesh, Function>
 
 public:
 
-    virt_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
+    virt_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info& hdi)
         : virt_scalar_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         this->loc_zone = element_location::ON_INTERFACE;
@@ -692,7 +692,7 @@ class interface_assembler : public virt_interface_assembler<Mesh, Function>
 
 public:
 
-    interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
+    interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info& hdi)
         : virt_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         auto celdeg = this->di.cell_degree();
@@ -763,7 +763,7 @@ public:
 
 
 template<typename Mesh, typename Function>
-auto make_interface_assembler(const Mesh& msh, Function dirichlet_bf, hho_degree_info hdi)
+auto make_interface_assembler(const Mesh& msh, Function& dirichlet_bf, hho_degree_info& hdi)
 {
     return interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
@@ -782,7 +782,7 @@ class interface_condensed_assembler : public virt_interface_assembler<Mesh, Func
 public:
 
     interface_condensed_assembler(const Mesh& msh, const Function& dirichlet_bf,
-                                   hho_degree_info hdi)
+                                  hho_degree_info& hdi)
         : virt_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         auto facdeg = this->di.face_degree();
@@ -882,7 +882,7 @@ public:
 
 template<typename Mesh, typename Function>
 auto make_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
-                                         hho_degree_info hdi)
+                                        hho_degree_info& hdi)
 {
     return interface_condensed_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
@@ -900,8 +900,8 @@ auto make_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
 stokes_static_condensation_compute
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  const size_t cell_size, const size_t face_size)
 {
     using matrix = Matrix<T, Dynamic, Dynamic>;
@@ -960,11 +960,11 @@ stokes_static_condensation_compute
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
 stokes_full_static_condensation_compute
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, Dynamic> lhs_C,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, Dynamic>& lhs_C,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  //const Matrix<T, Dynamic, 1> mult, const size_t cell_size, const size_t face_size)
-const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
+const Matrix<T, Dynamic, 1>& mult, const T coeff_cell,
 const size_t cell_size, const size_t face_size)
 {
     using matrix = Matrix<T, Dynamic, Dynamic>;
@@ -1104,10 +1104,10 @@ const size_t cell_size, const size_t face_size)
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
 stokes_full_static_condensation_compute
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  //const Matrix<T, Dynamic, 1> mult, const size_t cell_size, const size_t face_size)
-const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
+const Matrix<T, Dynamic, 1>& mult, const T coeff_cell,
 const size_t cell_size, const size_t face_size)
 {
     size_t p_size = lhs_B.rows();
@@ -1232,11 +1232,11 @@ stokes_full_static_condensation_recover_v
 template<typename T>
 Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_v
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  //const Matrix<T, Dynamic, 1> mult,
- const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
- const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
+ const Matrix<T, Dynamic, 1>& mult, const T coeff_cell,
+ const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1>& sol_sc)
 {
     size_t p_size = lhs_B.rows();
     Matrix<T, Dynamic, Dynamic> lhs_C = Matrix<T, Dynamic, Dynamic>::Zero(p_size, p_size);
@@ -1250,12 +1250,12 @@ stokes_full_static_condensation_recover_v
 template<typename T>
 Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_p
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, Dynamic> lhs_C,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, Dynamic>& lhs_C,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  //const Matrix<T, Dynamic, 1> mult,
- const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
- const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
+ const Matrix<T, Dynamic, 1>& mult, const T coeff_cell,
+ const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1>& sol_sc)
 {
     using matrix = Matrix<T, Dynamic, Dynamic>;
     using vector = Matrix<T, Dynamic, 1>;
@@ -1358,11 +1358,11 @@ stokes_full_static_condensation_recover_p
 template<typename T>
 Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_p
-(const Matrix<T, Dynamic, Dynamic> lhs_A, const Matrix<T, Dynamic, Dynamic> lhs_B,
- const Matrix<T, Dynamic, 1> rhs_A, const Matrix<T, Dynamic, 1> rhs_B,
+(const Matrix<T, Dynamic, Dynamic>& lhs_A, const Matrix<T, Dynamic, Dynamic>& lhs_B,
+ const Matrix<T, Dynamic, 1>& rhs_A, const Matrix<T, Dynamic, 1>& rhs_B,
  //const Matrix<T, Dynamic, 1> mult,
- const Matrix<T, Dynamic, 1> mult, const T coeff_cell,
- const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1> sol_sc)
+ const Matrix<T, Dynamic, 1>& mult, const T coeff_cell,
+ const size_t cell_size, const size_t face_size, const Matrix<T, Dynamic, 1>& sol_sc)
 {
     size_t p_size = lhs_B.rows();
     Matrix<T, Dynamic, Dynamic> lhs_C = Matrix<T, Dynamic, Dynamic>::Zero(p_size, p_size);
@@ -1399,11 +1399,43 @@ public:
     Matrix<T, Dynamic, 1>   RHS;
 
 
-    virt_stokes_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
+    virt_stokes_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info& hdi)
         : dir_func(dirichlet_bf), di(hdi)
-    {
-    }
+    {}
 
+    virt_stokes_assembler( virt_stokes_assembler& other)
+    {
+        triplets = other.triplets ;
+        face_table = other.face_table ;
+        cell_table = other.cell_table ;
+        di = other.di;
+        dir_func = other.dir_func;
+        loc_zone = other.loc_zone;
+        num_cells = other.num_cells;
+        num_other_faces = other.num_other_faces;
+        loc_cbs = other.loc_cbs;
+        loc_pbs = other.loc_pbs;
+        LHS = other.LHS;
+        RHS = other.RHS;
+        
+    }
+    
+    virt_stokes_assembler( const virt_stokes_assembler& other)
+    {
+        triplets = other.triplets ;
+        face_table = other.face_table ;
+        cell_table = other.cell_table ;
+        di = other.di;
+        dir_func = other.dir_func;
+        loc_zone = other.loc_zone;
+        num_cells = other.num_cells;
+        num_other_faces = other.num_other_faces;
+        loc_cbs = other.loc_cbs;
+        loc_pbs = other.loc_pbs;
+        LHS = other.LHS;
+        RHS = other.RHS;
+        
+    }
     
     void set_dir_func(const Function& f) {
       dir_func = f;
@@ -1746,7 +1778,7 @@ class virt_stokes_fict_assembler : public virt_stokes_assembler<Mesh, Function>
 public:
 
     virt_stokes_fict_assembler(const Mesh& msh, const Function& dirichlet_bf,
-                               hho_degree_info hdi, element_location where)
+                               hho_degree_info& hdi, element_location where)
         : virt_stokes_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         if( where != element_location::IN_NEGATIVE_SIDE
@@ -1804,7 +1836,7 @@ class stokes_fict_assembler : public virt_stokes_fict_assembler<Mesh, Function>
 public:
 
     stokes_fict_assembler(const Mesh& msh, Function& dirichlet_bf,
-                          hho_degree_info hdi, element_location where)
+                          hho_degree_info& hdi, element_location where)
         : virt_stokes_fict_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where)
     {
 
@@ -1921,7 +1953,7 @@ public:
 
 template<typename Mesh, typename Function>
 auto make_stokes_fict_assembler(const Mesh& msh, Function& dirichlet_bf,
-                                hho_degree_info hdi, element_location where)
+                                hho_degree_info& hdi, element_location where)
 {
     return stokes_fict_assembler<Mesh,Function>(msh, dirichlet_bf, hdi, where);
 }
@@ -1940,7 +1972,7 @@ class stokes_fict_condensed_assembler : public virt_stokes_fict_assembler<Mesh, 
 public:
 
     stokes_fict_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
-                                    hho_degree_info hdi, element_location where)
+                                    hho_degree_info& hdi, element_location where)
         : virt_stokes_fict_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where)
     {
         loc_LHS_A.resize( this->num_cells );
@@ -2099,7 +2131,7 @@ public:
 
 template<typename Mesh, typename Function>
 auto make_stokes_fict_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
-                                          hho_degree_info hdi, element_location where)
+                                          hho_degree_info& hdi, element_location where)
 {
     return stokes_fict_condensed_assembler<Mesh,Function>(msh, dirichlet_bf, hdi, where);
 }
@@ -2114,9 +2146,12 @@ class virt_stokes_interface_assembler : public virt_stokes_assembler<Mesh, Funct
     using T = typename Mesh::coordinate_type;
 
 public:
+    
+    virt_stokes_interface_assembler(virt_stokes_interface_assembler& other ):virt_stokes_assembler<Mesh, Function>(other){}
+    virt_stokes_interface_assembler(const virt_stokes_interface_assembler& other ):virt_stokes_assembler<Mesh, Function>(other){}
 
     virt_stokes_interface_assembler(const Mesh& msh, const Function& dirichlet_bf,
-                                    hho_degree_info hdi)
+                                    hho_degree_info& hdi)
         : virt_stokes_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         this->loc_zone = element_location::ON_INTERFACE;
@@ -2177,7 +2212,12 @@ class stokes_interface_assembler : public virt_stokes_interface_assembler<Mesh, 
 
 public:
 
-    stokes_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
+    stokes_interface_assembler(stokes_interface_assembler& other):virt_stokes_interface_assembler<Mesh, Function>(other) {}
+    
+    stokes_interface_assembler(const stokes_interface_assembler& other):virt_stokes_interface_assembler<Mesh, Function>(other) {}
+    
+    
+    stokes_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info& hdi)
         : virt_stokes_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         auto celdeg = this->di.cell_degree();
@@ -2307,7 +2347,7 @@ public:
 
 
 template<typename Mesh, typename Function>
-auto make_stokes_interface_assembler(const Mesh& msh, Function& dirichlet_bf, hho_degree_info hdi)
+auto make_stokes_interface_assembler(const Mesh& msh, Function& dirichlet_bf, hho_degree_info& hdi)
 {
     return stokes_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
@@ -2326,8 +2366,19 @@ class stokes_interface_condensed_assembler : public virt_stokes_interface_assemb
 
 public:
 
+    stokes_interface_condensed_assembler(stokes_interface_condensed_assembler& other):virt_stokes_interface_assembler<Mesh, Function>(other) {
+        loc_LHS = other.loc_LHS;
+        loc_RHS = other.loc_RHS ;
+    }
+    
+    stokes_interface_condensed_assembler(const stokes_interface_condensed_assembler& other):virt_stokes_interface_assembler<Mesh, Function>(other) {
+        loc_LHS = other.loc_LHS;
+        loc_RHS = other.loc_RHS ;
+    }
+    
+    
     stokes_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
-                                         hho_degree_info hdi)
+                                         hho_degree_info& hdi)
         : virt_stokes_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
     {
         this->loc_zone = element_location::ON_INTERFACE;
@@ -2584,7 +2635,7 @@ public:
 
 template<typename Mesh, typename Function>
 auto make_stokes_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
-                                               hho_degree_info hdi)
+                                               hho_degree_info& hdi)
 {
     return stokes_interface_condensed_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }

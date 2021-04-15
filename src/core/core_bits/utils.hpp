@@ -71,7 +71,26 @@ public:
     explicit hho_degree_info(size_t degree)
         : cell_deg(degree), face_deg(degree), reconstruction_deg(degree+1), grad_deg(degree)
     {}
-
+    
+    
+    hho_degree_info(hho_degree_info& other)
+    {
+        cell_deg = other.cell_deg ;
+        face_deg = other.face_deg ;
+        reconstruction_deg = other.reconstruction_deg ;
+        grad_deg = other.grad_deg ;
+        
+    }
+    
+    hho_degree_info(const hho_degree_info& other)
+    {
+        cell_deg = other.cell_deg ;
+        face_deg = other.face_deg ;
+        reconstruction_deg = other.reconstruction_deg ;
+        grad_deg = other.grad_deg ;
+        
+    }
+    
     hho_degree_info(size_t cd, size_t fd)
     {
         bool c1 = fd > 0  && (cd == fd-1 || cd == fd || cd == fd+1);
@@ -234,7 +253,7 @@ make_rhs(const Mesh& msh, const typename Mesh::face_type& fc,
 template<typename Mesh, typename Function>
 Matrix<typename Mesh::coordinate_type, Dynamic, 1>
 project_function(const Mesh& msh, const typename Mesh::cell_type& cl,
-                 hho_degree_info hdi, const Function& f, size_t di = 0)
+                 hho_degree_info& hdi, const Function& f, size_t di = 0)
 {
     using T = typename Mesh::coordinate_type;
 

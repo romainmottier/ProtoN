@@ -1,0 +1,3 @@
+add_executable(interface_stokes_functional interface_stokes_functional.cpp)
+target_link_libraries(interface_stokes_functional ${LINK_LIBS})
+install(TARGETS interface_stokes_functional RUNTIME DESTINATION bin)

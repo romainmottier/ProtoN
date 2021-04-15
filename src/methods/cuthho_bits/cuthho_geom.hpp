@@ -1429,7 +1429,7 @@ struct Interface_parametrisation_mesh1d_global
         }
 
     
-    template< typename Level_Set , typename OUTPUT >
+    template< typename Level_Set >
     void
     updating_parametric_interface(const Mesh& msh, Level_Set& ls_cell,bool l2proj,bool avg,bool l2proj_para,bool disc)
     {

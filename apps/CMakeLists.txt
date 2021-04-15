@@ -14,4 +14,5 @@ add_subdirectory(high_order_interface_new)
 add_subdirectory(stefano_interface_stokes)
 add_subdirectory(unsteady_interface_stokes)
 add_subdirectory(interface_stokes_new)
+add_subdirectory(interface_stokes_functional)
 

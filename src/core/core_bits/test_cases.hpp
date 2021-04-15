@@ -764,6 +764,66 @@ class test_case_stokes
         {}
 };
 
+
+
+template<typename T, typename Function, typename Mesh , typename Para_Interface >
+class test_case_stokes_eps
+{
+   public:
+    Function level_set_;
+    Para_Interface parametric_interface;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel;
+    std::function<T(const typename Mesh::point_type&)> sol_p;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel;
+    std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump;
+    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> neumann_jump;
+    
+    struct params<T> parms;
+
+    test_case_stokes_eps(const test_case_stokes_eps& other){
+        level_set_ = other.level_set_;
+        parametric_interface = other.parametric_interface;
+        sol_vel = other.sol_vel;
+        sol_p = other.sol_p;
+        rhs_fun = other.rhs_fun;
+        bcs_vel = other.bcs_vel;
+        vel_grad = other.vel_grad;
+        dirichlet_jump = other.dirichlet_jump;
+        neumann_jump = other.neumann_jump;
+        
+    }
+    
+    test_case_stokes_eps( test_case_stokes_eps& other){
+        level_set_ = other.level_set_;
+        parametric_interface = other.parametric_interface;
+        sol_vel = other.sol_vel;
+        sol_p = other.sol_p;
+        rhs_fun = other.rhs_fun;
+        bcs_vel = other.bcs_vel;
+        vel_grad = other.vel_grad;
+        dirichlet_jump = other.dirichlet_jump;
+        neumann_jump = other.neumann_jump;
+        
+    }
+    
+    test_case_stokes_eps(){}
+
+    test_case_stokes_eps( Function& level_set__, Para_Interface& para_interface ,  params<T> parms_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel_,
+     std::function<T(const typename Mesh::point_type&)> sol_p_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel_,
+     std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump_,
+     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type& )> neumann_jump_)
+    : level_set_(level_set__),parametric_interface(para_interface), sol_vel(sol_vel_), sol_p(sol_p_), rhs_fun(rhs_fun_),
+      bcs_vel(bcs_vel_), parms(parms_), vel_grad(vel_grad_), dirichlet_jump(dirichlet_jump_),
+      neumann_jump(neumann_jump_){}
+};
+
+
 template<typename T, typename Function, typename Mesh>
 class test_case_stokes_ref_pts
 {
@@ -854,6 +914,9 @@ class test_case_stokes_ref_pts_cont
       bcs_vel(bcs_vel_), parms(parms_), vel_grad(vel_grad_), dirichlet_jump(dirichlet_jump_),
       neumann_jump(neumann_jump_){}
 };
+
+
+
 
 
 
