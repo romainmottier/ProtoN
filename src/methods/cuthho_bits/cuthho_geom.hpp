@@ -4359,6 +4359,1003 @@ struct Interface_parametrisation_mesh1d_global
 };
 
 
+
+
+
+
+template<typename Mesh, typename T = typename Mesh::coordinate_type >
+struct Parametric_Interface
+{
+    
+    typedef typename Mesh::point_type       point_type;
+    size_t degree_det ;
+    
+    // ---- FINITE SPACE FOR THE INTERFACE
+    std::vector< std::vector<size_t> > connectivity_cells ;
+    std::vector< std::vector<size_t> > connectivity_matrix ;
+    size_t ndof ;
+    size_t counter_subcls = 0;
+    size_t basis_degree , basis_size;
+    
+    // ---- FINITE SPACE FOR THE INTERFACE DERIVATIVE
+    std::vector< std::vector<size_t> > connectivity_matrix_der ;
+    //    std::vector< std::vector<size_t> > connectivity_cells_der ;
+    size_t ndof_der ;
+//    size_t counter_subcls_der = 0;
+    size_t der_degree ;
+    size_t der_size ;
+    
+    // ---- FINITE SPACE FOR THE INTERFACE CURVATURE
+    std::vector< std::vector<size_t> > connectivity_matrix_dd ;
+//    std::vector< std::vector<size_t> > connectivity_cells_dd ;
+    size_t ndof_dd ;
+//    size_t counter_subcls_dd = 0;
+    size_t dd_degree ;
+    size_t dd_size ;
+    
+    
+    Eigen::Matrix<T, Dynamic, Dynamic> interface0 ;
+    Eigen::Matrix<T, Dynamic, Dynamic> interface1 ;
+    
+//    Eigen::Matrix<T, Dynamic, 1> derivative_FE0 ;
+//    Eigen::Matrix<T, Dynamic, 1> derivative_FE1 ;
+
+    Eigen::Matrix<T, Dynamic, Dynamic> derivative0 ;
+    Eigen::Matrix<T, Dynamic, Dynamic> derivative1 ;
+    
+    Eigen::Matrix<T, Dynamic, Dynamic> normal0 ;
+    Eigen::Matrix<T, Dynamic, Dynamic> normal1 ;
+    
+//    Eigen::Matrix<T, Dynamic, 1> curvature_FE ;
+    Eigen::Matrix<T, Dynamic, Dynamic> curvature_field ;
+    
+   
+    
+    Parametric_Interface();
+
+    
+    Parametric_Interface(const Parametric_Interface& other)
+    {
+        degree_det = other.degree_det;
+        connectivity_cells = other.connectivity_cells ;
+        connectivity_matrix = other.connectivity_matrix;
+        ndof = other.ndof;
+        counter_subcls = other.counter_subcls;
+        basis_degree = other.basis_degree;
+        basis_size = other.basis_size;
+        connectivity_matrix_der = other.connectivity_matrix_der;
+        ndof_der = other.ndof_der;
+        
+        der_degree = other.der_degree;
+        der_size = other.der_size;
+            
+        connectivity_matrix_dd = other.connectivity_matrix_dd;
+        
+        ndof_dd = other.ndof_dd;
+      
+        dd_degree = other.dd_degree;
+        dd_size = other.dd_size;
+            
+            
+        interface0 = other.interface0;
+        interface1 = other.interface1;
+    
+
+        derivative0 = other.derivative0;
+        derivative1 = other.derivative1;
+           
+        normal0 = other.normal0;
+        normal1 = other.normal1;
+        curvature_field = other.curvature_field;
+        
+       
+    }
+    
+    
+    T radius_a , radius_b ;
+    size_t N_cells ; // amount of cells
+    size_t N_pts ; // amount of cells
+    size_t N_interface ; // amount of cells
+//    std::vector<std::set<size_t>> connectivity_HHO_cells_this ;
+    std::vector<std::map< size_t , std::pair<T,T> > > connectivity_HHO_cells_this ;
+    std::vector<std::vector<size_t>> connectivity_this_HHO_cellsOLD ;
+   
+    std::vector<std::vector<size_t>> connectivity_this_HHO_cells ;
+    
+    Parametric_Interface(const Mesh& msh , T x_c , T y_c , T Ra, T Rb , size_t degree_curve , size_t N ): basis_degree(degree_curve) , basis_size(degree_curve+1), radius_a(Ra), radius_b (Rb), N_cells(N),N_pts(basis_degree*N), connectivity_this_HHO_cells(N),  connectivity_HHO_cells_this(msh.cells.size())
+    {
+        interface0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( basis_size, N);
+        interface1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( basis_size, N);
+        
+        T step = 2.0*M_PI/N ;
+        T sub_step = step/basis_degree;
+        size_t counter_cell = 0;
+        for( T theta = 0.0 ; theta < 2.0*M_PI ; theta += step)
+        {
+            auto pt0 = x_c + radius_a * cos(theta) ; // point_type(,  );
+            auto pt1 = y_c + radius_b * sin(theta) ;
+            interface0(0,counter_cell) = pt0;
+            interface1(0,counter_cell) = pt1;
+            pt0 = x_c + radius_a * cos(theta + step) ; // point_type(,  );
+            pt1 = y_c + radius_b * sin(theta + step) ;
+            
+            interface0(1,counter_cell) = pt0;
+            interface1(1,counter_cell) = pt1;
+            
+            
+            for(size_t i = 2 ; i < basis_size ; i++){
+                pt0 = x_c + radius_a * cos(theta + sub_step*(i-1)) ; // point_type(,  );
+                pt1 = y_c + radius_b * sin(theta + sub_step*(i-1)) ;
+                
+                interface0(i,counter_cell) = pt0;
+                interface1(i,counter_cell) = pt1;
+                
+            }
+                
+            counter_cell++;
+           
+            
+        }
+        
+    }
+    
+    
+  
+    
+    Matrix<T, 2, 1>
+    operator()( const T& pt , const size_t& i_cl ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        
+        auto basis_eval = cb.eval_basis_1d(pt) ;
+        auto values_cell0 = interface0.col(i_cl);
+        auto values_cell1 = interface1.col(i_cl);
+        
+        ret(0) = values_cell0.dot( basis_eval );
+        ret(1) = values_cell1.dot( basis_eval );
+        
+        return ret;
+        
+        
+    }
+    
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const size_t& i_cl ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        
+        auto basis_eval = cb.eval_gradients_1d(pt) ;
+        auto values_cell0 = interface0.col(i_cl);
+        auto values_cell1 = interface1.col(i_cl);
+        
+        ret(0) = values_cell0.dot( basis_eval );
+        ret(1) = values_cell1.dot( basis_eval );
+        
+        return ret;
+        
+        
+    }
+    
+    
+    T
+    jacobian( const T& pt , size_t i_cl ) const
+    {
+        return (this->derivative(pt,i_cl)).norm();
+    }
+    
+    
+    Matrix<T, 2, 1>
+    tangent( const T& pt , size_t i_cl ) const
+    {
+
+        auto der = this->derivative(pt,i_cl) ;
+        return der/der.norm();
+       
+        
+    }
+    
+    
+    
+    Matrix<T, 2, 1>
+    normal( const T& pt , size_t i_cl ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent(pt, i_cl)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+           
+    }
+    
+    
+    T
+    curvature( const T& pt , size_t i_cl ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+        
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        auto basis_eval = cb.eval_double_derivative_1d(pt) ;
+    
+        auto curv_der = (this->derivative( pt, i_cl ) ) ;
+        auto curv_der_norm = curv_der.norm() ;
+        
+        auto values_cell0 = interface0.col(i_cl);
+        auto values_cell1 = interface1.col(i_cl);
+        
+        curv_double_der(0) = values_cell0.dot( basis_eval );
+        curv_double_der(1) = values_cell1.dot( basis_eval );
+       
+        T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
+       
+        ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
+        ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
+        int sign_curv ;
+        auto n = this->normal( pt, i_cl );
+        
+        if( (sgn( n(0) ) == sgn( ret(0) ) ) && (sgn( n(1) ) == sgn( ret(1) ) ) )
+            sign_curv = 1.0 ;
+        else
+            sign_curv =  -1.0 ;
+       
+        return sign_curv * ret.norm()/curv_der_norm ;
+           
+    }
+    
+
+    
+
+    
+    
+};
+
+template<typename Mesh , typename Curve, typename T >
+void
+set_cut_cellOLD(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interface)
+{
+    typedef typename Mesh::point_type point_type;
+    size_t old_i = 0;
+    bool first_cut_cell = FALSE ;
+    size_t Nx =  mip.Nx ;
+    size_t Ny = mip.Ny ;
+    T eps = 1e-5;
+    T  h = std::min(mip.hx() , mip.hy() ) ;
+    
+    
+    size_t first_cell , last_cell ;
+    for(size_t cell_i = 0 ; cell_i < parametric_interface.N_cells ; cell_i++)
+    {
+        
+        auto pt0 = parametric_interface(0,cell_i);
+        auto pt1 = parametric_interface(1,cell_i);
+        T dist = (pt0 - pt1).norm();
+        T N_pts = 10.0*ceil(dist/h) + 1.0 ;
+        T N_half = (N_pts-1.0)/2.0;
+        
+        for(T pt_i = 1.0; pt_i < N_pts ; pt_i++)
+        {
+            T pos = pt_i / N_pts;
+//            if( pt_i == 0.0 )
+//                pos = pt_i / N_pts + eps;
+//            if( pt_i == N_pts )
+//                pos = pt_i / N_pts - eps;
+            
+            
+            auto pt_vec = parametric_interface(pos,cell_i) ;
+            auto pt = point_type(pt_vec(0) , pt_vec(1));
+            
+            
+            
+            if(!first_cut_cell)
+            {
+                for(auto& cl :msh.cells)
+                {
+                    if( pt_in_cell(msh, pt, cl) )
+                    {
+                        cl.user_data.location = element_location::ON_INTERFACE;
+                        old_i = offset(msh,cl);
+                        first_cell = old_i;
+//                        parametric_interface.connectivity_HHO_cells_this[old_i].push_back(cell_i) ;
+                        parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
+//                        if(pt_i == 0)
+//                        {
+//                            cl.user_data.interface.push_back(pt);
+//
+//                        }
+//
+//                        if(pt_i == N_half)
+//                        {
+//                            cl.user_data.interface.push_back(pt);
+//                        }
+//
+//                        if(pt_i == N_pts - 1)
+//                        {
+//                            cl.user_data.interface.push_back(pt);
+//                        }
+                        
+                        first_cut_cell = TRUE ;
+                        break;
+                    }
+                    
+                    if(first_cut_cell)
+                        break;
+                    
+                }
+                
+            }
+            else
+            {
+//                if(pt_in_cell(msh, pt, msh.cells[old_i]))
+//                    continue;
+                bool found_cut_cell = FALSE ;
+                for(int i = -1 ; i < 2 ; i++)
+                {
+                    for(int j = -1 ; j < 2 ; j++)
+                    {
+                        size_t cl_HHO_i = old_i + i + j * Ny ; // Notice it cannot be on the cell on the boundary
+                        auto cl = msh.cells[cl_HHO_i];
+                        
+                        if(parametric_interface.connectivity_this_HHO_cells[cell_i].size() == 0){
+                            size_t last_elem = parametric_interface.connectivity_this_HHO_cells[cell_i-1].size() -1;
+                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(parametric_interface.connectivity_this_HHO_cells[cell_i-1][last_elem]) ;
+//                            size_t last_elem_HHO = parametric_interface.connectivity_HHO_cells_this[old_i].size() -1;
+//                            parametric_interface.connectivity_HHO_cells_this[cl_HHO_i].push_back(parametric_interface.connectivity_HHO_cells_this[old_i][last_elem_HHO]) ;
+                            
+                        }
+                            
+                        if( cl.user_data.location != element_location::ON_INTERFACE && pt_in_cell(msh, pt, cl) )
+                        {
+                            msh.cells[cl_HHO_i].user_data.location = element_location::ON_INTERFACE;
+                            old_i = offset(msh,cl);
+                            
+                            
+                            
+//                            parametric_interface.connectivity_HHO_cells_this[old_i].push_back(cell_i) ;
+                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
+                            
+                            
+//                            if(pt_i == 0)
+//                            {
+//                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+//
+//                            }
+//
+//                            if(pt_i == N_half)
+//                            {
+//                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+//                            }
+//
+//                            if(pt_i == N_pts - 1)
+//                            {
+//                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+//                            }
+                            found_cut_cell = TRUE;
+                            
+                        }
+                        else if(cl_HHO_i == first_cell && pt_in_cell(msh, pt, cl))
+                        {
+                            size_t last_elem = parametric_interface.connectivity_this_HHO_cells[cell_i].size();
+                            if(last_elem>0 && parametric_interface.connectivity_this_HHO_cells[cell_i][last_elem-1] != first_cell){
+//                                parametric_interface.connectivity_HHO_cells_this[first_cell].push_back(cell_i) ;
+                                parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(first_cell) ;
+                                
+                                
+                            }
+                            if(last_elem == 0)
+                            {
+//                                parametric_interface.connectivity_HHO_cells_this[first_cell].push_back(cell_i) ;
+                                parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(first_cell) ;
+                            }
+                        }
+                                
+                        if( found_cut_cell )
+                            break;
+                    }
+                    if( found_cut_cell )
+                        break;
+                    
+                }
+                
+            }
+            
+            
+        }
+    }
+}
+
+
+
+template<typename Mesh , typename Curve, typename T >
+void
+set_cut_cell(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interface)
+{
+    typedef typename Mesh::point_type point_type;
+    size_t old_i = 0;
+    bool first_cut_cell = FALSE ;
+    size_t Nx =  mip.Nx ;
+    size_t Ny = mip.Ny ;
+    T eps = 1e-5;
+    T  h = std::min(mip.hx() , mip.hy() ) ;
+    
+    
+    size_t first_cell , last_cell ;
+    for(size_t cell_i = 0 ; cell_i < parametric_interface.N_cells ; cell_i++)
+    {
+        
+        auto pt0 = parametric_interface(0,cell_i);
+        auto pt1 = parametric_interface(1,cell_i);
+        T dist = (pt0 - pt1).norm();
+        T N_pts = 10.0*ceil(dist/h) + 1.0 ;
+        T N_half = (N_pts-1.0)/2.0;
+        
+        for(T pt_i = 1.0; pt_i < N_pts ; pt_i++)
+        {
+            T pos = pt_i / N_pts;
+//            if( pt_i == 0.0 )
+//                pos = pt_i / N_pts + eps;
+//            if( pt_i == N_pts )
+//                pos = pt_i / N_pts - eps;
+            
+            
+            auto pt_vec = parametric_interface(pos,cell_i) ;
+            auto pt = point_type(pt_vec(0) , pt_vec(1));
+            
+            
+            
+            if(!first_cut_cell)
+            {
+                for(auto& cl :msh.cells)
+                {
+                    if( pt_in_cell(msh, pt, cl) )
+                    {
+                        cl.user_data.location = element_location::ON_INTERFACE;
+                        old_i = offset(msh,cl);
+                        first_cell = old_i;
+                        parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
+                        first_cut_cell = TRUE ;
+                        break;
+                    }
+                    
+                    if(first_cut_cell)
+                        break;
+                    
+                }
+                
+            }
+            else
+            {
+
+                bool found_cut_cell = FALSE ;
+                for(int i = -1 ; i < 2 ; i++)
+                {
+                    for(int j = -1 ; j < 2 ; j++)
+                    {
+                        size_t cl_HHO_i = old_i + i + j * Ny ; // Notice it cannot be on the cell on the boundary
+                        auto cl = msh.cells[cl_HHO_i];
+                        
+
+                        if( pt_in_cell(msh, pt, cl) )
+                        {
+                            msh.cells[cl_HHO_i].user_data.location = element_location::ON_INTERFACE;
+                            old_i = offset(msh,cl);
+                            
+                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
+                          
+                            found_cut_cell = TRUE;
+                            
+                        }
+
+                                
+                        if( found_cut_cell )
+                            break;
+                    }
+                    if( found_cut_cell )
+                        break;
+                    
+                }
+                
+            }
+            
+            
+        }
+        
+
+        std::vector<size_t>::iterator it = std::unique (parametric_interface.connectivity_this_HHO_cells[cell_i].begin(), parametric_interface.connectivity_this_HHO_cells[cell_i].end());
+
+        parametric_interface.connectivity_this_HHO_cells[cell_i].resize( std::distance(parametric_interface.connectivity_this_HHO_cells[cell_i].begin(),it) );
+    }
+}
+
+template<typename Mesh , typename Curve, typename T >
+void
+set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interface)
+{
+    typedef typename Mesh::point_type point_type;
+    size_t Ny = mip.Ny ;
+    size_t N_cells = parametric_interface.N_cells;
+    size_t last_term = parametric_interface.connectivity_this_HHO_cells[N_cells-1].size() -1 ;
+    int elem_old = parametric_interface.connectivity_this_HHO_cells[N_cells-1][last_term] ;
+    
+    auto& fc_loop = msh.faces ;
+    
+   
+    for(size_t cell_i = 0 ; cell_i < parametric_interface.N_cells ; cell_i++)
+    {
+        
+        
+//        T prev_ref_x = 0.0 ;
+        size_t counter_para_cell = 0 ;
+        size_t amount_cut_cells = parametric_interface.connectivity_this_HHO_cells[cell_i].size() ;
+        
+        std::pair< Matrix<T, 2, 1> , T > pt_on_skeleton ;
+        
+        for(const int& elem : parametric_interface.connectivity_this_HHO_cells[cell_i])
+        {
+            
+            parametric_interface.connectivity_HHO_cells_this[elem].insert( {cell_i,std::make_pair(0.0,1.0)} ) ;
+            auto& cl = msh.cells[elem] ;
+            bool face_found = true ;
+            bool face0 = false , face1 = false , face2 = false , face3 = false ;
+            int which_fc = elem - elem_old ;
+            T pt_to_find ;
+            auto fcs = faces(msh, cl);
+            size_t fc_counter = 0;
+            
+            if( which_fc == 1 )
+            {
+                face1 = true ;
+                while ( face_found )
+                {
+                    
+                    if( fcs[3] == fc_loop[fc_counter] ){
+                        face_found = false;
+                        fc_loop[fc_counter].user_data.location = element_location::ON_INTERFACE;
+                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                        msh.nodes[fc_loop[fc_counter].ptids[1]].user_data.location = element_location::IN_NEGATIVE_SIDE;
+                        msh.nodes[fc_loop[fc_counter].ptids[0]].user_data.location = element_location::IN_POSITIVE_SIDE;
+                        pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).x() ;
+//                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
+//                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
+//                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
+//
+//                        std::cout<<"fc_loop[fc_counter].ptids[0] = "<<fc_loop[fc_counter].ptids[0]<<std::endl;
+//                        std::cout<<"node0 = "<<msh.nodes[fc_loop[fc_counter].ptids[0]]<<std::endl;
+//                        std::cout<<"node0bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                    }
+                    fc_counter++;
+                    
+                }
+                fc_counter--;
+
+                
+            }
+            else if ( which_fc == -1 )
+            {
+                face3 = true ;
+                while ( face_found )
+                {
+                    
+                    if( fcs[1] == fc_loop[fc_counter] ){
+                        face_found = false;
+                        fc_loop[fc_counter].user_data.location = element_location::ON_INTERFACE;
+                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                        msh.nodes[fc_loop[fc_counter].ptids[0]].user_data.location = element_location::IN_NEGATIVE_SIDE;
+                        msh.nodes[fc_loop[fc_counter].ptids[1]].user_data.location = element_location::IN_POSITIVE_SIDE;
+                        pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).x() ;
+                        
+//                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
+//                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
+//                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter].ptids[0] = "<<fc_loop[fc_counter].ptids[0]<<std::endl;
+//                        std::cout<<"node0 = "<<msh.nodes[fc_loop[fc_counter].ptids[0]]<<std::endl;
+//                        std::cout<<"node0bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                    }
+                    
+                    fc_counter++;
+                }
+                fc_counter--;
+
+            }
+            else if ( which_fc == Ny )
+            {
+                face0 = true ;
+                while ( face_found )
+                {
+
+                    if( fcs[0] == fc_loop[fc_counter] ){
+                        face_found = false;
+                        fc_loop[fc_counter].user_data.location = element_location::ON_INTERFACE;
+                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                        msh.nodes[fc_loop[fc_counter].ptids[0]].user_data.location = element_location::IN_NEGATIVE_SIDE;
+                        msh.nodes[fc_loop[fc_counter].ptids[1]].user_data.location = element_location::IN_POSITIVE_SIDE;
+                        pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).y() ;
+                        
+//                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
+//                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
+//                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter].ptids[0] = "<<fc_loop[fc_counter].ptids[0]<<std::endl;
+//                        std::cout<<"node0 = "<<msh.nodes[fc_loop[fc_counter].ptids[0]]<<std::endl;
+//                        std::cout<<"node0bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                    }
+                    fc_counter++;
+                }
+                fc_counter--;
+
+            }
+            else if ( which_fc == -Ny )
+            {
+                face2 = true ;
+                while ( face_found )
+                {
+
+                    if( fcs[2] == fc_loop[fc_counter] ){
+                        face_found = false;
+                        fc_loop[fc_counter].user_data.location = element_location::ON_INTERFACE;
+                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                        msh.nodes[fc_loop[fc_counter].ptids[1]].user_data.location = element_location::IN_NEGATIVE_SIDE;
+                        msh.nodes[fc_loop[fc_counter].ptids[0]].user_data.location = element_location::IN_POSITIVE_SIDE ;
+                        pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).y() ;
+                        
+//                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
+//                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
+//                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter].ptids[0] = "<<fc_loop[fc_counter].ptids[0]<<std::endl;
+//                        std::cout<<"node0 = "<<msh.nodes[fc_loop[fc_counter].ptids[0]]<<std::endl;
+//                        std::cout<<"node0bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]])<<std::endl;
+//                        std::cout<<"fc_loop[fc_counter] "<<fc_loop[fc_counter]<<" is cut!"<<std::endl;
+                    }
+                    fc_counter++;
+                    
+                }
+                fc_counter--;
+
+                
+            }
+            
+            
+            
+            int axis = 0 ;
+            if( face0 || face2 )
+                axis = 1 ;
+            
+            if( ! face_found )
+            {
+                auto threshold = diameter(msh, fc_loop[fc_counter]) / 1e20;
+                pt_on_skeleton = find_crossing_on_cut_face(pt_to_find, parametric_interface, cell_i , threshold , axis );
+                point_type pt_interface = point_type(pt_on_skeleton.first(0),pt_on_skeleton.first(1));
+                fc_loop[fc_counter].user_data.intersection_point = pt_interface ;
+                    
+            }
+            
+            if(counter_para_cell == 0)
+                parametric_interface.connectivity_HHO_cells_this[elem][cell_i] = std::make_pair( 0.0 , 1.0 ) ;
+            
+            else
+            {
+                parametric_interface.connectivity_HHO_cells_this[elem_old][cell_i].second = pt_on_skeleton.second ;
+                parametric_interface.connectivity_HHO_cells_this[elem][cell_i] = std::make_pair( pt_on_skeleton.second , 1.0 ) ;
+            }
+                
+            
+           
+            elem_old = elem;
+            
+            counter_para_cell++;
+            
+        }
+        
+        
+        
+    }
+    
+    
+   
+    
+   
+}
+
+
+template<typename T, typename Function>
+std::pair< Matrix<T, 2, 1> , T >
+find_crossing_on_cut_face(T pt ,Function& parametric_interface, size_t cell_i , const T& threshold , int axis )
+{
+//    typedef typename Mesh::point_type point_type ;
+    size_t max_iter = 50;
+    
+    T pm = 0.5;
+    T pa = 0.0;
+    T pb = 1.0;
+    auto pm_prev = pm;
+    
+    T diff_sq ;
+    
+    do {
+        auto lm = parametric_interface(pm,cell_i);
+        auto lm_axis = lm(axis) ;
+//        auto pt_a = curve(pm,cell_i);
+        auto lb = parametric_interface(pb,cell_i);
+        auto lb_axis = lb(axis) ;
+        
+        if ( (lb_axis >= pt && lm_axis >= pt) || (lb_axis < pt && lm_axis < pt) )
+        {
+            pm_prev = pm;
+            pb = pm;
+            pm = (pa+pb)/2.0;
+        }
+        else
+        {   /* intersection is between pm and pb */
+            pm_prev = pm;
+            pa = pm;
+            pm = (pa+pb)/2.0;
+        }
+        
+        auto lm_prev = parametric_interface(pm_prev,cell_i);
+        auto lm_prev_axis = lm_prev(axis) ;
+        diff_sq = (lm_prev_axis - pt) * (lm_prev_axis - pt) ;
+    } while ( (sqrt( diff_sq ) > threshold) && max_iter-- );
+    
+    
+    return std::make_pair(parametric_interface(pm,cell_i) , pm);
+}
+
+
+template<typename Mesh , typename Curve, typename T >
+void
+set_domains_properties(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interface)
+{
+//    std::set<size_t> closed_undef_cells ;
+    for(auto& cl : msh.cells)
+    {
+        for(auto& fc: faces(msh,cl) )
+        {
+            if(fc.is_boundary)
+            {
+                cl.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                auto nodes_cl = nodes(msh,cl) ;
+                for(auto& nd_cl : nodes_cl )
+                {
+                    if( nd_cl.user_data.location == element_location::UNDEF )
+                        msh.nodes[nd_cl.ptid].user_data.location = element_location::IN_POSITIVE_SIDE ;
+                }
+                
+                auto fcs_cl = faces(msh,cl) ;
+                for(auto& fc_cl : fcs_cl )
+                {
+                    for(auto& fc : msh.faces)
+                    {
+                        if(fc == fc_cl){
+                            if( fc.user_data.location == element_location::UNDEF )
+                                fc.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                        }
+                    }
+                    
+                }
+                
+                break;
+            }
+        }
+        
+        if( !(cl.user_data.location == element_location::UNDEF) )
+            continue ;
+        
+        auto f_neigh = cl.user_data.f_neighbors ;
+        auto d_neigh = cl.user_data.d_neighbors ;
+        std::set<size_t> neigh;
+        std::merge(f_neigh.begin(), f_neigh.end(),
+                    d_neigh.begin(), d_neigh.end(),
+                    std::inserter(neigh, neigh.begin()));
+        
+        size_t offset_cl = offset(msh,cl);
+//        closed_undef_cells.insert(offset_cl);
+        for(auto& cl_i : neigh)
+        {
+//            if(msh.cells[cl_i].user_data.location == element_location::IN_NEGATIVE_SIDE)
+//            {
+//
+//                for(auto& other_cls : closed_undef_cells)
+//                {
+//                    if( (cl.user_data.location == element_location::UNDEF) )
+//                        msh.cells[other_cls].user_data.location = element_location::IN_NEGATIVE_SIDE ;
+//                    // SET NODES AND FACES NEGATIVE
+//                }
+//                closed_undef_cells.erase(closed_undef_cells.begin(),closed_undef_cells.end());
+//            }
+            if(msh.cells[cl_i].user_data.location == element_location::IN_POSITIVE_SIDE)
+            {
+                cl.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                auto nodes_cl = nodes(msh,cl) ;
+                for(auto& nd_cl : nodes_cl )
+                {
+                    if( nd_cl.user_data.location == element_location::UNDEF )
+                        msh.nodes[nd_cl.ptid].user_data.location = element_location::IN_POSITIVE_SIDE ;
+                }
+                
+                auto fcs_cl = faces(msh,cl) ;
+                for(auto& fc_cl : fcs_cl )
+                {
+                    for(auto& fc : msh.faces)
+                    {
+                        if(fc == fc_cl){
+                            if( fc.user_data.location == element_location::UNDEF )
+                                fc.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                        }
+                    }
+                    
+                }
+                break;
+            }
+//            else if(msh.cells[cl_i].user_data.location == element_location::ON_INTERFACE)
+//            {
+//                auto nds = nodes(msh , msh.cells[cl_i]);
+//
+//
+//                closed_undef_cells.erase(closed_undef_cells.begin(),closed_undef_cells.end());
+//            }
+            else if(msh.cells[cl_i].user_data.location == element_location::UNDEF)
+            {
+                bool bdry_found = false;
+                for(auto& fc: faces(msh,msh.cells[cl_i]))
+                {
+                    if(fc.is_boundary)
+                    {
+                        cl.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                        auto nodes_cl = nodes(msh,cl) ;
+                        for(auto& nd_cl : nodes_cl )
+                        {
+                            if( nd_cl.user_data.location == element_location::UNDEF )
+                                msh.nodes[nd_cl.ptid].user_data.location = element_location::IN_POSITIVE_SIDE ;
+                        }
+                        
+                        auto fcs_cl = faces(msh,cl) ;
+                        for(auto& fc_cl : fcs_cl )
+                        {
+                            for(auto& fc : msh.faces)
+                            {
+                                if(fc == fc_cl){
+                                    if( fc.user_data.location == element_location::UNDEF )
+                                        fc.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                                }
+                            }
+                            
+                        }
+                        
+                        bdry_found = true;
+                        break;
+                    }
+                }
+                
+//                if(!bdry_found)
+//                    closed_undef_cells.insert(cl_i);
+                
+            }
+        }
+        
+    }
+    
+    
+    for(auto& cl : msh.cells)
+    {
+        if( cl.user_data.location == element_location::UNDEF )
+        {
+            cl.user_data.location = element_location::IN_NEGATIVE_SIDE ;
+            auto nodes_cl = nodes(msh,cl) ;
+            for(auto& nd_cl : nodes_cl )
+            {
+                if( nd_cl.user_data.location == element_location::UNDEF )
+                    msh.nodes[nd_cl.ptid].user_data.location = element_location::IN_NEGATIVE_SIDE ;
+            }
+            
+            auto fcs_cl = faces(msh,cl) ;
+            for(auto& fc_cl : fcs_cl )
+            {
+                for(auto& fc : msh.faces)
+                {
+                    if(fc == fc_cl){
+                        if( fc.user_data.location == element_location::UNDEF )
+                            fc.user_data.location = element_location::IN_NEGATIVE_SIDE ;
+                    }
+                }
+                
+            }
+        }
+        
+        else if( cl.user_data.location == element_location::ON_INTERFACE )
+        {
+            auto fcs_cl = faces(msh,cl) ;
+            for(auto& fc_cl : fcs_cl )
+            {
+                for(auto& fc : msh.faces)
+                {
+                    if(fc == fc_cl){
+                        if( fc.user_data.location == element_location::UNDEF ){
+                            auto nods = fc.ptids ;
+                            bool neg0 = (msh.nodes[nods[0]].user_data.location == element_location::IN_NEGATIVE_SIDE );
+                            bool neg1 = (msh.nodes[nods[1]].user_data.location == element_location::IN_NEGATIVE_SIDE );
+                            if(neg0 && neg1 )
+                                fc.user_data.location = element_location::IN_NEGATIVE_SIDE ;
+                            else if(! neg0 && ! neg1 )
+                                fc.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                            else
+                                std::cout<<"ERROR, IT SHOULD BE CUT!"<<std::endl;
+                            
+                        }
+                    }
+                }
+                
+            }
+            
+            auto nodes_cl = nodes(msh,cl) ;
+            size_t counter_p=0 , counter_n = 0;
+            for(auto& nd_cl : nodes_cl )
+            {
+                if( nd_cl.user_data.location == element_location::IN_POSITIVE_SIDE )
+                    msh.nodes[nd_cl.ptid].user_data.location = element_location::IN_NEGATIVE_SIDE ;
+            }
+        }
+        
+        
+        
+        
+        if ( location(msh, cl) == element_location::IN_POSITIVE_SIDE )
+            std::cout<<"Cell = "<<offset(msh,cl)<<" is IN POSITIVE SIDE."<<std::endl;
+        else if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
+            std::cout<<"Cell = "<<offset(msh,cl)<<" is IN NEGATIVE SIDE."<<std::endl;
+        else if ( location(msh, cl) == element_location::ON_INTERFACE )
+            std::cout<<"Cell = "<<offset(msh,cl)<<" is ON INTERFACE."<<std::endl;
+        else
+            std::cout<<"Cell = "<<offset(msh,cl)<<" error is UNDEF."<<std::endl;
+        
+
+    }
+    
+    
+    
+    
+    for(auto& nd : msh.nodes)
+    {
+        if ( location(msh, nd) == element_location::IN_POSITIVE_SIDE )
+            std::cout<<"Node = "<<nd<<" is IN POSITIVE SIDE."<<std::endl;
+        else if ( location(msh, nd) == element_location::IN_NEGATIVE_SIDE )
+            std::cout<<"Node = "<<nd<<" is IN NEGATIVE SIDE."<<std::endl;
+        else if ( location(msh, nd) == element_location::ON_INTERFACE )
+            std::cout<<"Node = "<<nd<<" is ON INTERFACE."<<std::endl;
+        else
+            std::cout<<"Node = "<<nd<<" error is UNDEF."<<std::endl;
+    }
+    
+    for(auto& fc : msh.faces)
+    {
+        if ( location(msh, fc) == element_location::IN_POSITIVE_SIDE )
+            std::cout<<"Face = "<<fc<<" is IN POSITIVE SIDE."<<std::endl;
+        else if ( location(msh, fc) == element_location::IN_NEGATIVE_SIDE )
+            std::cout<<"Face = "<<fc<<" is IN NEGATIVE SIDE."<<std::endl;
+        else if ( location(msh, fc) == element_location::ON_INTERFACE )
+            std::cout<<"Face = "<<fc<<" is ON INTERFACE."<<std::endl;
+        else{
+            std::cout<<"Face = "<<fc<<" error is UNDEF."<<std::endl;
+            auto nods = fc.ptids ;
+            for(auto& cl : msh.cells)
+            {
+                for(auto& nd_cl : nodes(msh,cl))
+                {
+                    if(nods[0] == nd_cl.ptid)
+                        std::cout<<"Node0 = "<<nd_cl.ptid<<" in cell = "<<offset(msh,cl)<<std::endl;
+                    if(nods[1] == nd_cl.ptid)
+                        std::cout<<"Node1 = "<<nd_cl.ptid<<" in cell = "<<offset(msh,cl)<<std::endl;
+                }
+            }
+        }
+    }
+        
+}
+
+
 struct triangular_parametrisation_curve
 {
     
