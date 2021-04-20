@@ -21,6 +21,123 @@
  */
 
 
+template<typename T, size_t ET>
+void
+detect_cell_agglo_set(cuthho_mesh<T, ET>& msh)
+{
+    const T threshold = 0.3;
+    const T threshold_cells = 0.3;
+
+    for (auto& cl : msh.cells)
+    {
+        auto fcs = faces(msh, cl);
+        auto pts = points(msh, cl);
+        auto nds = nodes(msh, cl);
+
+        if (fcs.size() != 4)
+            throw std::invalid_argument("This works only on quads for now");
+
+        if( !is_cut(msh, cl) )
+        {
+            cl.user_data.agglo_set = cell_agglo_set::T_OK;
+            continue;
+        }
+
+//        std::cout<<"Cell: "<<offset(msh,cl)<<" negative area = "<<measure(msh, cl, element_location::IN_NEGATIVE_SIDE)<< " , positive area = "<< measure(msh, cl, element_location::IN_POSITIVE_SIDE)<<" max threshold area = "<< threshold_cells * measure(msh, cl)<<std::endl;
+        
+        if( measure(msh, cl, element_location::IN_NEGATIVE_SIDE)
+            < threshold_cells * measure(msh, cl) )
+        {
+            cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
+            continue;
+        }
+        else if( measure(msh, cl, element_location::IN_POSITIVE_SIDE)
+            < threshold_cells * measure(msh, cl) )
+        {
+            cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
+            continue;
+        }
+
+        /* If it is a quadrilateral we have 6 possible configurations of the
+         * element-cut intersection. */
+
+        auto agglo_set_single_node = [&](size_t n) -> void
+        {
+            auto f1 = (n == 0) ? fcs.size()-1 : n-1;
+            auto f2 = n;
+
+            auto ma = measure(msh, fcs[f1]);
+            auto pa = (pts[n] - fcs[f1].user_data.intersection_point);
+            auto da = pa.to_vector().norm() / ma;
+
+            auto mb = measure(msh, fcs[f2]);
+            auto pb = (pts[n] - fcs[f2].user_data.intersection_point);
+            auto db = pb.to_vector().norm() / mb;
+
+            assert(da >= 0 && da <= 1);
+            assert(db >= 0 && db <= 1);
+
+            if ( std::min(da, db) > threshold )
+            {
+                cl.user_data.agglo_set = cell_agglo_set::T_OK;
+                return;
+            }
+
+            if ( location(msh, nds[n]) == element_location::IN_NEGATIVE_SIDE )
+                cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
+            else
+                cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
+        };
+        
+        auto agglo_set_double_node = [&](size_t f1, size_t f2) -> void
+        {
+            assert ( (f1 == 0 && f2 == 2) || ( f1 == 1 && f2 == 3 ) );
+
+            auto n1 = f1;
+            auto n2 = (f2+1) % fcs.size();
+
+            auto ma = measure(msh, fcs[f1]);
+            auto pa = (pts[n1] - fcs[f1].user_data.intersection_point);
+            auto da = pa.to_vector().norm() / ma;
+
+            auto mb = measure(msh, fcs[f2]);
+            auto pb = (pts[n2] - fcs[f2].user_data.intersection_point);
+            auto db = pb.to_vector().norm() / mb;
+
+            auto m1 = std::max(da, db);
+            auto m2 = std::max(1-da, 1-db);
+
+            if ( std::min(m1, m2) > threshold )
+            {
+                cl.user_data.agglo_set = cell_agglo_set::T_OK;
+                return;
+            }
+
+            if ( location(msh, nds[n1]) == element_location::IN_NEGATIVE_SIDE )
+                cl.user_data.agglo_set = (m1 <= threshold) ? cell_agglo_set::T_KO_NEG : cell_agglo_set::T_KO_POS;
+            else
+                cl.user_data.agglo_set = (m2 <= threshold) ? cell_agglo_set::T_KO_NEG : cell_agglo_set::T_KO_POS;
+        };
+        // for all the faces of the cell cl
+        for (size_t i = 0; i < fcs.size(); i++)
+        {
+            auto f1 = i;
+            auto f2 = (i+1) % fcs.size();
+            auto n = (i+1) % fcs.size();
+
+            if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
+                agglo_set_single_node(n);
+
+        }
+
+        if ( is_cut(msh, fcs[0]) && is_cut(msh, fcs[2]) )
+            agglo_set_double_node(0,2);
+
+        if ( is_cut(msh, fcs[1]) && is_cut(msh, fcs[3]) )
+            agglo_set_double_node(1,3);
+
+    }
+}
 
 
 template<typename T, size_t ET, typename Function>
@@ -54,6 +171,8 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
 //        std::cout<<"measure(msh, cl, element_location::IN_POSITIVE_SIDE) = "<<measure(msh, cl, element_location::IN_POSITIVE_SIDE)<<std::endl;
 //        std::cout<<"measure OLD (msh, cl, element_location::IN_POSITIVE_SIDE) = "<<measure_old(msh, cl, element_location::IN_POSITIVE_SIDE)<<std::endl;
 //        std::cout<<"measure(msh, cl) = "<<measure(msh, cl)<<std::endl;
+        
+//        std::cout<<"Cell: "<<offset(msh,cl)<<" negative area = "<<measure(msh, cl, element_location::IN_NEGATIVE_SIDE)<< " , positive area = "<< measure(msh, cl, element_location::IN_POSITIVE_SIDE)<<" max threshold area = "<< threshold_cells * measure(msh, cl)<<std::endl;
         
         if( measure(msh, cl, element_location::IN_NEGATIVE_SIDE)
             < threshold_cells * measure(msh, cl) )
@@ -2046,3 +2165,370 @@ make_agglomeration_no_double_points(Mesh& msh, const Function& level_set_functio
     output_cells.close();
 }
 
+
+
+template<typename Mesh>
+void
+make_agglomeration_no_double_points(Mesh& msh,  size_t degree_det_jac_curve)
+{
+    // initiate lists to store the agglomeration infos
+    std::vector<int> agglo_table_neg, agglo_table_pos;
+    size_t nb_cells = msh.cells.size();
+    agglo_table_neg.resize(nb_cells);
+    agglo_table_pos.resize(nb_cells);
+    
+    for(size_t i=0; i < nb_cells; i++)
+    {
+        agglo_table_neg.at(i) = -1;
+        agglo_table_pos.at(i) = -1;
+    }
+
+    ///////////////////////   LOOK FOR NEIGHBORS  ////////////////
+    size_t nb_step1 = 0;
+    size_t nb_step2 = 0;
+    //size_t nb_ko_neg_cls = 0;
+    //size_t nb_ko_pos_cls = 0;
+    // start the process for domain 1, and then domain 2
+    for(size_t domain=1; domain < 3; domain++)
+    {
+        // loop on the cells
+        for (auto cl : msh.cells)
+        {
+            element_location where;
+
+            if(domain == 1)
+                where = element_location::IN_NEGATIVE_SIDE;
+            else if(domain == 2)
+                where = element_location::IN_POSITIVE_SIDE;
+            else
+                throw std::logic_error("pb with domain");
+                
+            if(cl.user_data.agglo_set == cell_agglo_set::T_OK)
+                continue;
+            else if(cl.user_data.agglo_set == cell_agglo_set::UNDEF)
+                throw std::logic_error("UNDEF agglo_set");
+            else if(cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG
+                    && where != element_location::IN_NEGATIVE_SIDE)
+                continue;
+            else if(cl.user_data.agglo_set == cell_agglo_set::T_KO_POS
+                    && where != element_location::IN_POSITIVE_SIDE)
+                continue;
+
+
+            // if cl is already agglomerated : no need for further agglomerations
+            bool already_agglo = false;
+            size_t offset_cl = offset(msh, cl);
+            for (size_t i = 0; i < agglo_table_pos.size(); i++)
+            {
+                if( agglo_table_pos.at(i) == offset_cl || agglo_table_neg.at(i) == offset_cl )
+                {
+                    already_agglo = true;
+                    break;
+                }
+            }
+            if( already_agglo )
+                continue;
+
+
+            typename Mesh::cell_type best_neigh = find_good_neighbor(msh, cl, where);
+
+            auto f_neigh = cl.user_data.f_neighbors;
+
+            // prepare agglomeration of cells cl and best_neigh
+            size_t offset1 = offset(msh,cl);
+            size_t offset2 = offset(msh,best_neigh);
+
+            if(where == element_location::IN_NEGATIVE_SIDE)
+            {
+                agglo_table_neg.at(offset1) = offset2;
+                nb_step1++;
+            }
+            else
+            {
+                agglo_table_pos.at(offset1) = offset2;
+                nb_step2++;
+            }
+            
+            //if(domain==1)
+            //    nb_ko_neg_cls++;
+            //if (domain==2)
+            //    nb_ko_pos_cls++;
+            
+        }
+
+        if(domain == 1)
+            output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_one.okc");
+        if(domain == 2)
+            output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_two.okc");
+        
+    }
+    
+    //std::cout<<"Nb of KO_NEG cells "<<nb_ko_neg_cls<<" and of KO_POS "<<nb_ko_pos_cls
+    //std::cout<<"Nb of agglomerated cells in neg side "<<nb_step1<<" and in pos side "<<nb_step2<<std::endl;
+    //////////////   CHANGE THE AGGLO FOR THE CELLS OF DOMAIN 1 THAT ARE TARGETTED ///////
+    size_t nb_step3 = 0;
+    for (auto cl : msh.cells)
+    {
+        if(cl.user_data.agglo_set != cell_agglo_set::T_KO_NEG)
+            continue;
+
+        size_t offset1 = offset(msh,cl);
+
+        // are there cells that try to agglomerate with cl ?
+        bool agglo = false;
+        size_t cl2_offset;
+        for(size_t i = 0; i < agglo_table_pos.size(); i++)
+        {
+            if(agglo_table_pos.at(i) == offset1)
+            {
+                agglo = true;
+                cl2_offset = i;
+                break;
+            }
+        }
+        if(!agglo)
+            continue;
+
+        // at this point cl2_offset tries to agglomerate with cl
+        size_t cl1_agglo = agglo_table_neg.at(offset1);
+        
+        // -> check that no one tries to agglomerate with cl1_agglo
+        agglo = false;
+        for(size_t i = 0; i < agglo_table_neg.size(); i++)
+        {
+            if( i == offset1)
+                continue;
+
+            if(agglo_table_neg.at(i) == cl1_agglo)
+            {
+                agglo = true;
+                break;
+            }
+        }
+        if(!agglo && msh.cells.at(cl1_agglo).user_data.agglo_set == cell_agglo_set::T_KO_POS)
+            continue;
+
+        // at this point we risk chain agglomerations
+        // -> remove the target of cl
+        nb_step3++;
+        agglo_table_neg.at(offset1) = -1;
+    }
+    output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_three.okc");
+    //std::cout<<"Nb of removed cells in neg side "<<nb_step3<<std::endl;
+    
+    ///////////////////  BUILD LOCAL AGGLOMERATIONS  //////////////////
+    std::vector< loc_agglo<typename Mesh::cell_type> > loc_agglos;
+    std::vector<typename Mesh::face_type> removed_faces;
+    std::vector<typename Mesh::cell_type> removed_cells;
+    for (auto cl : msh.cells)
+    {
+        auto offset_cl = offset(msh, cl);
+
+        bool agglo = false;
+        size_t offset_neigh;
+        if(agglo_table_pos.at(offset_cl) != -1)
+        {
+            offset_neigh = agglo_table_pos.at(offset_cl);
+            agglo = true;
+        }
+        if(agglo_table_neg.at(offset_cl) != -1)
+        {
+            offset_neigh = agglo_table_neg.at(offset_cl);
+            agglo = true;
+        }
+
+        if(!agglo)
+            continue;
+
+        typename Mesh::cell_type neigh = msh.cells.at(offset_neigh);
+
+        
+        // test if one of the two cells is already agglomerated
+        size_t agglo_offset_cl, agglo_offset_neigh;
+        bool already_agglo_cl = false;
+        for (size_t i = 0; i < loc_agglos.size(); i++)
+        {
+            if( loc_agglos.at(i).is_in(cl) )
+            {
+                already_agglo_cl = true;
+                agglo_offset_cl = i;
+                break;
+            }
+        }
+        bool already_agglo_neigh = false;
+        for (size_t i = 0; i < loc_agglos.size(); i++)
+        {
+            if( loc_agglos.at(i).is_in(neigh) )
+            {
+                already_agglo_neigh = true;
+                agglo_offset_neigh = i;
+                break;
+            }
+        }
+
+        // the two cells can not be both already agglomerated in different agglomeration sets
+        if(already_agglo_cl && already_agglo_neigh)
+        {
+            if(agglo_offset_neigh != agglo_offset_cl)
+            {
+                throw std::logic_error("Both cells already agglomerated !!");
+            }
+            else
+                std::cout << "agglo already done" << std::endl;
+            // else : the two cells are already agglomerated together : DO NOTHING
+        }
+        else if(!already_agglo_cl && !already_agglo_neigh)
+        {
+            
+            //std::cout<<"The cell number "<<offset(msh,cl)<<" is aggloremated with the cell num "<<offset(msh,neigh)<<std::endl;
+           
+            // create a new local agglomeration
+            auto MC = merge_cells_no_double_pts(msh, cl, neigh,degree_det_jac_curve);
+
+            loc_agglos.push_back( loc_agglo<typename Mesh::cell_type>(offset(msh,cl),offset(msh,neigh),cl, neigh, MC.first) );
+
+            for(size_t i=0; i<MC.second.size(); i++)
+            {
+                removed_faces.push_back( MC.second[i] );
+            }
+            removed_cells.push_back(cl);
+            removed_cells.push_back(neigh);
+        }
+        else // only one cell is already agglomerated
+        {
+            //std::cout<<"The cell number "<<offset(msh,cl)<<" is aggloremated with the cell num "<<offset(msh,neigh)<<std::endl;
+            typename Mesh::cell_type cl1, cl2;
+            size_t offset_cl2 , agglo_offset ;
+            if(already_agglo_cl)
+            {
+                removed_cells.push_back(neigh);
+                cl2 = neigh;
+                offset_cl2 = offset_neigh;
+                agglo_offset = agglo_offset_cl;
+            }
+            else if(already_agglo_neigh)
+            {
+                removed_cells.push_back(cl);
+                cl2 = cl;
+                offset_cl2 = offset_cl;
+                agglo_offset = agglo_offset_neigh;
+            }
+
+            // get the agglomerated cell
+            cl1 = loc_agglos.at(agglo_offset).new_cell;
+            
+            // check if we need one more agglomeration here
+            auto CC = check_corner(msh, cl1, cl2);
+            if(CC.first)
+            {
+                auto offset_added_cell = offset(msh, CC.second);
+                auto MC_bis = merge_cells_no_double_pts(msh, CC.second, cl1,degree_det_jac_curve);
+                loc_agglos.at(agglo_offset).add_cell(CC.second, offset_added_cell,
+                                                         MC_bis.first);
+                for(size_t i=0; i<MC_bis.second.size(); i++)
+                {
+                    removed_faces.push_back( MC_bis.second[i] );
+                }
+                removed_cells.push_back(CC.second);
+            }
+
+            // end the merge procedure
+            auto MC = merge_cells_no_double_pts(msh, cl2, loc_agglos.at(agglo_offset).new_cell,degree_det_jac_curve);
+
+            loc_agglos.at(agglo_offset).add_cell(cl2, offset_cl2, MC.first);
+
+            for(size_t i=0; i<MC.second.size(); i++)
+            {
+                removed_faces.push_back( MC.second[i] );
+            }
+        }
+    }
+    
+    //////////////////////   UPDATE THE MESH   ////////////////////////
+    size_t nb_cells_before = msh.cells.size();
+    size_t nb_cells_ok = 0;
+    size_t nb_cells_ko1 = 0;
+    size_t nb_cells_ko2 = 0;
+    size_t nb_cut_before = 0;
+    for (auto& cl : msh.cells)
+    {
+        if( location(msh, cl) == element_location::ON_INTERFACE )
+            nb_cut_before++;
+        else
+            continue;
+
+        if( cl.user_data.agglo_set == cell_agglo_set::T_OK )
+            nb_cells_ok++;
+        else if( cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG )
+            nb_cells_ko1++;
+        else if( cl.user_data.agglo_set == cell_agglo_set::T_KO_POS )
+            nb_cells_ko2++;
+        else
+            throw std::logic_error("We should not arrive here !!");
+    }
+
+    // remove the agglomerated cells
+    typename std::vector<typename Mesh::cell_type>::iterator it_RC;
+    for(it_RC = removed_cells.begin(); it_RC != removed_cells.end(); it_RC++) {
+        msh.cells.erase(std::remove(begin(msh.cells), end(msh.cells), *it_RC ), end(msh.cells));
+    }
+
+    
+    // add new cells
+    for (size_t i = 0; i < loc_agglos.size(); i++)
+    {
+        msh.cells.push_back(loc_agglos.at(i).new_cell);
+    }
+
+    // sort the new list of cells
+    std::sort(msh.cells.begin(), msh.cells.end());
+    
+    // Check out if subcells work correctly
+    
+    /*
+    for(auto&cl:msh.cells)
+    {
+        //if(cl.user_data.offset_subcells.size()>1){
+            std::cout<<"The subcells of "<<offset(msh,cl)<<" are: ";
+            for(auto& i: cl.user_data.offset_subcells)
+                std::cout<<i<<", ";
+            std::cout<<std::endl;
+        //}
+        
+    }
+    */
+    
+    // remove faces
+    typename std::vector<typename Mesh::face_type>::iterator it_RF;
+    for(it_RF = removed_faces.begin(); it_RF != removed_faces.end(); it_RF++) {
+        msh.faces.erase(std::remove(begin(msh.faces), end(msh.faces), *it_RF ), end(msh.faces));
+    }
+
+    // sort the new list of faces
+    std::sort(msh.faces.begin(), msh.faces.end());
+
+    size_t nb_cells_after = msh.cells.size();
+    size_t nb_cut_after = 0;
+    for (auto& cl : msh.cells)
+    {
+        if( location(msh, cl) == element_location::ON_INTERFACE )
+            nb_cut_after++;
+    }
+
+    ////////////  output some info
+    std::ofstream output_cells("output_cells.txt", std::ios::out | std::ios::trunc);
+    output_cells << " NB_CELLS_BEFORE = " << nb_cells_before << std::endl;
+    output_cells << " NB_CELLS_AFTER = " << nb_cells_after << std::endl;
+    output_cells << " NB_CUT_CELLS_BEFORE = " << nb_cut_before << std::endl;
+    output_cells << " NB_CUT_CELLS_AFTER = " << nb_cut_after << std::endl;
+
+    output_cells << " NB_CELLS_OK = " << nb_cells_ok << std::endl;
+    output_cells << " NB_CELLS_KO1 = " << nb_cells_ko1 << std::endl;
+    output_cells << " NB_CELLS_KO2 = " << nb_cells_ko2 << std::endl;
+
+    output_cells << " NB_CELLS_STEP_1 = " << nb_step1 << std::endl;
+    output_cells << " NB_CELLS_STEP_2 = " << nb_step2 << std::endl;
+    output_cells << " NB_CELLS_STEP_3 = " << nb_step3 << std::endl;
+
+    output_cells.close();
+}
