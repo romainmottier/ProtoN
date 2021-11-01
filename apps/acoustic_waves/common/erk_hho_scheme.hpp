@@ -89,6 +89,10 @@ class erk_hho_scheme
     SparseMatrix<T> & Mc(){
         return m_Mc;
     }
+    
+    SparseMatrix<T> & Mc_inv(){
+        return m_Mc_inv;
+    }
 
     SparseMatrix<T> & Kcc(){
         return m_Kcc;
@@ -122,7 +126,8 @@ class erk_hho_scheme
         }
         std::vector< Triplet<T> > triplets_cc;
         triplets_cc.resize(nnz_cc);
-        m_Mc_inv = SparseMatrix<T>( m_n_c_dof, m_n_c_dof );
+//        m_Mc_inv = SparseMatrix<T>( m_n_c_dof + m_n_f_dof, m_n_c_dof + m_n_f_dof);
+        m_Mc_inv = SparseMatrix<T>( m_n_c_dof, m_n_c_dof);
         #ifdef HAVE_INTEL_TBB2
         size_t stride_eq = 0;
         size_t stride_l = 0;

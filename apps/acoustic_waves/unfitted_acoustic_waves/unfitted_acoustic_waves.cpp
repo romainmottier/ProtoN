@@ -36,8 +36,9 @@
 #include <Eigen/SparseCore>
 #include <Eigen/SparseLU>
 #include <unsupported/Eigen/SparseExtra>
-#include <Spectra/SymEigsSolver.h>
-#include <Spectra/MatOp/SparseSymMatProd.h>
+#include <Spectra/GenEigsSolver.h>
+#include <Spectra/MatOp/SparseGenMatProd.h>
+#include <Eigen/Eigenvalues>
 
 using namespace Eigen;
 
@@ -57,6 +58,7 @@ using namespace Eigen;
 #include "../common/erk_butcher_tableau.hpp"
 #include "../common/analytical_functions.hpp"
 
+#define scaled_stab_Q 0
 
 // ----- common data types ------------------------------
 using RealType = double;
@@ -211,21 +213,38 @@ public:
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
         // GR
+        T factor = 0.0;
+        if (1.0/(parms.kappa_1) < 1.0/(parms.kappa_2)) {
+            factor = 1.0;
+        }
         auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_NEGATIVE_SIDE, 1.0);
+                                                      element_location::IN_NEGATIVE_SIDE, 1.0-factor);
         auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_POSITIVE_SIDE, 0.0);
+                                                      element_location::IN_POSITIVE_SIDE, factor);
 
         // stab
-        Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
-
+        auto stab_parms = test_case.parms;
+        stab_parms.kappa_1 = 1.0/(parms.kappa_1);// rho_1 = kappa_1
+        stab_parms.kappa_2 = 1.0/(parms.kappa_2);// rho_2 = kappa_2
+        Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, stab_parms);
+        
+        T penalty_scale = std::min(1.0/(parms.kappa_1), 1.0/(parms.kappa_2));
         Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
-        stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
-        stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
-        stab.block(cbs, 0, cbs, cbs) -= parms.kappa_1 * penalty;
-        stab.block(cbs, cbs, cbs, cbs) += parms.kappa_1 * penalty;
+        stab.block(0, 0, cbs, cbs) += penalty_scale* penalty;
+        stab.block(0, cbs, cbs, cbs) -= penalty_scale * penalty;
+        stab.block(cbs, 0, cbs, cbs) -= penalty_scale * penalty;
+        stab.block(cbs, cbs, cbs, cbs) += penalty_scale * penalty;
+        
+//        Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
+//
+//        Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
+//        stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
+//        stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
+//        stab.block(cbs, 0, cbs, cbs) -= parms.kappa_1 * penalty;
+//        stab.block(cbs, cbs, cbs, cbs) += parms.kappa_1 * penalty;
 
-        Mat lc = stab + parms.kappa_1 * gr_n.second + parms.kappa_2 * gr_p.second;
+
+        Mat lc = stab + stab_parms.kappa_1 * gr_n.second + stab_parms.kappa_2 * gr_p.second;
         
         ///////////////    RHS
         Vect f = Vect::Zero(lc.rows());
@@ -284,21 +303,21 @@ public:
         // neg part
         f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
                                           element_location::IN_NEGATIVE_SIDE);
-        // we use element_location::IN_POSITIVE_SIDE to get rid of the Nitsche term
-        // (see definition of make_Dirichlet_jump)
-        f.head(cbs) -= parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
+//        // we use element_location::IN_POSITIVE_SIDE to get rid of the Nitsche term
+//        // (see definition of make_Dirichlet_jump)
+//        f.head(cbs) -= parms.kappa_1 *
+//            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
+//                                level_set_function, dir_jump, eta);
 
         // pos part
         f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
                                            element_location::IN_POSITIVE_SIDE);
-        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
-        f.block(cbs, 0, cbs, 1)
-            += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                    test_case.neumann_jump);
+//        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
+//            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
+//                                level_set_function, dir_jump, eta);
+//        f.block(cbs, 0, cbs, 1)
+//            += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
+//                                    test_case.neumann_jump);
 
         return f;
     }
@@ -356,7 +375,7 @@ public:
         auto n_cols = R_operator.cols();
         
         Matrix<T, Dynamic, Dynamic> S_operator = Matrix<T, Dynamic, Dynamic>::Zero(n_rows, n_cols);
-        auto stabilization_operator    = make_hho_naive_stabilization(msh, cl, hdi, false);
+        auto stabilization_operator    = make_hho_naive_stabilization(msh, cl, hdi, scaled_stab_Q);
         auto n_s_rows = stabilization_operator.rows();
         auto n_s_cols = stabilization_operator.cols();
         S_operator.block(n_rows-n_s_rows, n_cols-n_s_cols, n_s_rows, n_s_cols) = stabilization_operator;
@@ -549,10 +568,10 @@ public:
         auto stab_parms = test_case.parms;
         stab_parms.kappa_1 = 1.0/(parms.c_1*parms.kappa_1);// rho_1 = kappa_1
         stab_parms.kappa_2 = 1.0/(parms.c_2*parms.kappa_2);// rho_2 = kappa_2
-        Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, stab_parms, false);
+        Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, stab_parms, scaled_stab_Q);
         
         T penalty_scale = std::min(1.0/(parms.c_1*parms.kappa_1), 1.0/(parms.c_2*parms.kappa_2));
-        Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta, false).block(0, 0, cbs, cbs);
+        Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta, scaled_stab_Q).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += penalty_scale* penalty;
         stab.block(0, cbs, cbs, cbs) -= penalty_scale * penalty;
         stab.block(cbs, 0, cbs, cbs) -= penalty_scale * penalty;
@@ -993,7 +1012,7 @@ test_case_laplacian_waves_scatter(T t,Function level_set__)
             xc = 0.0;
             yc = 0.0;//2.0/3.0;
             c = 10.0;
-            lp = std::sqrt(9.0)/10.0;
+            lp = std::sqrt(9.0)/c;
             r = std::sqrt((x-xc)*(x-xc)+(y-yc)*(y-yc));
             wave = (c)/(std::exp((1.0/(lp*lp))*r*r*M_PI*M_PI));
             factor = (lp*lp/(2.0*M_PI*M_PI));
@@ -1017,7 +1036,7 @@ test_case_laplacian_waves_scatter(T t,Function level_set__)
             xc = 0.0;
             yc = 0.0;//2.0/3.0;
             c = 10.0;
-            lp = std::sqrt(9.0)/10.0;
+            lp = std::sqrt(9.0)/c;
             r = std::sqrt((x-xc)*(x-xc)+(y-yc)*(y-yc));
             wave = (c)/(std::exp((1.0/(lp*lp))*r*r*M_PI*M_PI));
             factor = (lp*lp/(2.0*M_PI*M_PI));
@@ -1090,9 +1109,13 @@ void ICutHHOSecondOrder(int argc, char **argv);
 void ICutHHOFirstOrder(int argc, char **argv);
 void ECutHHOFirstOrder(int argc, char **argv);
 void ECutHHOFirstOrderCFL(int argc, char **argv);
+void ECutHHOFirstOrderEigenCFL(int argc, char **argv);
 
 template<typename Mesh>
 void PrintIntegrationRule(const Mesh& msh, hho_degree_info & hdi);
+
+template<typename Mesh>
+void PrintAgglomeratedCells(const Mesh& msh);
 
 mesh_type SquareCutMesh(level_set<RealType> & level_set_function, size_t l_divs, size_t int_refsteps = 4);
 mesh_type SquareGar6moreCutMesh(level_set<RealType> & level_set_function, size_t l_divs, size_t int_refsteps);
@@ -1108,7 +1131,7 @@ int main(int argc, char **argv)
 {
 
 //    HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
-//    HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
+    HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
 //    HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
     
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
@@ -1117,7 +1140,8 @@ int main(int argc, char **argv)
 //    ICutHHOSecondOrder(argc, argv);
 //    ICutHHOFirstOrder(argc, argv);
 //    ECutHHOFirstOrder(argc, argv);
-    ECutHHOFirstOrderCFL(argc, argv);
+//    ECutHHOFirstOrderCFL(argc, argv);
+//    ECutHHOFirstOrderEigenCFL(argc, argv);
     
 //    CutHHOSecondOrderConvTest(argc, argv);
 //    CutHHOFirstOrderConvTest(argc, argv);
@@ -1949,7 +1973,8 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
     argv += optind;
     
     std::vector<RealType> tf_vec;
-    tf_vec = {0.5,0.25,0.125,0.125};
+    tf_vec = {0.5,0.4,0.3,0.2};
+//    tf_vec = {0.5/4,0.4/4,0.3/4,0.2/4};
 
     RealType ti = 0.0;
     RealType tf = tf_vec[degree];;
@@ -1966,6 +1991,8 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
         
             RealType radius = 1.0/3.0;
             auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+//            RealType cy = 1.0e-15+0.5;
+//            auto level_set_function = line_level_set<RealType>(cy);
             mesh_type msh = SquareCutMesh(level_set_function, l, int_refsteps);
             
             if (dump_debug)
@@ -1993,6 +2020,7 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
                 auto method = make_gradrec_mixed_interface_method(msh, 1.0, test_case);
                 size_t n_faces = 0;
                 std::vector<std::pair<size_t,size_t>> cell_basis_data = create_mixed_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg, true, &n_faces);
+                
                 
                 tc.tic();
                 size_t n_face_dof, n_face_basis;
@@ -2058,29 +2086,8 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
                 for (auto cell : msh.cells) {
                     
                     RealType h = diameter(msh, cell);
-                    if ( location(msh, cell) == element_location::ON_INTERFACE )
-                    {
-                        auto qps_n = integrate(msh, cell, 2, element_location::IN_NEGATIVE_SIDE);
-                        RealType h_n = 0.0;
-                        for (auto& qp : qps_n)
-                        {
-                            h_n += qp.second;
-                        }
-                        auto qps_p = integrate(msh, cell, 2, element_location::IN_POSITIVE_SIDE);
-                        RealType h_p = 0.0;
-                        for (auto& qp : qps_p)
-                        {
-                            h_p += qp.second;
-                        }
-                        h = std::sqrt(std::min(h_n, h_p));
-                        if (h < h_T) {
-                          h_T = h;
-                        }
-                    }
-                    else{
-                        if (h < h_T) {
-                            h_T = h;
-                        }
+                    if (h < h_T) {
+                        h_T = h;
                     }
                 }
                 
@@ -2120,6 +2127,181 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
         simulation_log << " ******************************* " << std::endl;
         simulation_log << std::endl << std::endl;
     }
+    
+}
+
+void ECutHHOFirstOrderEigenCFL(int argc, char **argv){
+    
+    bool report_energy_Q = true;
+
+    size_t degree           = 0;
+    size_t l_divs          = 0;
+    size_t nt_divs       = 0;
+    size_t int_refsteps     = 4;
+    bool dump_debug         = false;
+
+    /* k <deg>:     method degree
+     * l <num>:     number of cells in x and y direction
+     * r <num>:     number of interface refinement steps
+     * d:           dump debug data
+     */
+
+    // Simplified input
+     int ch;
+     while ( (ch = getopt(argc, argv, "k:l:r:n:d")) != -1 )
+     {
+         switch(ch)
+         {
+             case 'k':
+                 degree = atoi(optarg);
+                 break;
+
+             case 'l':
+                 l_divs = atoi(optarg);
+                 break;
+
+             case 'r':
+                 int_refsteps = atoi(optarg);
+                 break;
+                 
+             case 'n':
+                 nt_divs = atoi(optarg);
+                 break;
+
+             case 'd':
+                 dump_debug = true;
+                 break;
+
+             case '?':
+             default:
+                 std::cout << "wrong arguments" << std::endl;
+                 exit(1);
+         }
+     }
+
+    argc -= optind;
+    argv += optind;
+
+    RealType t = 0.0;
+    int nt_base = nt_divs;
+    RealType energy_0 = 0.125;
+    std::ofstream simulation_log("acoustic_two_fields_explicit_cfl.txt");
+
+    timecounter tc;
+    for(size_t k = 0; k <= degree; k++){
+        
+        simulation_log << " ******************************* " << std::endl;
+        simulation_log << " Polynomial degree =  " << k << std::endl;
+        simulation_log << std::endl;
+        
+        for(size_t l = 4; l <= l_divs; l++){
+        
+            RealType radius = 1.0/3.0;
+            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+//            RealType cy = 1.0e-15+0.5;
+//            auto level_set_function = line_level_set<RealType>(cy);
+            mesh_type msh = SquareCutMesh(level_set_function, l, int_refsteps);
+            
+            if (dump_debug)
+            {
+                dump_mesh(msh);
+                output_mesh_info(msh, level_set_function);
+                PrintAgglomeratedCells(msh);
+            }
+            
+            hho_degree_info hdi(k+1, k);
+            SparseMatrix<RealType> Kg, Mg;
+            auto test_case = make_test_case_laplacian_waves_mixed(t,msh, level_set_function);
+            auto method = make_gradrec_mixed_interface_method(msh, 1.0, test_case);
+            size_t n_faces = 0;
+            std::vector<std::pair<size_t,size_t>> cell_basis_data = create_mixed_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg, true, &n_faces);
+
+            size_t n_face_dof, n_face_basis;
+            size_t n_dof = Kg.rows();
+            size_t n_cell_dof = 0;
+            for (auto &chunk : cell_basis_data) {
+                n_cell_dof += chunk.second;
+            }
+            n_face_dof = n_dof - n_cell_dof;
+            n_face_basis = face_basis<mesh_type,RealType>::size(degree);
+            
+            Matrix<RealType, Dynamic, 1> rhs = Matrix<RealType, Dynamic, 1>::Zero(n_dof, 1);
+            erk_hho_scheme<RealType> analysis(Kg,rhs,Mg,n_face_dof);
+            
+//            {
+//                {
+//                    MatrixXf A = Kg.toDense();
+//                    MatrixXf B = Mg.toDense();
+//                    GeneralizedEigenSolver<MatrixXd> ges;
+//                    ges.compute(A, B, false);
+//                    auto lambda_max = ges.alphas()[0]/(ges.betas()[0]);
+//                    auto beta_cfl = 1.0/(lambda_max);
+//                    std::cout << "Number of equations : " << Kg.rows() << std::endl;
+//                    std::cout << "Largest eigenvalue : " << lambda_max << std::endl;
+//                    std::cout << "Beta-CFL :  " << beta_cfl << std::endl;
+//                }
+//            }
+            
+            analysis.Kcc_inverse_irregular_blocks(cell_basis_data);
+            
+            RealType lambda_max = 0;
+            {
+                tc.tic();
+//                for (int i = 0; i < n_cell_dof; i++) {
+//                    for (int j = 0; j < n_cell_dof; j++) {
+//                        Mg.coeffRef(i, j) = analysis.Mc_inv().coeffRef(i,j);
+//                    }
+//                }
+                Kg = analysis.Mc_inv()*Kg;
+                
+                Spectra::SparseGenMatProd<RealType> op(Kg);
+                Spectra::GenEigsSolver< RealType, Spectra::LARGEST_MAGN,
+                                        Spectra::SparseGenMatProd<RealType> > max_eigs(&op, 1, 8);
+                tc.toc();
+                simulation_log << "Generalized Eigen Solver creation time: " << tc << " seconds" << std::endl;
+                
+                tc.tic();
+                max_eigs.init();
+                max_eigs.compute();
+                tc.toc();
+                if(max_eigs.info() == Spectra::SUCCESSFUL){
+                    lambda_max = max_eigs.eigenvalues()(0).real();
+                }
+                simulation_log << "Generalized Eigen Solver compute time: " << tc << " seconds" << std::endl;
+                
+            }
+            
+            RealType h_T = std::numeric_limits<RealType>::max();
+            for (auto cell : msh.cells) {
+             
+                 RealType h = diameter(msh, cell);
+                 if (h < h_T) {
+                     h_T = h;
+                 }
+            }
+                
+
+            
+            auto beta_cfl = 1.0/(lambda_max);
+            simulation_log << "Number of equations : " << Kg.rows() << std::endl;
+            simulation_log << "Largest eigenvalue : " << lambda_max << std::endl;
+            simulation_log << "l :  " << l << std::endl;
+            simulation_log << "h :  " << h_T << std::endl;
+            simulation_log << "Beta-CFL :  " << beta_cfl << std::endl;
+            if (scaled_stab_Q) {
+                simulation_log << "CFL :  " << beta_cfl/(h_T*h_T) << std::endl;
+            }else{
+                simulation_log << "CFL :  " << beta_cfl/(h_T) << std::endl;
+            }
+            
+            simulation_log << std::endl;
+            simulation_log.flush();
+            
+        }
+    }
+    
+    simulation_log << " ******************************* " << std::endl;
+    simulation_log << std::endl << std::endl;
     
 }
 
@@ -2201,10 +2383,10 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
     SparseMatrix<RealType> Kg, Kg_c, Mg;
     hho_degree_info hdi(degree+1, degree);
     auto test_case = make_test_case_laplacian_waves_scatter(t,msh, level_set_function);
-    test_case.parms.kappa_1 = 1.0; // rho_1 = kappa_1
-    test_case.parms.kappa_2 = 1.0; // rho_2 = kappa_2
-    test_case.parms.c_1 = std::sqrt(3.0);
-    test_case.parms.c_2 = std::sqrt(9.0);
+    test_case.parms.kappa_1 = (1.0/9.0); // kappa_1 -> rho_1
+    test_case.parms.kappa_2 = (1.0/3.0); // kappa_2 -> rho_2
+    test_case.parms.c_1 = std::sqrt(9.0);
+    test_case.parms.c_2 = std::sqrt(3.0);
     auto method = make_gradrec_interface_method(msh, 1.0, test_case);
     
     std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
@@ -2231,15 +2413,18 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
     if (!direct_solver_Q) {
         analysis.set_iterative_solver(true);
     }
+//    }else{
+//        analysis.set_iterative_solver(true);
+//    }
     analysis.factorize();
     
     std::ofstream sensor_1_log("s1_cut_acoustic_one_field.csv");
     std::ofstream sensor_2_log("s2_cut_acoustic_one_field.csv");
     std::ofstream sensor_3_log("s3_cut_acoustic_one_field.csv");
     
-    typename mesh_type::point_type s1_pt(-1.0/3.0, -1.0/3.0);
-    typename mesh_type::point_type s2_pt( 0.0, -1.0/3.0);
-    typename mesh_type::point_type s3_pt(+1.0/3.0, -1.0/3.0);
+    typename mesh_type::point_type s1_pt(+3.0/4.0, -1.0/3.0);
+    typename mesh_type::point_type s2_pt( 0.0, +1.0/3.0);
+    typename mesh_type::point_type s3_pt(+3.0/4.0, +1.0/3.0);
     std::pair<typename mesh_type::point_type,size_t> s1_pt_cell = std::make_pair(s1_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s2_pt_cell = std::make_pair(s2_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s3_pt_cell = std::make_pair(s3_pt, -1);
@@ -2345,8 +2530,8 @@ void HeterogeneousGar6moreICutHHOFirstOrder(int argc, char **argv){
     
     SparseMatrix<RealType> Kg, Mg;
     auto test_case = make_test_case_laplacian_waves_scatter(t,msh, level_set_function);
-    test_case.parms.kappa_1 = 1.0; // rho_1 = kappa_1
-    test_case.parms.kappa_2 = 1.0; // rho_2 = kappa_2
+    test_case.parms.kappa_1 = 1.0/3.0; // rho_1 = kappa_1
+    test_case.parms.kappa_2 = 1.0/9.0; // rho_2 = kappa_2
     test_case.parms.c_1 = std::sqrt(3.0);
     test_case.parms.c_2 = std::sqrt(9.0);
     auto method = make_gradrec_mixed_interface_method(msh, 1.0, test_case);
@@ -2381,9 +2566,9 @@ void HeterogeneousGar6moreICutHHOFirstOrder(int argc, char **argv){
     std::ofstream sensor_2_log("s2_cut_acoustic_two_fields.csv");
     std::ofstream sensor_3_log("s3_cut_acoustic_two_fields.csv");
     
-    typename mesh_type::point_type s1_pt(-1.0/3.0, +1.0/3.0);
+    typename mesh_type::point_type s1_pt(+3.0/4.0, -1.0/3.0);
     typename mesh_type::point_type s2_pt( 0.0, +1.0/3.0);
-    typename mesh_type::point_type s3_pt(+1.0/3.0, +1.0/3.0);
+    typename mesh_type::point_type s3_pt(+3.0/4.0, +1.0/3.0);
     std::pair<typename mesh_type::point_type,size_t> s1_pt_cell = std::make_pair(s1_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s2_pt_cell = std::make_pair(s2_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s3_pt_cell = std::make_pair(s3_pt, -1);
@@ -2482,6 +2667,7 @@ void HeterogeneousFlowerICutHHOSecondOrder(int argc, char **argv){
         output_mesh_info(msh, level_set_function);
         hho_degree_info hdi(degree+1, degree);
         PrintIntegrationRule(msh,hdi);
+        PrintAgglomeratedCells(msh);
     }
     
     // Time controls : Final time value 1.0
@@ -2540,8 +2726,8 @@ void HeterogeneousFlowerICutHHOSecondOrder(int argc, char **argv){
     std::ofstream sensor_3_log("s3_cut_acoustic_one_field.csv");
     
     typename mesh_type::point_type s1_pt(1.0/3.0, 1.0/3.0);
-    typename mesh_type::point_type s2_pt(2.0/3.0, 2.0/3.0);
-    typename mesh_type::point_type s3_pt(1.0, 1.0);
+    typename mesh_type::point_type s2_pt(1.0/3.0, 2.0/3.0);
+    typename mesh_type::point_type s3_pt(1.2, 1.0);
     std::pair<typename mesh_type::point_type,size_t> s1_pt_cell = std::make_pair(s1_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s2_pt_cell = std::make_pair(s2_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s3_pt_cell = std::make_pair(s3_pt, -1);
@@ -2688,8 +2874,8 @@ void HeterogeneousFlowerICutHHOFirstOrder(int argc, char **argv){
     std::ofstream sensor_3_log("s3_cut_acoustic_two_fields.csv");
     
     typename mesh_type::point_type s1_pt(1.0/3.0, 1.0/3.0);
-    typename mesh_type::point_type s2_pt(2.0/3.0, 2.0/3.0);
-    typename mesh_type::point_type s3_pt(1.0, 1.0);
+    typename mesh_type::point_type s2_pt(1.0/3.0, 2.0/3.0);
+    typename mesh_type::point_type s3_pt(1.2, 1.0);
     std::pair<typename mesh_type::point_type,size_t> s1_pt_cell = std::make_pair(s1_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s2_pt_cell = std::make_pair(s2_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s3_pt_cell = std::make_pair(s3_pt, -1);
@@ -2729,7 +2915,7 @@ void HeterogeneousFlowerICutHHOFirstOrder(int argc, char **argv){
 
 void HeterogeneousFlowerECutHHOFirstOrder(int argc, char **argv){
     
-    bool report_energy_Q = true;
+    bool report_energy_Q = false;
     
     size_t degree           = 0;
     size_t l_divs          = 0;
@@ -2842,8 +3028,8 @@ void HeterogeneousFlowerECutHHOFirstOrder(int argc, char **argv){
     std::ofstream sensor_3_log("s3_cut_acoustic_e_two_fields.csv");
     
     typename mesh_type::point_type s1_pt(1.0/3.0, 1.0/3.0);
-    typename mesh_type::point_type s2_pt(2.0/3.0, 2.0/3.0);
-    typename mesh_type::point_type s3_pt(1.0, 1.0);
+    typename mesh_type::point_type s2_pt(1.0/3.0, 2.0/3.0);
+    typename mesh_type::point_type s3_pt(1.2, 1.0);
     std::pair<typename mesh_type::point_type,size_t> s1_pt_cell = std::make_pair(s1_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s2_pt_cell = std::make_pair(s2_pt, -1);
     std::pair<typename mesh_type::point_type,size_t> s3_pt_cell = std::make_pair(s3_pt, -1);
@@ -3096,7 +3282,7 @@ template<typename Mesh, typename testType, typename meth>
 void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell)
 {
     using RealType = typename Mesh::coordinate_type;
-    bool write_silo_Q = true;
+    bool write_silo_Q = false;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -3117,20 +3303,21 @@ void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_
         u_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
         v_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
         a_dof_n = Matrix<RealType, Dynamic, 1>::Zero(n_dof,1);
+        auto u_fun = test_case.sol_fun;
         
-        auto u_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
-            RealType x,y,xc,yc,r,wave,vx,vy,v,c,lp,factor;
-            x = pt.x();
-            y = pt.y();
-            xc = 0.0;
-            yc = 0.0;//2.0/3.0;
-            c = 10.0;
-            lp = std::sqrt(9.0)/10.0;
-            r = std::sqrt((x-xc)*(x-xc)+(y-yc)*(y-yc));
-            wave = (c)/(std::exp((1.0/(lp*lp))*r*r*M_PI*M_PI));
-            factor = (lp*lp/(2.0*M_PI*M_PI));
-            return factor*wave;
-        };
+//        auto u_fun = [](const typename Mesh::point_type& pt) -> typename Mesh::coordinate_type {
+//            RealType x,y,xc,yc,r,wave,vx,vy,v,c,lp,factor;
+//            x = pt.x();
+//            y = pt.y();
+//            xc = 0.0;
+//            yc = 2.0/3.0;
+//            c = 10.0;
+//            lp = std::sqrt(9.0)/10.0;
+//            r = std::sqrt((x-xc)*(x-xc)+(y-yc)*(y-yc));
+//            wave = (c)/(std::exp((1.0/(lp*lp))*r*r*M_PI*M_PI));
+//            factor = (lp*lp/(2.0*M_PI*M_PI));
+//            return factor*wave;
+//        };
 
         assembler.project_over_cells(msh, hdi, u_dof_n, u_fun);
         
@@ -3146,12 +3333,13 @@ void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_
         
     }
     
-    assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
-    for (auto& cl : msh.cells)
-    {
-        auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
-        assembler.assemble_rhs(msh, cl, f);
-    }
+    assembler.RHS = 0.0*u_dof_n;
+//    assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+//    for (auto& cl : msh.cells)
+//    {
+//        auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
+//        assembler.assemble_rhs(msh, cl, f);
+//    }
 
     tc.toc();
     std::cout << bold << yellow << "RHS assembly: " << tc << " seconds" << reset << std::endl;
@@ -3459,7 +3647,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 sdirk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, dirk_hho_scheme<RealType> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell){
     
-    bool write_silo_Q = true;
+    bool write_silo_Q = false;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -3479,7 +3667,7 @@ sdirk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType d
         auto vel_fun = [](const typename Mesh::point_type& pt) -> RealType {
             return 0.0;
         };
-
+        
         auto flux_fun = [](const typename Mesh::point_type& pt) -> Matrix<RealType, 1, 2> {
             Matrix<RealType, 1, 2> v;
             RealType x,y,xc,yc,r,wave,vx,vy,c,lp;
@@ -3488,7 +3676,7 @@ sdirk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType d
             xc = 0.0;
             yc = 0.0;//2.0/3.0;
             c = 10.0;
-            lp = std::sqrt(9.0)/10.0;
+            lp = std::sqrt(9.0)/c;
             r = std::sqrt((x-xc)*(x-xc)+(y-yc)*(y-yc));
             wave = (c)/(std::exp((1.0/(lp*lp))*r*r*M_PI*M_PI));
             vx = -wave*(x-xc);
@@ -3565,7 +3753,7 @@ void
 erk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, erk_hho_scheme<RealType> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell){
     
     
-    bool write_silo_Q = true;
+    bool write_silo_Q = false;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -3711,4 +3899,27 @@ void PrintIntegrationRule(const Mesh& msh, hho_degree_info & hdi){
         }
     }
     int_rule_file.flush();
+}
+
+template<typename Mesh>
+void PrintAgglomeratedCells(const Mesh& msh){
+    
+    std::ofstream agglo_cells_file("agglomerated_cells.txt");
+    for (auto& cl : msh.cells)
+    {
+
+        if (location(msh, cl) == element_location::ON_INTERFACE)
+        {
+            auto pts = points(msh, cl);
+            if (pts.size() == 4) {
+                continue;
+            }
+            for (auto point : pts) {
+                agglo_cells_file << " ";
+                agglo_cells_file << point.x() << " " << point.y();
+            }
+            agglo_cells_file << std::endl;
+        }
+    }
+    agglo_cells_file.flush();
 }
