@@ -1131,11 +1131,11 @@ int main(int argc, char **argv)
 {
 
 //    HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
-    HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
+//    HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
 //    HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
     
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
-//    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
+    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
 //    ICutHHOSecondOrder(argc, argv);
 //    ICutHHOFirstOrder(argc, argv);
@@ -3647,7 +3647,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 sdirk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, dirk_hho_scheme<RealType> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell){
     
-    bool write_silo_Q = false;
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
