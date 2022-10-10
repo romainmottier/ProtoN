@@ -12,9 +12,11 @@ set (CMAKE_MODULE_PATH
 
 include(safeguards)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++14 -g -fpermissive -fsanitize=address")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++14 -O3 -mavx -g -fpermissive")
-set(CMAKE_CXX_FLAGS_RELEASEASSERT "-std=c++14 -O3 -mavx -g -fpermissive")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fpermissive -fsanitize=address")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -fpermissive")
 
 #find_package(MKL)
 #if (MKL_FOUND)
@@ -47,9 +49,13 @@ endif()
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
 
+add_subdirectory(contrib/sol2)
+set(SOL2_BUILD_LUA OFF CACHE BOOL "Override sol2 build lua option")
+set(LINK_LIBS ${LINK_LIBS} sol2::sol2)
+
+include_directories(contrib/spectra/include)
+
 include_directories(src)
-include_directories(contrib)
 add_subdirectory(apps)
 add_subdirectory(tests)
 add_subdirectory(output)
-

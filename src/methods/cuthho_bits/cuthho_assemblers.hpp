@@ -325,7 +325,7 @@ public:
                 if ( asm_map[j].assemble() )
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
                 else
-                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
+                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
             }
         }
 
@@ -335,7 +335,7 @@ public:
             if (!asm_map[i].assemble())
                 continue;
 
-            RHS(asm_map[i]) += rhs(i);
+            RHS[asm_map[i]] += rhs(i);
         }
     }
 
@@ -1568,7 +1568,7 @@ public:
                 if ( asm_map[j].assemble() )
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
                 else
-                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
+                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
             }
         }
 
@@ -1578,7 +1578,7 @@ public:
             if (!asm_map[i].assemble())
                 continue;
 
-            RHS(asm_map[i]) += rhs(i);
+            RHS[asm_map[i]] += rhs(i);
         }
 
 
