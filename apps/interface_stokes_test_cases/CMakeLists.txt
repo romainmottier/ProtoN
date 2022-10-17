@@ -1,0 +1,3 @@
+add_executable(interface_stokes_test_cases interface_stokes_test_cases.cpp)
+target_link_libraries(interface_stokes_test_cases ${LINK_LIBS})
+install(TARGETS interface_stokes_test_cases RUNTIME DESTINATION bin)
