@@ -579,6 +579,39 @@ make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh,
     return data;
 }
 
+// make_hho_cut_interface_penalty
+// eta is the penalty (Nitsche's) parameter
+// return eta h_T^{-1} (u_T , v_T)_{Gamma}
+template<typename T, size_t ET , typename INTERFACE>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
+make_hho_cut_parametric_interface_penalty(const cuthho_mesh<T, ET>& msh,
+                               const typename cuthho_mesh<T, ET>::cell_type& cl, const INTERFACE& parametric_interface,
+                               const hho_degree_info& di, const T eta)
+{
+    auto celdeg = di.cell_degree();
+    auto facdeg = di.face_degree();
+
+    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+
+    auto num_faces = faces(msh, cl).size();
+
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+
+    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
+
+    auto hT = diameter(msh, cl);
+
+    auto iqps = integrate_interface(msh, cl,parametric_interface, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
+    for (auto& qp : iqps)
+    {
+        const auto c_phi  = cb.eval_basis(qp.first);
+
+        data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
+    }
+
+    return data;
+}
 
 
 //// make_hho_stabilization_interface
@@ -707,7 +740,7 @@ make_hho_gradrec_vector(const cuthho_mesh<T, ET>& msh, const typename cuthho_mes
     if ( !is_cut(msh, cl) )
         return make_hho_gradrec_vector(msh, cl, di);
 
-    std::cout<<"make_hho_gradrec_vector: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+//    std::cout<<"make_hho_gradrec_vector: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
 
@@ -1513,6 +1546,16 @@ make_hho_cut_interface_vector_penalty(const cuthho_mesh<T, ET>& msh,
     return vector_assembly(scalar_penalty);
 }
 
+template<typename T, size_t ET , typename INTERFACE>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
+make_hho_cut_parametric_interface_vector_penalty(const cuthho_mesh<T, ET>& msh,
+                                      const typename cuthho_mesh<T, ET>::cell_type& cl, const INTERFACE& parametric_interface,
+                                      const hho_degree_info& di, const T eta)
+{
+    auto scalar_penalty = make_hho_cut_parametric_interface_penalty(msh, cl,parametric_interface, di, eta);
+
+    return vector_assembly(scalar_penalty);
+}
 
 
 /////  GRADREC
@@ -1645,7 +1688,7 @@ make_vector_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
-    std::cout<<"make_vector_GR_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+//    std::cout<<"make_vector_GR_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     size_t gbs;
     if( sym_grad )
         gbs = sym_matrix_cell_basis<cuthho_mesh<T, ET>,T>::size(degree-1);
@@ -1945,7 +1988,7 @@ make_hho_divergence_reconstruction(const cuthho_mesh<T, ET>& msh,
     if ( !is_cut(msh, cl) )
         return make_hho_divergence_reconstruction(msh, cl, di);
 
-    std::cout<<"make_hho_divergence_reconstruction: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+//    std::cout<<"make_hho_divergence_reconstruction: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     const auto celdeg = di.cell_degree();
     const auto facdeg = di.face_degree();
     const auto pdeg = di.face_degree();
@@ -2060,7 +2103,7 @@ make_hho_divergence_reconstruction_interface
         const auto v_phi     = cb.eval_basis(qp.first);
         const auto s_phi   = pb.eval_basis(qp.first);
         const auto s_dphi  = pb.eval_gradients(qp.first);
-
+        // integration pour parties de la divergence
         dr_lhs += qp.second * s_phi * s_phi.transpose();
         rhs_tmp.block(0, 0, pbs, cbs) -= qp.second * s_dphi * v_phi.transpose();
     }
@@ -2079,7 +2122,6 @@ make_hho_divergence_reconstruction_interface
             const matrix_type f_phi      = fb.eval_basis(qp.first);
             const auto        s_phi      = pb.eval_basis(qp.first);
             const matrix_type qp_s_phi_n = qp.second * s_phi * n.transpose();
-
             rhs_tmp.block(0, cbs + i * fbs, pbs, fbs) += qp_s_phi_n * f_phi.transpose();
         }
     }
@@ -2105,16 +2147,24 @@ make_hho_divergence_reconstruction_interface
         dr_rhs.block(0, 0, pbs, cbs) += rhs_tmp.block(0, 0, pbs, cbs);
         dr_rhs.block(0, 2*cbs, pbs, num_faces*fbs)
             += rhs_tmp.block(0, cbs, pbs, num_faces*fbs);
+        // coeff -> interface jump + 1.0 -> derivé par l'integration pour parties de la DIV
         dr_rhs.block(0, 0, pbs, cbs) += (1.0 - coeff) * interface_term;
         dr_rhs.block(0, cbs, pbs, cbs) += coeff * interface_term;
+        // Stefano implementation alfai dependent
+//        dr_rhs.block(0, 0, pbs, cbs) += coeff * interface_term;
+//        dr_rhs.block(0, cbs, pbs, cbs) += (1.0 - coeff) * interface_term;
     }
     else if( where == element_location::IN_POSITIVE_SIDE)
     {
         dr_rhs.block(0, cbs, pbs, cbs) += rhs_tmp.block(0, 0, pbs, cbs);
         dr_rhs.block(0, 2*cbs + num_faces*fbs, pbs, num_faces*fbs)
                      += rhs_tmp.block(0, cbs, pbs, num_faces*fbs);
+        // coeff -> interface jump + 1.0 -> derivé par l'integration pour parties de la DIV
         dr_rhs.block(0, 0, pbs, cbs) -= coeff * interface_term;
         dr_rhs.block(0, cbs, pbs, cbs) += (coeff-1.0) * interface_term;
+        // Stefano implementation alfai dependent
+//        dr_rhs.block(0, 0, pbs, cbs) += (coeff-1.0) * interface_term;
+//        dr_rhs.block(0, cbs, pbs, cbs) -= coeff * interface_term;
     }
 
     matrix_type oper = dr_lhs.ldlt().solve(dr_rhs);
@@ -3061,7 +3111,7 @@ make_pressure_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
         Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
         return ret;
     }
-    std::cout<<"make_pressure_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+//    std::cout<<"make_pressure_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);

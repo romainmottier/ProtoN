@@ -337,13 +337,42 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
     std::vector<node_type>      nodes;
     std::vector<face_type>      faces;
     std::vector<cell_type>      cells;
-    
+    mesh_init_params<T>         msh_parms;
 
     mesh_impl() : mesh_impl( mesh_init_params<T>() )
-    {}
+    {
+        
+    }
+    
+//    mesh_impl() : mesh_impl( msh_parms )
+//    {
+//
+//    }
+    
+    mesh_impl(mesh_impl& other): mesh_impl( other.msh_parms )
+    {
+        points = other.points;
+        nodes = other.nodes;
+        faces = other.faces;
+        cells = other.cells;
+        msh_parms = other.msh_parms;
+    }
+    
+    
+    
+    mesh_impl(const mesh_impl& other): mesh_impl( other.msh_parms )
+    {
+        points = other.points;
+        nodes = other.nodes;
+        faces = other.faces;
+        cells = other.cells;
+        msh_parms = other.msh_parms;
+    }
+    
 
     mesh_impl(const mesh_init_params<T>& parms)
     {
+        msh_parms = parms;
         auto hx = parms.hx();
         auto hy = parms.hy();
 

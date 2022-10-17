@@ -2043,7 +2043,94 @@ public:
             lhs_sc = mat_sc.first;
             rhs_sc = mat_sc.second;
         }
+        
+       
+        // count how many inner faces there are
+        auto cc = 0;
+        int i_cc = 0;
+        
+        std::vector<int> indicesToKeep(cbs) ; // vector with 100 ints.
+        std::iota (std::begin(indicesToKeep), std::end(indicesToKeep), 0);
+        
+        for(auto& fc:fcs)
+        {
+            if (fc.user_data.location != element_location::IN_POSITIVE_SIDE)
+            {
+                cc++;
+                for(int ipos = 0 ; ipos < fbs ; ipos++)
+                    indicesToKeep.push_back( cbs + (i_cc+1)*ipos );
+                
+            }
+            i_cc++;
+        }
+        
+    
+        // Eigen::VectorXi indicesToKeepVector = Eigen::VectorXi(indicesToKeep.data(), indicesToKeep.size());
+//        size_t dim = cbs + cc*fbs;
+//        size_t dim_tot = 30 + 4*8;
+//        Matrix<T, 62, 62> Auu_HDG ;
+//
+//        Auu_HDG = lhs_A.block(0,0,cbs+ 4*fbs, cbs+ 4*fbs);
+//
+//        Auu_HDG = Auu_HDG(indicesToKeep,Eigen::all);
+//        for(auto c = 0 ; c<cc ; c++)
+//            Auu_HDG.block(cbs+indicesToKeep,0,1,cbs + cc) = lhs_A.block(0,0,cbs, cbs);
+//        auto tmp = loc_LHS_A.at( cell_offset ) ;
+//
+//
+//
+//        auto tmp2 = tmp.block(indicesToKeepVector, indicesToKeepVector);
+            
+        
+        //Matrix<T, Dynamic, Dynamic> A_kk = tmp(indicesToKeepVector, indicesToKeepVector); // select columns you want to keep(indicesToKeep), discard others
+        // A_kk = lhs_A(indicesToKeepVector, Eigen::placeholders::all);
 
+        
+        
+        
+        
+        auto non_null_elems = cc*fbs;
+
+        // Add by Stefano
+//        JacobiSVD<MatrixXd> svd(lhs_sc);
+//        double cond = svd.singularValues()(0)
+//            / svd.singularValues()(non_null_elems);
+//        auto sigma1 = svd.singularValues()(0);
+//        auto sigma2 = svd.singularValues()(non_null_elems-1);
+       
+//        for (size_t j = 0; j < svd.singularValues().size(); j++)
+//        {
+//            std::cout<<"J = "<<j<<"-> lhs = "<<svd.singularValues()(j)<<",   ";
+//        }
+//        std::cout<<std::endl;
+//        Eigen::BDCSVD<Eigen::MatrixXd> SVD(lhs_sc, Eigen::ComputeThinU | Eigen::ComputeThinV);
+//        double cond = SVD.singularValues()(0) / SVD.singularValues()(SVD.singularValues().size()-1);
+//        std::cout<<"cond_numb LOC = "<<cond<<std::endl;
+        
+//        JacobiSVD<MatrixXd> svd2(lhs_A);
+//        double cond2 = svd2.singularValues()(0)
+//            / svd2.singularValues()(svd2.singularValues().size()-1);
+//        for (size_t j = 0; j < svd2.singularValues().size(); j++)
+//        {
+//            std::cout<<"J = "<<j<<"-> lhsA = "<<svd2.singularValues()(j)<<",   ";
+//        }
+//        std::cout<<std::endl;
+//        std::cout<<"cond_numb LOC = "<<cond2<<std::endl;
+        
+        
+//        JacobiSVD<MatrixXd> svd3(lhs_B);
+//        double cond3 = svd3.singularValues()(0)
+//            / svd3.singularValues()(svd3.singularValues().size()-1);
+//        for (size_t j = 0; j < svd3.singularValues().size(); j++)
+//        {
+//            std::cout<<"J = "<<j<<"-> lhsB = "<<svd3.singularValues()(j)<<",   ";
+//        }
+//        std::cout<<std::endl;
+//        Eigen::BDCSVD<Eigen::MatrixXd> SVD(lhs_sc, Eigen::ComputeThinU | Eigen::ComputeThinV);
+//        double cond = SVD.singularValues()(0) / SVD.singularValues()(SVD.singularValues().size()-1);
+//        std::cout<<"cond_numb LOC = "<<cond3<<std::endl;
+        
+        
         this->assemble_bis(msh, cl, lhs_sc, rhs_sc);
 
         // null pressure mean condition
@@ -2065,7 +2152,8 @@ public:
 
         auto solF = this->get_solF(msh, cl, solution);
         auto f_dofs = solF.size();
-
+//        for( auto j = 0 ; j < f_dofs ; j++ )
+//            std::cout<<solF(j)<<std::endl;
         auto cbs = vector_cell_basis<Mesh,T>::size( this->di.cell_degree() );
 
         auto facdeg = this->di.face_degree();

@@ -619,7 +619,26 @@ public:
         ret(3) = (5*ep*ep*ep - 3*ep) * sqrt(7.0 / 8.0) / coeff;
         if( basis_degree == 3)
             return ret;
+    
+        
+        ret(4) = (35*ep*ep*ep*ep - 30*ep*ep + 3) * sqrt(9.0 / 128.0) / coeff;
+        if( basis_degree == 4)
+            return ret;
+        
+        ret(5) = (63*ep*ep*ep*ep*ep - 70*ep*ep*ep + 15*ep) * sqrt(11.0 / 128.0) / coeff;
+        if( basis_degree == 5)
+            return ret;
+        
 
+        ret(6) = (231*ep*ep*ep*ep*ep*ep - 315*ep*ep*ep*ep + 105*ep*ep - 5) * sqrt(13.0 / 2.0) / 16.0  / coeff;
+        if( basis_degree == 6)
+            return ret;
+        
+        
+        ret(7) = (429*ep*ep*ep*ep*ep*ep*ep - 693*ep*ep*ep*ep*ep + 315*ep*ep*ep - 35*ep) * sqrt(15.0 / 2.0) / 16.0  / coeff;
+        if( basis_degree == 7)
+            return ret;
+        
         throw std::logic_error("bases : we shouldn't be here");
     }
 

@@ -239,7 +239,8 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
     auto assembler_sc = make_stokes_fict_condensed_assembler(msh, bcs_fun, hdi, where);
 
     // method with gradient reconstruction (penalty-free)
-    auto class_meth = make_gradrec_stokes_fictdom_method(msh, 1.0, test_case, true);
+    bool sym = false;
+    auto class_meth = make_gradrec_stokes_fictdom_method(msh, 1.0, test_case, sym);
 
     for (auto& cl : msh.cells)
     {
@@ -391,7 +392,8 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
                 /* L2 - pressure - error */
                 auto s_cphi = s_cb.eval_basis( qp.first );
                 RealType p_num = s_cphi.dot(locdata_p);
-                RealType p_diff = test_case.sol_p( qp.first ) - p_num;
+                RealType p_exact = test_case.sol_p( qp.first ) - 1.0/6.0; // to have zero average
+                RealType p_diff = p_exact - p_num;
                 L2_pressure_error += qp.second * p_diff * p_diff;
 
                 p_gp->add_data( qp.first, p_num );
@@ -401,6 +403,7 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
 
     std::cout << bold << green << "Energy-norm absolute error:           " << std::sqrt(H1_error) << std::endl;
     std::cout << bold << green << "L2 - pressure - error:                " << std::sqrt(L2_pressure_error) << std::endl;
+    std::cout << bold << green << "L2 - velocity - error:                " << std::sqrt(L2_error) << std::endl;
 
     postoutput.add_object(uT_l2_gp);
     postoutput.add_object(uT1_gp);
@@ -415,6 +418,19 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
 
     tc.toc();
     std::cout << bold << yellow << "Postprocessing: " << tc << " seconds" << reset << std::endl;
+    
+    SparseMatrix<RealType> Mat;
+    // Matrix<RealType, Dynamic, Dynamic> Mat;
+    if (sc)
+        Mat = assembler_sc.LHS;
+    else
+        Mat = assembler.LHS;
+    
+    
+    // Add by Stefano
+    Eigen::BDCSVD<Eigen::MatrixXd> SVD(Mat, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    double cond = SVD.singularValues()(0) / SVD.singularValues()(SVD.singularValues().size()-1);
+    std::cout<<"cond_numb = "<<cond<<std::endl;
 
     return TI;
 }
@@ -1125,7 +1141,8 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
                 /* L2 - pressure - error */
                 auto p_phi = pb.eval_basis( qp.first );
                 RealType p_num = p_phi.dot(P_locdata);
-                RealType p_diff = test_case.sol_p( qp.first ) - p_num;
+                RealType p_exact = test_case.sol_p( qp.first ) - 1.0/6.0;
+                RealType p_diff = p_exact - p_num;
 //                L2_pressure_error += qp.second * p_diff * p_diff;
                 L2_pressure_error += qp.second * p_diff * p_diff / kappa;
                 
@@ -1153,7 +1170,7 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
     TI.L2_vel = std::sqrt(L2_error);
     TI.L2_p = std::sqrt(L2_pressure_error);
 
-    if (false)
+    if (true)
     {
         /////////////// compute condition number
         SparseMatrix<RealType> Mat;
@@ -1204,7 +1221,30 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
 }
 
 
-
+//template< typename Mesh, typename LevelSet , typename T >
+//void
+//checkNormal(const Mesh& msh, LevelSet level_set_function, T example)
+//{
+//    postprocess_output<T>  postoutput;
+//
+//    auto n_gp  = std::make_shared< gnuplot_output_object<T> >("normalVec.dat");
+//
+//
+//    for( auto& cl : msh.cells )
+//    {
+//        const auto iqps = integrate_interface(msh, cl, 2, element_location::IN_NEGATIVE_SIDE);
+//
+//        for (auto& qp : iqps)
+//        {
+//            Matrix<T,2,1> n = level_set_function.normal(qp.first);
+//            n_gp->add_data( qp.first, v(0) );
+//
+//        }
+//
+//
+//    }
+//
+//}
 
 /////////////////////////   AUTOMATIC TESTS  //////////////////////////
 
@@ -1269,7 +1309,7 @@ void convergence_test(void)
             cuthho_poly_mesh<T> msh(mip);
             size_t int_refsteps = 10;
             T radius = 1.0/3.0;
-            auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
+            // auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 
             // auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
             auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
@@ -1300,20 +1340,27 @@ void convergence_test(void)
             if(1)
             {
                 // auto test_case = make_test_case_stokes_1(msh, level_set_function);
-                // auto test_case = make_test_case_stokes_2(msh, level_set_function);
-                // auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
-
-                auto parms = params<T>();
-                parms.kappa_1 = 1.0;
-                parms.kappa_2 = 1.0;
-                bool sym_grad = true;
-                auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, parms, sym_grad);
-
-                // TI = run_cuthho_fictdom(msh, k, test_case);
-                // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
-                // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
-                auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
-                TI = run_cuthho_interface(msh, k, method, test_case);
+//<<<<<<< HEAD
+//                // auto test_case = make_test_case_stokes_2(msh, level_set_function);
+//                // auto test_case = make_test_case_static_bubble(msh, radius, 0.5, 0.5, 0.05);
+//
+//                auto parms = params<T>();
+//                parms.kappa_1 = 1.0;
+//                parms.kappa_2 = 1.0;
+//                bool sym_grad = true;
+//                auto test_case = make_test_case_kink_velocity(msh, radius, 0.5, 0.5, parms, sym_grad);
+//
+//                // TI = run_cuthho_fictdom(msh, k, test_case);
+//                // auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
+//                // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
+//                auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
+//                TI = run_cuthho_interface(msh, k, method, test_case);
+//=======
+                auto test_case = make_test_case_stokes_2(msh, level_set_function);
+//                TI = run_cuthho_fictdom(msh, k, test_case);
+                 auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
+                 TI = run_cuthho_interface(msh, k, method, test_case);
+//>>>>>>> fc2af78 (Implementation Cluster Inria)
             }
 
             // report info in the file
@@ -1353,6 +1400,8 @@ void convergence_test(void)
     // open the .pdf file
     system("xdg-open ./autom_tests_stokes.pdf");
 }
+
+
 
 //////////////////////////     MAIN        ////////////////////////////
 #if 0
@@ -1456,10 +1505,20 @@ int main(int argc, char **argv)
     tc.toc();
     std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
     /************** LEVEL SET FUNCTION **************/
-    RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
-    // auto level_set_function = line_level_set<RealType>(0.5);
-    // auto level_set_function = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
+//    RealType radius = 1.0/3.0;
+//    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+//     auto level_set_function = line_level_set<RealType>(0.5);
+//     auto level_set_function = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
+//    RealType eps  = 0.005; // 0.25-1e-10; // 0.1;
+//    RealType epsBndry  = 1e-8 ; //  0.15;
+//    RealType pos_sides  = 0.25; // 0.0;
+//    auto level_set_function = m_shaped_level_set<RealType>(eps,epsBndry,pos_sides);
+    
+    
+//    RealType R = 0.35;
+//    auto level_set_function = rotated_square<RealType>(0.5 , 0.5 , R );
+    RealType epsBndry  = -2.0*1e-2 ;
+     auto level_set_function = square_level_set<RealType>(0.75-epsBndry,0.25+epsBndry,0.25+epsBndry,0.75-epsBndry);
     /************** DO cutHHO MESH PROCESSING **************/
 
     tc.tic();
@@ -1510,12 +1569,13 @@ int main(int argc, char **argv)
 //    // auto method = make_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, sym_grad);
 //    auto method = make_gradrec_stokes_interface_method_bis(msh, 1.0, 0.0, test_case, sym_grad);
 //=======
-    auto test_case = make_test_case_stokes_2(msh, level_set_function);
+//    auto test_case = make_test_case_stokes_2(msh, level_set_function);
     // auto test_case = make_test_case_kink_velocity(msh, .... );
+    auto test_case = make_test_case_M_shaped(msh, 1.0,level_set_function);
     
     //auto test_case = make_test_case_kink_velocity2(msh, level_set_function);
     
-    
+//    checkNormal(msh,level_set_function,2.0);
     
     auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
 //>>>>>>> 928e4b8 (Analytical Velocity. LS evolution.)

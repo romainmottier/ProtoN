@@ -46,6 +46,503 @@ class level_set
 };
 
 template<typename T>
+struct rotated_square: public level_set<T>
+{
+    
+    T R ;
+    T xc ;
+    T yc ;
+   
+    rotated_square(T xc , T yc , T R )
+        : xc(xc), yc(yc),R(R)
+    {}
+    
+    rotated_square(){}
+    
+    rotated_square(const rotated_square& other){
+        xc = other.xc ;
+        yc = other.yc ;
+        R = other.R;
+        
+    }
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+        
+        
+        // bottom vertex
+        T a_x = xc ;
+        T a_y = yc - R ;
+        
+        // right vertex
+        T b_x = xc + R ;
+        T b_y = yc ;
+        
+        // top vertex
+        T c_x = xc ;
+        T c_y = yc + R ;
+        
+        
+        // left vertex
+        T d_x = xc - R;
+        T d_y = yc ;
+        
+       // from bottom vertex to right vertex
+        T m1 = (b_y - a_y)/(b_x - a_x) ;
+        T c1 = b_y - m1*b_x;
+        T y1 = m1*x+c1;
+        // inside +, outisde -
+        auto side1 = (x >= xc) && (y <= yc) && (y > y1) ;
+        
+        // from right vertex to top vertex
+         m1 = (c_y - b_y)/(c_x - b_x) ;
+         c1 = c_y - m1*c_x;
+         y1 = m1*x+c1;
+         // inside +, outisde -
+         auto side2 = (x >= xc) && (y >= yc) && (y < y1) ;
+        
+        
+        // from top vertex to left vertex
+         m1 = (d_y - c_y)/(d_x - c_x) ;
+         c1 = d_y - m1*d_x;
+         y1 = m1*x+c1;
+         // inside +, outisde -
+         auto side3 = (x <= xc) && (y >= yc) && (y < y1) ;
+        
+        
+        // from left vertex to bottom vertex
+         m1 = (a_y - d_y)/(a_x - d_x) ;
+         c1 = a_y - m1*a_x;
+         y1 = m1*x+c1;
+         // inside +, outisde -
+         auto side4 = (x <= xc) && (y <= yc) && (y > y1) ;
+      
+ 
+        // auto inside = side1 || side2 || side3 || side4;
+        
+        T in = 1;
+        
+        if (side1 || side2 || side3 || side4)
+            in = 1;
+        else
+            in = -1;
+        
+        T dist_x = std::min( abs(x-b_x), abs(x-d_x));
+        T dist_y = std::min( abs(y-a_y), abs(y-c_y));
+        
+        return - in * std::min(dist_x , dist_y);
+        
+    }
+
+    
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+       
+        T eps = 1e-6;
+        int side = 0;
+        
+        // bottom vertex
+        T a_x = xc ;
+        T a_y = yc - R ;
+        
+        // right vertex
+        T b_x = xc + R ;
+        T b_y = yc ;
+        
+        // top vertex
+        T c_x = xc ;
+        T c_y = yc + R ;
+        
+        
+        // left vertex
+        T d_x = xc - R;
+        T d_y = yc ;
+        
+       // from bottom vertex to right vertex
+        T m1 = (b_y - a_y)/(b_x - a_x) ;
+        T c1 = b_y - m1*b_x;
+        T y1 = m1*x+c1;
+        // inside +, outisde -
+        T dist1 = abs(y - y1);
+        // auto side1 = true;  (x >= xc) && (y <= yc) && (abs(y - y1) <= eps) ;
+        
+        
+        T dist = dist1 ;
+        side = 1;
+        
+        // from right vertex to top vertex
+         m1 = (c_y - b_y)/(c_x - b_x) ;
+         c1 = c_y - m1*c_x;
+         T y2 = m1*x+c1;
+         // inside +, outisde -
+        T dist2 = abs(y - y2);
+         // auto side2 = (x >= xc) && (y >= yc) && (abs(y - y2) <= eps) ;
+        
+        if( dist2 < dist ){
+            dist = dist2;
+            side = 2;
+   
+        }
+        
+        // from top vertex to left vertex
+         m1 = (d_y - c_y)/(d_x - c_x) ;
+         c1 = d_y - m1*d_x;
+         T y3 = m1*x+c1;
+         // inside +, outisde -
+         T dist3 = abs(y - y3);
+         // auto side3 = (x <= xc) && (y >= yc) && (abs(y - y3) <= eps) ;
+        
+        if( dist3 < dist ){
+            dist = dist3;
+            side = 3;
+   
+        }
+        
+        // from left vertex to bottom vertex
+         m1 = (a_y - d_y)/(a_x - d_x) ;
+         c1 = a_y - m1*a_x;
+         T y4 = m1*x+c1;
+         // inside +, outisde -
+         T dist4 = abs(y - y4);
+         // auto side4 = (x <= xc) && (y <= yc) && (abs(y - y4) <= eps) ;
+        
+        if( dist4 < dist ){
+            dist = dist4;
+            side = 4;
+   
+        }
+
+//        T dist = 10.;
+//        int side = 0;
+//
+//        int Nside = 0;
+//
+//        if( side1 ){
+//            dist = abs(y1 - y);
+//            side = 1;
+//            Nside +=1;
+//        }
+//        if( side2 ){
+//            T tmp_dist = abs(y2 - y);
+//            if( tmp_dist < dist)
+//            {
+//                dist = tmp_dist;
+//                side = 2;
+//                Nside +=1;
+//            }
+//
+//        }
+//        if( side3 ){
+//            T tmp_dist = abs(y3 - y);
+//            if( tmp_dist < dist)
+//            {
+//                dist = tmp_dist;
+//                side = 3;
+//                Nside +=1;
+//            }
+//        }
+//        if( side4 ){
+//            T tmp_dist = abs(y4 - y);
+//            if( tmp_dist < dist)
+//            {
+//                dist = tmp_dist;
+//                side = 4;
+//                Nside +=1;
+//            }
+//        }
+        
+        if(side == 0)
+            std::cout<<"Error, value not assigned..";
+        
+//        if( Nside != 1 )
+//            std::cout<<"Error, value assigned multiple times..";
+            
+        if( side == 1 )
+        {
+            ret(0) = 0.5;
+            ret(1) = -0.5;
+            ret = ret/ret.norm();
+        }
+        if( side == 2 )
+        {
+            ret(0) = 0.5;
+            ret(1) = 0.5;
+            ret = ret/ret.norm();
+        }
+        if( side == 3 )
+        {
+            ret(0) = -0.5;
+            ret(1) = 0.5;
+            ret = ret/ret.norm();
+        }
+        if( side == 4 )
+        {
+            ret(0) = -0.5;
+            ret(1) = -0.5;
+            ret = ret/ret.norm();
+        }
+    
+        return ret;
+        
+    }
+    
+
+    
+};
+
+template<typename T>
+struct m_shaped_level_set: public level_set<T>
+{
+    
+    T eps;
+    T eps_bndry = 1e-10;
+    T pos_sides ;
+    m_shaped_level_set(T eps, T eps_bndry, T pos_sides)
+        : eps(eps), eps_bndry(eps_bndry),pos_sides(pos_sides)
+    {}
+    
+    m_shaped_level_set(){}
+    
+    m_shaped_level_set(const m_shaped_level_set& other){
+        eps = other.eps ;
+        eps_bndry = other.eps_bndry ;
+        pos_sides = other.pos_sides;
+        
+    }
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+        
+        T a = pos_sides+eps_bndry;
+        T b = (1.0-pos_sides)-eps_bndry;
+        T c = (0.75)+eps;
+        T d = 1.0-eps_bndry;
+        
+        auto side1 = (y>a);
+        auto side2 = (x>a);
+        auto side3 = (x<b);
+        
+        T m1 = (c-d)/(0.5-a);
+        T c1 = c - m1*0.5;
+        T y1 = m1*x+c1;
+        
+        auto side5 = (y>c)&&(x<=0.5)&&(y<y1);
+        
+        
+        T m2 = (c-d)/(0.5-b);
+        T c2 = c - m2*0.5;
+        T y2 = m2*x+c2;
+        
+        auto side6 = (y>c)&&(x>=0.5)&&(y<y2);
+        
+        auto side4 = (y<c) || side5 || side6;
+        
+        T in = 1;
+        
+        if (side1 && side2 && side3 && side4)
+            in = 1;
+        else
+            in = -1;
+        
+        T dist_x = std::min( abs(x-a), abs(x-b));
+        T dist_y = std::min( abs(y-a), abs(y-d));
+        
+        return - in * std::min(dist_x , dist_y);
+        
+    }
+
+    
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+        
+        T epsGrad = 1e-8;
+        
+        T a = pos_sides+eps_bndry;
+        T b = (1.0-pos_sides)-eps_bndry;
+        T c = (0.75)+eps;
+        T d = 1.0-eps_bndry;
+        
+        // bottom square
+        T x_left = a;
+        T x_right = b;
+        T y_bot = a;
+        T y_top = c;
+
+        T dist = abs(x - x_left);
+        ret(0) = -1;
+        ret(1) = 0;
+        
+        
+        if(abs(x - x_right) < dist )
+        {
+            dist = abs(x - x_right);
+            ret(0) = 1;
+            ret(1) = 0;
+            
+        }
+        if(abs(y - y_bot) < dist )
+        {
+            dist = abs(y - y_bot);
+            ret(0) = 0;
+            ret(1) = -1;
+            
+        }
+//        if(abs(y - y_top) < dist)
+//        {
+//            ret(0) = 0;
+//            ret(1) = 1;
+//        }
+        
+        if( (x > a + epsGrad) && x <=0.5 && y >= c )// left-top side
+        {
+            T m1 = (c-d)/(0.5-a);
+            T m1N = -1.0/m1;
+            T normal1 = m1N*x ;
+
+            ret(0) = x;
+            ret(1) = normal1;
+            if( ret(1) > 10 || ret(1) < -10 ){
+                // degenerate case where M-shaped domain is square
+                ret(0) = 0;
+                ret(1) = 1;
+            }
+
+            ret = ret/ret.norm();
+
+        }
+
+        if(  (x < b-epsGrad) && x > 0.5 && y >= c )// right-top side
+        {
+            T m2 = (c-d)/(0.5-b);
+            T m2N = -1.0/m2;
+            T normal2 = m2N*(-x) ;
+
+            ret(0) = -x;
+            ret(1) = normal2;
+
+            if( ret(1) > 10 || ret(1) < -10 ){
+                // degenerate case where M-shaped domain is square
+                ret(0) = 0;
+                ret(1) = 1;
+            }
+
+            ret = ret/ret.norm();
+
+        }
+        
+        return ret;
+        
+    }
+    
+
+    
+    
+    Eigen::Matrix<T,2,1> gradient2(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        
+
+        auto x = pt.x();
+        auto y = pt.y();
+
+        T epsGrad = 1e-4;
+        
+        T a = pos_sides+eps_bndry;
+        T b = (1.0-pos_sides)-eps_bndry;
+        T c = (0.75)+eps;
+        T d = 1.0-eps_bndry;
+        
+        T distXa = abs(x - a);
+        T distXb = abs(x - b);
+        T distY  = abs(y - a);
+
+        T isOk = 0;
+        
+        if( distY < epsGrad )// bottom side
+        {
+            ret(0) = 0;
+            ret(1) = -1;
+            isOk +=1 ;
+        }
+        if( distXa < epsGrad )// left side
+        {
+            ret(0) = -1 ;
+            ret(1) = 0 ;
+            isOk +=1 ;
+        }
+        if( distXb < epsGrad )// right side
+        {
+            ret(0) = 1 ;
+            ret(1) = 0 ;
+            isOk +=1 ;
+        }
+        if( (x > a + epsGrad) && x <=0.5 && y <= d && y >= c )// left-top side
+        {
+            T m1 = (c-d)/(0.5-a);
+            // T c1 = c - m1*0.5;
+            T m1N = -1.0/m1;
+            
+            // T c1N = m1*x+c1 - m1N * x;
+            
+            T normal1 = m1N*x ; // + c1N;
+            
+            T norm1 = sqrt(x*x + normal1*normal1);
+            
+            ret(0) = x; // /norm1;
+            ret(1) = normal1; // /norm1;
+            
+            ret = ret/ret.norm();
+            isOk +=1 ;
+        }
+        
+        if(  (x < b-epsGrad) && x > 0.5 && y <= d && y >= c )// right-top side
+        {
+            T m2 = (c-d)/(0.5-b);
+            // T c2 = c - m2*0.5;
+            
+            T m2N = -1.0/m2;
+            
+            T normal2 = m2N*(-x) ;
+            
+            T norm2 = sqrt(x*x + normal2*normal2);
+            
+            ret(0) = -x; // /norm2;
+            ret(1) = normal2; // /norm2;
+            
+            
+//            T retN = ret.norm() ;
+            ret = ret/ret.norm();
+            
+            isOk +=1 ;
+          
+//            ret(0) = 1 ;
+//            ret(1) = 0 ;
+        }
+        
+       
+//        if (!isOk)
+//            std::cout<<"Error..."<<std::endl;
+        
+        if (isOk != 1)
+            std::cout<<"isOk = "<<isOk<<std::endl;
+            
+        
+        return ret;
+    }
+};
+
+
+template<typename T>
 struct circle_level_set: public level_set<T>
 {
     T radius, alpha, beta;

@@ -33156,9 +33156,9 @@ int main(int argc, char **argv)
 
 
     /************** ANALYTIC LEVEL SET FUNCTION  **************/
-    RealType radius = 1.0/9.0; // I PUT 6.0, IT WAS 1.0/3.0
-    RealType x_centre = 0.3; // 0.3
-    RealType y_centre = 0.8;  // 0.8
+    RealType radius = 1.0/6.0; // I PUT 6.0, IT WAS 1.0/3.0
+    RealType x_centre = 0.5; // 0.3
+    RealType y_centre = 0.3;  // 0.8
 
     auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre);
     std::cout << bold << yellow << "Initial Analytic Area Circle: "<< M_PI*radius*radius << " , and circonference: "<< 2*M_PI*radius << reset << std::endl;

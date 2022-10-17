@@ -23,7 +23,7 @@
 #pragma once
 #include <iterator>
 #include "cuthho_mesh.hpp"
-#include <boost/range/adaptor/reversed.hpp>
+// #include <boost/range/adaptor/reversed.hpp>
 
 
 size_t
@@ -733,7 +733,7 @@ triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 
 template<typename T, size_t ET>
 T
-measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+measureOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
         const element_location& where)
 {
     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
@@ -752,14 +752,14 @@ measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_t
 
 template<typename T, size_t ET>
 T
-measure_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
         const element_location& where)
 {
     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
         return measure(msh, cl);
 
     T totmeas = 0.0;
-    auto qpsi = integrate_old(msh, cl, 0, where);
+    auto qpsi = integrate(msh, cl, 0, where);
     for (auto& qp : qpsi)
     {
         totmeas += qp.second;
@@ -4583,7 +4583,7 @@ struct Parametric_Interface
     T radius_a , radius_b ;
     size_t N_cells ; // amount of cells
     size_t N_pts ; // amount of cells
-    size_t N_interface ; // amount of cells
+//    size_t N_interface ; // amount of cells
 //    std::vector<std::set<size_t>> connectivity_HHO_cells_this ;
     std::vector<std::map< size_t , std::pair<T,T> > > connectivity_HHO_cells_this ;
     std::vector<std::vector<size_t>> connectivity_this_HHO_cells ;
@@ -4616,15 +4616,15 @@ struct Parametric_Interface
     
     
     
-    
+    bool agglo_msh = false ;
 
-//    Eigen::Matrix<T, Dynamic, Dynamic> derivative0 ;
-//    Eigen::Matrix<T, Dynamic, Dynamic> derivative1 ;
+    Eigen::Matrix<T, Dynamic, Dynamic> derivative0 ;
+    Eigen::Matrix<T, Dynamic, Dynamic> derivative1 ;
 //
 //    Eigen::Matrix<T, Dynamic, Dynamic> normal0 ;
 //    Eigen::Matrix<T, Dynamic, Dynamic> normal1 ;
 //
-//    Eigen::Matrix<T, Dynamic, Dynamic> curvature_field ;
+    Eigen::Matrix<T, Dynamic, Dynamic> curvature_field ;
     
    
     
@@ -4649,7 +4649,7 @@ struct Parametric_Interface
 //        connectivity_matrix_dd = other.connectivity_matrix_dd;
 //
 //        ndof_dd = other.ndof_dd;
-//
+        agglo_msh = other.agglo_msh ;
         dd_degree = other.dd_degree;
         dd_size = other.dd_size;
             
@@ -4658,18 +4658,18 @@ struct Parametric_Interface
         interface1 = other.interface1;
 //        original_mesh = other.original_mesh ;
 
-//        derivative0 = other.derivative0;
-//        derivative1 = other.derivative1;
+        derivative0 = other.derivative0;
+        derivative1 = other.derivative1;
 //
 //        normal0 = other.normal0;
 //        normal1 = other.normal1;
-//        curvature_field = other.curvature_field;
+        curvature_field = other.curvature_field;
         
         radius_a = other.radius_a ;
         radius_b = other.radius_b ;
         N_cells = other.N_cells ;
         N_pts = other.N_pts ;
-        N_interface = other.N_interface ;
+//        N_interface = other.N_interface ;
         connectivity_HHO_cells_this = other.connectivity_HHO_cells_this ;
         connectivity_this_HHO_cells = other.connectivity_this_HHO_cells ;
         
@@ -4683,15 +4683,20 @@ struct Parametric_Interface
     
     
     
-    Parametric_Interface(const Mesh& msh , T x_c , T y_c , T Ra, T Rb , size_t degree_curve , size_t N ):  basis_degree(degree_curve) , basis_size(degree_curve+1),der_degree(degree_curve-1) , der_size(degree_curve),dd_degree(degree_curve-1) , dd_size(degree_curve), radius_a(Ra), radius_b (Rb), degree_det(jacobian_interface(degree_curve)), N_cells(N),N_pts(basis_degree*N), connectivity_this_HHO_cells(N),  connectivity_HHO_cells_this(msh.cells.size())
+    Parametric_Interface(const Mesh& msh , T x_c , T y_c , T Ra, T Rb , size_t degree_curve , size_t N ):  basis_degree(degree_curve) , basis_size(degree_curve+1),der_degree(degree_curve-1) , der_size(degree_curve),dd_degree(degree_curve-2) , dd_size(degree_curve-1), radius_a(Ra), radius_b (Rb), degree_det(jacobian_interface(degree_curve)), N_cells(N),N_pts(basis_degree*N), connectivity_this_HHO_cells(N),  connectivity_HHO_cells_this(msh.cells.size())
     {
         interface0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( basis_size, N);
         interface1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( basis_size, N);
         
+        derivative0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( der_size, N);
+        derivative1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( der_size, N);
+        curvature_field = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( dd_size, N);
+        
         T step = 2.0*M_PI/N ;
         T sub_step = step/basis_degree;
         size_t counter_cell = 0;
-        for( T theta = 0.0 ; theta < 2.0*M_PI ; theta += step)
+        T eps = 1e-6;
+        for( T theta = 0.0 ; theta < 2.0*M_PI - eps ; theta += step)
         {
             auto pt0 = x_c + radius_a * cos(theta) ; // point_type(,  );
             auto pt1 = y_c + radius_b * sin(theta) ;
@@ -4718,6 +4723,60 @@ struct Parametric_Interface
             
         }
         
+        make_avg_cont_derivative();
+        make_avg_cont_curvature();
+        
+    }
+    
+    Parametric_Interface(const Mesh& msh , T x_c , T y_c , T Ra, T Rb , size_t degree_curve , size_t N , size_t N_flower , T a_flower ):  basis_degree(degree_curve) , basis_size(degree_curve+1),der_degree(degree_curve-1) , der_size(degree_curve),dd_degree(degree_curve-2) , dd_size(degree_curve-1), radius_a(Ra), radius_b (Rb), degree_det(jacobian_interface(degree_curve)), N_cells(N),N_pts(basis_degree*N), connectivity_this_HHO_cells(N),  connectivity_HHO_cells_this(msh.cells.size())
+    {
+        interface0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( basis_size, N);
+        interface1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( basis_size, N);
+        
+        derivative0 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( der_size, N);
+        derivative1 = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( der_size, N);
+        curvature_field = Eigen::Matrix<T, Dynamic, Dynamic>::Zero( dd_size, N);
+        
+        T step = 2.0*M_PI/N ;
+        T sub_step = step/basis_degree;
+        size_t counter_cell = 0;
+        T eps = 1e-6;
+        for( T theta = 0.0 ; theta < 2.0*M_PI - eps ; theta += step)
+        {
+            auto pt0 = x_c + (4.0 + cos(4.0*theta))*cos(theta)*radius_a/5.0 ;
+            auto pt1 = y_c + (4.0 + cos(4.0*theta))*sin(theta)*radius_b/5.0 ;
+        
+            interface0(0,counter_cell) = pt0;
+            interface1(0,counter_cell) = pt1;
+            T thetanext = theta + step ;
+            pt0 = x_c + (4.0 + cos(4.0*thetanext))*cos(thetanext)*radius_a/5.0 ;
+            pt1 = y_c + (4.0 + cos(4.0*thetanext))*sin(thetanext)*radius_b/5.0 ;
+
+            
+            interface0(1,counter_cell) = pt0;
+            interface1(1,counter_cell) = pt1;
+            
+            
+            for(size_t i = 2 ; i < basis_size ; i++){
+                
+                T thetanext = theta + sub_step*(i-1) ;
+                pt0 = x_c + (4.0 + cos(4.0*thetanext))*cos(thetanext)*radius_a/5.0 ;
+                pt1 = y_c + (4.0 + cos(4.0*thetanext))*sin(thetanext)*radius_b/5.0 ;
+                
+                
+                interface0(i,counter_cell) = pt0;
+                interface1(i,counter_cell) = pt1;
+                
+            }
+                
+            counter_cell++;
+           
+            
+        }
+        
+        make_avg_cont_derivative();
+        make_avg_cont_curvature();
+        
     }
     
     void
@@ -4727,12 +4786,19 @@ struct Parametric_Interface
         connectivity_this_HHO_cells.clear() ;
         connectivity_this_HHO_cells.resize(N_cells);
         connectivity_HHO_cells_this.resize(msh.cells.size());
+        agglo_msh = false ;
+        make_avg_cont_derivative();
+        make_avg_cont_curvature();
     }
     
+    
+
     
     void
     interface_mesh_agglomeration_update(const Mesh& msh_new ,const Mesh& msh_past ,const mesh_init_params<T>& mip)
     {
+        connectivity_agglo_HHO_cells_this.clear();
+        connectivity_this_agglo_HHO_cells.clear();
         connectivity_agglo_HHO_cells_this.resize(msh_new.cells.size())  ;
         connectivity_this_agglo_HHO_cells.resize(N_cells)  ;
         
@@ -4745,10 +4811,10 @@ struct Parametric_Interface
                 
                 
                 auto subcells = agglo_cl.user_data.offset_subcells ;
-                std::cout<<"For agglo cell: "<<agglo_offset<<std::endl;
-                for(auto& i : subcells)
-                    std::cout<<i<<" -- ";
-                std::cout<<std::endl;
+//                std::cout<<"For agglo cell: "<<agglo_offset<<std::endl;
+//                for(auto& i : subcells)
+//                    std::cout<<i<<" -- ";
+//                std::cout<<std::endl;
             
                 
                 for(auto& i_cl_orig : subcells)
@@ -4974,6 +5040,22 @@ struct Parametric_Interface
         
     }
     
+    
+    std::map< size_t , std::pair<T,T> >
+    get_global_interface(const Mesh& msh, const typename Mesh::cell_type& cl) const
+    {
+        size_t k_offset = offset(msh,cl) ;
+        if(agglo_msh)
+            return connectivity_agglo_HHO_cells_this[k_offset] ;
+        
+        else
+            return connectivity_HHO_cells_this[k_offset] ;
+        
+        
+    }
+    
+    
+    
     Matrix<T, 2, 1>
     operator()( const T& pt , const size_t& i_cl ) const
     {
@@ -4992,14 +5074,71 @@ struct Parametric_Interface
         
     }
     
-  
+    void
+    make_avg_cont_derivative()
+    {
+        std::cout<<"---> Derivative: CONTINUITY BY AVG."<<std::endl;
+       
+
+        cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
+        
+        T tot = der_degree ;
+        size_t i_cl_old = N_cells - 1 ;
+        size_t i_cl_next;
+        for(size_t i_cl = 0 ; i_cl < N_cells ; i_cl ++ )
+        {
+            
+            
+            if(i_cl < N_cells -1 )
+                i_cl_next = i_cl + 1 ;
+            else
+                i_cl_next = 0 ;
+            
     
+            
+            T pt0 = 0.0 ;
+            T pt1 = 1.0 ;
+            auto basis_eval_pt0 = cb.eval_gradients_1d(pt0) ;
+            auto basis_eval_pt1 = cb.eval_gradients_1d(pt1) ;
+            
+            // first node in 0
+            auto val0_cl_i = interface0.col(i_cl).dot( basis_eval_pt0 );
+            auto val1_cl_i = interface1.col(i_cl).dot( basis_eval_pt0 );
+            auto val0_cl_old = interface0.col(i_cl_old).dot( basis_eval_pt1 );
+            auto val1_cl_old = interface1.col(i_cl_old).dot( basis_eval_pt1 );
+            derivative0(0,i_cl) = val0_cl_i * 0.5 + val0_cl_old * 0.5;
+            derivative1(0,i_cl) = val1_cl_i * 0.5 + val1_cl_old * 0.5;
+            // last node in 1
+            auto val0_cl_i_pt1 = interface0.col(i_cl).dot( basis_eval_pt1 );
+            auto val1_cl_i_pt1 = interface1.col(i_cl).dot( basis_eval_pt1 );
+            auto val0_cl_next = interface0.col(i_cl_next).dot( basis_eval_pt0 );
+            auto val1_cl_next = interface1.col(i_cl_next).dot( basis_eval_pt0 );
+            derivative0(1,i_cl) = val0_cl_i_pt1 * 0.5 + val0_cl_next * 0.5;
+            derivative1(1,i_cl) = val1_cl_i_pt1 * 0.5 + val1_cl_next * 0.5;
+            
+            for(size_t pt_i = 2 ; pt_i < der_size ; pt_i++)
+            {
+                T pos = (pt_i-1.0)/tot ;
+                auto basis_eval_pt_i = cb.eval_gradients_1d(pos) ;
+                derivative0(pt_i,i_cl) = interface0.col(i_cl).dot( basis_eval_pt_i );
+                derivative1(pt_i,i_cl) = interface1.col(i_cl).dot( basis_eval_pt_i );
+            }
+            
+            
+            i_cl_old = i_cl;
+        }
+        
+       
+       
+        
+                                                
+    }
     
     
     
     
     Matrix<T, 2, 1>
-    derivative( const T& pt , const size_t& i_cl ) const
+    derivative_disc( const T& pt , const size_t& i_cl ) const
     {
         Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
         cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
@@ -5007,6 +5146,24 @@ struct Parametric_Interface
         auto basis_eval = cb.eval_gradients_1d(pt) ;
         auto values_cell0 = interface0.col(i_cl);
         auto values_cell1 = interface1.col(i_cl);
+        
+        ret(0) = values_cell0.dot( basis_eval );
+        ret(1) = values_cell1.dot( basis_eval );
+        
+        return ret;
+        
+        
+    }
+    
+    Matrix<T, 2, 1>
+    derivative( const T& pt , const size_t& i_cl ) const
+    {
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        cell_basis_Lagrange_1d_reference_new <T> cb(der_degree);
+        
+        auto basis_eval = cb.eval_basis_1d(pt) ;
+        auto values_cell0 = derivative0.col(i_cl);
+        auto values_cell1 = derivative1.col(i_cl);
         
         ret(0) = values_cell0.dot( basis_eval );
         ret(1) = values_cell1.dot( basis_eval );
@@ -5048,42 +5205,143 @@ struct Parametric_Interface
            
     }
     
+    Matrix<T, 2, 1>
+    tangent_disc( const T& pt , size_t i_cl ) const
+    {
+
+        auto der = this->derivative_disc(pt,i_cl) ;
+        return der/der.norm();
+
+
+    }
+
+
+
+    Matrix<T, 2, 1>
+    normal_disc( const T& pt , size_t i_cl ) const
+    {
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        auto tan_pt = (this->tangent_disc(pt, i_cl)) ;
+        ret(0) = tan_pt(1);
+        ret(1) = -tan_pt(0);
+        return ret;
+
+    }
+    
+    
+    void
+    make_avg_cont_curvature()
+    {
+        std::cout<<"---> Curvature: CONTINUITY BY AVG."<<std::endl;
+
+        Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+        Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
+
+        T tot = dd_degree ;
+        size_t i_cl_old = N_cells - 1 ;
+        size_t i_cl_next;
+        for(size_t i_cl = 0 ; i_cl < N_cells ; i_cl ++ )
+        {
+
+
+            if(i_cl < N_cells -1 )
+                i_cl_next = i_cl + 1 ;
+            else
+                i_cl_next = 0 ;
+
+            if(dd_degree < 1)
+            {
+                
+                //            T pt0 = 0.0 ;
+                //            T pt1 = 1.0 ;
+                //
+                //            T curv_pt0_cl_i = curvature_disc( pt0 , i_cl );
+                //            T curv_pt1_cl_old = curvature_disc( pt1 , i_cl_old );
+
+                //            curvature_field(0,i_cl) = curv_pt0_cl_i * 0.5 + curv_pt1_cl_old * 0.5;
+                            curvature_field(0,i_cl) = curvature_disc( 0.5 , i_cl ) ;
+            }
+
+
+            else
+            {
+                T pt0 = 0.0 ;
+                T pt1 = 1.0 ;
+        
+                T curv_pt0_cl_i = curvature_disc( pt0 , i_cl );
+                T curv_pt1_cl_old = curvature_disc( pt1 , i_cl_old );
+
+                curvature_field(0,i_cl) = curv_pt0_cl_i * 0.5 + curv_pt1_cl_old * 0.5 ;
+    
+                T curv_pt1_cl_i = curvature_disc( pt1 , i_cl );
+                T curv_pt0_cl_next = curvature_disc( pt0 , i_cl_next );
+
+                curvature_field(1,i_cl) = curv_pt1_cl_i * 0.5 + curv_pt0_cl_next * 0.5;
+
+
+                for(size_t pt_i = 2 ; pt_i < dd_size ; pt_i++)
+                {
+                    T pos = (pt_i-1.0)/tot ;
+                    curvature_field(pt_i,i_cl) = curvature_disc( pos , i_cl );
+                }
+            }
+
+            i_cl_old = i_cl;
+        }
+
+
+
+
+
+    }
+    
     
     T
-    curvature( const T& pt , size_t i_cl ) const
+    curvature_disc( const T& pt , size_t i_cl ) const
     {
         Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
         Matrix<T, 2, 1> curv_double_der = Matrix<T, 2, 1>::Zero(2, 1);
-        
+
         cell_basis_Lagrange_1d_reference_new <T> cb(basis_degree);
         auto basis_eval = cb.eval_double_derivative_1d(pt) ;
-    
+
         auto curv_der = (this->derivative( pt, i_cl ) ) ;
         auto curv_der_norm = curv_der.norm() ;
-        
+
         auto values_cell0 = interface0.col(i_cl);
         auto values_cell1 = interface1.col(i_cl);
-        
+
         curv_double_der(0) = values_cell0.dot( basis_eval );
         curv_double_der(1) = values_cell1.dot( basis_eval );
-       
+
         T coeff = curv_der(0)*curv_double_der(0) + curv_der(1)*curv_double_der(1) ;
-       
+
         ret(0) = curv_double_der(0)/curv_der_norm - curv_der(0)/pow(curv_der_norm,3)*coeff;
         ret(1) = curv_double_der(1)/curv_der_norm - curv_der(1)/pow(curv_der_norm,3)*coeff;
         int sign_curv ;
         auto n = this->normal( pt, i_cl );
-        
+
         if( (sgn( n(0) ) == sgn( ret(0) ) ) && (sgn( n(1) ) == sgn( ret(1) ) ) )
             sign_curv = 1.0 ;
         else
             sign_curv =  -1.0 ;
-       
+
         return sign_curv * ret.norm()/curv_der_norm ;
-           
+
     }
     
-
+    T
+    curvature( const T& pt , size_t i_cl ) const
+    {
+       
+        cell_basis_Lagrange_1d_reference_new <T> cb(dd_degree);
+        auto basis_eval = cb.eval_basis_1d(pt) ;
+        auto values_cell = curvature_field.col(i_cl);
+        
+        return values_cell.dot( basis_eval );
+           
+    }
     
     
 
@@ -5091,159 +5349,159 @@ struct Parametric_Interface
     
 };
 
-template<typename Mesh , typename Curve, typename T >
-void
-set_cut_cellOLD(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interface)
-{
-    typedef typename Mesh::point_type point_type;
-    size_t old_i = 0;
-    bool first_cut_cell = FALSE ;
-    size_t Nx =  mip.Nx ;
-    size_t Ny = mip.Ny ;
-    T eps = 1e-5;
-    T  h = std::min(mip.hx() , mip.hy() ) ;
-    
-    
-    size_t first_cell , last_cell ;
-    for(size_t cell_i = 0 ; cell_i < parametric_interface.N_cells ; cell_i++)
-    {
-        
-        auto pt0 = parametric_interface(0,cell_i);
-        auto pt1 = parametric_interface(1,cell_i);
-        T dist = (pt0 - pt1).norm();
-        T N_pts = 10.0*ceil(dist/h) + 1.0 ;
-        T N_half = (N_pts-1.0)/2.0;
-        
-        for(T pt_i = 1.0; pt_i < N_pts ; pt_i++)
-        {
-            T pos = pt_i / N_pts;
-//            if( pt_i == 0.0 )
-//                pos = pt_i / N_pts + eps;
-//            if( pt_i == N_pts )
-//                pos = pt_i / N_pts - eps;
-            
-            
-            auto pt_vec = parametric_interface(pos,cell_i) ;
-            auto pt = point_type(pt_vec(0) , pt_vec(1));
-            
-            
-            
-            if(!first_cut_cell)
-            {
-                for(auto& cl :msh.cells)
-                {
-                    if( pt_in_cell(msh, pt, cl) )
-                    {
-                        cl.user_data.location = element_location::ON_INTERFACE;
-                        old_i = offset(msh,cl);
-                        first_cell = old_i;
-//                        parametric_interface.connectivity_HHO_cells_this[old_i].push_back(cell_i) ;
-                        parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
-//                        if(pt_i == 0)
-//                        {
-//                            cl.user_data.interface.push_back(pt);
+//template<typename Mesh , typename Curve, typename T >
+//void
+//set_cut_cellOLD(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interface)
+//{
+//    typedef typename Mesh::point_type point_type;
+//    size_t old_i = 0;
+//    bool first_cut_cell = FALSE ;
+//    size_t Nx =  mip.Nx ;
+//    size_t Ny = mip.Ny ;
+//    T eps = 1e-5;
+//    T  h = std::min(mip.hx() , mip.hy() ) ;
+//
+//
+//    size_t first_cell , last_cell ;
+//    for(size_t cell_i = 0 ; cell_i < parametric_interface.N_cells ; cell_i++)
+//    {
+//
+//        auto pt0 = parametric_interface(0,cell_i);
+//        auto pt1 = parametric_interface(1,cell_i);
+//        T dist = (pt0 - pt1).norm();
+//        T N_pts = 10.0*ceil(dist/h) + 1.0 ;
+//        T N_half = (N_pts-1.0)/2.0;
+//
+//        for(T pt_i = 1.0; pt_i < N_pts ; pt_i++)
+//        {
+//            T pos = pt_i / N_pts;
+////            if( pt_i == 0.0 )
+////                pos = pt_i / N_pts + eps;
+////            if( pt_i == N_pts )
+////                pos = pt_i / N_pts - eps;
+//
+//
+//            auto pt_vec = parametric_interface(pos,cell_i) ;
+//            auto pt = point_type(pt_vec(0) , pt_vec(1));
+//
+//
+//
+//            if(!first_cut_cell)
+//            {
+//                for(auto& cl :msh.cells)
+//                {
+//                    if( pt_in_cell(msh, pt, cl) )
+//                    {
+//                        cl.user_data.location = element_location::ON_INTERFACE;
+//                        old_i = offset(msh,cl);
+//                        first_cell = old_i;
+////                        parametric_interface.connectivity_HHO_cells_this[old_i].push_back(cell_i) ;
+//                        parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
+////                        if(pt_i == 0)
+////                        {
+////                            cl.user_data.interface.push_back(pt);
+////
+////                        }
+////
+////                        if(pt_i == N_half)
+////                        {
+////                            cl.user_data.interface.push_back(pt);
+////                        }
+////
+////                        if(pt_i == N_pts - 1)
+////                        {
+////                            cl.user_data.interface.push_back(pt);
+////                        }
+//
+//                        first_cut_cell = TRUE ;
+//                        break;
+//                    }
+//
+//                    if(first_cut_cell)
+//                        break;
+//
+//                }
+//
+//            }
+//            else
+//            {
+////                if(pt_in_cell(msh, pt, msh.cells[old_i]))
+////                    continue;
+//                bool found_cut_cell = FALSE ;
+//                for(int i = -1 ; i < 2 ; i++)
+//                {
+//                    for(int j = -1 ; j < 2 ; j++)
+//                    {
+//                        size_t cl_HHO_i = old_i + i + j * Ny ; // Notice it cannot be on the cell on the boundary
+//                        auto cl = msh.cells[cl_HHO_i];
+//
+//                        if(parametric_interface.connectivity_this_HHO_cells[cell_i].size() == 0){
+//                            size_t last_elem = parametric_interface.connectivity_this_HHO_cells[cell_i-1].size() -1;
+//                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(parametric_interface.connectivity_this_HHO_cells[cell_i-1][last_elem]) ;
+////                            size_t last_elem_HHO = parametric_interface.connectivity_HHO_cells_this[old_i].size() -1;
+////                            parametric_interface.connectivity_HHO_cells_this[cl_HHO_i].push_back(parametric_interface.connectivity_HHO_cells_this[old_i][last_elem_HHO]) ;
 //
 //                        }
 //
-//                        if(pt_i == N_half)
+//                        if( cl.user_data.location != element_location::ON_INTERFACE && pt_in_cell(msh, pt, cl) )
 //                        {
-//                            cl.user_data.interface.push_back(pt);
+//                            msh.cells[cl_HHO_i].user_data.location = element_location::ON_INTERFACE;
+//                            old_i = offset(msh,cl);
+//
+//
+//
+////                            parametric_interface.connectivity_HHO_cells_this[old_i].push_back(cell_i) ;
+//                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
+//
+//
+////                            if(pt_i == 0)
+////                            {
+////                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+////
+////                            }
+////
+////                            if(pt_i == N_half)
+////                            {
+////                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+////                            }
+////
+////                            if(pt_i == N_pts - 1)
+////                            {
+////                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+////                            }
+//                            found_cut_cell = TRUE;
+//
+//                        }
+//                        else if(cl_HHO_i == first_cell && pt_in_cell(msh, pt, cl))
+//                        {
+//                            size_t last_elem = parametric_interface.connectivity_this_HHO_cells[cell_i].size();
+//                            if(last_elem>0 && parametric_interface.connectivity_this_HHO_cells[cell_i][last_elem-1] != first_cell){
+////                                parametric_interface.connectivity_HHO_cells_this[first_cell].push_back(cell_i) ;
+//                                parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(first_cell) ;
+//
+//
+//                            }
+//                            if(last_elem == 0)
+//                            {
+////                                parametric_interface.connectivity_HHO_cells_this[first_cell].push_back(cell_i) ;
+//                                parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(first_cell) ;
+//                            }
 //                        }
 //
-//                        if(pt_i == N_pts - 1)
-//                        {
-//                            cl.user_data.interface.push_back(pt);
-//                        }
-                        
-                        first_cut_cell = TRUE ;
-                        break;
-                    }
-                    
-                    if(first_cut_cell)
-                        break;
-                    
-                }
-                
-            }
-            else
-            {
-//                if(pt_in_cell(msh, pt, msh.cells[old_i]))
-//                    continue;
-                bool found_cut_cell = FALSE ;
-                for(int i = -1 ; i < 2 ; i++)
-                {
-                    for(int j = -1 ; j < 2 ; j++)
-                    {
-                        size_t cl_HHO_i = old_i + i + j * Ny ; // Notice it cannot be on the cell on the boundary
-                        auto cl = msh.cells[cl_HHO_i];
-                        
-                        if(parametric_interface.connectivity_this_HHO_cells[cell_i].size() == 0){
-                            size_t last_elem = parametric_interface.connectivity_this_HHO_cells[cell_i-1].size() -1;
-                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(parametric_interface.connectivity_this_HHO_cells[cell_i-1][last_elem]) ;
-//                            size_t last_elem_HHO = parametric_interface.connectivity_HHO_cells_this[old_i].size() -1;
-//                            parametric_interface.connectivity_HHO_cells_this[cl_HHO_i].push_back(parametric_interface.connectivity_HHO_cells_this[old_i][last_elem_HHO]) ;
-                            
-                        }
-                            
-                        if( cl.user_data.location != element_location::ON_INTERFACE && pt_in_cell(msh, pt, cl) )
-                        {
-                            msh.cells[cl_HHO_i].user_data.location = element_location::ON_INTERFACE;
-                            old_i = offset(msh,cl);
-                            
-                            
-                            
-//                            parametric_interface.connectivity_HHO_cells_this[old_i].push_back(cell_i) ;
-                            parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
-                            
-                            
-//                            if(pt_i == 0)
-//                            {
-//                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
+//                        if( found_cut_cell )
+//                            break;
+//                    }
+//                    if( found_cut_cell )
+//                        break;
 //
-//                            }
+//                }
 //
-//                            if(pt_i == N_half)
-//                            {
-//                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
-//                            }
+//            }
 //
-//                            if(pt_i == N_pts - 1)
-//                            {
-//                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
-//                            }
-                            found_cut_cell = TRUE;
-                            
-                        }
-                        else if(cl_HHO_i == first_cell && pt_in_cell(msh, pt, cl))
-                        {
-                            size_t last_elem = parametric_interface.connectivity_this_HHO_cells[cell_i].size();
-                            if(last_elem>0 && parametric_interface.connectivity_this_HHO_cells[cell_i][last_elem-1] != first_cell){
-//                                parametric_interface.connectivity_HHO_cells_this[first_cell].push_back(cell_i) ;
-                                parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(first_cell) ;
-                                
-                                
-                            }
-                            if(last_elem == 0)
-                            {
-//                                parametric_interface.connectivity_HHO_cells_this[first_cell].push_back(cell_i) ;
-                                parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(first_cell) ;
-                            }
-                        }
-                                
-                        if( found_cut_cell )
-                            break;
-                    }
-                    if( found_cut_cell )
-                        break;
-                    
-                }
-                
-            }
-            
-            
-        }
-    }
-}
+//
+//        }
+//    }
+//}
 
 
 
@@ -5268,7 +5526,8 @@ set_cut_cell(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interf
         auto pt0 = parametric_interface(0,cell_i);
         auto pt1 = parametric_interface(1,cell_i);
         T dist = (pt0 - pt1).norm();
-        T N_pts = 10.0*ceil(dist/h) + 1.0 ;
+//        T N_pts = 40.0*ceil(dist/h) + 1.0 ;
+        T N_pts = 100.0/h + 1.0 ;
         T N_half = (N_pts-1.0)/2.0;
         
         for(T pt_i = 1.0; pt_i < N_pts ; pt_i++)
@@ -5381,6 +5640,7 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
             bool face0 = false , face1 = false , face2 = false , face3 = false ;
             int which_fc = elem - elem_old ;
             T pt_to_find ;
+            T min_pt , max_pt ;
             auto fcs = faces(msh, cl);
             size_t fc_counter = 0;
             
@@ -5401,6 +5661,10 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
                         fc_loop[fc_counter].user_data.node_inside = 1;
                         
                         pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).x() ;
+                        
+                        min_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]]).y() ;
+                        
+                        max_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).y() ;
 //                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
 //                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
 //                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
@@ -5434,7 +5698,9 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
                         fc_loop[fc_counter].user_data.node_inside = 0;
                         
                         pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).x() ;
+                        min_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]]).y() ;
                         
+                        max_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).y() ;
 //                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
 //                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
 //                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
@@ -5465,7 +5731,9 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
                         fc_loop[fc_counter].user_data.node_inside = 0;
                         
                         pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).y() ;
+                        min_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]]).x() ;
                         
+                        max_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).x() ;
 //                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
 //                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
 //                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
@@ -5496,7 +5764,9 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
                         fc_loop[fc_counter].user_data.node_inside = 1;
                         
                         pt_to_find = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).y() ;
+                        min_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[0]]).x() ;
                         
+                        max_pt = points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]]).x() ;
 //                        std::cout<<"fc_loop[fc_counter].ptids[1] = "<<fc_loop[fc_counter].ptids[1]<<std::endl;
 //                        std::cout<<"node1 = "<<msh.nodes[fc_loop[fc_counter].ptids[1]]<<std::endl;
 //                        std::cout<<"node1bis = "<<points(msh,msh.nodes[fc_loop[fc_counter].ptids[1]])<<std::endl;
@@ -5522,7 +5792,8 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
             if( ! face_found )
             {
                 auto threshold = diameter(msh, fc_loop[fc_counter]) / 1e20;
-                pt_on_skeleton = find_crossing_on_cut_face(pt_to_find, parametric_interface, cell_i , threshold , axis );
+//                pt_on_skeleton = find_crossing_on_cut_face(msh,elem, pt_to_find, parametric_interface, cell_i , threshold , axis );
+                pt_on_skeleton = find_crossing_on_cut_face_more_robust(msh,elem, pt_to_find,min_pt,max_pt, parametric_interface, cell_i , threshold , axis );
                 point_type pt_interface = point_type(pt_on_skeleton.first(0),pt_on_skeleton.first(1));
                 fc_loop[fc_counter].user_data.intersection_point = pt_interface ;
                 
@@ -5559,11 +5830,11 @@ set_cut_faces(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_inter
 }
 
 
-template<typename T, typename Function>
+template<typename T, typename Function,typename Mesh>
 std::pair< Matrix<T, 2, 1> , T >
-find_crossing_on_cut_face(T pt ,Function& parametric_interface, size_t cell_i , const T& threshold , int axis )
+find_crossing_on_cut_face(const Mesh& msh,const size_t& elem , T pt ,Function& parametric_interface, size_t cell_i , const T& threshold , int axis )
 {
-//    typedef typename Mesh::point_type point_type ;
+    typedef typename Mesh::point_type point_type ;
     size_t max_iter = 100;
     
     T pm = 0.5;
@@ -5571,7 +5842,52 @@ find_crossing_on_cut_face(T pt ,Function& parametric_interface, size_t cell_i , 
     T pb = 1.0;
     auto pm_prev = pm;
     
-    T diff_sq ;
+    T diff_sq = 10 ;
+    
+    do {
+        auto lm = parametric_interface(pm,cell_i);
+        auto lm_axis = lm(axis) ;
+//        auto pt_a = curve(pm,cell_i);
+        auto lb = parametric_interface(pb,cell_i);
+        auto lb_axis = lb(axis) ;
+        
+        if ( (lb_axis >= pt && lm_axis >= pt) || (lb_axis < pt && lm_axis < pt) )
+        {
+            pm_prev = pm;
+            pb = pm;
+            pm = (pa+pb)/2.0;
+        }
+        else
+        {   /* intersection is between pm and pb */
+            pm_prev = pm;
+            pa = pm;
+            pm = (pa+pb)/2.0;
+        }
+        
+        auto lm_prev = parametric_interface(pm_prev,cell_i);
+        auto pt_to_check = point_type(lm_prev(0),lm_prev(1)) ;
+        if( ! pt_in_cell(msh, pt_to_check, msh.cells[elem]) )
+            continue;
+            
+        auto lm_prev_axis = lm_prev(axis) ;
+        diff_sq = (lm_prev_axis - pt) * (lm_prev_axis - pt) ;
+    } while ( (sqrt( diff_sq ) > threshold) && max_iter-- );
+    
+    
+    return std::make_pair(parametric_interface(pm_prev,cell_i) , pm_prev);
+}
+
+template<typename T, typename Function,typename Mesh>
+T
+iterative_procedure(const Mesh& msh,const size_t& elem , T pt ,T min_pt,T max_pt, Function& parametric_interface, size_t cell_i , const T& threshold , int axis , T pm, T pa, T pb )
+{
+    
+    typedef typename Mesh::point_type point_type ;
+    size_t max_iter = 100;
+    
+    auto pm_prev = pm;
+    
+    T diff_sq = 10 ;
     
     do {
         auto lm = parametric_interface(pm,cell_i);
@@ -5595,13 +5911,107 @@ find_crossing_on_cut_face(T pt ,Function& parametric_interface, size_t cell_i , 
         
         auto lm_prev = parametric_interface(pm_prev,cell_i);
         auto lm_prev_axis = lm_prev(axis) ;
+        auto pt_to_check = point_type(lm_prev(0),lm_prev(1)) ;
+        if( ! pt_in_cell(msh, pt_to_check, msh.cells[elem]) ){
+            continue;
+        }
+        
         diff_sq = (lm_prev_axis - pt) * (lm_prev_axis - pt) ;
     } while ( (sqrt( diff_sq ) > threshold) && max_iter-- );
     
+    return pm_prev ;
+}
+
+template<typename T, typename Function,typename Mesh>
+std::pair< Matrix<T, 2, 1> , T >
+find_crossing_on_cut_face_more_robust(const Mesh& msh,const size_t& elem , T pt ,T min_pt,T max_pt, Function& parametric_interface, size_t cell_i , const T& threshold , int axis )
+{
+    typedef typename Mesh::point_type point_type ;
+   
+    
+    T pm = 0.5;
+    T pa = 0.0;
+    T pb = 1.0;
+    
+    T pm_prev = iterative_procedure(msh,elem, pt,min_pt,max_pt, parametric_interface, cell_i , threshold , axis ,pm,pa,pb);
+    auto candidate_pt = parametric_interface(pm_prev,cell_i);
+    auto pt_to_check = point_type(candidate_pt(0),candidate_pt(1)) ;
+    size_t counterp = 0 , counterm = 0;
+    while( ! pt_in_cell(msh, pt_to_check, msh.cells[elem]) ){
+        
+        std::cout<<"CUT FACES ITNERFACE POINTS NOT ROBUST, A NEW VERSION IS GOING TO BE UPDATE."<<std::endl;
+//        pa = 0.0 ;
+//        if(pm_prev > 0.02)
+//            pb = pm_prev - 0.01 ;
+//        else
+//            pb = pm_prev - pm_prev/2.0;
+//        pm = (pb + pa)*0.5;
+//
+//        T pm_prev1 = iterative_procedure(msh,elem, pt,min_pt,max_pt, parametric_interface, cell_i , threshold , axis ,pm,pa,pb);
+//
+//        auto candidate_pt1 = parametric_interface(pm_prev1,cell_i);
+//        auto pt_to_check1 = point_type(candidate_pt1(0),candidate_pt1(1)) ;
+//
+//        if( pt_in_cell(msh, pt_to_check1, msh.cells[elem]) )
+//            break;
+//        if(pm_prev < 0.98)
+//            pa = pm_prev + 0.01 ;
+//        else
+//            pa = pm_prev + 0.01 ;
+//        pb = 1.0 ;
+//        pm = (pb + pa)*0.5;
+//
+//        T pm_prev2 = iterative_procedure(msh,elem, pt,min_pt,max_pt, parametric_interface, cell_i , threshold , axis ,pm,pa,pb);
+//
+//        auto candidate_pt2 = parametric_interface(pm_prev2,cell_i);
+//        auto pt_to_check2 = point_type(candidate_pt2(0),candidate_pt2(1)) ;
+//
+//        if( pt_in_cell(msh, pt_to_check2, msh.cells[elem]) )
+//            break;
+        // If not found:
+        // TO BE CHECK DISTANCE BETWEEN pt_to_check1 and pt_to_check2 and pt (I know min_pt e max_pt) and take as pm_prev the one with min distance , then calculate also pt_to_check with pm_prev
+        
+        if( pm_prev > 0.5 )
+        {
+            T eps = std::abs(pb-pm_prev)/10.0 + 0.01;
+            pb = pm_prev - eps ;
+//            pa = 0.0;
+            pm = (pb + pa)*0.5;
+            pm_prev = iterative_procedure(msh,elem, pt,min_pt,max_pt, parametric_interface, cell_i , threshold , axis ,pm,pa,pb);
+            counterp++;
+        }
+        else
+        {
+//            pb = 1.0 ;
+            T eps = std::abs(pm_prev-pa)/10.0 + 0.01;
+            pa = pm_prev + eps;
+            pm = (pb + pa)*0.5;
+            pm_prev = iterative_procedure(msh,elem, pt,min_pt,max_pt, parametric_interface, cell_i , threshold , axis ,pm,pa,pb);
+            counterm++;
+        }
+        
+        
+        auto candidate_pt1 = parametric_interface(pm_prev,cell_i);
+        pt_to_check = point_type(candidate_pt1(0),candidate_pt1(1)) ;
+        
+        if(counterm>20){
+            if(pa*2.0 < 1.0)
+                pa *= 2.0 ;
+            else{
+                T delta = pa*2.0 - 1.0;
+                pa = 1.0 - delta/2.0 ;
+            }
+            counterm = 0;
+        }
+        if(counterp>20){
+            pb /= 2.0 ;
+            counterp = 0;
+        }
+            
+    }
     
     return std::make_pair(parametric_interface(pm_prev,cell_i) , pm_prev);
 }
-
 
 template<typename Mesh , typename Curve, typename T >
 void
@@ -5610,6 +6020,8 @@ set_domains_properties(Mesh& msh, const mesh_init_params<T>& mip, Curve& paramet
 //    std::set<size_t> closed_undef_cells ;
     for(auto& cl : msh.cells)
     {
+//        if(offset(msh,cl)==690)
+//            std::cout<<"offset(msh,cl)= "<<offset(msh,cl)<<std::endl;
         for(auto& fc: faces(msh,cl) )
         {
             if(fc.is_boundary)
@@ -5657,6 +6069,8 @@ set_domains_properties(Mesh& msh, const mesh_init_params<T>& mip, Curve& paramet
 //        closed_undef_cells.insert(offset_cl);
         for(auto& cl_i : neigh)
         {
+//            if(cl_i== 690)
+//                std::cout<<"cl_i= "<<cl_i<<std::endl;
 //            if(msh.cells[cl_i].user_data.location == element_location::IN_NEGATIVE_SIDE)
 //            {
 //
@@ -5749,8 +6163,65 @@ set_domains_properties(Mesh& msh, const mesh_init_params<T>& mip, Curve& paramet
     }
     
     
+    
+    
+    
     for(auto& cl : msh.cells)
     {
+        
+        if( !(cl.user_data.location == element_location::UNDEF) )
+            continue ;
+        
+        auto f_neigh = cl.user_data.f_neighbors ;
+        auto d_neigh = cl.user_data.d_neighbors ;
+        std::set<size_t> neigh;
+        std::merge(f_neigh.begin(), f_neigh.end(),
+                    d_neigh.begin(), d_neigh.end(),
+                    std::inserter(neigh, neigh.begin()));
+        
+        size_t offset_cl = offset(msh,cl);
+        for(auto& cl_i : neigh)
+        {
+            if(msh.cells[cl_i].user_data.location == element_location::IN_POSITIVE_SIDE)
+            {
+                cl.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                auto nodes_cl = nodes(msh,cl) ;
+                for(auto& nd_cl : nodes_cl )
+                {
+                    if( nd_cl.user_data.location == element_location::UNDEF )
+                        msh.nodes[nd_cl.ptid].user_data.location = element_location::IN_POSITIVE_SIDE ;
+
+                }
+                
+                auto fcs_cl = faces(msh,cl) ;
+                for(auto& fc_cl : fcs_cl )
+                {
+                    for(auto& fc : msh.faces)
+                    {
+                        if(fc == fc_cl){
+                            if( fc.user_data.location == element_location::UNDEF )
+                                fc.user_data.location = element_location::IN_POSITIVE_SIDE ;
+                        }
+                    }
+                    
+                }
+                break;
+            }
+
+        }
+        
+    }
+    
+    
+    
+    
+    
+    
+    
+    for(auto& cl : msh.cells)
+    {
+//        if(offset(msh,cl)==690)
+//            std::cout<<"offset(msh,cl)= "<<offset(msh,cl)<<std::endl;
         if( cl.user_data.location == element_location::UNDEF )
         {
             cl.user_data.location = element_location::IN_NEGATIVE_SIDE ;
@@ -6529,7 +7000,7 @@ triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, 
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
+make_integrateNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
 
@@ -6583,7 +7054,7 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> > // HO INVERTITO I NOMI PER FARE LA PROVA
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrateNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
     // (2) TOLTO PER CONTROLLARE CASE LINEARE
@@ -6605,7 +7076,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                size_t degree, const element_location& where)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
@@ -6646,7 +7117,7 @@ make_integrate_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
     
@@ -6696,7 +7167,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interface_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                     size_t degree, element_location where)
 {
     assert( is_cut(msh, cl) );
@@ -6746,7 +7217,7 @@ integrate_interface_old(const cuthho_mesh<T, ET>& msh, const typename cuthho_mes
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
+integrate_interfaceNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
 {
     assert( is_cut(msh, cl) );
     typedef typename cuthho_mesh<T, ET>::point_type point_type ;
@@ -6821,7 +7292,13 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     
     
     size_t elem = offset(msh,cl);
-    auto local_para_functions = curve.connectivity_HHO_cells_this[elem] ;
+    
+
+    
+//    auto local_para_functions = curve.connectivity_HHO_cells_this[elem] ;
+    
+    auto local_para_functions = curve.get_global_interface( msh, cl);
+    
     
     for(auto& local_func : local_para_functions)
     {
@@ -6855,7 +7332,7 @@ measure_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
         exit(9);
 
     T totmeas = 0.0;
-    auto qpsi = integrate_interface(msh, cl,curve, 0, where);
+    auto qpsi = integrate_interface(msh, cl,curve, 0, where );
     for (auto& qp : qpsi)
     {
         totmeas += qp.second;
@@ -7298,6 +7775,28 @@ public:
 
         ret(3) = (5*ep*ep*ep - 3*ep) * sqrt(7.0 / 8.0) / coeff;
         if( basis_degree == 3)
+            return ret;
+        
+        ret(4) = (35*ep*ep*ep*ep - 30*ep*ep + 3) * sqrt(9.0 / 128.0) / coeff;
+        if( basis_degree == 4)
+            return ret;
+        
+        ret(5) = (63*ep*ep*ep*ep*ep - 70*ep*ep*ep + 15*ep) * sqrt(11.0 / 128.0) / coeff;
+        if( basis_degree == 5)
+            return ret;
+        
+
+        ret(6) = (231*ep*ep*ep*ep*ep*ep - 315*ep*ep*ep*ep + 105*ep*ep - 5) * sqrt(13.0 / 2.0) / 16.0  / coeff;
+        if( basis_degree == 6)
+            return ret;
+        
+        
+        ret(7) = (429*ep*ep*ep*ep*ep*ep*ep - 693*ep*ep*ep*ep*ep + 315*ep*ep*ep - 35*ep) * sqrt(15.0 / 2.0) / 16.0  / coeff;
+        if( basis_degree == 7)
+            return ret;
+        
+        ret(8) = (6435*ep*ep*ep*ep*ep*ep*ep*ep - 12012*ep*ep*ep*ep*ep*ep + 6930*ep*ep*ep*ep - 1260*ep*ep + 35.0) * sqrt(17.0 / 2.0) / 128.0  / coeff;
+        if( basis_degree == 8)
             return ret;
 
         throw std::logic_error("bases : we shouldn't be here");

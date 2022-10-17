@@ -792,7 +792,7 @@ class test_case_stokes_eps
         vel_grad = other.vel_grad;
         dirichlet_jump = other.dirichlet_jump;
         neumann_jump = other.neumann_jump;
-        
+        parms = other.parms;
     }
     
     test_case_stokes_eps( test_case_stokes_eps& other){
@@ -805,6 +805,7 @@ class test_case_stokes_eps
         vel_grad = other.vel_grad;
         dirichlet_jump = other.dirichlet_jump;
         neumann_jump = other.neumann_jump;
+        parms = other.parms;
         
     }
     
@@ -1248,6 +1249,74 @@ auto make_test_case_static_bubble(const Mesh& msh, T R, T a, T b, T k ,Function&
    return test_case_static_bubble<typename Mesh::coordinate_type, Mesh, Function > (R,a,b,k,level_set_);
 }
 
+
+template<typename T, typename Mesh , typename Function >
+class test_case_M_shaped: public test_case_stokes<T, Function , Mesh>
+{
+  public:
+    test_case_M_shaped(T k , Function& level_set_)
+       : test_case_stokes<T, Function, Mesh>
+       (level_set_, params<T>(),
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+           Matrix<T, 2, 1> ret;
+           T x = pt.x() ;
+           T y = pt.y();
+           ret(0) =  x*x*(1.0 - x)*(1.0 - x)*(2.*y - 6.*y*y + 4.*y*y*y);
+           ret(1) =  -y*y*(1. - y)*(1. - y)*(2.*x - 6.*x*x + 4.*x*x*x);
+           return ret;
+           
+       },
+        [](const typename Mesh::point_type& pt) -> T { // p
+           T x = pt.x();
+           T y = pt.y();
+           return   x*(1.0-x);
+           
+       },
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+            Matrix<T, 2, 1> ret;
+           T x = pt.x();
+           T y = pt.y();
+//            ret(0) =    1.0-2.0*x - (x*x+ x*x*x*x -2.0*x*x*x)*(-12.0+24.0*y);
+//            ret(1) =   - (-y*y- y*y*y*y + 2.0*y*y*y)*(-12.0+24.0*x);
+           ret(0) = 1.0 -2.0*x - ( 4.0 * (-1.0 + 2.0 * y) * (3.0 * (-1.0 + x)*(-1.0 + x)* x * x + (1.0 + 6.0 * (-1.0 + x)* x)* (-1.0 + y)* y) );
+           ret(1) = - ( 4.0 * (-1.0 + 2.0 * x) * (-3.0 * (-1.0 + y) * (-1.0 + y) * y * y - (-1.0 + x) * x * (1.0 + 6.0 * (-1.0 + y) * y)) );
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+           Matrix<T, 2, 1> ret;
+           T x = pt.x();
+           T y = pt.y();
+           ret(0) =  x*x*(1.0 - x)*(1.0 - x)*(2.*y - 6.*y*y + 4.*y*y*y);
+           ret(1) =  -y*y*(1. - y)*(1. - y)*(2.*x - 6.*x*x + 4.*x*x*x);
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 2, 2> ret;
+           T x = pt.x();
+           T y = pt.y();
+            ret(0,0) =  2.0 * (1.0 - x) * (1.0 - x) * x * (2.0 * y - 6.0 * y * y + 4.0 * y * y * y) - 2.0 * (1.0 - x) * x * x * (2.0 * y - 6.0 * y * y + 4.0 * y * y * y);
+            ret(0,1) = (1.0 - x)*(1.0 - x)* x*x *(2.0 - 12.0 * y + 12.0 * y*y);
+            ret(1,0) = -((2.0 - 12.0 * x + 12.0 * x*x) * (1.0 - y)*(1.0 - y)* y*y);
+            ret(1,1) = -2.0 * (2.0 * x - 6.0 * x * x + 4.0 * x * x * x) * (1.0 - y)* (1.0 - y) * y + 2.0 * (2.0 * x - 6.0 * x * x + 4.0 * x * x * x )* (1.0 - y)* y*y;
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Dir //
+            Matrix<T, 2, 1> ret;
+            T x = pt.x();
+            T y = pt.y();
+           ret(0) =   0. ; // x*x*(1-x)*(1-x)*(2*y-6*y*y+4*y*y*y);
+           ret(1) =   0. ; // -y*y*(1-y)*(1-y)*(2*x-6*x*x+4*x*x*x);
+            return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {// Neu
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;})
+       {}
+};
+
+template<typename Mesh, typename T, typename Function >
+auto make_test_case_M_shaped(const Mesh& msh, T k ,Function& level_set_ )
+{
+   return test_case_M_shaped<typename Mesh::coordinate_type, Mesh, Function > (k,level_set_);
+}
 
 
 template<typename T, typename Function, typename Mesh>
