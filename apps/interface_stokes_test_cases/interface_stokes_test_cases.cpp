@@ -57830,6 +57830,130 @@ auto make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps(const Mesh& ms
 
 
 
+// shear flow - curve evaluation domain (-a,a)^2
+template<typename T, typename Mesh, typename Function ,  typename Para_Interface >
+class test_case_eshelby_parametric_cont_eps_DIR_domSym: public test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>
+{
+
+public:
+
+    Mesh m_msh  ;
+    typename Mesh::cell_type m_cl ;
+    T gamma = 1.0;
+    T eps = 1.0;
+
+    explicit test_case_eshelby_parametric_cont_eps_DIR_domSym( Function & level_set__, Para_Interface& parametric_curve_cont, params<T> parms_, bool sym_grad, T gamma , T eps )
+       : gamma(gamma),eps(eps), test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>
+       (level_set__,parametric_curve_cont, parms_,
+        [eps](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {
+           // sol_vel
+           Matrix<T, 2, 1> ret;
+           
+           ret(0) = eps*pt.x();
+           ret(1) = -eps*pt.y() ;
+
+           return ret;},
+        [level_set__,gamma,this](const typename Mesh::point_type& pt) mutable ->  T { // p
+
+           level_set__.cell_assignment(m_cl);
+           T R = level_set__.radius ;
+
+            if( level_set__(pt) < 0 )
+                return  gamma / R - M_PI * R * gamma;
+            else
+                return -M_PI * R * gamma;
+
+
+       },
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0 ;
+            ret(1) = 0.0 ;
+            return ret;},
+        [eps](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+           Matrix<T, 2, 1> ret;
+
+           ret(0) = eps*pt.x();
+           ret(1) = -eps*pt.y() ;
+
+           return ret;},
+        [eps](const typename Mesh::point_type& pt) -> auto { // grad
+
+           Matrix<T, 2, 2> ret;
+           
+           ret(0,0) = eps;
+           ret(0,1) = 0.0;
+           ret(1,0) = 0.0;
+           ret(1,1) = -eps;
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+        [level_set__,parametric_curve_cont,sym_grad,gamma,this](const T& pt, const size_t& global_cl_i ) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
+
+           Matrix<T, 2, 1> ret;
+           
+            if(sym_grad)
+            {
+               
+                ret(0) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(0);
+                ret(1) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(1) ;
+               
+               
+            }
+            else
+            {
+                ret(0) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(0);
+                ret(1) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(1) ;
+                
+
+            }
+            return ret;})
+       {}
+
+    test_case_eshelby_parametric_cont_eps_DIR_domSym(const test_case_eshelby_parametric_cont_eps_DIR_domSym & other) : test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>(other) {
+        m_msh = other.m_msh;
+        m_cl = other.m_cl;
+        gamma = other.gamma;
+        eps = other.eps ;
+    }
+
+
+    void test_case_cell_assignment(const typename Mesh::cell_type& cl_new )
+    {
+        m_cl = cl_new ;
+    }
+    
+    void test_case_mesh_assignment(const Mesh& msh_new )
+    {
+
+        m_msh = msh_new ;
+
+    }
+  
+    typename Mesh::cell_type& upload_cl()
+    {
+        return m_cl ;
+    }
+    
+
+
+};
+
+template<typename Mesh, typename T, typename Function , typename Para_Interface >
+auto make_test_case_eshelby_parametric_cont_eps_DIR_domSym(const Mesh& msh, Function& level_set_function, Para_Interface& parametric_curve_cont ,  params<T> parms_, bool sym_grad, T gamma , T eps )
+{
+   return test_case_eshelby_parametric_cont_eps_DIR_domSym<typename Mesh::coordinate_type, Mesh , Function,Para_Interface>(level_set_function,parametric_curve_cont,parms_,sym_grad,gamma,eps);
+}
+
+
+
+
+
+
+
 // Perturbeted case
 template<typename T, typename Mesh, typename Function ,  typename Para_Interface >
 class test_case_shear_flow_perturbated: public test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>
@@ -58443,11 +58567,7 @@ public:
 
 };
 
-template<typename Mesh, typename T, typename Function ,  typename Para_Interface>
-auto make_test_case_eshelby_LS_eps_DIR_domSym(const Mesh& msh, Function& level_set_function ,Para_Interface& curve, params<T> parms_, bool sym_grad, T gamma , T eps,T sizeBox)
-{
-   return test_case_eshelby_LS_eps_DIR_domSym<T, Mesh , Function,Para_Interface>(level_set_function,curve,parms_,sym_grad,gamma,eps,sizeBox);
-}
+
 
 
 
@@ -81628,20 +81748,20 @@ int main(int argc, char **argv)
 // DT PAPER NEW
 // OTHER SETTING: TGV SOURCE
 // CHECKING IF EVEN HERE IT IS NECESSARY ALL THOSE TRANSFORMATION OF NORMAL AND CURVATURE
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
-
-    size_t degree           = 0;
-    size_t int_refsteps     = 4;
-    size_t degree_FEM       = 0;
+    RealType sizeBox = 1.0;
+    size_t degree           = 1;
+    size_t int_refsteps     = 0; // 4
+    size_t degree_FEM       = 2;
     size_t degree_curve     = 2;
     size_t degree_curvature = 1; // degree_curve -1 ;
     bool dump_debug         = false;
-    bool solve_interface    = false;
+    bool solve_interface    = true;
     bool solve_fictdom      = false;
-    bool agglomeration      = false;
+    bool agglomeration      = true;
 
     bool high_order = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
     bool entropic = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
@@ -81652,7 +81772,14 @@ int main(int argc, char **argv)
     mesh_init_params<RealType> mip;
     mip.Nx = 5;
     mip.Ny = 5;
-    size_t T_N = 0;
+    
+    mip.min_x = -sizeBox;
+    mip.min_y = -sizeBox;
+    mip.max_x = sizeBox;
+    mip.max_y = sizeBox;
+    
+    
+    size_t T_N = 200;
     int ch;
     while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:l:p:ifDAdhesgc")) != -1 )
     {
@@ -81793,15 +81920,15 @@ int main(int argc, char **argv)
     /************** ANALYTIC LEVEL SET FUNCTION  **************/
    
 
-    bool circle = false , ellipse = false ;
-    bool flower = true;
+    bool circle = true , ellipse = false ;
+    bool flower = false;
     RealType radius_a , radius_b , radius ;
-    RealType x_centre = 0.5;
-    RealType y_centre = 0.5; // 0.5 with all problems, but TGV 0.3
+    RealType x_centre = 0.0;
+    RealType y_centre = 0.0; // 0.5 with all problems, but TGV 0.3
     //T h = std::max( fe_data.hx , fe_data.hy) ;
     if(circle)
     {
-        radius = 1.0/6.0; // I ALWAYS USED 1.0/9.0
+        radius = 1.0/3.0; // I ALWAYS USED 1.0/9.0
     }
 
     if(ellipse)
@@ -81823,9 +81950,9 @@ int main(int argc, char **argv)
 
     // ------------------------------------ CIRCLE LEVEL SET ------------------------------------
     
-//        std::cout<<"Initial interface: CIRCLE"<<std::endl;
-//        auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
-//        typedef  circle_level_set<T> Fonction;
+        std::cout<<"Initial interface: CIRCLE"<<std::endl;
+        auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
+        typedef  circle_level_set<T> Fonction;
     
 //    std::cout<<"Initial interface: CIRCLE"<<std::endl;
 //    auto level_set_function_anal = circle_level_set_signed_distance<RealType>(radius, x_centre, y_centre , 0.01 ); // , 0.01 --> eps to smooth gradient
@@ -81841,12 +81968,12 @@ int main(int argc, char **argv)
 //    radius =  sqrt( radius_a * radius_b ) ;
 //    T ratioR = (radiusOLD*radiusOLD)/(radius*radius);
 //    T oscillation = 0.04/ratioR ;
-    T oscillation = 0.04;
-    radius = 1.0/3.0 ;
-    std::cout<<"Initial interface: FLOWER"<<std::endl;
-    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
-    typedef  flower_level_set<T> Fonction;
-    flower = true ;
+//    T oscillation = 0.04;
+//    radius = 1.0/3.0 ;
+//    std::cout<<"Initial interface: FLOWER"<<std::endl;
+//    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
+//    typedef  flower_level_set<T> Fonction;
+//    flower = true ;
      
     // ------------------------------------ ELLIPTIC LEVEL SET -----------------------------------
 //    std::cout<<"Initial interface: ELLIPSE"<<std::endl;
@@ -82122,9 +82249,9 @@ int main(int argc, char **argv)
     // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
     plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
     
-    T final_time = 8.0;
+    T final_time = 3.0;
     
-    T eps_dirichlet_cond = 0.0 ; //0.26; 0.59 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.52 ; //0.26; 0.59 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
@@ -82175,9 +82302,16 @@ int main(int argc, char **argv)
         
         
         // -------------------- ESHELBY VERSION PARAMETRIC (CONT) - CORRECT -------------------
-        // ---> THE OLD ONE FOR DIRICHLET =0
-        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma ); // SIGN OF PRESSURE HAS TO BE CHANGED CONFORMING TO THE CHANGE  OF SIGN OF THE CURVATURE. HERE DONE: CORRECT 25/01/2021
-//        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // SIGN OF PRESSURE HAS TO BE CHANGED CONFORMING TO THE CHANGE  OF SIGN OF THE CURVATURE.
+        // domain  (0,1)^2 - null flow
+//        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma );
+    
+        // domain  (-a,a)^2 - shear flow
+        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
+        
+        // domain  (0,1)^2 - shear flow
+        
+//        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
+        
         // New test case perturbated
 //        T perturbation = 0.5;
 //     auto test_case_prova = make_test_case_shear_flow_perturbated( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
@@ -82805,169 +82939,3 @@ int main(int argc, char **argv)
 
 
 
-
-
-// ---------------------------- GUILLAUME OLD MAIN (ANALYTICAL LS)--------------------------
-// Case m-shaped to compare the condition number with the HDG results
-#if 1
-int main(int argc, char **argv)
-{
-    using RealType = double;
-
-    size_t degree           = 0;
-    size_t int_refsteps     = 4;
-
-    bool dump_debug         = false;
-    bool solve_interface    = false;
-    bool solve_fictdom      = false;
-    bool agglomeration      = false;
-
-    mesh_init_params<RealType> mip;
-    mip.Nx = 5;
-    mip.Ny = 5;
-
-    /* k <deg>:     method degree
-     * M <num>:     number of cells in x direction
-     * N <num>:     number of cells in y direction
-     * r <num>:     number of interface refinement steps
-     *
-     * i:           solve interface problem
-     * f:           solve fictitious domain problem
-     *
-     * D:           use node displacement to solve bad cuts (default)
-     * A:           use agglomeration to solve bad cuts
-     *
-     * d:           dump debug data
-     */
-
-    int ch;
-    while ( (ch = getopt(argc, argv, "k:M:N:r:ifDAd")) != -1 )
-    {
-        switch(ch)
-        {
-            case 'k':
-                degree = atoi(optarg);
-                break;
-
-            case 'M':
-                mip.Nx = atoi(optarg);
-                break;
-
-            case 'N':
-                mip.Ny = atoi(optarg);
-                break;
-
-            case 'r':
-                int_refsteps = atoi(optarg);
-                break;
-
-            case 'i':
-                solve_interface = true;
-                break;
-
-            case 'f':
-                solve_fictdom = true;
-                break;
-
-            case 'D':
-                agglomeration = false;
-                break;
-
-            case 'A':
-                agglomeration = true;
-                break;
-
-            case 'd':
-                dump_debug = true;
-                break;
-
-            case '?':
-            default:
-                std::cout << "wrong arguments" << std::endl;
-                exit(1);
-        }
-    }
-
-    argc -= optind;
-    argv += optind;
-
-
-    timecounter tc;
-
-    /************** BUILD MESH **************/
-    tc.tic();
-    cuthho_poly_mesh<RealType> msh(mip);
-    tc.toc();
-    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
-    typedef cuthho_poly_mesh<RealType> Mesh;
-    offset_definition(msh);
-    /************** LEVEL SET FUNCTION **************/
-    
-    RealType eps  = 0.05; // 0.25-1e-10; // 0.1;
-    RealType epsBndry  = 1e-8 ; // 1e-10;
-    RealType pos_sides  = 0.25; // 0.0;
-//    auto level_set_function = m_shaped_level_set<RealType>(eps,epsBndry,pos_sides);
-    
-    RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
-    // auto level_set_function = line_level_set<RealType>(0.5);
-    // auto level_set_function = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
-    /************** DO cutHHO MESH PROCESSING **************/
-
-    tc.tic();
-    detect_node_position(msh, level_set_function);
-    detect_cut_faces(msh, level_set_function);
-
-    if (agglomeration)
-    {
-        detect_cut_cells(msh, level_set_function);
-        detect_cell_agglo_set(msh, level_set_function);
-        make_neighbors_info_cartesian(msh);
-        // make_neighbors_info(msh);
-        refine_interface(msh, level_set_function, int_refsteps);
-        make_agglomeration(msh, level_set_function);
-    }
-    else
-    {
-        // move_nodes(msh, level_set_function);
-        // detect_cut_faces(msh, level_set_function); //do it again to update intersection points
-        detect_cut_cells(msh, level_set_function);
-        refine_interface(msh, level_set_function, int_refsteps);
-    }
-
-
-    tc.toc();
-    std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
-
-    if (dump_debug)
-    {
-        dump_mesh(msh);
-        output_mesh_info(msh, level_set_function);
-    }
-
-    output_mesh_info(msh, level_set_function);
-
-    // auto test_case = make_test_case_stokes_1(msh, level_set_function);
-    auto test_case = make_test_case_stokes_2(msh, level_set_function);
-//    auto test_case = make_test_case_M_shaped(msh, 1.0,level_set_function); // DELETED TO CHECK FAST IMPLEMENTATION
-    
-    // auto test_case = make_test_case_kink_velocity(msh, .... );
-    
-    //auto test_case = make_test_case_kink_velocity2(msh, level_set_function);
-    
-//    auto method = make_sym_gradrec_stokes_interface_method_analytic(msh, 1.0, 0.0, test_case, true);
-    
-    auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, true);
-
-    
-    
-    if (solve_interface)
-        run_cuthho_interface(msh, degree, method, test_case);
-
-    if (solve_fictdom)
-        run_cuthho_fictdom(msh, degree, test_case);
-
-
-    return 0;
-}
-#endif

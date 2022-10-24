@@ -29,10 +29,13 @@ class level_set
     size_t div_deg = 0;
     virtual T operator()(const point<T,2>& pt) const
     {
+        return 0.0;
     }
     
     virtual Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
     {
+        Eigen::Matrix<T,2,1> ret;
+        return ret;
     }
 
     Eigen::Matrix<T,2,1> normal(const point<T,2>& pt) const

@@ -277,7 +277,7 @@ void set_dir_func(const Function& f) {
             auto face_LHS_offset = face_SOL_offset(msh, fc);
 
             bool in_dom = true;
-            if( loc_zone != element_location::ON_INTERFACE );
+            if( loc_zone != element_location::ON_INTERFACE )
             {
                 element_location loc_fc = location(msh, fc);
                 in_dom = (loc_fc == element_location::ON_INTERFACE ||
@@ -1576,7 +1576,7 @@ public:
             //auto face_LHS_offset = face_SOL_offset(msh, fc);
 
             bool in_dom = true;
-            if( loc_zone != element_location::ON_INTERFACE );
+            if( loc_zone != element_location::ON_INTERFACE )
             {
                 element_location loc_fc = location(msh, fc);
                 bool in_dom = (loc_fc == element_location::ON_INTERFACE ||

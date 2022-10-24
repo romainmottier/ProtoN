@@ -7000,7 +7000,7 @@ triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, 
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrateNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
 
@@ -7054,7 +7054,7 @@ make_integrateNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> > // HO INVERTITO I NOMI PER FARE LA PROVA
-integrateNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
     // (2) TOLTO PER CONTROLLARE CASE LINEARE
@@ -7076,7 +7076,7 @@ integrateNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::c
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+make_integrateOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                size_t degree, const element_location& where)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
@@ -7117,7 +7117,7 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrateOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
     
@@ -7167,7 +7167,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate_interfaceOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                     size_t degree, element_location where)
 {
     assert( is_cut(msh, cl) );
@@ -7217,7 +7217,7 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interfaceNEW(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
+integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
 {
     assert( is_cut(msh, cl) );
     typedef typename cuthho_mesh<T, ET>::point_type point_type ;

@@ -1695,6 +1695,8 @@ public:
      
         return ret;
         }
+        std::cout<<"Error, returns 0. See core_bits/bases.hpp."<<std::endl;
+        return ret ;
     }
     
 
