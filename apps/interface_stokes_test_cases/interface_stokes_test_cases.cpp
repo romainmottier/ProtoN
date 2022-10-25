@@ -313,8 +313,8 @@ goal_quantities_time_fast_para(const Mesh& msh,const VEC& interface_gamma  , con
         size_t i = 0;
         for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
         {
-            //std::cout<<val_u_nx[i]<<std::endl;
-            interface_file4 << std::setprecision(std::numeric_limits<long double>::digits10 + 1) <<(*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+            // << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+            interface_file4 <<(*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
             << tangent_gamma[i](0) << "   " <<tangent_gamma[i](1)<< std::endl;
 
             i++;
@@ -336,8 +336,8 @@ goal_quantities_time_fast_para(const Mesh& msh,const VEC& interface_gamma  , con
            size_t i = 0;
            for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
            {
-               //std::cout<<val_u_nx[i]<<std::endl;
-               interface_file0 << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+               // << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+               interface_file0  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
                << normal_gamma[i](0) << "   " <<normal_gamma[i](1)<< std::endl;
 
                i++;
@@ -359,8 +359,8 @@ goal_quantities_time_fast_para(const Mesh& msh,const VEC& interface_gamma  , con
               size_t i = 0;
               for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
               {
-                  //std::cout<<val_u_nx[i]<<std::endl;
-                  interface_file1 << std::setprecision(std::numeric_limits<long double>::digits10 + 1)  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+                  //<< std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                  interface_file1  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
                   << curvature_gamma[i] << std::endl;
 
                   i++;
@@ -391,8 +391,8 @@ goal_quantities_time_fast_para_cont(const Mesh& msh,const VEC& interface_gamma  
         size_t i = 0;
         for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
         {
-            //std::cout<<val_u_nx[i]<<std::endl;
-            interface_file4 << std::setprecision(std::numeric_limits<long double>::digits10 + 1) <<(*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+            // << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+            interface_file4 <<(*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
             << tangent_gamma[i](0) << "   " <<tangent_gamma[i](1)<< std::endl;
 
             i++;
@@ -414,8 +414,8 @@ goal_quantities_time_fast_para_cont(const Mesh& msh,const VEC& interface_gamma  
            size_t i = 0;
            for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
            {
-               //std::cout<<val_u_nx[i]<<std::endl;
-               interface_file0 << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+               // << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+               interface_file0  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
                << normal_gamma[i](0) << "   " <<normal_gamma[i](1)<< std::endl;
 
                i++;
@@ -437,8 +437,8 @@ goal_quantities_time_fast_para_cont(const Mesh& msh,const VEC& interface_gamma  
               size_t i = 0;
               for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
               {
-                  //std::cout<<val_u_nx[i]<<std::endl;
-                  interface_file1 << std::setprecision(std::numeric_limits<long double>::digits10 + 1)  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+                  //std::cout<<val_u_nx[i]<<std::endl;  << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                  interface_file1 << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
                   << curvature_gamma[i] << std::endl;
 
                   i++;
@@ -469,8 +469,8 @@ goal_quantities_time_fast(const Mesh& msh,const VEC& interface_gamma  , const VE
         size_t i = 0;
         for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
         {
-            //std::cout<<val_u_nx[i]<<std::endl;
-            interface_file4 << std::setprecision(std::numeric_limits<long double>::digits10 + 1) <<(*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+            //std::cout<<val_u_nx[i]<<std::endl; << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+            interface_file4  <<(*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
             << tangent_gamma[i](0) << "   " <<tangent_gamma[i](1)<< std::endl;
 
             i++;
@@ -492,8 +492,8 @@ goal_quantities_time_fast(const Mesh& msh,const VEC& interface_gamma  , const VE
            size_t i = 0;
            for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
            {
-               //std::cout<<val_u_nx[i]<<std::endl;
-               interface_file0 << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+               //std::cout<<val_u_nx[i]<<std::endl; << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+               interface_file0  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
                << normal_gamma[i](0) << "   " <<normal_gamma[i](1)<< std::endl;
 
                i++;
@@ -515,8 +515,8 @@ goal_quantities_time_fast(const Mesh& msh,const VEC& interface_gamma  , const VE
               size_t i = 0;
               for(auto interface_point = interface_gamma.begin() ; interface_point < interface_gamma.end() ; interface_point++ )
               {
-                  //std::cout<<val_u_nx[i]<<std::endl;
-                  interface_file1 << std::setprecision(std::numeric_limits<long double>::digits10 + 1)  << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
+                  //std::cout<<val_u_nx[i]<<std::endl; << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                  interface_file1   << (*interface_point)(0) << "   " <<  (*interface_point)(1) << "   "
                   << curvature_gamma[i] << std::endl;
 
                   i++;
@@ -2205,7 +2205,7 @@ detect_cut_cells2(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             }
 
 
-            if( !(signbit(level_set_function(pn,msh,cl)) == signbit(level_set_function(pn_prova,msh,cl))) ){
+            if( !(std::signbit(level_set_function(pn,msh,cl)) == std::signbit(level_set_function(pn_prova,msh,cl))) ){
                 pn = pn_prova ;
                 std::cout<<"pn = "<<pn<< " , pn_prova = "<<pn_prova<< " , level_set_function(pn,msh,cl) = "<<level_set_function(pn,msh,cl)<< " , level_set_function(pn_prova,msh,cl) = "<<level_set_function(pn_prova,msh,cl) <<std::endl;
             }
@@ -2349,7 +2349,7 @@ detect_cut_cells3(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             }
             */
 
-            if( !(signbit(level_set_function(pn,msh,cl)-iso_val_interface) == signbit(level_set_function(pn_prova,msh,cl) -iso_val_interface) ) ){
+            if( !(std::signbit(level_set_function(pn,msh,cl)-iso_val_interface) == std::signbit(level_set_function(pn_prova,msh,cl) -iso_val_interface) ) ){
                 std::cout<<"p0 = "<<p0<< " , p1 = "<<p1<< std::endl;
                 std::cout<<"pn = "<<pn<< " , pn_prova = "<<pn_prova<< " , level_set_function(pn,msh,cl) = "<<level_set_function(pn,msh,cl)<< " , level_set_function(pn_prova,msh,cl) = "<<level_set_function(pn_prova,msh,cl) <<std::endl;
                 pn = pn_prova ;
@@ -3905,7 +3905,7 @@ refine_interface_angle2(cuthho_mesh<T, ET>& msh, const Function& level_set_funct
         auto checK_sign = level_set_function(pm,msh,cl);
 
 
-        if( !(signbit(checK_sign) && !positive) || !(!signbit(checK_sign) && positive) )
+        if( !(std::signbit(checK_sign) && !positive) || !(!std::signbit(checK_sign) && positive) )
         {
             std::cout<<"LEVEL SET(Pm) = "<<checK_sign<< " and sign used is = "<<positive<<std::endl;
             throw std::logic_error("HO FATTO ERRORE IN POSITIVE SIGN CHECKING");
@@ -4106,9 +4106,9 @@ refine_interface_angle(cuthho_mesh<T, ET>& msh, const Function& level_set_functi
 
         auto checK_sign = level_set_function(pm,msh,cl);
 
-        if( (positive==FALSE && signbit(checK_sign) == 0 ) || (positive==TRUE && signbit(checK_sign) == 1 ) )
+        if( (positive==FALSE && std::signbit(checK_sign) == 0 ) || (positive==TRUE && std::signbit(checK_sign) == 1 ) )
         {
-            std::cout<<"LEVEL SET(Pm) = "<<checK_sign<< " and sign used is = "<<positive<<" and signbit is "<<signbit(checK_sign)<<std::endl;
+            std::cout<<"LEVEL SET(Pm) = "<<checK_sign<< " and sign used is = "<<positive<<" and signbit is "<<std::signbit(checK_sign)<<std::endl;
             throw std::logic_error("HO FATTO ERRORE IN POSITIVE SIGN CHECKING");
         }
 

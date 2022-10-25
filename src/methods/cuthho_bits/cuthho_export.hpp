@@ -118,7 +118,7 @@ public:
         std::ofstream ofs(output_filename);
 
         for (auto& d : data)
-            ofs << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << d << std::endl;
+            ofs << d << std::endl; // << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
 
         ofs.close();
 
