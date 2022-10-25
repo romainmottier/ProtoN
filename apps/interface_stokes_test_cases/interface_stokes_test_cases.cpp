@@ -127,6 +127,276 @@ void offset_definition( Mesh& msh)
 }
 
 
+
+
+// Lagrangian basis b_kl(x,y) = b_k(x)*b_l(y) over a set of equidistributed 2-dimensional nodes (3D CASE NOT YET IMPLEMENTED)
+
+template<typename T,typename Mesh>
+std::vector< point<T,2> >
+equidistriduted_nodes_ordered_bis(const Mesh& msh,
+          const typename Mesh::cell_type& cl,
+          size_t degree)
+{
+    typedef typename Mesh::point_type    point_type;
+
+    auto qps = reference_nodes_ordered<T>(degree); //Ordering:  0 2 3 4 5 6 ... 1
+
+    // 3 -  12 - 11 - 10 - 2
+    // 13 - 22 - 21 - 20 - 9
+    // 14 - 23 - 24 - 19 - 8
+    // 15 - 16 - 17 - 18 - 7
+    // 0 -  4 -  5  - 6  - 1
+
+    auto pts = points(msh, cl);
+
+    //auto v0 = pts[1] - pts[0];
+    //auto v1 = pts[2] - pts[1];
+    //auto v2 = pts[3] - pts[2];
+    //auto v3 = pts[3] - pts[0];
+
+    std::vector< point<T,2> > ret((degree+1)*(degree+1));
+
+    auto P = [&](T xi, T eta) -> T {
+        return 0.25 * pts[0].x() * (1-xi)*(1-eta) +
+               0.25 * pts[1].x() * (1+xi)*(1-eta) +
+               0.25 * pts[2].x() * (1+xi)*(1+eta) +
+               0.25 * pts[3].x() * (1-xi)*(1+eta);
+    };
+
+    auto Q = [&](T xi, T eta) -> T {
+        return 0.25 * pts[0].y() * (1-xi)*(1-eta) +
+               0.25 * pts[1].y() * (1+xi)*(1-eta) +
+               0.25 * pts[2].y() * (1+xi)*(1+eta) +
+               0.25 * pts[3].y() * (1-xi)*(1+eta);
+    };
+
+    /// ADDING VERTICES:
+
+    // (-1,-1)
+    auto qp_x = qps[0];
+    auto qp_y = qps[0];
+    auto xi = qp_x.x();
+    auto eta = qp_y.x();
+    auto px = P(xi, eta);
+    auto py = Q(xi, eta);
+    ret[0] = ( point_type(px, py) );
+
+    if( degree == 0 )
+        return ret ;
+
+    // (1,-1)
+    qp_x = qps[1];
+    qp_y = qps[0];
+    xi = qp_x.x();
+    eta = qp_y.x();
+    px = P(xi, eta);
+    py = Q(xi, eta);
+    ret[1] = ( point_type(px, py) );
+    // (1,1)
+    qp_x = qps[1];
+    qp_y = qps[1];
+    xi = qp_x.x();
+    eta = qp_y.x();
+    px = P(xi, eta);
+    py = Q(xi, eta);
+    ret[2] = ( point_type(px, py) );
+    // (-1,1)
+    qp_x = qps[0];
+    qp_y = qps[1];
+    xi = qp_x.x();
+    eta = qp_y.x();
+    px = P(xi, eta);
+    py = Q(xi, eta);
+    ret[3] = ( point_type(px, py) );
+
+    /// Counter for each side of the 2D - square : starting to count from a vertice, the position where I save the point in ret is (degree -1)*j , with j the j-esima face.
+
+    int  count0 = 4 , count1 = 4 + degree - 1 , count2 = 4 + 2*(degree - 1), count3 = 4 + 3*(degree - 1)  ;
+
+    int count_bis0 = 4*degree ; // counter initialisation (USELESS)
+    int j_max = floor((degree-1)/2) ; // number of internal layour of points
+  //  std::cout<<"j max "<<j_max<<std::endl;
+    int pos_right = 100; // initial point from the right from bottom -> up
+    int pos_left = 100; // initial point from the left from left -> right
+   // size_t i_min = 0;
+ //   std::cout<<"inizia ciclo"<<std::endl;
+    for (int j = 0 ; j <= j_max ; j++ ) { // for each layout of point
+       // bool i_loop = FALSE;
+        for(int i = std::max(0,j-1) ; i < degree -1 - j ; i++ ) // I move from into the points over a side of each layout
+        {
+
+            if( i == std::max(0,j-1) && j > 0) // vertices
+            {
+                // different pos_left depending on the layout. Especially this rules the y starting point
+                if(j == 0)
+                    pos_left = 0;
+                else if(j == 1)
+                    pos_left = 2;
+                else
+                    pos_left = 2+(j-1);
+
+                //   std::cout<<"pos_left "<<pos_left<<std::endl;
+                qp_x = qps[2+i];
+                qp_y = qps[pos_left]; //qps[0 + 2*j];
+                //   std::cout<<"qp_y "<<qp_y<<std::endl;
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                // Here change counters. No more count0, count1 etc.. Just count_bis0, to have the vertices enumerate one after the other.
+                count_bis0 = count0; // counter_bis0 re-initialisation for each loop (first loop)
+                //std::cout<<"count bis 0 "<<count_bis0<<std::endl;
+                ret[count_bis0] = ( point_type(px, py) ); // adding point bottom layout
+                //std::cout<<"count0 is "<<count0<<" , pt0"<<point_type(px, py)<<std::endl;
+                //std::cout<<ret[count0]<<std::endl;
+                count_bis0++;
+
+                if(j==0)
+                    pos_right = 1;
+                else
+                    pos_right = degree + 1 - j;
+                // size_t pos = (1 + j*(degree-1));
+                // if(pos>degree)
+                //     pos -= j*degree ;
+
+                qp_x =  qps[pos_right];
+                qp_y = qps[2 + i];
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count_bis0] = ( point_type(px, py) ); // adding point right layout in count_bis0 pos.
+                //std::cout<<"count1 is "<<count1<<" , pt1"<<point_type(px, py)<<std::endl;
+                //std::cout<<"count_bis0 is "<<count_bis0<<std::endl;
+                //std::cout<<ret[count_bis0]<<std::endl;
+                count_bis0++;
+
+                qp_x = qps[degree - i];
+                qp_y =  qps[pos_right] ;
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count_bis0] = ( point_type(px, py) ); // adding point top layout in count_bis0 pos.
+                //std::cout<<"count_bis0 is "<<count_bis0<<" and pt "<<ret[count_bis0]<<std::endl;
+                //std::cout<<"count2 is "<<count2<<" , pt2"<<point_type(px, py)<<std::endl;
+
+                count_bis0++;
+                qp_x = qps[pos_left];
+                qp_y = qps[degree - i];
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count_bis0] = ( point_type(px, py) ); // adding point left layout in count_bis0 pos.
+                //std::cout<<"count_bis0 is "<<count_bis0<<" and pt "<<ret[count_bis0]<<std::endl;
+                //std::cout<<"count3 is "<<count3<<" , pt3"<<point_type(px, py)<<std::endl;
+                count_bis0++;
+
+                // Updating counters according to count_bis0. I start enumerate "face" unknown for the current layout (IN ELSE HERE BELOW) from the last position count_bis0.
+                count0 = count_bis0 ;
+                count1 = count0 + degree - 1.0 - 2.0*j; //  count0 + (degree - 2); it was
+                count2 = count1 + degree - 1.0 - 2.0*j;
+                count3 = count2 + degree - 1.0 - 2.0*j;
+
+
+
+            }
+            else // NOT vertices -> node in the sides of each layout
+            {
+
+                //   std::cout<<"i "<<i<<" j "<<j<<std::endl;
+                // vertical position where starting for each bottom side layout.
+                if(j == 0)
+                    pos_left = 0;
+                else if(j == 1)
+                    pos_left = 2;
+                else
+                    pos_left = 2+(j-1);
+
+                //   std::cout<<"pos_left "<<pos_left<<std::endl;
+                qp_x = qps[2+i];
+                qp_y = qps[pos_left]; //qps[0 + 2*j];
+                //   std::cout<<"qp_y "<<qp_y<<std::endl;
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count0] = ( point_type(px, py) ); // from left, node of each bottom side layout
+                //std::cout<<"count0 is "<<count0<<" , pt0"<<point_type(px, py)<<std::endl;
+                //std::cout<<ret[count0]<<std::endl;
+                count0++;
+                // x-position where to start to increase to get points for each right side layout of points
+                if(j==0)
+                    pos_right = 1;
+                else
+                    pos_right = degree + 1 - j;
+                // size_t pos = (1 + j*(degree-1));
+                // if(pos>degree)
+                //     pos -= j*degree ;
+
+                qp_x =  qps[pos_right];
+                qp_y = qps[2 + i];
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count1] = ( point_type(px, py) ); // using count1 that allows correct enumeration
+                //std::cout<<"count1 is "<<count1<<" , pt1"<<point_type(px, py)<<std::endl;
+                //std::cout<<ret[count1]<<std::endl;
+                count1++; // count1 bigger than count0. Count1 just enumerate right faces' layout
+
+                qp_x = qps[degree - i];
+                qp_y =  qps[pos_right] ;
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count2] = ( point_type(px, py) );
+                //std::cout<<"count2 is "<<count2<<" , pt2"<<point_type(px, py)<<std::endl;
+                count2++; // count2 just enumerate top faces' layout
+
+                qp_x = qps[pos_left];
+                qp_y = qps[degree - i];
+                xi = qp_x.x();
+                eta = qp_y.x();
+                px = P(xi, eta);
+                py = Q(xi, eta);
+                ret[count3] = ( point_type(px, py) );
+                //std::cout<<"count3 is "<<count3<<" , pt3"<<point_type(px, py)<<std::endl;
+                count3++; // count3 just enumerate left faces' layout
+
+
+            }
+        }
+        // Updating for the next layout.
+        count0 = count3 ;
+        count1 = count0 + (degree - 2*(j+1)); //  count0 + (degree - 2); it was
+        count2 = count1 + (degree - 2*(j+1));
+        count3 = count2 + (degree - 2*(j+1));
+
+
+        //}
+    }
+
+    /// Middle point --> the internal node is treated a part of the others. Just even degrees have it.
+    if( degree % 2 == 0)
+    {
+        qp_x = qps[degree - floor((degree-1)/2)];
+        qp_y = qps[degree - floor((degree-1)/2)];
+        xi = qp_x.x();
+        eta = qp_y.x();
+        px = P(xi, eta);
+        py = Q(xi, eta);
+        ret[count0] = ( point_type(px, py) );
+        //std::cout<<"counto MIDDLE is "<<count0<<" , pt3"<<point_type(px, py)<<std::endl;
+    }
+    return ret;
+}
+
+
+
+
 /// Lagrangian nodes saved in each cell of orginal mesh -> useful for connecting HHO velocity field and transport velocity field
 template<typename Mesh , typename T = typename Mesh::coordinate_type >
 void nodes_Lagrangian_cell_definition( Mesh& msh , size_t degree )
@@ -6253,270 +6523,6 @@ reference_nodes_ordered(size_t degree)
 }
 
 
-// Lagrangian basis b_kl(x,y) = b_k(x)*b_l(y) over a set of equidistributed 2-dimensional nodes (3D CASE NOT YET IMPLEMENTED)
-
-template<typename T,typename Mesh>
-std::vector< point<T,2> >
-equidistriduted_nodes_ordered_bis(const Mesh& msh,
-          const typename Mesh::cell_type& cl,
-          size_t degree)
-{
-    typedef typename Mesh::point_type    point_type;
-
-    auto qps = reference_nodes_ordered<T>(degree); //Ordering:  0 2 3 4 5 6 ... 1
-
-    // 3 -  12 - 11 - 10 - 2
-    // 13 - 22 - 21 - 20 - 9
-    // 14 - 23 - 24 - 19 - 8
-    // 15 - 16 - 17 - 18 - 7
-    // 0 -  4 -  5  - 6  - 1
-
-    auto pts = points(msh, cl);
-
-    //auto v0 = pts[1] - pts[0];
-    //auto v1 = pts[2] - pts[1];
-    //auto v2 = pts[3] - pts[2];
-    //auto v3 = pts[3] - pts[0];
-
-    std::vector< point<T,2> > ret((degree+1)*(degree+1));
-
-    auto P = [&](T xi, T eta) -> T {
-        return 0.25 * pts[0].x() * (1-xi)*(1-eta) +
-               0.25 * pts[1].x() * (1+xi)*(1-eta) +
-               0.25 * pts[2].x() * (1+xi)*(1+eta) +
-               0.25 * pts[3].x() * (1-xi)*(1+eta);
-    };
-
-    auto Q = [&](T xi, T eta) -> T {
-        return 0.25 * pts[0].y() * (1-xi)*(1-eta) +
-               0.25 * pts[1].y() * (1+xi)*(1-eta) +
-               0.25 * pts[2].y() * (1+xi)*(1+eta) +
-               0.25 * pts[3].y() * (1-xi)*(1+eta);
-    };
-
-    /// ADDING VERTICES:
-
-    // (-1,-1)
-    auto qp_x = qps[0];
-    auto qp_y = qps[0];
-    auto xi = qp_x.x();
-    auto eta = qp_y.x();
-    auto px = P(xi, eta);
-    auto py = Q(xi, eta);
-    ret[0] = ( point_type(px, py) );
-
-    if( degree == 0 )
-        return ret ;
-
-    // (1,-1)
-    qp_x = qps[1];
-    qp_y = qps[0];
-    xi = qp_x.x();
-    eta = qp_y.x();
-    px = P(xi, eta);
-    py = Q(xi, eta);
-    ret[1] = ( point_type(px, py) );
-    // (1,1)
-    qp_x = qps[1];
-    qp_y = qps[1];
-    xi = qp_x.x();
-    eta = qp_y.x();
-    px = P(xi, eta);
-    py = Q(xi, eta);
-    ret[2] = ( point_type(px, py) );
-    // (-1,1)
-    qp_x = qps[0];
-    qp_y = qps[1];
-    xi = qp_x.x();
-    eta = qp_y.x();
-    px = P(xi, eta);
-    py = Q(xi, eta);
-    ret[3] = ( point_type(px, py) );
-
-    /// Counter for each side of the 2D - square : starting to count from a vertice, the position where I save the point in ret is (degree -1)*j , with j the j-esima face.
-
-    int  count0 = 4 , count1 = 4 + degree - 1 , count2 = 4 + 2*(degree - 1), count3 = 4 + 3*(degree - 1)  ;
-
-    int count_bis0 = 4*degree ; // counter initialisation (USELESS)
-    int j_max = floor((degree-1)/2) ; // number of internal layour of points
-  //  std::cout<<"j max "<<j_max<<std::endl;
-    int pos_right = 100; // initial point from the right from bottom -> up
-    int pos_left = 100; // initial point from the left from left -> right
-   // size_t i_min = 0;
- //   std::cout<<"inizia ciclo"<<std::endl;
-    for (int j = 0 ; j <= j_max ; j++ ) { // for each layout of point
-       // bool i_loop = FALSE;
-        for(int i = std::max(0,j-1) ; i < degree -1 - j ; i++ ) // I move from into the points over a side of each layout
-        {
-
-            if( i == std::max(0,j-1) && j > 0) // vertices
-            {
-                // different pos_left depending on the layout. Especially this rules the y starting point
-                if(j == 0)
-                    pos_left = 0;
-                else if(j == 1)
-                    pos_left = 2;
-                else
-                    pos_left = 2+(j-1);
-
-                //   std::cout<<"pos_left "<<pos_left<<std::endl;
-                qp_x = qps[2+i];
-                qp_y = qps[pos_left]; //qps[0 + 2*j];
-                //   std::cout<<"qp_y "<<qp_y<<std::endl;
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                // Here change counters. No more count0, count1 etc.. Just count_bis0, to have the vertices enumerate one after the other.
-                count_bis0 = count0; // counter_bis0 re-initialisation for each loop (first loop)
-                //std::cout<<"count bis 0 "<<count_bis0<<std::endl;
-                ret[count_bis0] = ( point_type(px, py) ); // adding point bottom layout
-                //std::cout<<"count0 is "<<count0<<" , pt0"<<point_type(px, py)<<std::endl;
-                //std::cout<<ret[count0]<<std::endl;
-                count_bis0++;
-
-                if(j==0)
-                    pos_right = 1;
-                else
-                    pos_right = degree + 1 - j;
-                // size_t pos = (1 + j*(degree-1));
-                // if(pos>degree)
-                //     pos -= j*degree ;
-
-                qp_x =  qps[pos_right];
-                qp_y = qps[2 + i];
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count_bis0] = ( point_type(px, py) ); // adding point right layout in count_bis0 pos.
-                //std::cout<<"count1 is "<<count1<<" , pt1"<<point_type(px, py)<<std::endl;
-                //std::cout<<"count_bis0 is "<<count_bis0<<std::endl;
-                //std::cout<<ret[count_bis0]<<std::endl;
-                count_bis0++;
-
-                qp_x = qps[degree - i];
-                qp_y =  qps[pos_right] ;
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count_bis0] = ( point_type(px, py) ); // adding point top layout in count_bis0 pos.
-                //std::cout<<"count_bis0 is "<<count_bis0<<" and pt "<<ret[count_bis0]<<std::endl;
-                //std::cout<<"count2 is "<<count2<<" , pt2"<<point_type(px, py)<<std::endl;
-
-                count_bis0++;
-                qp_x = qps[pos_left];
-                qp_y = qps[degree - i];
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count_bis0] = ( point_type(px, py) ); // adding point left layout in count_bis0 pos.
-                //std::cout<<"count_bis0 is "<<count_bis0<<" and pt "<<ret[count_bis0]<<std::endl;
-                //std::cout<<"count3 is "<<count3<<" , pt3"<<point_type(px, py)<<std::endl;
-                count_bis0++;
-
-                // Updating counters according to count_bis0. I start enumerate "face" unknown for the current layout (IN ELSE HERE BELOW) from the last position count_bis0.
-                count0 = count_bis0 ;
-                count1 = count0 + degree - 1.0 - 2.0*j; //  count0 + (degree - 2); it was
-                count2 = count1 + degree - 1.0 - 2.0*j;
-                count3 = count2 + degree - 1.0 - 2.0*j;
-
-
-
-            }
-            else // NOT vertices -> node in the sides of each layout
-            {
-
-                //   std::cout<<"i "<<i<<" j "<<j<<std::endl;
-                // vertical position where starting for each bottom side layout.
-                if(j == 0)
-                    pos_left = 0;
-                else if(j == 1)
-                    pos_left = 2;
-                else
-                    pos_left = 2+(j-1);
-
-                //   std::cout<<"pos_left "<<pos_left<<std::endl;
-                qp_x = qps[2+i];
-                qp_y = qps[pos_left]; //qps[0 + 2*j];
-                //   std::cout<<"qp_y "<<qp_y<<std::endl;
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count0] = ( point_type(px, py) ); // from left, node of each bottom side layout
-                //std::cout<<"count0 is "<<count0<<" , pt0"<<point_type(px, py)<<std::endl;
-                //std::cout<<ret[count0]<<std::endl;
-                count0++;
-                // x-position where to start to increase to get points for each right side layout of points
-                if(j==0)
-                    pos_right = 1;
-                else
-                    pos_right = degree + 1 - j;
-                // size_t pos = (1 + j*(degree-1));
-                // if(pos>degree)
-                //     pos -= j*degree ;
-
-                qp_x =  qps[pos_right];
-                qp_y = qps[2 + i];
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count1] = ( point_type(px, py) ); // using count1 that allows correct enumeration
-                //std::cout<<"count1 is "<<count1<<" , pt1"<<point_type(px, py)<<std::endl;
-                //std::cout<<ret[count1]<<std::endl;
-                count1++; // count1 bigger than count0. Count1 just enumerate right faces' layout
-
-                qp_x = qps[degree - i];
-                qp_y =  qps[pos_right] ;
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count2] = ( point_type(px, py) );
-                //std::cout<<"count2 is "<<count2<<" , pt2"<<point_type(px, py)<<std::endl;
-                count2++; // count2 just enumerate top faces' layout
-
-                qp_x = qps[pos_left];
-                qp_y = qps[degree - i];
-                xi = qp_x.x();
-                eta = qp_y.x();
-                px = P(xi, eta);
-                py = Q(xi, eta);
-                ret[count3] = ( point_type(px, py) );
-                //std::cout<<"count3 is "<<count3<<" , pt3"<<point_type(px, py)<<std::endl;
-                count3++; // count3 just enumerate left faces' layout
-
-
-            }
-        }
-        // Updating for the next layout.
-        count0 = count3 ;
-        count1 = count0 + (degree - 2*(j+1)); //  count0 + (degree - 2); it was
-        count2 = count1 + (degree - 2*(j+1));
-        count3 = count2 + (degree - 2*(j+1));
-
-
-        //}
-    }
-
-    /// Middle point --> the internal node is treated a part of the others. Just even degrees have it.
-    if( degree % 2 == 0)
-    {
-        qp_x = qps[degree - floor((degree-1)/2)];
-        qp_y = qps[degree - floor((degree-1)/2)];
-        xi = qp_x.x();
-        eta = qp_y.x();
-        px = P(xi, eta);
-        py = Q(xi, eta);
-        ret[count0] = ( point_type(px, py) );
-        //std::cout<<"counto MIDDLE is "<<count0<<" , pt3"<<point_type(px, py)<<std::endl;
-    }
-    return ret;
-}
 
 template<typename Mesh, typename T >
 class cell_basis_Lagrangian_ordered
