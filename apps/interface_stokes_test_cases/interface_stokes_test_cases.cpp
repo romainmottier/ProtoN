@@ -128,6 +128,92 @@ void offset_definition( Mesh& msh)
 
 
 
+template<typename T>
+std::vector<point<T,1> >
+reference_nodes_ordered(size_t degree)
+{
+    auto comp_degree = degree + 1;
+    size_t reqd_nodes = comp_degree;
+
+    std::vector<point<T,1> > ret;
+    ret.reserve(reqd_nodes);
+
+    point<T,1>  qp , qp_1;
+    T           a1, a2;
+    T           delta_x;
+    switch(reqd_nodes)
+    {
+        case 1:
+            qp = point<T,1>({0.0});
+            ret.push_back(qp);
+            return ret;
+
+        case 2:
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            return ret;
+
+        case 3:
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            qp = point<T,1>({0.0});
+            ret.push_back( qp );
+            return ret;
+
+        case 4:
+            a1 = 1.0/3.0;
+            qp = point<T,1>({ 1.0 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            qp = point<T,1>({ a1 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+            return ret;
+
+        case 5:
+            // Be carefull in what order data is inserted in ret!
+            // In Gauss Legendre the first one was 0.0, now is the last one
+            a2 = 0.5;
+            a1 = 1.0;
+            qp = point<T,1>({ a1 });
+            ret.push_back( -qp );
+            ret.push_back( qp );
+
+            qp = point<T,1>({ a2 });
+            ret.push_back( -qp );
+            qp_1 = point<T,1>({ 0.0 });
+            ret.push_back( qp_1 );
+            ret.push_back( qp );
+
+         //   qp = point<T,1>({ 0.0 });
+         //   ret.push_back( qp );
+            return ret;
+
+        default:
+
+            delta_x = 2.0/degree;
+            a1 = 1.0;
+            while (a1>1e-10) {
+                qp = point<T,1>({ a1 });
+                ret.push_back( -qp );
+                ret.push_back( qp );
+                a1-=delta_x;
+
+            }
+            if(a1<1e-10 && a1>-1e-10)
+            {
+                qp = point<T,1>({0.0});
+                ret.push_back( qp );
+            }
+            std::sort(ret.begin()+2, ret.end() ,[](point<T,1>  a, point<T,1>  b) {
+                return a.x() < b.x();
+            } );
+            return ret;
+    }
+    return ret;
+}
 
 // Lagrangian basis b_kl(x,y) = b_k(x)*b_l(y) over a set of equidistributed 2-dimensional nodes (3D CASE NOT YET IMPLEMENTED)
 
@@ -6435,92 +6521,6 @@ test_new_method(const Mesh msh , const FonctionD& level_set_disc , const Fonctio
 
 
 
-template<typename T>
-std::vector<point<T,1> >
-reference_nodes_ordered(size_t degree)
-{
-    auto comp_degree = degree + 1;
-    size_t reqd_nodes = comp_degree;
-
-    std::vector<point<T,1> > ret;
-    ret.reserve(reqd_nodes);
-
-    point<T,1>  qp , qp_1;
-    T           a1, a2;
-    T           delta_x;
-    switch(reqd_nodes)
-    {
-        case 1:
-            qp = point<T,1>({0.0});
-            ret.push_back(qp);
-            return ret;
-
-        case 2:
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( -qp );
-            ret.push_back( qp );
-            return ret;
-
-        case 3:
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( -qp );
-            ret.push_back( qp );
-            qp = point<T,1>({0.0});
-            ret.push_back( qp );
-            return ret;
-
-        case 4:
-            a1 = 1.0/3.0;
-            qp = point<T,1>({ 1.0 });
-            ret.push_back( -qp );
-            ret.push_back( qp );
-            qp = point<T,1>({ a1 });
-            ret.push_back( -qp );
-            ret.push_back( qp );
-            return ret;
-
-        case 5:
-            // Be carefull in what order data is inserted in ret!
-            // In Gauss Legendre the first one was 0.0, now is the last one
-            a2 = 0.5;
-            a1 = 1.0;
-            qp = point<T,1>({ a1 });
-            ret.push_back( -qp );
-            ret.push_back( qp );
-
-            qp = point<T,1>({ a2 });
-            ret.push_back( -qp );
-            qp_1 = point<T,1>({ 0.0 });
-            ret.push_back( qp_1 );
-            ret.push_back( qp );
-
-         //   qp = point<T,1>({ 0.0 });
-         //   ret.push_back( qp );
-            return ret;
-
-        default:
-
-            delta_x = 2.0/degree;
-            a1 = 1.0;
-            while (a1>1e-10) {
-                qp = point<T,1>({ a1 });
-                ret.push_back( -qp );
-                ret.push_back( qp );
-                a1-=delta_x;
-
-            }
-            if(a1<1e-10 && a1>-1e-10)
-            {
-                qp = point<T,1>({0.0});
-                ret.push_back( qp );
-            }
-            std::sort(ret.begin()+2, ret.end() ,[](point<T,1>  a, point<T,1>  b) {
-                return a.x() < b.x();
-            } );
-            return ret;
-    }
-    return ret;
-}
 
 
 
