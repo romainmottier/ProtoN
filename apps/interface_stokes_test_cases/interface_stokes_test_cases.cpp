@@ -79817,12 +79817,12 @@ int main(int argc, char **argv)
 // EPS BDRY CONDS
 // Loop varying \mu and ellipse radii
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
     RealType sizeBox = 2.0;
-    size_t degree           = 0;
+    size_t degree           = 1;
     size_t int_refsteps     = 4;
     size_t degree_FEM       = 0;
     size_t degree_curve     = 2;
@@ -79942,9 +79942,9 @@ int main(int argc, char **argv)
     timecounter tc_tot;
     tc_tot.tic();
 
-    std::vector<RealType> mu_vec{10.0 , 100.0};
-    std::vector<RealType> radius_a_vec {1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0} ;
-    std::vector<RealType> radius_b_vec {1.0/6.0, 2.0/9.0, 4.0/15.0, 10.0/57.0, 10.0/33.0, 4.0/21.0} ;
+    std::vector<RealType> mu_vec{1.0}; // 0.01,0.1,1,10,100
+    std::vector<RealType> radius_a_vec {1.0/3.0}; // , 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0} ;
+    std::vector<RealType> radius_b_vec {1.0/6.0}; // , 2.0/9.0, 4.0/15.0, 10.0/57.0, 10.0/33.0, 4.0/21.0} ;
     
     int nOfRadii = radius_a_vec.size();
     
@@ -81746,15 +81746,10 @@ int main(int argc, char **argv)
 
 // Interface Stokes Problem: INLET DIRICHLET BDRY CONDITIONS
 // Generic Interface: Gamma = 0 or 1/2 or generic ( SEE MAX-MAX mapping)
-// CODE BASED ON 02/21 -> (GRADIENT AND NORMAL CONTINUOUS + DIVERGENCE CONT/DISC )
-// NEW CURVE INTEGRATION :  POST GOAL QUANTITIES PARA
 
-// ---> CHECKING 17/03:
-// SIGNED DISTANCE LS
-// DT PAPER NEW
-// OTHER SETTING: TGV SOURCE
-// CHECKING IF EVEN HERE IT IS NECESSARY ALL THOSE TRANSFORMATION OF NORMAL AND CURVATURE
-#if 1
+// -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
+
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -82255,9 +82250,9 @@ int main(int argc, char **argv)
     // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
     plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
     
-    T final_time = 3.0;
+    T final_time = 8.0;
     
-    T eps_dirichlet_cond = 0.52 ; //0.26; 0.59 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.1 ; //0.26; 0.59 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
