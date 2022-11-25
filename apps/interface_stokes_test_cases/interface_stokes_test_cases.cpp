@@ -53362,9 +53362,13 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
 
     if( sc )
     {
-        solver.analyzePattern(assembler_sc.LHS);
+        std::cout << "First step: analyze pattern... " << std::endl;
+	solver.analyzePattern(assembler_sc.LHS);
+	std::cout << "Pattern ok. Second step: assembling... " << std::endl;
         solver.factorize(assembler_sc.LHS);
+	std::cout << "Assembling ok. Third step: solving... " << std::endl;
         sol = solver.solve(assembler_sc.RHS);
+	std::cout << "..problem solved. " << std::endl;
     }
     else
     {
@@ -53383,7 +53387,12 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
     {
         sol = Matrix<RealType, Dynamic, 1>::Zero(assembler_sc.RHS.rows());
         cgp.max_iter = assembler_sc.LHS.rows();
-        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+        ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
+	cg.compute(assembler_sc.LHS);
+	sol = cg.solve(assembler_sc.RHS);
+	std::cout << "#iterations:     " << cg.iterations() << std::endl;
+	std::cout << "estimated error: " << cg.error()      << std::endl;
+	// conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
     }
     else
     {
@@ -58574,6 +58583,11 @@ public:
 };
 
 
+template<typename Mesh, typename T, typename Function ,  typename Para_Interface>
+auto make_test_case_eshelby_LS_eps_DIR_domSym(const Mesh& msh, Function& level_set_function ,Para_Interface& curve, params<T> parms_, bool sym_grad, T gamma , T eps,T sizeBox)
+{
+   return test_case_eshelby_LS_eps_DIR_domSym<T, Mesh , Function,Para_Interface>(level_set_function,curve,parms_,sym_grad,gamma,eps,sizeBox);
+}
 
 
 
@@ -79817,7 +79831,7 @@ int main(int argc, char **argv)
 // EPS BDRY CONDS
 // Loop varying \mu and ellipse radii
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -79948,13 +79962,14 @@ int main(int argc, char **argv)
     
     int nOfRadii = radius_a_vec.size();
     
-    std::vector<RealType> testCaseGamma{0.0 , 1.0 };
-    std::vector<RealType> testCaseEps{1.0 , 0.0 };
+    std::vector<RealType> testCaseGamma{1.0}; // {0.0 , 1.0 };
+    std::vector<RealType> testCaseEps{0.0}; //{1.0 , 0.0 };
     
+    int nOfTestCases = testCaseGamma.size(); 
     size_t counter_tests = 0 ;
     for (auto mu : mu_vec)
     {
-        for (int iTestCase = 0 ; iTestCase < 2 ; iTestCase++)
+        for (int iTestCase = 0 ; iTestCase < nOfTestCases ; iTestCase++)
         {
             RealType gamma = testCaseGamma.at(iTestCase);
             RealType eps_dirichlet_cond = testCaseEps.at(iTestCase);
@@ -81749,7 +81764,7 @@ int main(int argc, char **argv)
 
 // -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -82252,7 +82267,7 @@ int main(int argc, char **argv)
     
     T final_time = 8.0;
     
-    T eps_dirichlet_cond = 0.1 ; //0.26; 0.59 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.52 ; //0.26; 0.59 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
