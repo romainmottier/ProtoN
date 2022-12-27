@@ -53566,7 +53566,16 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
     {
         sol = Matrix<RealType, Dynamic, 1>::Zero(assembler_sc.RHS.rows());
         cgp.max_iter = assembler_sc.LHS.rows();
-        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+//        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+        
+        
+        ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
+        cg.compute(assembler_sc.LHS);
+        sol = cg.solve(assembler_sc.RHS);
+        std::cout << "#iterations:     " << cg.iterations() << std::endl;
+        std::cout << "estimated error: " << cg.error()      << std::endl;
+        // conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+        
     }
     else
     {
