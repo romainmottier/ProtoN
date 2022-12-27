@@ -53570,14 +53570,6 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
     {
         sol = Matrix<RealType, Dynamic, 1>::Zero(assembler_sc.RHS.rows());
         cgp.max_iter = assembler_sc.LHS.rows();
-<<<<<<< HEAD
-        ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
-	cg.compute(assembler_sc.LHS);
-	sol = cg.solve(assembler_sc.RHS);
-	std::cout << "#iterations:     " << cg.iterations() << std::endl;
-	std::cout << "estimated error: " << cg.error()      << std::endl;
-	// conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
-=======
 //        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
         
         
@@ -53588,7 +53580,6 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
         std::cout << "estimated error: " << cg.error()      << std::endl;
         // conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
         
->>>>>>> 68b5195d7c676c577b9faed4e9abb6d18f8c21bd
     }
     else
     {
@@ -82087,10 +82078,6 @@ int main(int argc, char **argv)
 
 // -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 68b5195d7c676c577b9faed4e9abb6d18f8c21bd
 #if 1
 int main(int argc, char **argv)
 {
@@ -82594,11 +82581,7 @@ int main(int argc, char **argv)
     // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
     plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
     
-<<<<<<< HEAD
-    T final_time = 8.0;
-=======
     T final_time = 5.0;
->>>>>>> 68b5195d7c676c577b9faed4e9abb6d18f8c21bd
     
     T eps_dirichlet_cond = 0.26 ; //0.26; 0.52 ; // 0.01 -->  0.1
 
