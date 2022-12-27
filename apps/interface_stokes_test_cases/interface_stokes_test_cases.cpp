@@ -53570,12 +53570,25 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
     {
         sol = Matrix<RealType, Dynamic, 1>::Zero(assembler_sc.RHS.rows());
         cgp.max_iter = assembler_sc.LHS.rows();
+<<<<<<< HEAD
         ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
 	cg.compute(assembler_sc.LHS);
 	sol = cg.solve(assembler_sc.RHS);
 	std::cout << "#iterations:     " << cg.iterations() << std::endl;
 	std::cout << "estimated error: " << cg.error()      << std::endl;
 	// conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+=======
+//        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+        
+        
+        ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
+        cg.compute(assembler_sc.LHS);
+        sol = cg.solve(assembler_sc.RHS);
+        std::cout << "#iterations:     " << cg.iterations() << std::endl;
+        std::cout << "estimated error: " << cg.error()      << std::endl;
+        // conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
+        
+>>>>>>> 68b5195d7c676c577b9faed4e9abb6d18f8c21bd
     }
     else
     {
@@ -58148,6 +58161,128 @@ auto make_test_case_eshelby_parametric_cont_eps_DIR_domSym(const Mesh& msh, Func
 
 
 
+
+// shear flow - curve evaluation domain (-a,a)^2
+template<typename T, typename Mesh, typename Function ,  typename Para_Interface >
+class test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym: public test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>
+{
+
+public:
+
+    Mesh m_msh  ;
+    typename Mesh::cell_type m_cl ;
+    T gamma = 1.0;
+    T eps = 1.0;
+    T perturbation = 0.1 ;
+    explicit test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( Function & level_set__, Para_Interface& parametric_curve_cont, params<T> parms_, bool sym_grad, T gamma , T eps , T perturbation)
+       : gamma(gamma),eps(eps),perturbation(perturbation), test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>
+       (level_set__,parametric_curve_cont, parms_,
+        [eps,perturbation](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {
+           // sol_vel
+           Matrix<T, 2, 1> ret;
+           T px = pt.x();
+           T py = pt.y();
+           ret(0) = eps * ( px + perturbation*std::sin(M_PI*py) );
+           ret(1) = eps * ( -py + perturbation*std::sin(M_PI*px) );
+
+           return ret;},
+        [level_set__,gamma,this](const typename Mesh::point_type& pt) mutable ->  T { // p
+
+           level_set__.cell_assignment(m_cl);
+           T R = level_set__.radius ;
+
+            if( level_set__(pt) < 0 )
+                return  gamma / R - M_PI * R * gamma;
+            else
+                return -M_PI * R * gamma;
+
+
+       },
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // rhs
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0 ;
+            ret(1) = 0.0 ;
+            return ret;},
+        [eps,perturbation](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+           Matrix<T, 2, 1> ret;
+
+           T px = pt.x();
+           T py = pt.y();
+           ret(0) = eps * ( px + perturbation*std::sin(M_PI*py) );
+           ret(1) = eps * ( -py + perturbation*std::sin(M_PI*px) );
+
+           return ret;},
+        [eps,perturbation](const typename Mesh::point_type& pt) -> auto { // grad
+
+           Matrix<T, 2, 2> ret;
+           
+           ret(0,0) = eps;
+           ret(0,1) = eps * M_PI * perturbation * std::cos( M_PI*pt.y() );
+           ret(1,0) = eps * M_PI * perturbation * std::cos( M_PI*pt.x() );
+           ret(1,1) = -eps;
+           return ret;},
+        [](const typename Mesh::point_type& pt) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+            Matrix<T, 2, 1> ret;
+            ret(0) = 0.0;
+            ret(1) = 0.0;
+            return ret;},
+        [level_set__,parametric_curve_cont,sym_grad,gamma,this](const T& pt, const size_t& global_cl_i ) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
+
+           Matrix<T, 2, 1> ret;
+           
+            if(sym_grad)
+            {
+               
+                ret(0) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(0);
+                ret(1) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(1) ;
+               
+               
+            }
+            else
+            {
+                ret(0) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(0);
+                ret(1) = gamma * parametric_curve_cont.curvature_cont(pt, global_cl_i) * parametric_curve_cont.normal_cont(pt, global_cl_i)(1) ;
+                
+
+            }
+            return ret;})
+       {}
+
+    test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym(const test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym & other) : test_case_stokes_ref_pts_cont<T, Function , Mesh,Para_Interface>(other) {
+        m_msh = other.m_msh;
+        m_cl = other.m_cl;
+        gamma = other.gamma;
+        eps = other.eps ;
+        perturbation = other.perturbation ;
+    }
+
+
+    void test_case_cell_assignment(const typename Mesh::cell_type& cl_new )
+    {
+        m_cl = cl_new ;
+    }
+    
+    void test_case_mesh_assignment(const Mesh& msh_new )
+    {
+
+        m_msh = msh_new ;
+
+    }
+  
+    typename Mesh::cell_type& upload_cl()
+    {
+        return m_cl ;
+    }
+    
+
+
+};
+
+template<typename Mesh, typename T, typename Function , typename Para_Interface >
+auto make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym(const Mesh& msh, Function& level_set_function, Para_Interface& parametric_curve_cont ,  params<T> parms_, bool sym_grad, T gamma , T eps , T perturbation)
+{
+   return test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym<typename Mesh::coordinate_type, Mesh , Function,Para_Interface>(level_set_function,parametric_curve_cont,parms_,sym_grad,gamma,eps,perturbation);
+}
 
 
 
@@ -81952,6 +82087,10 @@ int main(int argc, char **argv)
 
 // -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 68b5195d7c676c577b9faed4e9abb6d18f8c21bd
 #if 1
 int main(int argc, char **argv)
 {
@@ -82455,9 +82594,13 @@ int main(int argc, char **argv)
     // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
     plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
     
+<<<<<<< HEAD
     T final_time = 8.0;
+=======
+    T final_time = 5.0;
+>>>>>>> 68b5195d7c676c577b9faed4e9abb6d18f8c21bd
     
-    T eps_dirichlet_cond = 0.52 ; //0.26; 0.59 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.26 ; //0.26; 0.52 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
@@ -82513,14 +82656,17 @@ int main(int argc, char **argv)
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma );
     
         // domain  (-a,a)^2 - shear flow
-        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
+//        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
         
         // domain  (0,1)^2 - shear flow
         
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
         
-        // New test case perturbated
-//        T perturbation = 0.5;
+        // domain  (-a,a)^2 - new test case perturbated
+        T perturbation = 0.5;
+        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
+        
+        // domain  (0,1)^2 - new test case perturbated
 //     auto test_case_prova = make_test_case_shear_flow_perturbated( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
 //        auto test_case_prova = make_test_case_shear_y( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
         // New test case TGV - fixed point
@@ -83154,7 +83300,7 @@ int main(int argc, char **argv)
 // Starting from numerical velocity field and level set - to be uploaded
 
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
