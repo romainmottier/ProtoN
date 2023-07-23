@@ -32,6 +32,7 @@
 #include <sstream>
 #include <list>
 #include <map>
+#include <iomanip>
 
 #include <Eigen/Dense>
 #include <Eigen/SparseCore>
@@ -53573,7 +53574,7 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
 //        conjugated_gradient(assembler_sc.LHS, assembler_sc.RHS, sol, cgp);
         
         
-        ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
+       ConjugateGradient<SparseMatrix<RealType>, Lower|Upper> cg;
         cg.compute(assembler_sc.LHS);
         sol = cg.solve(assembler_sc.RHS);
         std::cout << "#iterations:     " << cg.iterations() << std::endl;
@@ -53593,9 +53594,9 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
 
     // ************** POSTPROCESS **************
 
-
+    std::string path = "simulation_1x1_/";
     postprocess_output<RealType>  postoutput;
-    std::string filename_interface_uT = "interface_uT_" + std::to_string(time) + ".3D";
+    std::string filename_interface_uT = path + "interface_uT_" + std::to_string(time) + ".3D";
     std::ofstream interface_file(filename_interface_uT, std::ios::out | std::ios::trunc);
 
        if(interface_file)
@@ -53608,31 +53609,31 @@ run_cuthho_interface_velocity_new_post_processingLS(const Mesh& msh, size_t degr
 
 
 
-    auto uT1_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT1_" + std::to_string(time) + ".dat");
-    auto uT2_gp  = std::make_shared< gnuplot_output_object<RealType> >("interface_uT2_" + std::to_string(time) + ".dat");
+    auto uT1_gp  = std::make_shared< gnuplot_output_object<RealType> >(path+"interface_uT1_" + std::to_string(time) + ".dat");
+    auto uT2_gp  = std::make_shared< gnuplot_output_object<RealType> >(path+"interface_uT2_" + std::to_string(time) + ".dat");
 //    auto uT_gp  = std::make_shared< gnuplot_output_object_vec<RealType> >("interface_uT.dat");
 
 //    std::string filename_pressure = "interface_p_" + std::to_string(time) + ".dat";
-    auto p_gp    = std::make_shared< gnuplot_output_object<RealType> >("interface_p_" + std::to_string(time) + ".dat");
-    auto p1_gp    = std::make_shared< gnuplot_output_object<RealType> >("interface_pIN_" + std::to_string(time) + ".dat");
-    auto p2_gp    = std::make_shared< gnuplot_output_object<RealType> >("interface_pOUT_" + std::to_string(time) + ".dat");
+    auto p_gp    = std::make_shared< gnuplot_output_object<RealType> >(path+"interface_p_" + std::to_string(time) + ".dat");
+    auto p1_gp    = std::make_shared< gnuplot_output_object<RealType> >(path+"interface_pIN_" + std::to_string(time) + ".dat");
+    auto p2_gp    = std::make_shared< gnuplot_output_object<RealType> >(path+"interface_pOUT_" + std::to_string(time) + ".dat");
     //auto p_gp    = std::make_shared< gnuplot_output_object<RealType> >(filename_pressure);
     
-    std::string filename_gammaH = "gamma_H_"+ std::to_string(time) + ".dat";
+    std::string filename_gammaH = path+"gamma_H_"+ std::to_string(time) + ".dat";
     auto test_gammaH = std::make_shared< gnuplot_output_object<double> >(filename_gammaH);
 
-    std::string filename_press_jump = "pressure_jump_"+ std::to_string(time) + ".dat";
+    std::string filename_press_jump = path+"pressure_jump_"+ std::to_string(time) + ".dat";
     auto test_press_jump = std::make_shared< gnuplot_output_object<double> >(filename_press_jump);
     
-    std::string filename_grad_vel_jump = "grad_vel_jump_"+ std::to_string(time) + ".dat";
+    std::string filename_grad_vel_jump = path+"grad_vel_jump_"+ std::to_string(time) + ".dat";
     auto test_grad_vel_jump = std::make_shared< gnuplot_output_object<double> >(filename_grad_vel_jump);
     
     
     
-    std::string filename_grad_vel_t_n = "grad_vel_t_n_"+ std::to_string(time) + ".dat";
+    std::string filename_grad_vel_t_n = path + "grad_vel_t_n_"+ std::to_string(time) + ".dat";
     auto test_grad_vel_t_n = std::make_shared< gnuplot_output_object<double> >(filename_grad_vel_t_n);
 
-    std::string filename_vel_n = "vel_u_n_"+ std::to_string(time) + ".dat";
+    std::string filename_vel_n = path + "vel_u_n_"+ std::to_string(time) + ".dat";
     auto test_vel_n = std::make_shared< gnuplot_output_object<double> >(filename_vel_n);
 //    auto force_pressure    = std::make_shared< gnuplot_output_object<RealType> >("pressure_force.dat");
     
@@ -58898,11 +58899,6 @@ auto make_test_case_eshelby_LS_eps_DIR_domSym(const Mesh& msh, Function& level_s
    return test_case_eshelby_LS_eps_DIR_domSym<T, Mesh , Function,Para_Interface>(level_set_function,curve,parms_,sym_grad,gamma,eps,sizeBox);
 }
 
-template<typename Mesh, typename T, typename Function ,  typename Para_Interface>
-auto make_test_case_eshelby_LS_eps_DIR_domSym(const Mesh& msh, Function& level_set_function ,Para_Interface& curve, params<T> parms_, bool sym_grad, T gamma , T eps,T sizeBox)
-{
-   return test_case_eshelby_LS_eps_DIR_domSym<T, Mesh , Function,Para_Interface>(level_set_function,curve,parms_,sym_grad,gamma,eps,sizeBox);
-}
 
 
 
@@ -80145,11 +80141,11 @@ int main(int argc, char **argv)
 // EPS BDRY CONDS
 // Loop varying \mu and ellipse radii
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
-    RealType sizeBox = 2.0;
+    RealType sizeBox = 1.0;
     size_t degree           = 1;
     size_t int_refsteps     = 4;
     size_t degree_FEM       = 0;
@@ -80270,28 +80266,35 @@ int main(int argc, char **argv)
     timecounter tc_tot;
     tc_tot.tic();
 
-    std::vector<RealType> mu_vec{1.0}; // 0.01,0.1,1,10,100
-    std::vector<RealType> radius_a_vec {1.0/3.0}; // , 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0} ;
-    std::vector<RealType> radius_b_vec {1.0/6.0}; // , 2.0/9.0, 4.0/15.0, 10.0/57.0, 10.0/33.0, 4.0/21.0} ;
+    std::vector<RealType> int_refstepsVec{0};
+    std::vector<RealType> degree_curveVec{4};
+    std::vector<RealType> mu_vec{0.01,0.1,1.0,10.0,100.0}; // 0.01,0.1,1,10,100
+    std::vector<RealType> radius_a_vec {1.0/3.0 , 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0} ;
+    std::vector<RealType> radius_b_vec {1.0/6.0 , 2.0/9.0, 4.0/15.0, 10.0/57.0, 10.0/33.0, 4.0/21.0} ;
     
     int nOfRadii = radius_a_vec.size();
     
-    std::vector<RealType> testCaseGamma{1.0}; // {0.0 , 1.0 };
-    std::vector<RealType> testCaseEps{0.0}; //{1.0 , 0.0 };
+    std::vector<RealType> testCaseGamma{0.0 , 1.0 }; // {1.0};
+    std::vector<RealType> testCaseEps{1.0 , 0.0 }; // {0.0};
     
     int nOfTestCases = testCaseGamma.size(); 
     size_t counter_tests = 0 ;
-    for (auto mu : mu_vec)
+    for (auto mu : mu_vec) // for (auto int_refsteps1 : int_refstepsVec) //  for (auto mu : mu_vec)
     {
+	// auto mu = mu_vec.at(0);
+	// int R_i = 0 ;
+	int_refsteps = int_refstepsVec.at(0) ; // int_refsteps1;
         for (int iTestCase = 0 ; iTestCase < nOfTestCases ; iTestCase++)
         {
             RealType gamma = testCaseGamma.at(iTestCase);
             RealType eps_dirichlet_cond = testCaseEps.at(iTestCase);
             
-            for (int R_i = 0 ; R_i < nOfRadii ; R_i++)
-            {
-                /************** BUILD MESH **************/
-                cuthho_poly_mesh<RealType> msh(mip);
+            for (int R_i = 0 ; R_i < nOfRadii ; R_i++) // for (auto degree_curve1 : degree_curveVec) // for (int R_i = 0 ; R_i < nOfRadii ; R_i++)
+            {           
+		degree_curve = degree_curveVec.at(0) ; //  degree_curve1;
+	        /************** BUILD MESH **************/
+                
+		cuthho_poly_mesh<RealType> msh(mip);
                 typedef cuthho_poly_mesh<RealType> Mesh;
                 typedef RealType T;
                 offset_definition(msh);
@@ -80335,7 +80338,8 @@ int main(int argc, char **argv)
                 std::cout<<"Initial interface: ELLIPSE"<<std::endl;
                 auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
                 typedef  elliptic_level_set<T> Fonction;
-                
+		//std::cout<<"mu = "<<mu<<std::endl;
+                //std::cout<<"radius_a = "<<radius_a<<"radius_b = "<<radius_b<<std::endl;
                 T curvature_anal = 1.0/radius;
 
                 /**************  VELOCITY FIELD  INITIALISATION  **************/
@@ -80539,7 +80543,7 @@ int main(int argc, char **argv)
                     
                 
                 counter_tests++;
-                std::cout<<"Test number = "<<counter_tests <<" over 24."<<std::endl;
+                std::cout<<"Test number = "<<counter_tests << std::endl;
                 std::cout<<"Case: mu = "<<mu<<", gamma = "<<gamma <<", eps = "<<eps_dirichlet_cond<<std::endl;
                 std::cout<<"Ra = "<<radius_a <<", Rb = "<<radius_b<<std::endl;
             } // R_i loop
@@ -82078,7 +82082,7 @@ int main(int argc, char **argv)
 
 // -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -83723,7 +83727,7 @@ int main(int argc, char **argv)
     
     T final_time = 3.0;
     
-    T eps_dirichlet_cond = 0.52 ; //0.26; 0.59 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.26 ; //0.26; 0.59 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
@@ -83779,13 +83783,16 @@ int main(int argc, char **argv)
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma );
     
         // domain  (-a,a)^2 - shear flow
-        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
+       //  auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
         
         // domain  (0,1)^2 - shear flow
         
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
-        
-        // New test case perturbated
+
+          // domain  (-a,a)^2 - new test case perturbated
+         T perturbation = 0.5;
+        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
+         // domain  (0,1)^2 - new test case perturbated
 //        T perturbation = 0.5;
 //     auto test_case_prova = make_test_case_shear_flow_perturbated( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
 //        auto test_case_prova = make_test_case_shear_y( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
