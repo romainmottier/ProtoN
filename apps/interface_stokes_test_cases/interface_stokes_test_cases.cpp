@@ -51952,13 +51952,194 @@ run_cuthho_interface_velocity_complete(const Mesh& msh, size_t degree, meth& met
     size_t      counter_interface_pts = 0;
     RealType    distance_pts = 0.0;
 
-//    timecounter tc1;
-//    tc1.tic();
+   timecounter tc1;
+   tc1.tic();
 //    size_t i_global = 0 ;
     auto hdi_cell = hdi.cell_degree();
     auto hdi_face = hdi.face_degree();
     auto msh_vel = velocity.msh ;
     auto degree_vel = velocity.degree_FEM ;
+
+
+    for (auto& cl : msh.cells)
+   {
+
+
+       vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi_cell);
+       auto cbs = cb.size();
+
+
+       level_set_function.cell_assignment(cl); // Useful to pick if a cell is agglo or not
+//        test_case.test_case_cell_assignment(cl) ; // ----------------------------> TOGLIERE????
+
+
+       assembler_sc.set_dir_func( bcs_vel ); // CAMBIA QUALCOSA?? // ----------------------------> TOGLIERE????
+
+
+       Matrix<RealType, Dynamic, 1> vel_locdata_n, vel_locdata_p, vel_locdata;
+//        Matrix<RealType, Dynamic, 1> P_locdata_n, P_locdata_p, P_locdata;
+       Matrix<RealType, Dynamic, 1> vel_cell_dofs_n, vel_cell_dofs_p, vel_cell_dofs;
+
+       if (location(msh, cl) == element_location::ON_INTERFACE)
+       {
+           vel_locdata_n = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+           vel_locdata_p = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+//                P_locdata_n = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+//                P_locdata_p = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+
+
+           vel_cell_dofs_n = vel_locdata_n.head(cbs);
+           vel_cell_dofs_p = vel_locdata_p.head(cbs);
+
+
+
+           // Updating velocity field by STE
+           //std::cout<<"------------>>> CUT CELL"<<std::endl;
+           //std::cout<<"subcells.size() = "<<level_set_function.subcells.size()<<std::endl;
+
+
+           // NOT AGGLO CELL
+           if ( level_set_function.subcells.size()<1 )
+           {
+//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells.size() == 2);
+//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
+               auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
+               auto cl_old = msh_vel.cells[offset_old];
+               auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
+
+
+               velocity.set_weight_area( offset_old, 1.0);
+
+               size_t i_local = 0;
+               for ( const auto & ln_Qk : Lagrange_nodes_Qk)
+               {
+                   if( level_set_function(ln_Qk,cl_old) > iso_val_interface )
+                   {
+                       auto phi_HHO = cb.eval_basis( ln_Qk );
+                       auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
+                       velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                       velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                       //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                       i_local++;
+                   }
+                   else
+                   {
+                       auto phi_HHO = cb.eval_basis( ln_Qk );
+                       auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
+                       velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                       velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                       //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                       i_local++;
+                   }
+               }
+
+           }
+           else // AGGLO CELL
+           {
+
+               RealType nOfSubCellsAgglo = level_set_function.agglo_LS_cl.user_data.offset_subcells.size() ;
+               for(size_t i_subcell = 0 ; i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size() ; i_subcell++ )
+               {
+                   auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+
+                   velocity.set_weight_area( offset_old, nOfSubCellsAgglo);
+                    //std::cout<<"offset_old = "<<offset_old<<std::endl;
+                   auto cl_old = msh_vel.cells[offset_old];
+                   auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
+                   size_t i_local = 0;
+                   for ( const auto & ln_Qk : Lagrange_nodes_Qk)
+                   {
+                       if( level_set_function(ln_Qk,cl_old) > iso_val_interface )
+                       {
+                           auto phi_HHO = cb.eval_basis( ln_Qk );
+                           auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
+                           velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                           velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                           //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                           i_local++;
+                       }
+                       else
+                       {
+                           auto phi_HHO = cb.eval_basis( ln_Qk );
+                           auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
+                           velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                           velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                           //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                           i_local++;
+                       }
+                   }
+
+               }
+           }
+
+
+       }
+       else
+       {
+
+           vel_locdata = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+//                P_locdata = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+
+           vel_cell_dofs = vel_locdata.head(cbs);
+
+
+           // NOT AGGLO CELL
+           if ( level_set_function.subcells.size()<1 )
+           {
+//                assert(level_set_function.agglo_LS_cl.user_data.offset_subcells.size()==2);
+//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
+               auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
+               velocity.set_weight_area( offset_old, 1.0);
+               auto cl_old = msh_vel.cells[offset_old];
+               auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
+               size_t i_local = 0;
+               for ( const auto & ln_Qk : Lagrange_nodes_Qk)
+               {
+                   auto phi_HHO = cb.eval_basis( ln_Qk );
+                   auto vel = phi_HHO.transpose() * vel_cell_dofs;
+                   velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                   velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                   //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                   i_local++;
+
+               }
+
+           }
+           else // AGGLO CELL
+           {
+               RealType nOfSubCellsAgglo = level_set_function.agglo_LS_cl.user_data.offset_subcells.size();
+               for(size_t i_subcell = 0 ; i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size() ; i_subcell++ )
+               {
+                   auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+                   velocity.set_weight_area( offset_old, nOfSubCellsAgglo);
+                   //std::cout<<"offset_old = "<<offset_old<<std::endl;
+                   auto cl_old = msh_vel.cells[offset_old];
+                   auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
+                   size_t i_local = 0;
+                   for ( const auto & ln_Qk : Lagrange_nodes_Qk)
+                   {
+                       auto phi_HHO = cb.eval_basis( ln_Qk );
+                       auto vel = phi_HHO.transpose() * vel_cell_dofs;
+                       velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                       velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                       //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                       i_local++;
+
+                   }
+
+               }
+           }
+
+
+       }
+
+
+   }
+
+    tc.toc();
+   std::cout << bold << yellow << "HHO velocity postprocessing: " << tc << " seconds" << reset << std::endl;
+
+
 
     timecounter tc_p1;
 
@@ -54978,8 +55159,8 @@ post_processing_functionLS_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_t hdi
                 {
                     auto phi_HHO = cb.eval_basis( ln_Qk );
                     auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
-                    velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                    velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                    // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                    // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                     //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                     i_local++;
                 }
@@ -54987,8 +55168,8 @@ post_processing_functionLS_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_t hdi
                 {
                     auto phi_HHO = cb.eval_basis( ln_Qk );
                     auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
-                    velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                    velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                    // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                    // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                     //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                     i_local++;
                     //  velocity.first(i_local,i_global) = cell_dofs_n.dot( phi_HHO );
@@ -55014,8 +55195,8 @@ post_processing_functionLS_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_t hdi
                     {
                         auto phi_HHO = cb.eval_basis( ln_Qk );
                         auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
-                        velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                        velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                        // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                        // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                         //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                         i_local++;
                     }
@@ -55023,8 +55204,8 @@ post_processing_functionLS_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_t hdi
                     {
                         auto phi_HHO = cb.eval_basis( ln_Qk );
                         auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
-                        velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                        velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                        // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                        // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                         //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                         i_local++;
                         //  velocity.first(i_local,i_global) = cell_dofs_n.dot( phi_HHO );
@@ -55272,8 +55453,8 @@ post_processing_functionLS_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_t hdi
             {
                 auto phi_HHO = cb.eval_basis( ln_Qk );
                 auto vel = phi_HHO.transpose() * vel_cell_dofs;
-                velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                 //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                 i_local++;
 
@@ -55294,8 +55475,8 @@ post_processing_functionLS_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_t hdi
                 {
                     auto phi_HHO = cb.eval_basis( ln_Qk );
                     auto vel = phi_HHO.transpose() * vel_cell_dofs;
-                    velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                    velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                    // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                    // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                     //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                     i_local++;
 
@@ -55426,8 +55607,8 @@ post_processing_functionLS_fast_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_
             {
                 auto phi_HHO = cb.eval_basis( ln_Qk );
                 auto vel = phi_HHO.transpose() * vel_cell_dofs;
-                velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                 //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                 i_local++;
 
@@ -55448,8 +55629,8 @@ post_processing_functionLS_fast_2(const Mesh& msh,Cell& cl,size_t hdi_cell,size_
                 {
                     auto phi_HHO = cb.eval_basis( ln_Qk );
                     auto vel = phi_HHO.transpose() * vel_cell_dofs;
-                    velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-                    velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+                    // velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+                    // velocity.sol_HHO.second(i_local,offset_old) = vel(1);
                     //std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
                     i_local++;
 
