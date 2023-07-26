@@ -761,6 +761,67 @@ struct elliptic_level_set: public level_set<T>
     }
 };
 
+template<typename T>
+struct couette_level_set: public level_set<T>
+{
+    T radius_a, radius_b, alpha, beta;
+
+    couette_level_set(T r_a, T r_b , T a, T b)
+        : radius_a(r_a), radius_b(r_b), alpha(a), beta(b)
+    {}
+    
+    couette_level_set(){}
+    
+    couette_level_set(const couette_level_set& other){
+        radius_a = other.radius_a ;
+        radius_b = other.radius_b ;
+        alpha = other.alpha ;
+        beta = other.beta ;
+        
+    }
+
+    T operator()(const point<T,2>& pt) const
+    {
+        auto x = pt.x();
+        auto y = pt.y();
+        
+        T radius = x*x + y*y ;
+        T ret = 0;
+        if(radius < 1.0/4.0)
+            ret = -(radius_a*radius_a*(x-alpha)*(x-alpha) + radius_a*radius_a*(y-beta)*(y-beta) - radius_a*radius_a*radius_a*radius_a) ;
+        else
+            ret = radius_b*radius_b*(x-alpha)*(x-alpha) + radius_b*radius_b*(y-beta)*(y-beta) - radius_b*radius_b*radius_b*radius_b ;
+            
+        
+
+        return ret ;
+         
+    }
+
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
+    {
+        Eigen::Matrix<T,2,1> ret;
+        auto x = pt.x();
+        auto y = pt.y();
+        
+        T radius = x*x + y*y ;
+        if( radius < 1.0/4.0)
+        {
+            ret(0) = 2.0*radius_a*radius_a*(x - alpha);
+            ret(1) = 2.0*radius_a*radius_a*(y - beta);
+        }
+        else
+        {
+            ret(0) = 2.0*radius_b*radius_b*(x - alpha );
+            ret(1) = 2.0*radius_b*radius_b*(y - beta );
+        }
+        
+        return ret;
+    }
+};
+
+
+
 
 template<typename T>
 struct elliptic_level_set_signed_distance: public level_set<T>

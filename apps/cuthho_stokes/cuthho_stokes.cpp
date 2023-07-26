@@ -427,10 +427,14 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
         Mat = assembler.LHS;
     
     
-    // Add by Stefano
-    Eigen::BDCSVD<Eigen::MatrixXd> SVD(Mat, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    double cond = SVD.singularValues()(0) / SVD.singularValues()(SVD.singularValues().size()-1);
-    std::cout<<"cond_numb = "<<cond<<std::endl;
+    // Add by Stefano - condition number
+    if (0)
+    {
+        Eigen::BDCSVD<Eigen::MatrixXd> SVD(Mat, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        double cond = SVD.singularValues()(0) / SVD.singularValues()(SVD.singularValues().size()-1);
+        std::cout<<"cond_numb = "<<cond<<std::endl;
+    }
+    
 
     return TI;
 }
@@ -1513,12 +1517,22 @@ int main(int argc, char **argv)
 //    RealType epsBndry  = 1e-8 ; //  0.15;
 //    RealType pos_sides  = 0.25; // 0.0;
 //    auto level_set_function = m_shaped_level_set<RealType>(eps,epsBndry,pos_sides);
-    
-    
 //    RealType R = 0.35;
 //    auto level_set_function = rotated_square<RealType>(0.5 , 0.5 , R );
-    RealType epsBndry  = -2.0*1e-2 ;
-     auto level_set_function = square_level_set<RealType>(0.75-epsBndry,0.25+epsBndry,0.25+epsBndry,0.75-epsBndry);
+//    RealType epsBndry  = -2.0*1e-2 ;
+//     auto level_set_function = square_level_set<RealType>(0.75-epsBndry,0.25+epsBndry,0.25+epsBndry,0.75-epsBndry);
+    
+    RealType radius_a , radius_b,radius ;
+    RealType x_centre = 0.5;
+    RealType y_centre = 0.5;
+    
+    radius_a = 1.0/6.0;
+    radius_b = 1.0/3.0;
+    radius = radius_a;
+    
+    std::cout<<"Couette immersed domain: R1 = "<<radius_a<<", R2 = "<<radius_b<<std::endl;
+    auto level_set_function = couette_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
+    
     /************** DO cutHHO MESH PROCESSING **************/
 
     tc.tic();
@@ -1528,11 +1542,16 @@ int main(int argc, char **argv)
     if (agglomeration)
     {
         detect_cut_cells(msh, level_set_function);
+        std::cout<<"stop 1"<<std::endl;
         detect_cell_agglo_set(msh, level_set_function);
+        std::cout<<"stop 2"<<std::endl;
         make_neighbors_info_cartesian(msh);
+        std::cout<<"stop 3"<<std::endl;
         // make_neighbors_info(msh);
         refine_interface(msh, level_set_function, int_refsteps);
+        std::cout<<"stop 4"<<std::endl;
         make_agglomeration(msh, level_set_function);
+        std::cout<<"stop 5"<<std::endl;
     }
     else
     {
@@ -1588,6 +1607,7 @@ int main(int argc, char **argv)
     if (solve_fictdom)
         run_cuthho_fictdom(msh, degree, test_case);
 
+    std::cout << "Completed!" << std::endl;
 
     return 0;
 }

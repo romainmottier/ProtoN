@@ -31509,6 +31509,8 @@ struct velocity_high_order
      std::pair<Matrix<T, Dynamic, 1>,Matrix<T, Dynamic, 1>> sol_FEM ; // projection saved in Continuos FE format: global nodes
      //std::pair<Eigen::Matrix<T, Dynamic, 1>,Matrix<T, Dynamic, 1>> vertices; // saving level_set on vertices mesh
 
+    // std::vector<T> weightsArea ;
+    Eigen::Matrix<T, Dynamic, 1> weightsArea ;
 
     // AGGLOMERATED MESHES DATA:
     typedef typename Mesh::cell_type       cell_type;
@@ -31534,6 +31536,7 @@ struct velocity_high_order
 
            sol_HHO = std::make_pair(Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls ) , Eigen::Matrix<T, Dynamic, Dynamic>::Zero( local_dim, n_cls ) ) ;
 
+           weightsArea = Eigen::Matrix<T, Dynamic,1>::Zero( n_cls,1 ) ;
 
        }
 
@@ -31566,6 +31569,11 @@ struct velocity_high_order
         sol_HHO = values_new ;
         std::cout<<" Using set_discrete_points: sol_FEM has to be already uploaded!"<<std::endl;
 
+    }
+
+    void set_weight_area(size_t posCell, T w)
+    {
+        weightsArea(posCell) = 1.0/w ;
     }
 
     template< typename VECTOR >
@@ -31682,6 +31690,52 @@ struct velocity_high_order
                 sum_first( asm_map ) += values_new.first(i,counter_bis) ;
                 sum_second( asm_map ) += values_new.second(i,counter_bis);
                 counting_avg(asm_map)++;
+            }
+           //size_t i_vertex = counter_bis+floor(counter_bis/Nx);
+            //vertices(i_vertex) = sol_HHO(0,counter_bis) ;
+            //vertices(i_vertex+1) = sol_HHO(1,counter_bis) ;
+            //vertices(i_vertex+Nx+2) = sol_HHO(2,counter_bis) ;
+            //vertices(i_vertex+Nx+1) = sol_HHO(3,counter_bis) ;
+        }
+        sol_FEM.first = (sum_first.array()).cwiseQuotient(counting_avg);
+        sol_FEM.second = (sum_second.array()).cwiseQuotient(counting_avg);
+
+        for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
+        {
+            for (size_t i = 0; i < local_dim; i++){
+                size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
+                sol_HHO.first(i,counter_bis) = sol_FEM.first( asm_map );
+                sol_HHO.second(i,counter_bis) = sol_FEM.second( asm_map );
+            }
+
+        }
+        //std::cout<<"counting_avg"<<'\n'<<counting_avg<<std::endl;
+//        std::cout<<"In CONVERTING FE SMOOTH -> Using converting_into_FE_formulation: sol_HHO has to be already uploaded!"<<std::endl;
+
+        //set_max_min();
+        //phi_min = sol_FEM.minCoeff() ;
+        //phi_max = sol_FEM.maxCoeff() ;
+
+    }
+
+
+    template< typename MATRIX >
+    void weight_converting_into_FE_formulation( const MATRIX& values_new )
+    {
+//        std::cout<<"SMOOTH CONVERTING INTO CONTINUOUS FE: --> For each point a geometrical average implemented."<<std::endl;
+        Array<T,Dynamic,1> counting_avg = Array<T,Dynamic,1>::Zero(ndof_FE) ;
+        Array<T,Dynamic,1> sum_first = Array<T,Dynamic,1>::Zero(ndof_FE) ;
+        Array<T,Dynamic,1> sum_second = Array<T,Dynamic,1>::Zero(ndof_FE) ;
+        //std::array<T, ndof_FE > counting_avg;
+        for(size_t counter_bis = 0 ; counter_bis < n_cls ;counter_bis++)
+        {
+            T wLoc = weightsArea(counter_bis);
+
+            for (size_t i = 0; i < local_dim; i++){
+                size_t asm_map =  connectivity_matrix[counter_bis][i].first ;
+                sum_first( asm_map ) += wLoc*values_new.first(i,counter_bis) ;
+                sum_second( asm_map ) += wLoc*values_new.second(i,counter_bis);
+                counting_avg(asm_map) += wLoc;
             }
            //size_t i_vertex = counter_bis+floor(counter_bis/Nx);
             //vertices(i_vertex) = sol_HHO(0,counter_bis) ;
@@ -51862,7 +51916,9 @@ run_cuthho_interface_velocity_fast(const Mesh& msh, size_t degree, meth& method,
                 auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
                 auto cl_old = msh_vel.cells[offset_old];
                 auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
-                
+
+
+                velocity.set_weight_area( offset_old, 1.0);
 
                 size_t i_local = 0;
                 for ( const auto & ln_Qk : Lagrange_nodes_Qk)
@@ -51891,10 +51947,12 @@ run_cuthho_interface_velocity_fast(const Mesh& msh, size_t degree, meth& method,
             else // AGGLO CELL
             {
                
-
+                RealType nOfSubCellsAgglo = level_set_function.agglo_LS_cl.user_data.offset_subcells.size() ;
                 for(size_t i_subcell = 0 ; i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size() ; i_subcell++ )
                 {
                     auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+
+                    velocity.set_weight_area( offset_old, nOfSubCellsAgglo);
                      //std::cout<<"offset_old = "<<offset_old<<std::endl;
                     auto cl_old = msh_vel.cells[offset_old];
                     auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
@@ -51941,6 +51999,7 @@ run_cuthho_interface_velocity_fast(const Mesh& msh, size_t degree, meth& method,
 //                assert(level_set_function.agglo_LS_cl.user_data.offset_subcells.size()==2);
 //                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
                 auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
+                velocity.set_weight_area( offset_old, 1.0);
                 auto cl_old = msh_vel.cells[offset_old];
                 auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
                 size_t i_local = 0;
@@ -51958,9 +52017,11 @@ run_cuthho_interface_velocity_fast(const Mesh& msh, size_t degree, meth& method,
             }
             else // AGGLO CELL
             {
+                RealType nOfSubCellsAgglo = level_set_function.agglo_LS_cl.user_data.offset_subcells.size();
                 for(size_t i_subcell = 0 ; i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size() ; i_subcell++ )
                 {
                     auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+                    velocity.set_weight_area( offset_old, nOfSubCellsAgglo);
                     //std::cout<<"offset_old = "<<offset_old<<std::endl;
                     auto cl_old = msh_vel.cells[offset_old];
                     auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk ;
@@ -79341,7 +79402,7 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     using RealType = double;
-    RealType sizeBox = 0.5;
+    RealType sizeBox = 2;
     size_t degree           = 0;
     size_t int_refsteps     = 4;
     size_t degree_FEM       = 0;
@@ -79754,9 +79815,9 @@ int main(int argc, char **argv)
     //------------------------ CHECK REFERENCE QUANTITIES ---------------------------//
 //    reference_quantities_computation(perim_ref,area_ref,circularity_ref,radius, x_centre, y_centre,fe_data , msh, degree_curve,perimeter_initial , initial_area,int_refsteps , degree_det_jac_curve);
    
-    T perimeter_anal = 2.0*M_PI*radius ;
+    T perimeter_anal = 2.0*M_PI*sqrt( (radius_a*radius_a + radius_b*radius_b) / 2.0)  ; //   2.0*M_PI*radius ;
     std::cout<<"Error( perimetre_anal - perimeter_initial ) = " << perimeter_anal - perimeter_initial <<std::endl;
-    T area_anal = M_PI*radius*radius ;
+    T area_anal = M_PI*radius_a*radius_b ; // M_PI*radius*radius ;
     std::cout<<"Error( area_anal - initial_area ) = " << area_anal - initial_area <<std::endl;
        
 //    plot_curvature_normal_vs_curv_abscisse(msh_i, ls_cell, degree_curve,int_refsteps , 0 );
@@ -80140,7 +80201,7 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     using RealType = double;
-    RealType sizeBox = 2.0;
+    RealType sizeBox = 1.0;
     size_t degree           = 0;
     size_t int_refsteps     = 4;
     size_t degree_FEM       = 0;
@@ -80261,9 +80322,9 @@ int main(int argc, char **argv)
     timecounter tc_tot;
     tc_tot.tic();
 
-    std::vector<RealType> mu_vec{10.0 , 100.0};
-    std::vector<RealType> radius_a_vec {1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0} ;
-    std::vector<RealType> radius_b_vec {1.0/6.0, 2.0/9.0, 4.0/15.0, 10.0/57.0, 10.0/33.0, 4.0/21.0} ;
+    std::vector<RealType> mu_vec{1.0, 10.0 , 100.0};
+    std::vector<RealType> radius_a_vec {1.0/3.0} ; // 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 1.0/3.0
+    std::vector<RealType> radius_b_vec {1.0/6.0} ; // 1.0/6.0, 2.0/9.0, 4.0/15.0, 10.0/57.0, 10.0/33.0, 4.0/21.0
     
     int nOfRadii = radius_a_vec.size();
     
@@ -82073,7 +82134,7 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     using RealType = double;
-    RealType sizeBox = 1.0;
+    RealType sizeBox = 0.5;
     size_t degree           = 1;
     size_t int_refsteps     = 0; // 4
     size_t degree_FEM       = 2;
@@ -82241,11 +82302,12 @@ int main(int argc, char **argv)
     /************** ANALYTIC LEVEL SET FUNCTION  **************/
    
 
-    bool circle = true , ellipse = false ;
-    bool flower = false;
+    bool circle = false , ellipse = false ;
+    bool flower = true;
     RealType radius_a , radius_b , radius ;
     RealType x_centre = 0.0;
     RealType y_centre = 0.0; // 0.5 with all problems, but TGV 0.3
+    T oscillation = 0.0 ;
     //T h = std::max( fe_data.hx , fe_data.hy) ;
     if(circle)
     {
@@ -82264,6 +82326,14 @@ int main(int argc, char **argv)
         std::cout << bold << yellow << "Final radius expected of the circle : " << radius <<reset<<std::endl;
     }
 
+    if(flower)
+    {
+        oscillation = 0.04;
+        radius = 1.0/3.0 ;
+
+
+    }
+
 
 
 
@@ -82271,31 +82341,17 @@ int main(int argc, char **argv)
 
     // ------------------------------------ CIRCLE LEVEL SET ------------------------------------
     
-        std::cout<<"Initial interface: CIRCLE"<<std::endl;
-        auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
-        typedef  circle_level_set<T> Fonction;
-    
-//    std::cout<<"Initial interface: CIRCLE"<<std::endl;
-//    auto level_set_function_anal = circle_level_set_signed_distance<RealType>(radius, x_centre, y_centre , 0.01 ); // , 0.01 --> eps to smooth gradient
-//    typedef  circle_level_set_signed_distance<T> Fonction;
+        // std::cout<<"Initial interface: CIRCLE"<<std::endl;
+        // auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
+        // typedef  circle_level_set<T> Fonction;
+
 
     // ------------------------------------ FLOWER LEVEL SET ------------------------------------
-    
-//    T radiusOLD = 0.31 ;
-//    radius_a = 1.0/12.0;
-//    radius_b = 1.0/24.0;
-//    radius_a = 1.0/6.0;
-//    radius_b = 1.0/12.0;
-//    radius =  sqrt( radius_a * radius_b ) ;
-//    T ratioR = (radiusOLD*radiusOLD)/(radius*radius);
-//    T oscillation = 0.04/ratioR ;
-//    T oscillation = 0.04;
-//    radius = 1.0/3.0 ;
-//    std::cout<<"Initial interface: FLOWER"<<std::endl;
-//    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
-//    typedef  flower_level_set<T> Fonction;
-//    flower = true ;
-     
+
+        std::cout<<"Initial interface: FLOWER"<<std::endl;
+        auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
+        typedef  flower_level_set<T> Fonction;
+
     // ------------------------------------ ELLIPTIC LEVEL SET -----------------------------------
 //    std::cout<<"Initial interface: ELLIPSE"<<std::endl;
 //    auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
@@ -82572,9 +82628,9 @@ int main(int argc, char **argv)
     // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
     plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
     
-    T final_time = 5.0;
+    T final_time = 8.0;
     
-    T eps_dirichlet_cond = 0.26 ; //0.26; 0.52 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.0 ; //0.26; 0.52 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
@@ -82630,15 +82686,15 @@ int main(int argc, char **argv)
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma );
     
         // domain  (-a,a)^2 - shear flow
-//        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
+        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
         
         // domain  (0,1)^2 - shear flow
         
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
         
         // domain  (-a,a)^2 - new test case perturbated
-        T perturbation = 0.5;
-        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
+        // T perturbation = 0.5;
+        // auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
         
         // domain  (0,1)^2 - new test case perturbated
 //     auto test_case_prova = make_test_case_shear_flow_perturbated( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
@@ -82680,10 +82736,15 @@ int main(int argc, char **argv)
         if(0)
             std::cout<<bold<<green<<"CASE WITH VELOCITY DISCONTINUOUS: ho solo sol_HHO, sol_FEM non salvato, va cambiato il transport pb!!!"<<reset<<std::endl;
 
-        if( 1 ) //1 FIRST RESULT WITH THIS
+        if( 0 ) // method used in the paper - algebraic average
         {
             std::cout<<'\n'<<"Smoothing operator from velocity HHO to FE (continuity imposed): geometrical average."<<std::endl;
             u_projected.smooth_converting_into_FE_formulation( u_projected.sol_HHO );
+        }
+        if( 1 ) // method used for the reviewers - weigth average
+        {
+            std::cout<<'\n'<<"Smoothing operator from velocity HHO to FE (continuity imposed): geometrical average."<<std::endl;
+            u_projected.weight_converting_into_FE_formulation( u_projected.sol_HHO );
         }
         if( 0 )
         {
@@ -83278,7 +83339,7 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
     using RealType = double;
-    RealType sizeBox = 1.0;
+    RealType sizeBox = 0.5;
     size_t degree           = 1;
     size_t int_refsteps     = 0; // 4
     size_t degree_FEM       = 2;
@@ -83452,12 +83513,12 @@ int main(int argc, char **argv)
     std::cout<<"Velocity field: high order Lagrange basis: degree = "<<degree_velocity<<std::endl;
     auto u_projected = velocity_high_order <Mesh,FiniteSpace,T> (fe_data_Lagrange , msh );
     
-    std::cout<<"Uploading velocity field.. "<<std::endl;
+     std::cout<<"Uploading velocity field.. "<<std::endl;
     u_projected.upload_velocity("FEM_velocityX.txt","FEM_velocityY.txt");
 
     /************** LEVEL SET FUNCTION DISCRETISATION **************/
     bool circle = true , ellipse = false ;
-    bool flower = false;
+    bool flower = true;
     RealType radius_a , radius_b , radius ;
     RealType x_centre = 0.0;
     RealType y_centre = 0.0;
@@ -83471,6 +83532,24 @@ int main(int argc, char **argv)
         radius_a = 1.0/12.0;
         radius_b = 1.0/24.0;
     }
+    if(flower)
+    {
+
+        // T radiusOLD = 0.31 ;
+        // radius_a = 1.0/12.0;
+        // radius_b = 1.0/24.0;
+        // radius_a = 1.0/6.0;
+        // radius_b = 1.0/12.0;
+        // radius =  sqrt( radius_a * radius_b ) ;
+        // T ratioR = (radiusOLD*radiusOLD)/(radius*radius);
+        // T oscillation = 0.04/ratioR ;
+        T oscillation = 0.04;
+        radius = 1.0/3.0 ;
+        std::cout<<"Initial interface: FLOWER"<<std::endl;
+        auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
+        typedef  flower_level_set<T> Fonction;
+    }
+
     auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre ); // random data, useful only to initialize the level set
     typedef  circle_level_set<T> Fonction;
     auto level_set_function = Level_set_berstein< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh , fe_data_gradient , fe_data_div );
@@ -83817,7 +83896,12 @@ int main(int argc, char **argv)
         if(0)
             std::cout<<bold<<green<<"CASE WITH VELOCITY DISCONTINUOUS: ho solo sol_HHO, sol_FEM non salvato, va cambiato il transport pb!!!"<<reset<<std::endl;
 
-        if( 1 ) //1 FIRST RESULT WITH THIS
+        if( 0 ) //results of the paper with this
+        {
+            std::cout<<'\n'<<"Smoothing operator from velocity HHO to FE (continuity imposed): geometrical average."<<std::endl;
+            u_projected.smooth_converting_into_FE_formulation( u_projected.sol_HHO );
+        }
+        if( 1 ) //weighted implementation - reviewer results
         {
             std::cout<<'\n'<<"Smoothing operator from velocity HHO to FE (continuity imposed): geometrical average."<<std::endl;
             u_projected.smooth_converting_into_FE_formulation( u_projected.sol_HHO );
@@ -84403,3 +84487,889 @@ int main(int argc, char **argv)
 
 
 
+
+
+// Interface Stokes Problem: Fictitious domain
+// couette problem
+#if 0
+int main(int argc, char **argv)
+{
+    using RealType = double;
+    RealType sizeBox = 1;
+    RealType minX = 0;
+    RealType minY = 0;
+    size_t degree           = 0;
+    size_t int_refsteps     = 4;
+    size_t degree_FEM       = 0;
+    size_t degree_curve     = 2;
+    size_t degree_curvature = 1; // degree_curve -1 ;
+    bool dump_debug         = false;
+    bool solve_interface    = false;
+    bool solve_fictdom      = false;
+    bool agglomeration      = false;
+
+    bool high_order = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool entropic = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool entropic_mass_consistent = false;
+    bool compressed = false ; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool cut_off_active = false ; // IF FALSE IS SMOOTH, IF TRUE  CUT_OFF
+
+    mesh_init_params<RealType> mip;
+    mip.Nx = 5;
+    mip.Ny = 5;
+    
+    mip.min_x = minX-sizeBox;
+    mip.min_y = minY-sizeBox;
+    mip.max_x = minX+sizeBox;
+    mip.max_y = minY+sizeBox;
+    size_t T_N = 0;
+    int ch;
+    while ( (ch = getopt(argc, argv, "k:q:M:N:r:T:l:p:ifDAdhesgc")) != -1 )
+    {
+        switch(ch)
+        {
+            case 'k':
+                degree = atoi(optarg);
+                break;
+
+            case 'q':
+                degree_FEM = atoi(optarg);
+                break;
+
+            case 'M':
+                mip.Nx = atoi(optarg);
+                break;
+
+            case 'N':
+                mip.Ny = atoi(optarg);
+                break;
+
+            case 'r':
+                int_refsteps = atoi(optarg);
+                break;
+
+            case 'T':
+                T_N = atoi(optarg);
+                break;
+                
+            case 'l':
+                degree_curve = atoi(optarg);
+                break;
+            
+            case 'p':
+                degree_curvature = atoi(optarg);
+                break;
+
+            case 'i':
+                solve_interface = true;
+                break;
+
+            case 'f':
+                solve_fictdom = true;
+                break;
+
+            case 'D':
+                agglomeration = false;
+                break;
+
+            case 'A':
+                agglomeration = true;
+                break;
+
+            case 'd':
+                dump_debug = true;
+                break;
+
+            case 'h':
+                high_order = true;
+            break;
+                
+            case 'e':
+                entropic = true;
+            break;
+                
+            case 's':
+                entropic_mass_consistent = true;
+            break;
+                
+            case 'g':
+                compressed = true;
+            break;
+
+            case 'c':
+                cut_off_active = true;
+            break;
+
+
+            case '?':
+            default:
+                std::cout << "wrong arguments" << std::endl;
+                exit(1);
+        }
+    }
+
+    argc -= optind;
+    argv += optind;
+
+
+
+    timecounter tc;
+
+    timecounter tc_tot;
+    tc_tot.tic();
+
+
+    /************** BUILD MESH **************/
+
+    cuthho_poly_mesh<RealType> msh(mip);
+    typedef cuthho_poly_mesh<RealType> Mesh;
+    typedef RealType T;
+    offset_definition(msh);
+   
+    std::cout<<"Mesh size = "<<mip.Nx<<"x"<<mip.Ny<<std::endl;
+    std::cout<<"Number of refine interface points: r = "<<int_refsteps<<std::endl;
+    
+    
+    
+    /************** FINITE ELEMENT INITIALIZATION **************/
+    auto fe_data = Finite_Element<RealType,Mesh>( msh , degree_FEM , mip ) ;
+    typedef Finite_Element<RealType,Mesh> FiniteSpace;
+    std::cout<<"Level Set (finite element approximation): Bernstein basis in space Q^{k_phi},  k_phi = "<<degree_FEM<<std::endl;
+
+    /**************************************TRANSPORT PROBLEM METHOD *****************************************/
+    auto method_transport_pb = Transport_problem_method<Mesh, FiniteSpace>(fe_data, msh) ;
+
+    size_t  degree_gradient = degree_FEM ;
+    size_t  degree_div = degree_FEM  ;
+    std::cout<<"Finite element space for gradient and divergence of the LS: grad deg = "<< degree_gradient <<" , div deg = " << degree_div <<std::endl;
+    
+    auto fe_data_gradient = Finite_Element<RealType,Mesh>( msh , degree_gradient , mip ) ;
+    auto method_transport_pb_grad = Transport_problem_method<Mesh, FiniteSpace>(fe_data_gradient, msh) ;
+    auto fe_data_div = Finite_Element<RealType,Mesh>( msh , degree_div , mip ) ;
+    auto method_transport_pb_div = Transport_problem_method<Mesh, FiniteSpace>(fe_data_div, msh) ;
+
+
+    /************** ANALYTIC LEVEL SET FUNCTION  **************/
+   
+
+    RealType radius_a , radius_b,radius ;
+    RealType x_centre = 0.5;
+    RealType y_centre = 0.5;
+    
+    radius_a = 1.0/6.0;
+    radius_b = 1.0/3.0;
+    radius = radius_a;
+    
+    std::cout<<"Couette immersed domain: R1 = "<<radius_a<<", R2 = "<<radius_b<<std::endl;
+    auto level_set_function_anal = couette_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
+    typedef  couette_level_set<T> Fonction;
+
+
+    
+    T curvature_anal = 1.0/radius;
+
+    /**************  VELOCITY FIELD  INITIALISATION  **************/
+
+
+    size_t  degree_velocity = degree_FEM ; // std::max(degree + 1 , degree_FEM) ;
+    
+    
+    // **************** --------> STORING OF LAGRANGIAN NODES
+    nodes_Lagrangian_cell_definition(msh, degree_velocity);
+    
+    
+    auto fe_data_Lagrange = Finite_Element<RealType,Mesh>( msh , degree_velocity , mip ) ;
+
+    std::cout<<"Velocity field: high order Lagrange basis: degree = "<<degree_velocity<<std::endl;
+    auto u_projected = velocity_high_order <Mesh,FiniteSpace,T> (fe_data_Lagrange , msh );
+
+
+
+    /************** LEVEL SET FUNCTION DISCRETISATION **************/
+    
+    //-------->  NEW FORMULATION
+    auto level_set_function = Level_set_berstein< Mesh , Fonction , FiniteSpace , T > (fe_data , level_set_function_anal , msh , fe_data_gradient , fe_data_div );
+    typedef Level_set_berstein< Mesh , Fonction , FiniteSpace , T > Level_Set;
+    // ------------------  IF GRADIENT CONTINUOUS --------------
+    level_set_function.gradient_continuous_setting(method_transport_pb_grad) ;
+    //  ------------------ IF DIVERGENCE CONTINUOUS  ------------------
+    //    level_set_function.divergence_continuous_setting(method_transport_pb_div ) ;
+    
+   
+    
+    
+    std::cout<<"Parametric interface: degree_curve = "<<degree_curve<<std::endl;
+    auto curve = Interface_parametrisation_mesh1d(degree_curve);
+    size_t degree_det_jac_curve = curve.degree_det ; // 2*degree_curve INUTILE PER ORA
+    // integration CUT CELL degree += 2*degree_curve
+    // integration INTERFACE degree += degree_curve-1
+    
+
+    /************** MESH INITIALISATION FOR ROUTINE  **************/
+    auto crr_mesh =  Current_Mesh<Mesh>(msh);
+    crr_mesh.current_mesh = msh;
+    Mesh msh_i =  crr_mesh.current_mesh;      // MESH at t=t^n (FOR THE PROCESSING)
+    offset_definition(msh_i);
+
+
+    /************** INITIAL DATA INITIALISATION (t = 0) **************/
+    T  dt = 0. ;
+    T initial_area = 0. , initial_mass = 0.;
+    T d_a = 0. ;
+    T perimeter_initial = 0. ;
+    T centre_mass_x_inital = 0. , centre_mass_y_inital = 0. ;
+    T max_u_n_val_old = 1e+6 , max_u_n_val_new  = 1e+5 ;
+    T check = 10.0;
+    T tot_time = 0.;
+
+    /************** BOUNDARY CONDITIONS **************/
+    std::cout<<yellow<<bold<<"INLET BDRY: UP AND DOWN FOR DIRCIRCHLET_eps FP"<<reset<<std::endl;
+    bool bdry_bottom = true , bdry_up = true ;
+    bool bdry_left = false , bdry_right = false ;
+    check_inlet( msh , fe_data , bdry_bottom , bdry_right , bdry_up , bdry_left, 1e-14 );
+
+
+    //************ DO cutHHO MESH PROCESSING **************
+    tc.tic();
+    detect_node_position3(msh_i, level_set_function); // In cuthho_geom
+    detect_cut_faces3(msh_i, level_set_function); // In cuthho_geom
+    
+    if (agglomeration)
+    {
+        detect_cut_cells3(msh_i, level_set_function); // In cuthho_geom
+        refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+        set_integration_mesh(msh_i,degree_curve);
+        detect_cell_agglo_set(msh_i, level_set_function); // Non serve modificarla
+        make_neighbors_info_cartesian(msh_i); // Non serve modificarla
+        make_agglomeration_no_double_points(msh_i, level_set_function,degree_det_jac_curve);
+        set_integration_mesh(msh_i,degree_curve) ; // TOLTO PER IL MOMENTO SENNO RADDOPPIO
+    }
+    else
+    {
+        detect_cut_cells3(msh_i, level_set_function);
+        refine_interface_pro3_curve_para(msh_i, level_set_function, int_refsteps,degree_curve);
+        set_integration_mesh(msh_i,degree_curve);
+    }
+
+    tc.toc();
+    std::cout << "cutHHO-specific mesh preprocessing: " << tc << " seconds" <<'\n' << std::endl;
+    std::cout << "Agglomerated amount cells: " << msh_i.cells.size() << std::endl;
+
+    
+    output_mesh_info2_pre_FEM(msh_i, level_set_function); // IN cuthho_export
+
+    /************** UPDATING  LEVEL SET  AND VELOCITY  **************/
+//    level_set_function.gradient_continuous_setting() ;
+//    // IF GRADIENT CONTINUOUS
+    level_set_function.gradient_continuous_setting(method_transport_pb_grad) ;
+//    // IF DIVERGENCE CONTINUOUS
+//    level_set_function.divergence_continuous_setting(method_transport_pb_div) ;
+
+    
+    // --------------------- LS_CELL: CHOICE OF DISC/CONT ------------------------------- \\
+    
+// IF grad cont -> normal cont -> (divergence disc) -> divergence cont
+    //auto ls_cell = LS_cell_high_order_curvature_cont< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+
+// IF grad cont -> normal cont -> divergence disc
+    auto ls_cell = LS_cell_high_order_grad_cont_div_disc< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+
+// IF grad disc -> normal disc -> divergence disc
+//    auto ls_cell = LS_cell_high_order_grad_disc_div_disc< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+// IF grad disc -> normal disc -> divergence disc -> normal and grad cont
+//    auto ls_cell = LS_cell_high_order_div_disc_grad_n_cont< T , Mesh , Level_Set, Fonction , FiniteSpace >(level_set_function,msh_i);
+   
+    
+    ls_cell.radius = radius ;
+    u_projected.set_agglo_mesh( msh_i );
+
+    timecounter tc_initial ;
+    tc_initial.tic();
+    
+    
+    
+    /************** PLOTTINGS + GOAL QUANTITIES  **************/
+    std::vector<T> max_val_u_n_time_para , L1_err_u_n_time_para , l1_err_u_n_time_para , linf_err_u_n_time_para , L1_err_u_n_time ;
+    std::vector<T> area_time , l1_err_u_n_time , linf_err_u_n_time , time_vec ;
+    std::vector<T> linf_der_time_interface , eccentricity_vec ;
+    std::vector<T> max_val_u_n_time , l1_err_curvature_time , linf_err_curvature_time ;
+    std::vector<T> circularity_time , circularity_time2 , flux_interface_time , perimeter_time;
+    std::vector<std::pair<T,T>> centre_mass_err_time , rise_velocity_time , min_max_vec ;
+    T circularity_ref = 0.0 , perim_ref = 0.0, area_ref = 0.0 ;
+    T l1_divergence_error = 0. , l2_divergence_error = 0. ;
+    T linf_divergence_error = -10. ;
+    T L1_divergence_error = 0.;
+    
+    check_disc_curvature(  msh_i ,  ls_cell , curvature_anal , degree_FEM ) ;
+
+    
+    check_goal_quantities(msh_i, ls_cell, perimeter_initial,d_a, initial_area, centre_mass_x_inital, centre_mass_y_inital,degree_FEM, initial_mass , flower , l1_divergence_error , l2_divergence_error , linf_divergence_error , radius ,L1_divergence_error , ellipse,degree_curve,int_refsteps);
+    
+    
+    
+    //------------------------ CHECK REFERENCE QUANTITIES ---------------------------//
+//    reference_quantities_computation(perim_ref,area_ref,circularity_ref,radius, x_centre, y_centre,fe_data , msh, degree_curve,perimeter_initial , initial_area,int_refsteps , degree_det_jac_curve);
+   
+    T perimeter_anal = 2.0*M_PI*radius ;
+    std::cout<<"Error( perimetre_anal - perimeter_initial ) = " << perimeter_anal - perimeter_initial <<std::endl;
+    T area_anal = M_PI*radius*radius ;
+    std::cout<<"Error( area_anal - initial_area ) = " << area_anal - initial_area <<std::endl;
+       
+//    plot_curvature_normal_vs_curv_abscisse(msh_i, ls_cell, degree_curve,int_refsteps , 0 );
+
+    plot_curvature_normal_vs_curv_abscisse_PARAMETRIC(msh_i, ls_cell, degree_curve,int_refsteps ,0, degree_curvature ); // NO FILTER
+    
+   
+    tc_initial.toc();
+
+    circularity_time.push_back(M_PI*d_a/perimeter_initial);
+    circularity_time2.push_back(4.0*M_PI*initial_area /(perimeter_initial*perimeter_initial));
+    perimeter_time.push_back(perimeter_initial);
+    centre_mass_err_time.push_back(std::make_pair(centre_mass_x_inital/initial_area  , centre_mass_y_inital/initial_area) );
+    time_vec.push_back(0) ;
+    area_time.push_back(initial_area) ;
+
+    min_max_vec.push_back(std::make_pair(level_set_function.phi_min , level_set_function.phi_max) );
+
+    l1_err_curvature_time.push_back(l1_divergence_error) ;
+    linf_err_curvature_time.push_back(linf_divergence_error) ;
+    
+    T dt_M ;
+    T R_phi = radius ;
+    
+    size_t tot_amount_transport_routine = 0;
+    
+    
+    
+    bool l2proj_para = false ;
+    
+    bool l2proj = true ;
+    bool avg = false ;
+    bool disc = false ;
+    bool filter = false ;
+       
+    Interface_parametrisation_mesh1d_global<Mesh> para_curve_cont(msh_i,degree_curve,degree_curvature);
+    
+    // *********************** DERIVATIVE / NORMAL PARA *************************//
+    //------------- L2 cont curvature from parametric interface  r ---------- //
+    para_curve_cont.make_L2_proj_para_derivative(msh_i);
+    
+    //---------------------------- L2 global Normal from LS  ----------------------- //
+    if(l2proj){
+        if(!disc)
+            para_curve_cont.make_L2_proj_para_normal(msh_i,ls_cell);
+        else
+            para_curve_cont.make_L2_proj_para_normal_disc(msh_i,ls_cell);
+    }
+    //---------------------------- Avg Normal from LS  ---------------------------- //
+    if(avg){
+        if(!disc)
+            para_curve_cont.make_avg_L2_local_proj_para_normal(msh_i, ls_cell);
+        else
+            para_curve_cont.make_avg_L2_local_proj_para_normal_disc(msh_i, ls_cell);
+    }
+    
+    
+    // *********************** CURVATURE PARA *************************//
+    
+    //------------- L2 cont curvature from parametric interface  r ---------- //
+    if(l2proj_para)
+        para_curve_cont.make_L2_proj_para_curvature(msh_i);
+    
+
+     
+    //---------------------------- L2 global Curvature from LS  ----------------------- //
+    if(l2proj){
+        if(!disc)
+            para_curve_cont.make_L2_proj_para_curvature(msh_i,ls_cell);
+        else
+            para_curve_cont.make_L2_proj_para_curvature_disc(msh_i,ls_cell);
+    }
+    //---------------------------- Avg Curvature from LS  ---------------------------- //
+    if(avg){
+        if(!disc)
+            para_curve_cont.make_avg_L2_local_proj_para_curvature(msh_i, ls_cell);
+        else
+            para_curve_cont.make_avg_L2_local_proj_para_curvature_disc(msh_i, ls_cell);
+      
+    }
+    if(filter){
+        std::cout<<bold<<yellow<<"CURVATURE ANALYSIS PRE FILTER:"<<'\n';
+        para_curvature_error( msh_i,  para_curve_cont , curvature_anal );
+        para_curve_cont.make_smooth_filter_curvature();
+        std::cout<<bold<<yellow<<"CURVATURE ANALYSIS POST FILTER:"<<'\n';
+        para_curvature_error( msh_i,  para_curve_cont , curvature_anal );
+    
+    }
+    if(!filter)
+    {
+        std::cout<<bold<<yellow<<"CURVATURE ANALYSIS PARA:"<<'\n';
+        para_curvature_error( msh_i,  para_curve_cont , curvature_anal );
+    }
+    
+    // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
+    plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
+    
+    
+    T dirichlet_radius_a = 1.0 ;
+    T dirichlet_radius_b = 0.0 ;
+    
+    std::cout<<"Boundary conditions: inner circle = "<<eps_dirichlet_cond <<std::endl;
+    std::cout<<"Boundary conditions: external circle = "<<eps_dirichlet_cond <<std::endl;
+        
+    // -----------------------------------------------------------------------------------------
+    // ----------------- RESOLUTION OF THE STOKES PROBLEM (HHO) ------------------
+    // -----------------------------------------------------------------------------------------
+
+    bool sym_grad = TRUE;
+    auto prm = params<T>();
+    prm.kappa_1 = 0.1;
+    prm.kappa_2 = 1.0;
+    T gamma = 0.0; // 0.05
+    // kappa_1 is negative domain (inner)
+    // kappa_2 is positive domain (outer)
+
+    std::cout<<"gamma = "<<gamma <<std::endl;
+       
+    
+   
+    std::cout<<'\n'<<bold<<yellow<<"HHO flow resolution."<<reset<<'\n'<<std::endl;
+        
+    auto test_case = make_test_case_eshelby_LS_eps_DIR( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
+    auto method = make_sym_gradrec_stokes_interface_method(msh_i, 1.0, 0.0, test_case, sym_grad);
+    
+    if(solve_interface)
+        run_cuthho_interface_velocity_new_post_processingLS(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad , 0, 1); // FOR LS H
+    
+    if (solve_fictdom)
+        run_cuthho_fictdom(msh, degree, test_case);
+        
+        
+    
+    
+    
+    // ------------------ OLD VERSIONS ------------------
+        //auto test_case = make_test_case_eshelby(msh_i, ls_cell,  prm , sym_grad);
+        // Non serve modificare Gamma = 1/2
+        //auto test_case = make_test_case_eshelby_2(msh_i, ls_cell,  prm , sym_grad );
+        //auto test_case = make_test_case_eshelby_analytic(msh_i, ls_cell,  prm , sym_grad , radius);
+    // ------------- OLD GUILLAUME VERSIONS --------------
+        // auto test_case = make_test_case_stokes_1(msh, level_set_function);
+        // auto test_case = make_test_case_stokes_2(msh, ls_cell); //level_set_function);
+
+    // ----------------- ESHELBY VERSION - CORRECT BUT PRESSURE ------------------
+        //auto test_case_prova = make_test_case_eshelby_2_prova(msh_i, ls_cell,  prm , sym_grad );
+    // PRESSURE SIGN NOT CORRECT
+    // ---------------------- ESHELBY VERSION LEVEL SET - CORRECT ------------------------
+    //        auto test_case = make_test_case_eshelby_correct(msh_i, ls_cell,  prm , sym_grad,gamma);
+    // PRESSURE SIGN NOT CORRECT
+    // -------------------- ESHELBY VERSION PARAMETRIC (DISC) - CORRECT -------------------
+    //        auto test_case = make_test_case_eshelby_correct_parametric(msh_i, ls_cell,  prm , sym_grad,gamma);
+    // PRESSURE SIGN NOT CORRECT
+        
+        
+   
+        
+        // -------------------- ESHELBY VERSION PARAMETRIC (CONT) - CORRECT -------------------
+        // ---> THE OLD ONE FOR DIRICHLET =0
+//        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma ); // SIGN OF PRESSURE HAS TO BE CHANGED CONFORMING TO THE CHANGE  OF SIGN OF THE CURVATURE. HERE DONE: CORRECT 25/01/2021
+    
+    // PARAMETRIC normal and curvature
+//        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // SIGN OF PRESSURE HAS TO BE CHANGED CONFORMING TO THE CHANGE  OF SIGN OF THE CURVATURE.
+    
+        // LS normal and curvature
+        
+        // auto test_case = make_test_case_eshelby_LS_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,sizeBox);
+        // auto test_case = make_test_case_eshelby_LS_eps_DIR( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
+        
+        // ------------------------ HHO METHOD FOR LEVEL SET  ---------------------------
+//        auto method = make_sym_gradrec_stokes_interface_method(msh_i, 1.0, 0.0, test_case, sym_grad);
+    // T alfa1 = prm.kappa_2/(prm.kappa_1 + prm.kappa_2);
+    // T alfa2 = prm.kappa_1/(prm.kappa_1 + prm.kappa_2);
+    // alfa1 is negative domain (inner)
+    // alfa2 is positive domain (outer)
+    // auto method = make_sym_gradrec_stokes_interface_method_alfai(msh_i, 1.0, 0.0, test_case, sym_grad,alfa1,alfa2);
+        // -------------------- HHO METHOD FOR DISC PARAMETRIC INTERFACE  -----------------------
+//         auto method = make_sym_gradrec_stokes_interface_method_ref_pts(msh_i, 1.0, 0.0, test_case, sym_grad);
+    
+        // -------------------- HHO METHOD FOR CONT PARAMETRIC INTERFACE  -----------------------
+//        auto method_prova = make_sym_gradrec_stokes_interface_method_ref_pts_cont(msh_i, 1.0, 0.0, test_case_prova, sym_grad); // WITH H_p  I use this!!!!
+        
+        
+        
+        
+        //  ******************** - HHO RESOLUTION - ********************
+        if(solve_interface){
+            // ----------------- HHO RESOLUTION OLD CASE  --------------------------
+//            TI = run_cuthho_interface_numerical_ls(msh_i, degree, method, test_case_prova , ls_cell ,  normal_analysis );
+//            run_cuthho_interface_velocity_parallel(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad );
+            
+            // ----------------- HHO RESOLUTION LS / PARAMETRIC DISC  ---------------------
+//            run_cuthho_interface_velocity_prova(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad , time_step); // THE ONE CORRECT THAT I'M USING NOW
+            
+            // ----------------- HHO RESOLUTION PARAMETRIC CONT  --------------------------
+//             run_cuthho_interface_velocity_new(msh_i, degree, method_prova,test_case_prova, ls_cell , u_projected ,sym_grad , time_step); // THE ONE CORRECT THAT I'M USING NOW
+//            run_cuthho_interface_velocity_new_post_processing(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad , 0); // FOR PARAMETRIC H_p
+//            run_cuthho_interface_velocity_fast(msh_i, degree, method_prova,test_case_prova, ls_cell , u_projected ,sym_grad , time_step); // CORRECT BUT DOEST NOT COMPUTE ERRORS
+            
+            run_cuthho_interface_velocity_new_post_processingLS(msh_i, degree, method,test_case, ls_cell , u_projected ,sym_grad , 0, 1); // FOR LS H
+        }
+
+        /************************************ FEM -  PRE-PROCESSING ******************************************/
+        // ----------------- PROJECTION OF THE VELOCITY FIELD ------------------
+        if(0)
+            std::cout<<bold<<green<<"CASE WITH VELOCITY DISCONTINUOUS: ho solo sol_HHO, sol_FEM non salvato, va cambiato il transport pb!!!"<<reset<<std::endl;
+
+        if( 1 ) //1 FIRST RESULT WITH THIS
+        {
+            std::cout<<'\n'<<"Smoothing operator from velocity HHO to FE (continuity imposed): geometrical average."<<std::endl;
+            u_projected.smooth_converting_into_FE_formulation( u_projected.sol_HHO );
+        }
+        if( 0 )
+        {
+            std::cout<<'\n'<<"------------------>>>> NOTICE: NON SMOOTH OPERATOR FROM HHO TO FEM."<<std::endl;
+            u_projected.converting_into_FE_formulation( u_projected.sol_HHO );
+        }
+        if( 0 )
+        {
+            std::cout<<'\n'<<"------------------>>>>NOTICE: L^2 PROJECTION FROM HHO TO FEM."<<std::endl;
+            u_projected.L2_proj_into_FE_formulation(level_set_function , msh , method_transport_pb);
+        }
+        
+        
+        //testing_velocity_field(msh , u_projected) ;
+        //auto u_prova = velocity_high_order <Mesh,FiniteSpace,T> (fe_data , msh);
+        //u_prova.sol_HHO = u_projected.sol_HHO ;
+        //u_prova.L2_proj_into_FE_formulation( level_set_function , msh );
+        //testing_velocity_field_L2projected(msh , u_prova) ;
+
+        T rise_vel0 = 0.0 , rise_vel1 = 0.0 ;
+        T flux_interface = 0.0 ;
+        
+       
+            T max_u_n_val_initial = 0.0 ;
+            T max_u_n_val_abs_initial = 0.0 ;
+            T l1_normal_interface_status_initial = 0.  ;
+
+            T L1_normal_interface_status_initial = 0. ;
+
+            size_t counter_interface_pts_initial = 0;
+            for(auto& cl : msh_i.cells)
+            {
+            if(cl.user_data.location == element_location::ON_INTERFACE)
+            {
+                ls_cell.cell_assignment(cl);
+                u_projected.cell_assignment(cl);
+                         
+                auto qps = integrate_interface(msh_i, cl, degree_FEM + degree_velocity, element_location::ON_INTERFACE);
+                for(auto& qp:qps){
+                    auto u_pt = u_projected(qp.first);
+                    
+                    auto ls_n_pt = ls_cell.normal(qp.first);
+                    T u_n_val = u_pt.first * ls_n_pt(0) + u_pt.second * ls_n_pt(1) ;
+                    L1_normal_interface_status_initial += qp.second * std::abs(u_n_val) ;
+                    max_u_n_val_abs_initial = std::max( max_u_n_val_abs_initial , std::abs(u_n_val) ) ;
+                    if( std::abs(u_n_val) == max_u_n_val_abs_initial )
+                        max_u_n_val_initial = u_n_val ;
+                             
+                    l1_normal_interface_status_initial += std::abs(u_n_val) ;
+                    counter_interface_pts_initial ++ ;
+                             
+            
+                }
+        
+            }
+        
+            }
+            l1_normal_interface_status_initial /= counter_interface_pts_initial;
+            l1_err_u_n_time.push_back(l1_normal_interface_status_initial) ;
+            linf_err_u_n_time.push_back(max_u_n_val_abs_initial) ;
+//            linf_der_time_interface.push_back(0) ;
+            max_val_u_n_time.push_back(max_u_n_val_initial) ;
+            L1_err_u_n_time.push_back(L1_normal_interface_status_initial) ;
+            
+            std::cout<<"------> The l1 error of u*n along the INTERFACE at INITIAL TIME is " << l1_normal_interface_status_initial  << std::endl;
+        
+            std::cout<<bold<<green<<"------> The linf error of u*n along the INTERFACE at INITIAL TIME is " << max_u_n_val_abs_initial <<reset << std::endl;
+                    
+            std::cout<<"------> The L1 error of u*n along the INTERFACE at INITIAL TIME is " << L1_normal_interface_status_initial  << std::endl;
+            
+            
+           
+            size_t degree_jacobian = para_curve_cont.degree_det ;
+
+            T L1_normal_interface_para = 0.0 ;
+            T linf_u_n_para = 0.0 ;
+            T max_u_n_val_para = 0.0 ;
+            T l1_normal_interface_para = 0.0 ;
+            size_t counter_interface_pts_para = 0;
+            
+            
+            T area_para = 0.0;
+            
+            for(auto& cl : msh_i.cells)
+            {
+
+                if( (location(msh_i, cl) == element_location::IN_NEGATIVE_SIDE) || (location(msh_i, cl) == element_location::ON_INTERFACE) )
+                {
+                    u_projected.cell_assignment(cl);
+                    T partial_area = measure( msh_i, cl, element_location::IN_NEGATIVE_SIDE);
+                    area_para += partial_area;
+
+                    size_t max_deg = std::max(degree_velocity,degree_FEM);
+                    auto qps_fin = integrate( msh_i , cl , max_deg , element_location::IN_NEGATIVE_SIDE);
+                 
+
+                    for(auto& qp:qps_fin){
+                        auto u_pt = u_projected(qp.first);
+                        rise_vel0 +=  qp.second * u_pt.first;
+                        rise_vel1 +=  qp.second * u_pt.second;
+                    }
+
+                }
+
+
+                if(cl.user_data.location == element_location::ON_INTERFACE)
+                {
+                    u_projected.cell_assignment(cl);
+                    auto global_cells_i = para_curve_cont.get_global_cells_interface(msh_i , cl);
+                    auto integration_msh = cl.user_data.integration_msh ;
+//                    auto degree_int = degree_curvature + degree_jacobian ;
+
+
+                    auto qps_un = edge_quadrature<T>(degree_jacobian + degree_curvature + degree_velocity);
+
+                    for (size_t i_cell = 0; i_cell < integration_msh.cells.size(); i_cell++)
+                    {
+                        auto pts = points(integration_msh,integration_msh.cells[i_cell]);
+                        size_t global_cl_i = global_cells_i[i_cell] ;
+
+                        for(auto& qp:qps_un)
+                        {
+                            auto t = 0.5 * qp.first.x() + 0.5;
+
+                            T jacobian = para_curve_cont.jacobian_cont( t , global_cl_i ) ;
+                            auto w = 0.5 * qp.second * jacobian ;
+                            auto p = para_curve_cont(t , global_cl_i ) ;
+                            auto pt = typename Mesh::point_type(p(0) , p(1) ) ;
+                            auto u_pt = u_projected(pt);
+                            auto curve_n_pt = para_curve_cont.normal_cont(t , global_cl_i);
+                            T flux = u_pt.first * curve_n_pt(0) + u_pt.second * curve_n_pt(1) ;
+                            flux_interface += w * flux ;
+                                        
+                            L1_normal_interface_para += w * std::abs(flux) ;
+                            linf_u_n_para = std::max( linf_u_n_para , std::abs(flux) ) ;
+                            if( std::abs(flux) == linf_u_n_para )
+                                max_u_n_val_para = flux ;
+                                        
+                            l1_normal_interface_para += std::abs(flux) ;
+                            counter_interface_pts_para ++ ;
+
+                        }
+                    }
+                }
+            }
+            l1_normal_interface_para/=counter_interface_pts_para ;
+            l1_err_u_n_time_para.push_back(l1_normal_interface_para) ;
+            linf_err_u_n_time_para.push_back(linf_u_n_para) ;
+            L1_err_u_n_time_para.push_back(L1_normal_interface_para) ;
+            max_val_u_n_time_para.push_back(max_u_n_val_para) ;
+            flux_interface_time.push_back(flux_interface) ;
+            rise_velocity_time.push_back( std::make_pair(rise_vel0/area_para  , rise_vel1/area_para) ) ;
+            
+            std::cout<<"------> The l1 error of PARA_CONT u*n along the INTERFACE at INITIAL TIME is " << l1_normal_interface_para  << std::endl;
+            
+            std::cout<<bold<<yellow<<"------> The linf error of PARA_CONT u*n along the INTERFACE at INITIAL TIME is " << linf_u_n_para <<reset << std::endl;
+                        
+            std::cout<<"------> The L1 error of PARA_CONT u*n along the INTERFACE at INITIAL TIME is " << L1_normal_interface_para  << std::endl;
+       
+
+   
+    
+    
+    
+    tc_tot.toc();
+    std::cout<<"Simulation machine time t = "<<tc_tot <<std::endl;
+
+    return 0;
+}
+#endif
+
+#if 0
+int main(int argc, char **argv)
+{
+    using RealType = double;
+
+    size_t degree           = 0;
+    size_t int_refsteps     = 4;
+
+    bool dump_debug         = false;
+    bool solve_interface    = false;
+    bool solve_fictdom      = false;
+    bool agglomeration      = false;
+
+    mesh_init_params<RealType> mip;
+    mip.Nx = 5;
+    mip.Ny = 5;
+
+    /* k <deg>:     method degree
+     * M <num>:     number of cells in x direction
+     * N <num>:     number of cells in y direction
+     * r <num>:     number of interface refinement steps
+     *
+     * i:           solve interface problem
+     * f:           solve fictitious domain problem
+     *
+     * D:           use node displacement to solve bad cuts (default)
+     * A:           use agglomeration to solve bad cuts
+     *
+     * d:           dump debug data
+     */
+
+    int ch;
+    while ( (ch = getopt(argc, argv, "k:M:N:r:ifDAd")) != -1 )
+    {
+        switch(ch)
+        {
+            case 'k':
+                degree = atoi(optarg);
+                break;
+
+            case 'M':
+                mip.Nx = atoi(optarg);
+                break;
+
+            case 'N':
+                mip.Ny = atoi(optarg);
+                break;
+
+            case 'r':
+                int_refsteps = atoi(optarg);
+                break;
+
+            case 'i':
+                solve_interface = true;
+                break;
+
+            case 'f':
+                solve_fictdom = true;
+                break;
+
+            case 'D':
+                agglomeration = false;
+                break;
+
+            case 'A':
+                agglomeration = true;
+                break;
+
+            case 'd':
+                dump_debug = true;
+                break;
+
+            case '?':
+            default:
+                std::cout << "wrong arguments" << std::endl;
+                exit(1);
+        }
+    }
+
+    argc -= optind;
+    argv += optind;
+
+
+    timecounter tc;
+
+    /************** BUILD MESH **************/
+    tc.tic();
+    cuthho_poly_mesh<RealType> msh(mip);
+    tc.toc();
+    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
+    /************** LEVEL SET FUNCTION **************/
+//    RealType radius = 1.0/3.0;
+//    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+//     auto level_set_function = line_level_set<RealType>(0.5);
+//     auto level_set_function = flower_level_set<RealType>(0.31, 0.5, 0.5, 4, 0.04);
+    RealType eps  = 0.005; // 0.25-1e-10; // 0.1;
+    RealType epsBndry  = 1e-8 ; //  0.15;
+    RealType pos_sides  = 0.25; // 0.0;
+    auto level_set_function = m_shaped_level_set<RealType>(eps,epsBndry,pos_sides);
+    
+    
+//    RealType R = 0.35;
+//    auto level_set_function = rotated_square<RealType>(0.5 , 0.5 , R );
+    // RealType epsBndry  = -2.0*1e-2 ;
+     // auto level_set_function = square_level_set<RealType>(0.75-epsBndry,0.25+epsBndry,0.25+epsBndry,0.75-epsBndry);
+    
+//    RealType radius_a , radius_b,radius ;
+//    RealType x_centre = 0.5;
+//    RealType y_centre = 0.5;
+//
+//    radius_a = 1.0/6.0;
+//    radius_b = 1.0/3.0;
+//    radius = radius_a;
+//
+//    std::cout<<"Couette immersed domain: R1 = "<<radius_a<<", R2 = "<<radius_b<<std::endl;
+//    auto level_set_function = couette_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
+
+
+    
+    
+    /************** DO cutHHO MESH PROCESSING **************/
+
+    tc.tic();
+    detect_node_position(msh, level_set_function);
+    detect_cut_faces(msh, level_set_function);
+
+    if (agglomeration)
+    {
+        detect_cut_cells(msh, level_set_function);
+        detect_cell_agglo_set(msh, level_set_function);
+        make_neighbors_info_cartesian(msh);
+        // make_neighbors_info(msh);
+        refine_interface(msh, level_set_function, int_refsteps);
+        make_agglomeration(msh, level_set_function);
+    }
+    else
+    {
+        move_nodes(msh, level_set_function);
+        detect_cut_faces(msh, level_set_function); //do it again to update intersection points
+        detect_cut_cells(msh, level_set_function);
+        refine_interface(msh, level_set_function, int_refsteps);
+    }
+
+
+    tc.toc();
+    std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
+
+    if (dump_debug)
+    {
+        dump_mesh(msh);
+        output_mesh_info(msh, level_set_function);
+    }
+
+    output_mesh_info(msh, level_set_function);
+
+    // auto test_case = make_test_case_stokes_1(msh, level_set_function);
+//    auto test_case = make_test_case_stokes_2(msh, level_set_function);
+    // auto test_case = make_test_case_kink_velocity(msh, .... );
+    auto test_case = make_test_case_M_shaped(msh, 1.0,level_set_function);
+    
+    //auto test_case = make_test_case_kink_velocity2(msh, level_set_function);
+    
+//    checkNormal(msh,level_set_function,2.0);
+    auto cauchyFormulation = false ;
+    auto method = make_sym_gradrec_stokes_interface_method(msh, 1.0, 0.0, test_case, cauchyFormulation);
+
+    
+    
+    if (solve_interface)
+        run_cuthho_interface(msh, degree, method, test_case);
+
+    if (solve_fictdom)
+        run_cuthho_fictdom(msh, degree, test_case);
+
+
+    return 0;
+}
+#endif
