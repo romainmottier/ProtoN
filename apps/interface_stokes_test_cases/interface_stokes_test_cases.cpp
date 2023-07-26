@@ -80141,7 +80141,7 @@ int main(int argc, char **argv)
 // EPS BDRY CONDS
 // Loop varying \mu and ellipse radii
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
@@ -82082,11 +82082,11 @@ int main(int argc, char **argv)
 
 // -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     using RealType = double;
-    RealType sizeBox = 1.0;
+    RealType sizeBox = 0.5;
     size_t degree           = 1;
     size_t int_refsteps     = 0; // 4
     size_t degree_FEM       = 2;
@@ -82254,8 +82254,8 @@ int main(int argc, char **argv)
     /************** ANALYTIC LEVEL SET FUNCTION  **************/
    
 
-    bool circle = true , ellipse = false ;
-    bool flower = false;
+    bool circle = false , ellipse = false ;
+    bool flower = true;
     RealType radius_a , radius_b , radius ;
     RealType x_centre = 0.0;
     RealType y_centre = 0.0; // 0.5 with all problems, but TGV 0.3
@@ -82284,9 +82284,9 @@ int main(int argc, char **argv)
 
     // ------------------------------------ CIRCLE LEVEL SET ------------------------------------
     
-        std::cout<<"Initial interface: CIRCLE"<<std::endl;
-        auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
-        typedef  circle_level_set<T> Fonction;
+       // std::cout<<"Initial interface: CIRCLE"<<std::endl;
+       //  auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
+       //  typedef  circle_level_set<T> Fonction;
     
 //    std::cout<<"Initial interface: CIRCLE"<<std::endl;
 //    auto level_set_function_anal = circle_level_set_signed_distance<RealType>(radius, x_centre, y_centre , 0.01 ); // , 0.01 --> eps to smooth gradient
@@ -82294,20 +82294,20 @@ int main(int argc, char **argv)
 
     // ------------------------------------ FLOWER LEVEL SET ------------------------------------
     
-//    T radiusOLD = 0.31 ;
-//    radius_a = 1.0/12.0;
-//    radius_b = 1.0/24.0;
-//    radius_a = 1.0/6.0;
-//    radius_b = 1.0/12.0;
-//    radius =  sqrt( radius_a * radius_b ) ;
-//    T ratioR = (radiusOLD*radiusOLD)/(radius*radius);
-//    T oscillation = 0.04/ratioR ;
-//    T oscillation = 0.04;
-//    radius = 1.0/3.0 ;
-//    std::cout<<"Initial interface: FLOWER"<<std::endl;
-//    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
-//    typedef  flower_level_set<T> Fonction;
-//    flower = true ;
+    T radiusOLD = 0.31 ;
+    radius_a = 1.0/12.0;
+    radius_b = 1.0/24.0;
+    radius_a = 1.0/6.0;
+    radius_b = 1.0/12.0;
+    radius =  sqrt( radius_a * radius_b ) ;
+    T ratioR = (radiusOLD*radiusOLD)/(radius*radius);
+    // T oscillation = 0.04/ratioR ;
+    T oscillation = 0.04;
+    radius = 1.0/3.0 ;
+    std::cout<<"Initial interface: FLOWER"<<std::endl;
+    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
+    typedef  flower_level_set<T> Fonction;
+    flower = true ;
      
     // ------------------------------------ ELLIPTIC LEVEL SET -----------------------------------
 //    std::cout<<"Initial interface: ELLIPSE"<<std::endl;
@@ -82585,9 +82585,9 @@ int main(int argc, char **argv)
     // ******** TO FASTER THE SIMULATION, ERASED THE PLOTTINGS
     plotting_para_curvature_cont_time_fast(msh_i,para_curve_cont ,degree_curve,degree_FEM,radius,0,int_refsteps) ;
     
-    T final_time = 5.0;
+    T final_time = 8.0;
     
-    T eps_dirichlet_cond = 0.26 ; //0.26; 0.52 ; // 0.01 -->  0.1
+    T eps_dirichlet_cond = 0.0 ; //0.26; 0.52 ; // 0.01 -->  0.1
 
     for (size_t time_step = 0; time_step<=T_N; time_step++)
     {
@@ -82643,15 +82643,15 @@ int main(int argc, char **argv)
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma );
     
         // domain  (-a,a)^2 - shear flow
-//        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
+        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_DIR_domSym( msh_i, ls_cell ,para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond); // sizeBox
         
         // domain  (0,1)^2 - shear flow
         
 //        auto test_case_prova = make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond);
         
         // domain  (-a,a)^2 - new test case perturbated
-        T perturbation = 0.5;
-        auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
+//        T perturbation = 0.5;
+  //      auto test_case_prova = make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
         
         // domain  (0,1)^2 - new test case perturbated
 //     auto test_case_prova = make_test_case_shear_flow_perturbated( msh_i, ls_cell , para_curve_cont, prm , sym_grad , gamma , eps_dirichlet_cond,perturbation );
