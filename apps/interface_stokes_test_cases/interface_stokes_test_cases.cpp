@@ -83171,7 +83171,7 @@ int main(int argc, char **argv)
     using RealType = double;
     RealType sizeBox = 0.5;
 
-    std::string folder = "simu_weightCircle_1/";
+    std::string folder = "simu_weightCircle_";
     int time_gap = 20;
 
 
@@ -83299,7 +83299,7 @@ int main(int argc, char **argv)
 
 
     /************** BUILD MESH **************/
-
+    
     cuthho_poly_mesh<RealType> msh(mip);
     typedef cuthho_poly_mesh<RealType> Mesh;
     typedef RealType T;
@@ -83309,6 +83309,9 @@ int main(int argc, char **argv)
     std::cout<<"Mesh size = "<<mip.Nx<<"x"<<mip.Ny<<std::endl;
     std::cout<<"Number of refine interface points: r = "<<int_refsteps<<std::endl;
     
+
+    folder =  folder + std::to_string(mip.Nx)+"/";
+
     if( high_order == true )
         std::cout<<bold<<green<<"Transport problem high order with limiting (no inlet). "<<reset<<std::endl;
     else if ( entropic == true )
