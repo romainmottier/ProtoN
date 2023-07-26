@@ -890,10 +890,10 @@ goal_quantities_time_fast(const Mesh& msh,const VEC& interface_gamma  , const VE
 
 template<typename Mesh, typename VEC , typename T >
 void
-goal_quantities_time_fast(const Mesh& msh,const VEC& interface_points , const std::vector<T>& val_u_n , const std::vector<std::pair<T,T>>& vec_n , size_t time_step )
+goal_quantities_time_fast(const Mesh& msh,const VEC& interface_points , const std::vector<T>& val_u_n , const std::vector<std::pair<T,T>>& vec_n , size_t time_step, std::string& folder )
 {
 
-    std::string filename_stokes4 = "vec_u_n_" + std::to_string(time_step) + ".3D";
+    std::string filename_stokes4 = folder+"vec_u_n_" + std::to_string(time_step) + ".3D";
     std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
 
     if(interface_file4)
@@ -916,7 +916,7 @@ goal_quantities_time_fast(const Mesh& msh,const VEC& interface_points , const st
     else
         std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
     
-    std::string filename_stokes7 = "vec_normal_" + std::to_string(time_step) + ".3D";
+    std::string filename_stokes7 = folder+"vec_normal_" + std::to_string(time_step) + ".3D";
     std::ofstream interface_file7(filename_stokes7, std::ios::out | std::ios::trunc);
 
     if(interface_file7)
@@ -1434,13 +1434,13 @@ goal_quantities_time(const Mesh& msh, T time ,const VEC& interface_points , cons
 /// in cuthho_export.hpp
 template<typename Mesh, typename Function , typename T >
 void
-output_mesh_info2_time(const Mesh& msh, const Function& level_set_function, T time,size_t time_step)
+output_mesh_info2_time(const Mesh& msh, const Function& level_set_function, T time,size_t time_step, std::string& folder )
 {
     using RealType = typename Mesh::coordinate_type;
 
     /************** OPEN SILO DATABASE **************/
     silo_database silo;
-    std::string filename_silo = "cuthho_meshinfo_Stokes_" + std::to_string(time_step) + ".silo";
+    std::string filename_silo = folder + "cuthho_meshinfo_Stokes_" + std::to_string(time_step) + ".silo";
     silo.create(filename_silo);
     silo.add_mesh(msh, "mesh");
 
@@ -1532,7 +1532,7 @@ output_mesh_info2_time(const Mesh& msh, const Function& level_set_function, T ti
         int_pts_y.push_back(y);
     }
 
-    std::ofstream points_file("int_points.3D", std::ios::out | std::ios::trunc);
+    std::ofstream points_file(folder+"int_points.3D", std::ios::out | std::ios::trunc);
 
     if(points_file)
     {
@@ -1570,7 +1570,7 @@ output_mesh_info2_time(const Mesh& msh, const Function& level_set_function, T ti
         }
     }
 
-    std::string filename_interface_Stokes = "interface_Stokes_" + std::to_string(time_step) + ".3D";
+    std::string filename_interface_Stokes = folder+"interface_Stokes_" + std::to_string(time_step) + ".3D";
 
     std::ofstream interface_file(filename_interface_Stokes, std::ios::out | std::ios::trunc);
 
@@ -5403,7 +5403,7 @@ plotting_in_time(const std::vector<T>& time_vec , const std::vector<T>& area_tim
 
 template< typename FonctionD , typename Mesh  >
 void
-testing_level_set(const Mesh& msh , const FonctionD& level_set_disc )
+testing_level_set(const Mesh& msh , const FonctionD& level_set_disc , std::string& folder)
 {
     typedef typename Mesh::point_type       point_type;
     postprocess_output<double> postoutput1;
@@ -5414,20 +5414,20 @@ testing_level_set(const Mesh& msh , const FonctionD& level_set_disc )
     
     N = 4; //80 points to see also the interface!!!
     M = 4; //80 points to see also the interface!!!
-    auto test_disc  = std::make_shared< gnuplot_output_object<double> >("testing_interface_disc.dat");
+    auto test_disc  = std::make_shared< gnuplot_output_object<double> >(folder+"testing_interface_disc.dat");
 
 
-    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >("testing_der_discX.dat");
+    auto test_disc_gradX  = std::make_shared< gnuplot_output_object<double> >(folder+"testing_der_discX.dat");
 
-    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >("testing_der_discY.dat");
+    auto test_disc_gradY  = std::make_shared< gnuplot_output_object<double> >(folder+"testing_der_discY.dat");
 
-    auto test_profile_disc  = std::make_shared< gnuplot_output_object<double> >("test_profile_disc.dat");
+    auto test_profile_disc  = std::make_shared< gnuplot_output_object<double> >(folder+"test_profile_disc.dat");
     
-    auto test_profile_obliq_disc  = std::make_shared< gnuplot_output_object<double> >("test_profile_obliq.dat");
+    auto test_profile_obliq_disc  = std::make_shared< gnuplot_output_object<double> >(folder+"test_profile_obliq.dat");
     
     
     
-    auto test_disc_grad = std::make_shared< gnuplot_output_object<double> >("testing_der_disc_fin.dat");
+    auto test_disc_grad = std::make_shared< gnuplot_output_object<double> >(folder+"testing_der_disc_fin.dat");
 
     for(auto& cl : msh.cells)
     {
@@ -14734,10 +14734,10 @@ testing_velocity_field(const Mesh msh , const Fonction& vel )
 
 template< typename Fonction , typename Mesh  >
 void
-testing_velocity_field(const Mesh& msh , const Fonction& vel , size_t time_step )
+testing_velocity_field(const Mesh& msh , const Fonction& vel , size_t time_step ,std::string& folder)
 {
     
-    std::string filename_stokes6 = "velocity_field_"+ std::to_string(time_step) +".3D";
+    std::string filename_stokes6 = folder+"velocity_field_"+ std::to_string(time_step) +".3D";
         std::ofstream interface_file(filename_stokes6, std::ios::out | std::ios::trunc);
 
         if(interface_file)
@@ -14772,13 +14772,13 @@ testing_velocity_field(const Mesh& msh , const Fonction& vel , size_t time_step 
 
 template< typename FonctionD , typename Mesh , typename T >
 void
-testing_level_set_time(const Mesh msh , const FonctionD& level_set_disc , T time , size_t time_step)
+testing_level_set_time(Mesh& msh , const FonctionD& level_set_disc , T time , size_t time_step, std::string& folder)
 {
     typedef typename Mesh::point_type       point_type;
 
 
     postprocess_output<T> postoutput0;
-    std::string filename_FEM = "sol_FEM_t=" + std::to_string(time_step) + ".dat";
+    std::string filename_FEM = folder+"sol_FEM_t=" + std::to_string(time_step) + ".dat";
     auto test_FEM  = std::make_shared< gnuplot_output_object<double> >(filename_FEM);
     
 
@@ -14811,7 +14811,7 @@ testing_level_set_time(const Mesh msh , const FonctionD& level_set_disc , T time
 
 template<typename Mesh,typename Level_Set , typename Velocity , typename T = typename Mesh::coordinate_type >
 void
-plot_u_n_interface( Mesh& msh_i ,Level_Set& ls_cell , Velocity& u_projected , size_t time_step )
+plot_u_n_interface( Mesh& msh_i ,Level_Set& ls_cell , Velocity& u_projected , size_t time_step , std::string& folder)
 {
     
   
@@ -14863,7 +14863,7 @@ plot_u_n_interface( Mesh& msh_i ,Level_Set& ls_cell , Velocity& u_projected , si
     
     
   
-    goal_quantities_time_fast(msh_i , interface_points_plot_fin , val_u_n_fin  , vec_n , time_step);
+    goal_quantities_time_fast(msh_i , interface_points_plot_fin , val_u_n_fin  , vec_n , time_step ,folder);
 
            
     
@@ -61495,7 +61495,7 @@ plotting_para_curvature_cont_time_fast( Mesh& msh_i, Curve& curve , size_t degre
 
 template<typename Mesh,typename Level_Set, typename T = typename Mesh::coordinate_type >
 void
-plot_curvature_normal_vs_curv_abscisse( Mesh& msh_i , Level_Set& ls_cell , size_t degree_curve , size_t n_int , size_t time_step )
+plot_curvature_normal_vs_curv_abscisse( Mesh& msh_i , Level_Set& ls_cell , size_t degree_curve , size_t n_int , size_t time_step ,std::string& folder)
 {
     
     
@@ -61509,22 +61509,22 @@ plot_curvature_normal_vs_curv_abscisse( Mesh& msh_i , Level_Set& ls_cell , size_
 
     postprocess_output<double> postoutput_div2;
     
-    std::string filename_curvature_k0 = "curvature_2d_"+ std::to_string(time_step) +".dat";
+    std::string filename_curvature_k0 = folder+"curvature_2d_"+ std::to_string(time_step) +".dat";
     auto test_curv_var_divergence0 = std::make_shared< gnuplot_output_object<double> >(filename_curvature_k0);
     
-    std::string filename_normal_k0 = "normal_2d_"+ std::to_string(time_step) +".dat";
+    std::string filename_normal_k0 = folder+"normal_2d_"+ std::to_string(time_step) +".dat";
     auto test_var_normal0 = std::make_shared< gnuplot_output_object<double> >(filename_normal_k0);
     // ----
-    std::string filename_curv_var = "cell_limit_curvature_"+ std::to_string(time_step) +".dat";
+    std::string filename_curv_var = folder+"cell_limit_curvature_"+ std::to_string(time_step) +".dat";
     auto test_curv_var_cell = std::make_shared< gnuplot_output_object<double> >(filename_curv_var);
     
-    std::string filename_norm_var = "cell_limit_normal_"+ std::to_string(time_step) +".dat";
+    std::string filename_norm_var = folder+"cell_limit_normal_"+ std::to_string(time_step) +".dat";
     auto test_norm_var_cell = std::make_shared< gnuplot_output_object<double> >(filename_norm_var);
      // ----
-    std::string filename_curv_var_inner_cl = "inner_cell_limit_curvature_"+ std::to_string(time_step) +".dat";
+    std::string filename_curv_var_inner_cl = folder+"inner_cell_limit_curvature_"+ std::to_string(time_step) +".dat";
     auto test_inner_cell_curv = std::make_shared< gnuplot_output_object<double> >(filename_curv_var_inner_cl);
     
-    std::string filename_norm_var_inner_cl = "inner_cell_limit_normal_"+ std::to_string(time_step) +".dat";
+    std::string filename_norm_var_inner_cl = folder+"inner_cell_limit_normal_"+ std::to_string(time_step) +".dat";
     auto test_inner_cell_norm = std::make_shared< gnuplot_output_object<double> >(filename_norm_var_inner_cl);
 
     std::vector< point<T, 2> > interface_points_plot ;
@@ -62000,7 +62000,7 @@ template<typename Mesh, typename Parametric_Interface, typename T = typename Mes
 
 template<typename Mesh, typename Parametric_Interface, typename T = typename Mesh::coordinate_type >
 void
-plot_curvature_normal_vs_curv_abscisse_PARAMETRIC( Mesh& msh_i ,  size_t degree_curve , size_t n_int , size_t time_step , size_t degree_curvature , Parametric_Interface& curve )
+plot_curvature_normal_vs_curv_abscisse_PARAMETRIC( Mesh& msh_i ,  size_t degree_curve , size_t n_int , size_t time_step , size_t degree_curvature , Parametric_Interface& curve , std::string& folder)
 {
     
     
@@ -62020,16 +62020,16 @@ plot_curvature_normal_vs_curv_abscisse_PARAMETRIC( Mesh& msh_i ,  size_t degree_
     
 
     postprocess_output<double> postoutput_div_para;
-    std::string filename_curvature_k0 = "curvature_filtered_para_2d_"+ std::to_string(time_step) +".dat";
+    std::string filename_curvature_k0 = folder+"curvature_filtered_para_2d_"+ std::to_string(time_step) +".dat";
     auto test_curvature_para = std::make_shared< gnuplot_output_object<double> >(filename_curvature_k0);
 
-    std::string filename_curv_var_para = "cell_limit_curv_filter_var_para_"+ std::to_string(time_step) +".dat";
+    std::string filename_curv_var_para = folder+"cell_limit_curv_filter_var_para_"+ std::to_string(time_step) +".dat";
     auto test_curv_var_para = std::make_shared< gnuplot_output_object<double> >(filename_curv_var_para);
     
 //    auto test_jacobian = std::make_shared< gnuplot_output_object<double> >("jacobian_para_cont.dat");
 //    auto test_jacobian_cl = std::make_shared< gnuplot_output_object<double> >("jacobian_para_cont_cells.dat");
     
-    std::string filename_curv_var_inner_cl = "inner_cell_limit_curv_filter_para_"+ std::to_string(time_step) +".dat";
+    std::string filename_curv_var_inner_cl = folder+"inner_cell_limit_curv_filter_para_"+ std::to_string(time_step) +".dat";
     auto test_inner_cell = std::make_shared< gnuplot_output_object<double> >(filename_curv_var_inner_cl);
 
     
@@ -62237,7 +62237,7 @@ plot_curvature_normal_vs_curv_abscisse_PARAMETRIC( Mesh& msh_i ,  size_t degree_
 
 template< typename T >
 void
-plotting_in_time_new(const std::vector<T>& time_vec , const std::vector<T>& area_time ,const std::vector<T>& l1_err_u_n_time ,const std::vector<T>& linf_err_u_n_time ,const std::vector<T>& max_val_u_n_time ,const std::vector<T>& l1_err_curvature_time ,const std::vector<T>& linf_err_curvature_time , T dt , const std::vector<std::pair<T,T>>& min_max_vec , const std::vector<T>& flux_interface_time , const std::vector<std::pair<T,T>>& rise_velocity_time , const std::vector<std::pair<T,T>>& centre_mass_err_time , const std::vector<T>& perimeter_time , const std::vector<T>& circularity_time , T circularity_ref , T perimetre_ref , T area_ref , T radius , const std::vector<T>& L1_err_u_n_time , const std::vector<T>& l1_err_u_n_time_para ,const std::vector<T>& linf_err_u_n_time_para , const std::vector<T>& L1_err_u_n_time_para , const std::vector<T>& max_val_u_n_time_para , const std::vector<T>& linf_der_time_interface , const std::vector<T>& eccentricity_vec )
+plotting_in_time_new(const std::vector<T>& time_vec , const std::vector<T>& area_time ,const std::vector<T>& l1_err_u_n_time ,const std::vector<T>& linf_err_u_n_time ,const std::vector<T>& max_val_u_n_time ,const std::vector<T>& l1_err_curvature_time ,const std::vector<T>& linf_err_curvature_time , T dt , const std::vector<std::pair<T,T>>& min_max_vec , const std::vector<T>& flux_interface_time , const std::vector<std::pair<T,T>>& rise_velocity_time , const std::vector<std::pair<T,T>>& centre_mass_err_time , const std::vector<T>& perimeter_time , const std::vector<T>& circularity_time , T circularity_ref , T perimetre_ref , T area_ref , T radius , const std::vector<T>& L1_err_u_n_time , const std::vector<T>& l1_err_u_n_time_para ,const std::vector<T>& linf_err_u_n_time_para , const std::vector<T>& L1_err_u_n_time_para , const std::vector<T>& max_val_u_n_time_para , const std::vector<T>& linf_der_time_interface , const std::vector<T>& eccentricity_vec, std::string& folder )
 {
 
     postprocess_output<T> postoutput;
@@ -62252,22 +62252,22 @@ plotting_in_time_new(const std::vector<T>& time_vec , const std::vector<T>& area
 //    auto testanal1  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_anal_time.dat");
 
 
-    auto test0  = std::make_shared< gnuplot_output_object_time<T> >("area_time.dat");
-    auto test1  = std::make_shared< gnuplot_output_object_time<T> >("lpiccolo1_err_u_n_time.dat");
-    auto test2  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time.dat");
+    auto test0  = std::make_shared< gnuplot_output_object_time<T> >(folder+"area_time.dat");
+    auto test1  = std::make_shared< gnuplot_output_object_time<T> >(folder+"lpiccolo1_err_u_n_time.dat");
+    auto test2  = std::make_shared< gnuplot_output_object_time<T> >(folder+"linf_err_u_n_time.dat");
     
-    auto test_der_int  = std::make_shared< gnuplot_output_object_time<T> >("linf_der_interface_time.dat");
+    auto test_der_int  = std::make_shared< gnuplot_output_object_time<T> >(folder+"linf_der_interface_time.dat");
     
 //    auto test1_counter  = std::make_shared< gnuplot_output_object_time<T> >("lpiccolo1_err_u_n_time_counter.dat");
 //    auto test2_counter  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time_counter.dat");
     
 //    auto test3  = std::make_shared< gnuplot_output_object_time<T> >("max_val_u_n_time.dat");
-    auto test4  = std::make_shared< gnuplot_output_object_time<T> >("l1_err_curvature_time.dat");
-    auto test5  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_curvature_time.dat");
+    auto test4  = std::make_shared< gnuplot_output_object_time<T> >(folder+"l1_err_curvature_time.dat");
+    auto test5  = std::make_shared< gnuplot_output_object_time<T> >(folder+"linf_err_curvature_time.dat");
 //    auto test4_counter  = std::make_shared< gnuplot_output_object_time<T> >("l1_err_curvature_time_counter.dat");
 //    auto test5_counter  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_curvature_time_counter.dat");
     
-    auto test_new0  = std::make_shared< gnuplot_output_object_time<T> >("Lgrande1_err_u_n_time.dat");
+    auto test_new0  = std::make_shared< gnuplot_output_object_time<T> >(folder+"Lgrande1_err_u_n_time.dat");
 //    auto test_new1  = std::make_shared< gnuplot_output_object_time<T> >("lpiccolo1_err_u_n_time_para.dat");
 //    auto test_new2  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time_para.dat");
 //    auto test_new3  = std::make_shared< gnuplot_output_object_time<T> >("Lgrande1_err_u_n_time_para.dat");
@@ -62291,34 +62291,34 @@ plotting_in_time_new(const std::vector<T>& time_vec , const std::vector<T>& area
 //    auto test5b  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_curvature_time_normalised.dat");
     // //auto test4c  = std::make_shared< gnuplot_output_object_time<T> >("l1_l1_err_curvature_err_time.dat");
 
-    auto test_dt  = std::make_shared< gnuplot_output_object_time<T> >("dt_M.dat");
-    auto test_e  = std::make_shared< gnuplot_output_object_time<T> >("eccentricity.dat");
+    auto test_dt  = std::make_shared< gnuplot_output_object_time<T> >(folder+"dt_M.dat");
+    auto test_e  = std::make_shared< gnuplot_output_object_time<T> >(folder+"eccentricity.dat");
 
-    auto test0c  = std::make_shared< gnuplot_output_object_time<T> >("area_time_err.dat");
-    auto test0c_counter  = std::make_shared< gnuplot_output_object_time<T> >("area_time_err_counter.dat");
+    auto test0c  = std::make_shared< gnuplot_output_object_time<T> >(folder+"area_time_err.dat");
+    auto test0c_counter  = std::make_shared< gnuplot_output_object_time<T> >(folder+"area_time_err_counter.dat");
 
 //    auto testm0  = std::make_shared< gnuplot_output_object_time<T> >("min_time.dat");
 //    auto testm1  = std::make_shared< gnuplot_output_object_time<T> >("min_normalised_time.dat");
 //    auto testM0  = std::make_shared< gnuplot_output_object_time<T> >("max_time.dat");
 //    auto testM1  = std::make_shared< gnuplot_output_object_time<T> >("max_normalised_time.dat");
-    auto testflux  = std::make_shared< gnuplot_output_object_time<T> >("flux_interface_time.dat");
+    auto testflux  = std::make_shared< gnuplot_output_object_time<T> >(folder+"flux_interface_time.dat");
 //    auto testvelx  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_x_time.dat");
 //    auto testvely  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_y_time.dat");
-    auto testvel  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_time.dat");
+    auto testvel  = std::make_shared< gnuplot_output_object_time<T> >(folder+"rise_velocity_err_time.dat");
 //    auto testvel_counter  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_time_counter.dat");
-    auto testcomx  = std::make_shared< gnuplot_output_object_time<T> >("centre_mass_err_x_time.dat");
-    auto testcomy  = std::make_shared< gnuplot_output_object_time<T> >("centre_mass_err_y_time.dat");
-    auto testcom  = std::make_shared< gnuplot_output_object_time<T> >("centre_mass_err_time.dat");
+    auto testcomx  = std::make_shared< gnuplot_output_object_time<T> >(folder+"centre_mass_err_x_time.dat");
+    auto testcomy  = std::make_shared< gnuplot_output_object_time<T> >(folder+"centre_mass_err_y_time.dat");
+    auto testcom  = std::make_shared< gnuplot_output_object_time<T> >(folder+"centre_mass_err_time.dat");
 
 
-    auto testper0  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_time.dat");
+    auto testper0  = std::make_shared< gnuplot_output_object_time<T> >(folder+"perimeter_time.dat");
 //    auto testper1  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_normalised_time.dat");
 //    auto testper2  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_err_time.dat");
 //    auto testper2_counter  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_err_time_counter.dat");
     
-    auto testcirc  = std::make_shared< gnuplot_output_object_time<T> >("circularity_time.dat");
-    auto testcirc1  = std::make_shared< gnuplot_output_object_time<T> >("circularity_error_time.dat");
-    auto testcirc1_counter  = std::make_shared< gnuplot_output_object_time<T> >("circularity_error_time_counter.dat");
+    auto testcirc  = std::make_shared< gnuplot_output_object_time<T> >(folder+"circularity_time.dat");
+    auto testcirc1  = std::make_shared< gnuplot_output_object_time<T> >(folder+"circularity_error_time.dat");
+    auto testcirc1_counter  = std::make_shared< gnuplot_output_object_time<T> >(folder+"circularity_error_time_counter.dat");
 
     size_t tot = l1_err_u_n_time.size() ;
 
@@ -82150,6 +82150,8 @@ int main(int argc, char **argv)
 {
     using RealType = double;
     RealType sizeBox = 0.5;
+
+    std::string folder = "simu_prova/";
     size_t degree           = 1;
     size_t int_refsteps     = 0; // 4
     size_t degree_FEM       = 2;
@@ -83090,13 +83092,13 @@ int main(int argc, char **argv)
         
         // TOLTO TO BE FASTER
         if(time_step % 20 == 0){
-            output_mesh_info2_time(msh_i, level_set_function,tot_time,time_step);
-            testing_level_set_time(msh,level_set_function,tot_time,time_step);
-            plot_u_n_interface( msh_i , ls_cell , u_projected , time_step );
-            testing_velocity_field(msh , u_projected,time_step) ;
+            output_mesh_info2_time(msh_i, level_set_function,tot_time,time_step,folder);
+            testing_level_set_time(msh,level_set_function,tot_time,time_step,folder);
+            plot_u_n_interface( msh_i , ls_cell , u_projected , time_step ,folder);
+            testing_velocity_field(msh , u_projected,time_step,folder) ;
         }
 //        output_mesh_info2_time_fixed_mesh(msh_i, level_set_function,tot_time,time_step);
-        testing_level_set(msh , level_set_function ) ;
+        testing_level_set(msh , level_set_function ,folder) ;
          // Updating level set
          ls_cell.level_set = level_set_function;
          ls_cell.agglo_msh = msh_i;
@@ -83216,8 +83218,8 @@ int main(int argc, char **argv)
         size_t counter_interface_pts_para = 0;
         T max_curvature = 0;
         T min_curvature = 1e+6;
-        plot_curvature_normal_vs_curv_abscisse(msh_i, ls_cell, degree_curve,int_refsteps , 1 );
-        plot_curvature_normal_vs_curv_abscisse_PARAMETRIC(msh_i,  degree_curve,int_refsteps , 1, degree_curvature , para_curve_cont );
+        plot_curvature_normal_vs_curv_abscisse(msh_i, ls_cell, degree_curve,int_refsteps , 1 ,folder);
+        plot_curvature_normal_vs_curv_abscisse_PARAMETRIC(msh_i,  degree_curve,int_refsteps , 1, degree_curvature , para_curve_cont ,folder);
         
 //        check_goal_quantities_final_para( msh_i ,ls_cell, para_curve_tmp , u_projected, perimeter, d_a,  area_fin, centre_mass_x ,   centre_mass_y , degree_FEM , mass_fin , degree_velocity , l1_divergence_error_fin , l2_divergence_error_fin , linf_divergence_error_fin , radius , L1_divergence_error_fin ,  time_step ,rise_vel0 , rise_vel1 ,flux_interface, counter_interface_pts_fin,degree_curve,int_refsteps, L1_normal_interface_para,linf_u_n_para,max_u_n_val_para,l1_normal_interface_para,counter_interface_pts_para);
         
@@ -83319,7 +83321,7 @@ int main(int argc, char **argv)
         tc_iteration.toc();
         std::cout<<"Time for this iteration = "<<tc_iteration<<std::endl;
         plotting_in_time_new( time_vec , area_time , l1_err_u_n_time , linf_err_u_n_time , max_val_u_n_time , l1_err_curvature_time , linf_err_curvature_time , dt_M ,min_max_vec ,  flux_interface_time , rise_velocity_time , centre_mass_err_time , perimeter_time , circularity_time2 , circularity_ref , perim_ref , area_ref , radius ,
-            L1_err_u_n_time , l1_err_u_n_time_para , linf_err_u_n_time_para , L1_err_u_n_time_para , max_val_u_n_time_para ,linf_der_time_interface , eccentricity_vec);
+            L1_err_u_n_time , l1_err_u_n_time_para , linf_err_u_n_time_para , L1_err_u_n_time_para , max_val_u_n_time_para ,linf_der_time_interface , eccentricity_vec,folder);
     } // End of the temporal loop
     
 
