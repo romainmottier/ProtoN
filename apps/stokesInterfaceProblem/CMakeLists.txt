@@ -1,0 +1,3 @@
+add_executable(stokesInterfaceProblem stokesInterfaceProblem.cpp)
+target_link_libraries(stokesInterfaceProblem ${LINK_LIBS})
+install(TARGETS stokesInterfaceProblem RUNTIME DESTINATION bin)

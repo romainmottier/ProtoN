@@ -15,4 +15,5 @@
 #add_subdirectory(unsteady_interface_stokes)
 #add_subdirectory(interface_stokes_new)
 #add_subdirectory(interface_stokes_functional)
-add_subdirectory(interface_stokes_test_cases)
+#add_subdirectory(interface_stokes_test_cases)
+add_subdirectory(stokesInterfaceProblem)
