@@ -3248,10 +3248,575 @@ namespace computationQuantities {
 
 
 
+    template<typename Mesh, typename Cell, typename LS, typename TC, typename RealType, typename ASS, typename BDRY, typename SOL, typename VEL, typename PP1, typename PP2, typename Function1, typename Function2, typename Function3>
+    void
+    post_processing_functionLS_fast_2(const Mesh &msh, Cell &cl, size_t hdi_cell, size_t hdi_face,
+                                      LS &level_set_function, TC &test_case, ASS &assembler_sc, BDRY &bcs_vel,
+                                      const SOL &sol, VEL &velocity, RealType &H1_error, RealType &L2_error, PP1 &uT1_gp,
+                                      PP1 &uT2_gp,
+                                      PP1 &p_gp, PP2 &interface_file, RealType &L2_pressure_error, RealType &l1_u_n_error,
+                                      RealType &l2_u_n_error, RealType &linf_u_n_error, size_t &counter_interface_pts,
+                                      size_t &degree,
+                                      RealType &force_pressure_avg, RealType &force_pressure_max, size_t &counter_pt_Gamma,
+                                      PP1 &test_gammaH,
+                                      PP1 &test_press_jump, PP1 &test_grad_vel_jump, RealType &distance_pts,
+                                      RealType &force_gradVel_max,
+                                      RealType &force_gradVel_avg, PP1 &p1_gp, PP1 &p2_gp,
+                                      Function1 &sol_vel, Function2 &sol_p, Function3 &vel_grad) {
+
+
+        vector_cell_basis <cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi_cell);
+        RealType kappa_1 = test_case.parms.kappa_1;
+        RealType kappa_2 = test_case.parms.kappa_2;
+
+        cell_basis <cuthho_poly_mesh<RealType>, RealType> pb(msh, cl, hdi_face);
+        auto cbs = cb.size();
+        auto pbs = pb.size();
+
+
+        level_set_function.cell_assignment(cl); // ----------------------------> TOGLIERE????
+        test_case.test_case_cell_assignment(cl); // ----------------------------> TOGLIERE????
+
+//    auto sol_vel = test_case.sol_vel;
+//    auto sol_p = test_case.sol_p;
+//    auto vel_grad = test_case.vel_grad;
+
+        assembler_sc.set_dir_func(bcs_vel); // CAMBIA QUALCOSA?? // ----------------------------> TOGLIERE????
+
+
+        Matrix<RealType, Dynamic, 1> vel_locdata_n, vel_locdata_p, vel_locdata;
+        Matrix<RealType, Dynamic, 1> P_locdata_n, P_locdata_p, P_locdata;
+        Matrix<RealType, Dynamic, 1> vel_cell_dofs_n, vel_cell_dofs_p, vel_cell_dofs;
+
+
+        vel_locdata = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+        P_locdata = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+
+        vel_cell_dofs = vel_locdata.head(cbs);
+
+
+
+// NOT AGGLO CELL
+        if (level_set_function.subcells.size() < 1) {
+//                assert(level_set_function.agglo_LS_cl.user_data.offset_subcells.size()==2);
+//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
+            auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
+            auto cl_old = velocity.msh.cells[offset_old];
+            auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
+//                auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
+            size_t i_local = 0;
+            for (const auto &ln_Qk: Lagrange_nodes_Qk) {
+                auto phi_HHO = cb.eval_basis(ln_Qk);
+                auto vel = phi_HHO.transpose() * vel_cell_dofs;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                i_local++;
+
+            }
+
+        } else // AGGLO CELL
+        {
+            for (size_t i_subcell = 0;
+                 i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size(); i_subcell++) {
+                auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+//std::cout<<"offset_old = "<<offset_old<<std::endl;
+                auto cl_old = velocity.msh.cells[offset_old];
+                auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
+//                    auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
+                size_t i_local = 0;
+                for (const auto &ln_Qk: Lagrange_nodes_Qk) {
+                    auto phi_HHO = cb.eval_basis(ln_Qk);
+                    auto vel = phi_HHO.transpose() * vel_cell_dofs;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                    i_local++;
+
+                }
+
+            }
+        }
+
+        RealType kappa = test_case.parms.kappa_1;
+        if (location(msh, cl) == element_location::IN_POSITIVE_SIDE)
+            kappa = test_case.parms.kappa_2;
+
+        auto qps = integrate(msh, cl, 2 * hdi_cell);
+        for (auto &qp: qps) {
+// Compute H1-error //
+            auto t_dphi = cb.eval_gradients(qp.first);
+            Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+            for (size_t i = 1; i < cbs; i++)
+                grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
+
+            Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+            Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
+            H1_error += qp.second * kappa * inner_product(grad_sym_diff, grad_sym_diff);
+
+// Compute L2-error //
+            auto t_phi = cb.eval_basis(qp.first);
+            auto v = t_phi.transpose() * vel_cell_dofs;
+            Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+
+            L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
+
+            uT1_gp->add_data(qp.first, v(0));
+            uT2_gp->add_data(qp.first, v(1));
+            if (interface_file) {
+
+                interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
+
+            }
+
+// L2 - pressure - error //
+            auto p_phi = pb.eval_basis(qp.first);
+            RealType p_num = p_phi.dot(P_locdata);
+            RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
+
+            L2_pressure_error += qp.second * p_diff * p_diff / kappa;
+
+            p_gp->add_data(qp.first, p_num);
+            if (level_set_function(qp.first, cl) > 0.0)
+                p2_gp->add_data(qp.first, p_num);
+            else
+                p1_gp->add_data(qp.first, p_num);
+        }
+
+
+    }
+
+
+    template<typename Mesh, typename Cell, typename LS, typename TC, typename RealType, typename ASS, typename BDRY, typename SOL, typename VEL, typename PP1, typename PP2, typename Function1, typename Function2, typename Function3>
+    void
+    post_processing_functionLS_2(const Mesh &msh, Cell &cl, size_t hdi_cell, size_t hdi_face,
+                                 LS &level_set_function, TC &test_case, ASS &assembler_sc, BDRY &bcs_vel,
+                                 const SOL &sol, VEL &velocity, RealType &H1_error, RealType &L2_error, PP1 &uT1_gp,
+                                 PP1 &uT2_gp, PP1 &p_gp, PP2 &interface_file, RealType &L2_pressure_error,
+                                 RealType &l1_u_n_error,
+                                 RealType &l2_u_n_error, RealType &linf_u_n_error, size_t &counter_interface_pts,
+                                 size_t &degree,
+                                 RealType &force_pressure_avg, RealType &force_pressure_max, size_t &counter_pt_Gamma,
+                                 PP1 &test_gammaH,
+                                 PP1 &test_press_jump, PP1 &test_grad_vel_jump, RealType &distance_pts,
+                                 RealType &force_gradVel_max,
+                                 RealType &force_gradVel_avg, PP1 &test_veln_n, PP1 &p1_gp, PP1 &p2_gp,
+                                 PP1 &test_grad_vel_t_n,
+                                 Function1 &sol_vel, Function2 &sol_p, Function3 &vel_grad, PP1 &test_veln_t,
+                                 PP1 &test_velp_n, PP1 &test_velp_t) {
+
+
+        vector_cell_basis <cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi_cell);
+        RealType kappa_1 = test_case.parms.kappa_1;
+        RealType kappa_2 = test_case.parms.kappa_2;
+
+        cell_basis <cuthho_poly_mesh<RealType>, RealType> pb(msh, cl, hdi_face);
+        auto cbs = cb.size();
+//auto pbs = pb.size();
+//    auto sol_vel = test_case.sol_vel;
+//    auto sol_p = test_case.sol_p;
+//    auto vel_grad = test_case.vel_grad;
+
+        level_set_function.cell_assignment(cl); // ----------------------------> TOGLIERE????
+        test_case.test_case_cell_assignment(cl); // ----------------------------> TOGLIERE????
+
+
+//auto bcs_vel = test_case.bcs_vel;
+//auto neumann_jump = test_case.neumann_jump;
+        assembler_sc.set_dir_func(bcs_vel); // CAMBIA QUALCOSA?? // ----------------------------> TOGLIERE????
+
+
+        Matrix<RealType, Dynamic, 1> vel_locdata_n, vel_locdata_p, vel_locdata;
+        Matrix<RealType, Dynamic, 1> P_locdata_n, P_locdata_p, P_locdata;
+        Matrix<RealType, Dynamic, 1> vel_cell_dofs_n, vel_cell_dofs_p, vel_cell_dofs;
+
+        if (location(msh, cl) == element_location::ON_INTERFACE) {
+            vel_locdata_n = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+            vel_locdata_p = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+            P_locdata_n = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
+            P_locdata_p = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+
+
+            vel_cell_dofs_n = vel_locdata_n.head(cbs);
+            vel_cell_dofs_p = vel_locdata_p.head(cbs);
+
+
+// NOT AGGLO CELL
+            if (level_set_function.subcells.size() < 1) {
+
+                auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
+                auto cl_old = velocity.msh.cells[offset_old];
+                auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
+                size_t i_local = 0;
+                for (const auto &ln_Qk: Lagrange_nodes_Qk) {
+                    if (level_set_function(ln_Qk, cl_old) > 0.0) {
+                        auto phi_HHO = cb.eval_basis(ln_Qk);
+                        auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                        i_local++;
+                    } else {
+                        auto phi_HHO = cb.eval_basis(ln_Qk);
+                        auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                        i_local++;
+//  velocity.first(i_local,i_global) = cell_dofs_n.dot( phi_HHO );
+//  velocity.second(i_local,i_global) = 0; // elliptic case is scalar
+                    }
+                }
+
+            } else // AGGLO CELL
+            {
+
+                for (size_t i_subcell = 0;
+                     i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size(); i_subcell++) {
+                    auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+//std::cout<<"offset_old = "<<offset_old<<std::endl;
+                    auto cl_old = velocity.msh.cells[offset_old];
+                    auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
+//                    auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
+                    size_t i_local = 0;
+                    for (const auto &ln_Qk: Lagrange_nodes_Qk) {
+                        if (level_set_function(ln_Qk, cl_old) > 0.0) {
+                            auto phi_HHO = cb.eval_basis(ln_Qk);
+                            auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                            i_local++;
+                        } else {
+                            auto phi_HHO = cb.eval_basis(ln_Qk);
+                            auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                            i_local++;
+//  velocity.first(i_local,i_global) = cell_dofs_n.dot( phi_HHO );
+//  velocity.second(i_local,i_global) = 0; // elliptic case is scalar
+                        }
+                    }
+
+                }
+            }
+
+//            tc2.toc();
+//            std::cout<<"time tc2 3 = "<<tc2<<std::endl;
+//            tc2.tic();
+            auto qps_n = integrate(msh, cl, 2 * hdi_cell, element_location::IN_NEGATIVE_SIDE);
+            for (auto &qp: qps_n) {
+// Compute H1-error //
+                auto t_dphi = cb.eval_gradients(qp.first);
+                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+                for (size_t i = 1; i < cbs; i++)
+                    grad += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
+                H1_error += qp.second * kappa_1 * inner_product(grad_sym_diff, grad_sym_diff);
+
+// Compute L2-error //
+                auto t_phi = cb.eval_basis(qp.first);
+                auto v = t_phi.transpose() * vel_cell_dofs_n;
+                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+//                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * kappa_1 * sol_diff.dot(sol_diff);
+
+                uT1_gp->add_data(qp.first, v(0));
+                uT2_gp->add_data(qp.first, v(1));
+
+                interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
+
+
+
+// L2 - pressure - error //
+                auto p_phi = pb.eval_basis(qp.first);
+                RealType p_num = p_phi.dot(P_locdata_n);
+                RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
+//                auto p_prova = test_case.sol_p( qp.first ) ;
+//                std::cout<<"In pt = "<<qp.first<<" --> pressure ANAL  = "<<p_prova<<" , pressure NUM = "<< p_num<<std::endl;
+//                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / kappa_1;
+                p_gp->add_data(qp.first, p_num);
+                p1_gp->add_data(qp.first, p_num);
+            }
+
+            auto qps_p = integrate(msh, cl, 2 * hdi_cell, element_location::IN_POSITIVE_SIDE);
+            for (auto &qp: qps_p) {
+// Compute H1-error //
+                auto t_dphi = cb.eval_gradients(qp.first);
+                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+                for (size_t i = 1; i < cbs; i++)
+                    grad += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
+                H1_error += qp.second * kappa_2 * inner_product(grad_sym_diff, grad_sym_diff);
+
+// Compute L2-error //
+                auto t_phi = cb.eval_basis(qp.first);
+                auto v = t_phi.transpose() * vel_cell_dofs_p;
+                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+//                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * kappa_2 * sol_diff.dot(sol_diff);
+
+                uT1_gp->add_data(qp.first, v(0));
+                uT2_gp->add_data(qp.first, v(1));
+//                uT_gp->add_data( qp.first, std::make_pair(v(0),v(1)) );
+                if (interface_file) {
+
+                    interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
+
+                }
+// L2 - pressure - error //
+                auto p_phi = pb.eval_basis(qp.first);
+                RealType p_num = p_phi.dot(P_locdata_p);
+                RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
+//auto p_prova = test_case.sol_p( qp.first ) ;
+//std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
+//                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / kappa_2;
+
+                p_gp->add_data(qp.first, p_num);
+                p2_gp->add_data(qp.first, p_num);
+            }
+            if (1) {
+                for (auto &interface_point: cl.user_data.interface) {
+                    auto t_phi = cb.eval_basis(interface_point);
+                    auto v = t_phi.transpose() * vel_cell_dofs_p;
+                    auto n = level_set_function.normal(interface_point);
+                    auto v_n = v.dot(n);
+                    l1_u_n_error += std::abs(v_n);
+                    l2_u_n_error += pow(v_n, 2.0);
+                    linf_u_n_error = std::max(linf_u_n_error, std::abs(v_n));
+                    counter_interface_pts++;
+                }
+            }
+//            tc2.toc();
+//            std::cout<<"time tc2 2 = "<<tc2<<std::endl;
+
+            if (1) // analysis power of pressure
+            {
+                auto parametric_interface = test_case.parametric_interface;
+                auto gamma = test_case.gamma;
+                auto msh_int = cl.user_data.integration_msh;
+                auto global_cells_i = parametric_interface.get_global_cells_interface(msh, cl);
+                Matrix<RealType, 2, 1> phi_t;
+                size_t degree_curve = msh_int.degree_curve;
+                RealType tot = 10.0;
+//                Interface_parametrisation_mesh1d curve(degree_curve) ;
+//            degree += 3*degree_curve -4 ; // 2*degree_curve ; // TO BE CHECKED
+//            auto qps = edge_quadrature<RealType>(degree);
+                auto neumann = test_case.neumann_jump;
+                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++) {
+                    auto pts = points(msh_int, msh_int.cells[i_cell]);
+                    size_t global_cl_i = global_cells_i[i_cell];
+//                auto qp_old = 0.5 *(*(qps.begin())).first.x() + 0.5;
+//                auto p = parametric_interface(t , pts , degree_curve ) ;
+//                point<RealType,2> pt_old ; //= typename Mesh::point_type( p(0) , p(1) ) ;
+
+                    for (RealType i = 0.0; i <= tot; i++) {
+                        auto t = 0.0 + i / tot;
+                        auto p = parametric_interface(t, pts, degree_curve);
+                        point<RealType, 2> pt = typename Mesh::point_type(p(0), p(1));
+//                    if( t == 0.0 )
+//                        pt_old = pt;
+                        auto p_phi = pb.eval_basis(pt);
+                        RealType p_pos = p_phi.dot(P_locdata_p);
+                        RealType p_neg = p_phi.dot(P_locdata_n);
+
+
+                        auto phi_HHO = cb.eval_basis(pt);
+                        auto t_dphi = cb.eval_gradients(pt);
+                        Matrix<RealType, 2, 2> grad_p = Matrix<RealType, 2, 2>::Zero();
+                        Matrix<RealType, 2, 2> grad_n = Matrix<RealType, 2, 2>::Zero();
+
+                        for (size_t i = 1; i < cbs; i++) {
+                            grad_p += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
+                            grad_n += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                        }
+                        Matrix<RealType, 2, 2> grad_sym_p = 0.5 * (grad_p + grad_p.transpose());
+                        Matrix<RealType, 2, 2> grad_sym_n = 0.5 * (grad_n + grad_n.transpose());
+                        auto vel_n = phi_HHO.transpose() * vel_cell_dofs_n;
+
+                        auto vel_p = phi_HHO.transpose() * vel_cell_dofs_p; // added 26/07/2023
+
+                        Matrix<RealType, 2, 1> phi_n = level_set_function.normal(pt);
+
+                        RealType val_un_n = (vel_n).transpose() * (phi_n);
+                        RealType val_up_n = (vel_p).transpose() * (phi_n);
+
+
+                        auto val_p = (p_pos - p_neg);
+                        Matrix<RealType, 2, 1> val_grad_u_n =
+                                (2.0 * kappa_1 * grad_sym_n - 2.0 * kappa_2 * grad_sym_p) * (phi_n);
+                        RealType val_u = (phi_n.transpose()) * val_grad_u_n;
+                        phi_t(0) = -phi_n(1);
+                        phi_t(1) = phi_n(0);
+
+                        RealType val_un_t = (vel_n).transpose() * (phi_t);
+                        RealType val_up_t = (vel_p).transpose() * (phi_t);
+
+                        RealType t_val_u_n = (phi_t.transpose()) * val_grad_u_n;
+//                    RealType val_u ;
+//                    if( signbit(phi_n(0)) == signbit(grads_u_n(0)) && signbit(phi_n(1)) == signbit(grads_u_n(1)) )
+//                        val_u = grads_u_n.norm();
+//                    else
+//                        val_u = -grads_u_n.norm();
+                        point<RealType, 2> curv_var = typename Mesh::point_type(distance_pts, 0.0);
+                        auto val_H = gamma * level_set_function.divergence(pt);
+                        test_press_jump->add_data(curv_var, val_p);
+                        test_gammaH->add_data(curv_var, val_H);
+                        test_grad_vel_jump->add_data(curv_var, val_u);
+                        test_grad_vel_t_n->add_data(curv_var, t_val_u_n);
+
+                        test_veln_n->add_data(curv_var, val_un_n);
+                        test_veln_t->add_data(curv_var, val_un_t);
+
+                        test_velp_n->add_data(curv_var, val_up_n);
+                        test_velp_t->add_data(curv_var, val_up_t);
+
+                        force_pressure_avg += val_p / val_H;
+                        force_pressure_max = std::max(force_pressure_max, std::abs(val_p / val_H));
+
+                        force_gradVel_avg += val_u / val_H;
+                        force_gradVel_max = std::max(force_gradVel_max, std::abs(val_u / val_H));
+
+
+                        counter_pt_Gamma++;
+
+                        RealType dist;
+
+                        if (t == 1)
+                            dist = 0.0;
+                        else
+                            dist = (parametric_interface(t + 1.0 / tot, pts, degree_curve) - p).norm();
+
+                        distance_pts += dist;
+
+                    }
+                }
+
+
+            }
+
+        } else {
+//            tc2.tic();
+            vel_locdata = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+            P_locdata = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+
+            vel_cell_dofs = vel_locdata.head(cbs);
+
+
+
+// NOT AGGLO CELL
+            if (level_set_function.subcells.size() < 1) {
+//                assert(level_set_function.agglo_LS_cl.user_data.offset_subcells.size()==2);
+//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
+                auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
+                auto cl_old = velocity.msh.cells[offset_old];
+                auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
+//                auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
+                size_t i_local = 0;
+                for (const auto &ln_Qk: Lagrange_nodes_Qk) {
+                    auto phi_HHO = cb.eval_basis(ln_Qk);
+                    auto vel = phi_HHO.transpose() * vel_cell_dofs;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                    i_local++;
+
+                }
+
+            } else // AGGLO CELL
+            {
+                for (size_t i_subcell = 0;
+                     i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size(); i_subcell++) {
+                    auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
+//std::cout<<"offset_old = "<<offset_old<<std::endl;
+                    auto cl_old = velocity.msh.cells[offset_old];
+                    auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
+//                    auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
+                    size_t i_local = 0;
+                    for (const auto &ln_Qk: Lagrange_nodes_Qk) {
+                        auto phi_HHO = cb.eval_basis(ln_Qk);
+                        auto vel = phi_HHO.transpose() * vel_cell_dofs;
+// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
+// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
+//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
+                        i_local++;
+
+                    }
+
+                }
+            }
+//            tc2.toc();
+//            std::cout<<"time tc2 1 = "<<tc2<<std::endl;
+//            tc2.tic();
+            RealType kappa = test_case.parms.kappa_1;
+            if (location(msh, cl) == element_location::IN_POSITIVE_SIDE)
+                kappa = test_case.parms.kappa_2;
+
+            auto qps = integrate(msh, cl, 2 * hdi_cell);
+            for (auto &qp: qps) {
+// Compute H1-error //
+                auto t_dphi = cb.eval_gradients(qp.first);
+                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+
+                for (size_t i = 1; i < cbs; i++)
+                    grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
+
+                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
+//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
+                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
+                H1_error += qp.second * kappa * inner_product(grad_sym_diff, grad_sym_diff);
+
+// Compute L2-error //
+                auto t_phi = cb.eval_basis(qp.first);
+                auto v = t_phi.transpose() * vel_cell_dofs;
+                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+//                L2_error += qp.second * sol_diff.dot(sol_diff);
+                L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
+
+                uT1_gp->add_data(qp.first, v(0));
+                uT2_gp->add_data(qp.first, v(1));
+//                uT_gp->add_data( qp.first, std::make_pair(v(0),v(1)) );
+                if (interface_file) {
+
+                    interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
+
+                }
+
+// L2 - pressure - error //
+                auto p_phi = pb.eval_basis(qp.first);
+                RealType p_num = p_phi.dot(P_locdata);
+                RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
+//auto p_prova = test_case.sol_p( qp.first ) ;
+//std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
+//                L2_pressure_error += qp.second * p_diff * p_diff;
+                L2_pressure_error += qp.second * p_diff * p_diff / kappa;
+
+                p_gp->add_data(qp.first, p_num);
+                if (level_set_function(qp.first, cl) > 0.0)
+                    p2_gp->add_data(qp.first, p_num);
+                else
+                    p1_gp->add_data(qp.first, p_num);
+            }
+//            tc2.toc();
+//            std::cout<<"time tc2 0 = "<<tc2<<std::endl;
+        }
+
+
+    }
+
+
 }
 
-
-namespace testcases{
-
-
-}

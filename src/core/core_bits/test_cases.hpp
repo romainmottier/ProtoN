@@ -1968,8 +1968,11 @@ test_case_kink_velocity_old(T R, T a, T b, params<T> parms_, bool sym_grad)
 
 >
 (
-circle_level_set<T>(R, a, b), parms_,
-[R,a,b,parms_]( const typename Mesh::point_type &pt ) -> Eigen::Matrix<T, 2, 1> { // sol_vel
+circle_level_set<T>(R, a, b
+), parms_,
+[R,a,b,parms_](
+const typename Mesh::point_type &pt
+) -> Eigen::Matrix<T, 2, 1> { // sol_vel
 Matrix<T, 2, 1> ret;
 T x1 = pt.x() - a;
 T y1 = pt.y() - b;
@@ -1981,16 +1984,29 @@ if( r2<R2 )
 ur = r2 * r2 * r2 / parms_.kappa_1;
 else
 ur = (r2 * r2 * r2 - R2 * R2 * R2) / parms_.kappa_2 + R2 * R2 * R2 / parms_.kappa_1;
-ret(0) = ur *y1 / r;
-ret(1) = - ur *x1 / r;
-return ret;
+ret(0) =
+ur *y1
+/
+r;
+ret(1) = -
+ur *x1
+/
+r;
+return
+ret;
 },
-[a,b](const typename Mesh::point_type &pt) -> T { // p
+[a,b](
+const typename Mesh::point_type &pt
+) -> T { // p
 T x1 = pt.x() - a;
 T y1 = pt.y() - b;
 T r2 = x1 * x1 + y1 * y1;
-return r2 *r2 - 7.0/180.0;},
-[R,a,b,parms_](const typename Mesh::point_type &pt ) -> Eigen::Matrix<T, 2, 1> { // rhs
+return
+r2 *r2
+- 7.0/180.0;},
+[R,a,b,parms_](
+const typename Mesh::point_type &pt
+) -> Eigen::Matrix<T, 2, 1> { // rhs
 T x1 = pt.x() - a;
 T y1 = pt.y() - b;
 T r2 = x1 * x1 + y1 * y1;
@@ -2001,11 +2017,20 @@ if(r2 > R2)
 kappa_Delta_ur = kappa_Delta_ur + (1.0 - parms_.kappa_2 / parms_.kappa_1) * R2 * R2 * R2 / r2;
 
 Matrix<T, 2, 1> ret;
-ret(0) = - y1 *kappa_Delta_ur / r + 4.0* x1 *r2;
-ret(1) = x1 *kappa_Delta_ur / r + 4.0* y1 *r2;
-return ret;
+ret(0) = -
+y1 *kappa_Delta_ur
+/ r + 4.0*
+x1 *r2;
+ret(1) =
+x1 *kappa_Delta_ur
+/ r + 4.0*
+y1 *r2;
+return
+ret;
 },
-[R,a,b,parms_]( const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> { // bcs
+[R,a,b,parms_](
+const typename Mesh::point_type &pt
+) -> Eigen::Matrix<T, 2, 1> { // bcs
 Matrix<T, 2, 1> ret;
 T x1 = pt.x() - a;
 T y1 = pt.y() - b;
@@ -2018,11 +2043,20 @@ ur = r2 * r2 * r2 / parms_.kappa_1;
 else
 ur = (r2 * r2 * r2 - R2 * R2 * R2) / parms_.kappa_2
      + R2 * R2 * R2 / parms_.kappa_1;
-ret(0) = ur *y1 / r;
-ret(1) = - ur *x1 / r;
-return ret;
+ret(0) =
+ur *y1
+/
+r;
+ret(1) = -
+ur *x1
+/
+r;
+return
+ret;
 },
-[R,a,b,parms_]( const typename Mesh::point_type &pt ) -> auto { // grad
+[R,a,b,parms_](
+const typename Mesh::point_type &pt
+) -> auto { // grad
 T x1 = (pt.x() - a);
 T y1 = (pt.y() - b);
 T r2 = x1 * x1 + y1 * y1;
@@ -2036,44 +2070,86 @@ T D = -5.0 * r * r2 * x1 * y1;
 Matrix<T, 2, 2> ret;
 if(r2<R2)
 {
-ret(0,0) = A / parms_.kappa_1;
-ret(0,1) = B / parms_.kappa_1;
-ret(1,0) = C / parms_.kappa_1;
-ret(1,1) = D / parms_.kappa_1;
+ret(0,0) = A / parms_.
+kappa_1;
+ret(0,1) = B / parms_.
+kappa_1;
+ret(1,0) = C / parms_.
+kappa_1;
+ret(1,1) = D / parms_.
+kappa_1;
 }
 else
 {
-ret(0,0) = A / parms_.kappa_2 + (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 *R2 * R2 *x1 * y1 / ( r *r2 );
-ret(0,1) = B / parms_.kappa_2 - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 *R2 * R2 *x1 * x1 / ( r *r2 );
-ret(1,0) = C / parms_.kappa_2 + (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 *R2 * R2 *y1 * y1 / ( r *r2 );
-ret(1,1) = D / parms_.kappa_2 - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) * R2 *R2 * R2 *x1 * y1 / ( r *r2 );
+ret(0,0) = A / parms_.kappa_2 + (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) *
+R2 *R2
+*
+R2 *x1
+* y1 / (
+r *r2
+);
+ret(0,1) = B / parms_.kappa_2 - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) *
+R2 *R2
+*
+R2 *x1
+* x1 / (
+r *r2
+);
+ret(1,0) = C / parms_.kappa_2 + (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) *
+R2 *R2
+*
+R2 *y1
+* y1 / (
+r *r2
+);
+ret(1,1) = D / parms_.kappa_2 - (1.0/parms_.kappa_2 - 1.0/parms_.kappa_1) *
+R2 *R2
+*
+R2 *x1
+* y1 / (
+r *r2
+);
 }
-return ret;
+return
+ret;
 },
-[]( const typename Mesh::point_type &pt ) -> Eigen::Matrix<T, 2, 1> {/* Dir */
+[](
+const typename Mesh::point_type &pt
+) -> Eigen::Matrix<T, 2, 1> {/* Dir */
 Matrix<T, 2, 1> ret;
 ret(0) = 0.0;
 ret(1) = 0.0;
-return ret;
+return
+ret;
 },
-[R,a,b,parms_,sym_grad]( const typename Mesh::point_type &pt ) -> Eigen::Matrix<T, 2, 1> {/* Neu */
+[R,a,b,parms_,sym_grad](
+const typename Mesh::point_type &pt
+) -> Eigen::Matrix<T, 2, 1> {/* Neu */
 Matrix<T, 2, 1> ret;
 if(sym_grad)
 {
 T x1 = (pt.x() - a);
 T y1 = (pt.y() - b);
 T r2 = x1 * x1 + y1 * y1;
-ret(0) = - (1.0 - parms_.kappa_2 / parms_.kappa_1) * r2 *r2 * y1;
-ret(1) = (1.0 - parms_.kappa_2 / parms_.kappa_1) * r2 *r2 * x1;
+ret(0) = - (1.0 - parms_.kappa_2 / parms_.kappa_1) *
+r2 *r2
+*
+y1;
+ret(1) = (1.0 - parms_.kappa_2 / parms_.kappa_1) *
+r2 *r2
+*
+x1;
 }
 else
 {
 ret(0) = 0.0;
 ret(1) = 0.0;
 }
-return ret;
+return
+ret;
 })
-{}
+{
+}
 };
 
 template<typename Mesh, typename T>
@@ -2096,7 +2172,7 @@ template<typename T, typename Mesh, typename Function>
 class test_case_eshelby :
         public test_case_stokes<T, Function, Mesh> {
 public:
-    test_case_eshelby(const Function &level_set__, params <T> parms_, bool sym_grad)
+    test_case_eshelby(const Function &level_set__, params<T> parms_, bool sym_grad)
             : test_case_stokes<T, Function, Mesh>
                       (level_set__, parms_,
                        [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> { // sol_vel
@@ -2179,7 +2255,7 @@ public:
 };
 
 template<typename Mesh, typename T, typename Function>
-auto make_test_case_eshelby(const Mesh &msh, const Function &level_set_function, params <T> parms_, bool sym_grad) {
+auto make_test_case_eshelby(const Mesh &msh, const Function &level_set_function, params<T> parms_, bool sym_grad) {
     return test_case_eshelby<typename Mesh::coordinate_type, Mesh, Function>(level_set_function, parms_, sym_grad);
 }
 
@@ -2193,7 +2269,7 @@ template<typename T, typename Mesh, typename Function>
 class test_case_eshelby_2 :
         public test_case_stokes<T, Function, Mesh> {
 public:
-    test_case_eshelby_2(const Function &level_set__, params <T> parms_, bool sym_grad)
+    test_case_eshelby_2(const Function &level_set__, params<T> parms_, bool sym_grad)
             : test_case_stokes<T, Function, Mesh>
                       (level_set__, parms_,
                        [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -2266,7 +2342,7 @@ public:
 };
 
 template<typename Mesh, typename T, typename Function>
-auto make_test_case_eshelby_2(const Mesh &msh, const Function &level_set_function, params <T> parms_, bool sym_grad) {
+auto make_test_case_eshelby_2(const Mesh &msh, const Function &level_set_function, params<T> parms_, bool sym_grad) {
     return test_case_eshelby_2<typename Mesh::coordinate_type, Mesh, Function>(level_set_function, parms_, sym_grad);
 }
 
@@ -2284,7 +2360,7 @@ public:
 //    size_t i = 2;
 //std::shared_ptr<typename Mesh::cell_type> cl_pointer;
 
-    explicit test_case_eshelby_2_prova(Function &level_set__, params <T> parms_, bool sym_grad)
+    explicit test_case_eshelby_2_prova(Function &level_set__, params<T> parms_, bool sym_grad)
             : test_case_stokes<T, Function, Mesh>
                       (level_set__, parms_,
                        [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -2408,7 +2484,7 @@ public:
         m_cl = cl_new;
     }
 
-    void refresh_lambdas(Function &level_set__, params <T> parms_, bool sym_grad) {
+    void refresh_lambdas(Function &level_set__, params<T> parms_, bool sym_grad) {
 
         this->neumann_jump = [level_set__, sym_grad, this](
                 const typename Mesh::point_type &pt) mutable -> Eigen::Matrix<T, 2, 1> {/* Neu */
@@ -2484,7 +2560,7 @@ public:
 };
 
 template<typename Mesh, typename T, typename Function>
-auto make_test_case_eshelby_2_prova(const Mesh &msh, Function &level_set_function, params <T> parms_, bool sym_grad) {
+auto make_test_case_eshelby_2_prova(const Mesh &msh, Function &level_set_function, params<T> parms_, bool sym_grad) {
     return test_case_eshelby_2_prova<typename Mesh::coordinate_type, Mesh, Function>(level_set_function, parms_,
                                                                                      sym_grad);
 }
@@ -2494,7 +2570,7 @@ template<typename T, typename Mesh, typename Function>
 class test_case_eshelby_analytic :
         public test_case_stokes<T, Function, Mesh> {
 public:
-    test_case_eshelby_analytic(const Function &level_set__, params <T> parms_, bool sym_grad, T radius)
+    test_case_eshelby_analytic(const Function &level_set__, params<T> parms_, bool sym_grad, T radius)
             : test_case_stokes<T, Function, Mesh>
                       (level_set__, parms_,
                        [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -2572,7 +2648,7 @@ public:
 
 template<typename Mesh, typename T, typename Function>
 auto
-make_test_case_eshelby_analytic(const Mesh &msh, const Function &level_set_function, params <T> parms_, bool sym_grad,
+make_test_case_eshelby_analytic(const Mesh &msh, const Function &level_set_function, params<T> parms_, bool sym_grad,
                                 T radius) {
     return test_case_eshelby_analytic<typename Mesh::coordinate_type, Mesh, Function>(level_set_function, parms_,
                                                                                       sym_grad, radius);
@@ -2593,7 +2669,7 @@ public:
     typename Mesh::cell_type m_cl;
     T gamma = 1.0;
 
-    explicit test_case_eshelby_correct(Function &level_set__, params <T> parms_, bool sym_grad, T gamma)
+    explicit test_case_eshelby_correct(Function &level_set__, params<T> parms_, bool sym_grad, T gamma)
             : gamma(gamma), test_case_stokes<T, Function, Mesh>
             (level_set__, parms_,
              [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -2797,7 +2873,7 @@ public:
 };
 
 template<typename Mesh, typename T, typename Function>
-auto make_test_case_eshelby_correct(const Mesh &msh, Function &level_set_function, params <T> parms_, bool sym_grad,
+auto make_test_case_eshelby_correct(const Mesh &msh, Function &level_set_function, params<T> parms_, bool sym_grad,
                                     T gamma) {
     return test_case_eshelby_correct<typename Mesh::coordinate_type, Mesh, Function>(level_set_function, parms_,
                                                                                      sym_grad, gamma);
@@ -2816,7 +2892,7 @@ public:
     typename Mesh::cell_type m_cl;
     T gamma = 1.0;
 
-    explicit test_case_eshelby_correct_parametric(Function &level_set__, params <T> parms_, bool sym_grad, T gamma)
+    explicit test_case_eshelby_correct_parametric(Function &level_set__, params<T> parms_, bool sym_grad, T gamma)
             : gamma(gamma), test_case_stokes_ref_pts<T, Function, Mesh>
             (level_set__, parms_,
              [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -2931,7 +3007,7 @@ public:
 };
 
 template<typename Mesh, typename T, typename Function>
-auto make_test_case_eshelby_correct_parametric(const Mesh &msh, Function &level_set_function, params <T> parms_,
+auto make_test_case_eshelby_correct_parametric(const Mesh &msh, Function &level_set_function, params<T> parms_,
                                                bool sym_grad, T gamma) {
     return test_case_eshelby_correct_parametric<typename Mesh::coordinate_type, Mesh, Function>(level_set_function,
                                                                                                 parms_, sym_grad,
@@ -2952,7 +3028,7 @@ public:
     T gamma = 1.0;
 
     explicit test_case_eshelby_correct_parametric_cont(Function &level_set__, Para_Interface &parametric_curve_cont,
-                                                       params <T> parms_, bool sym_grad, T gamma)
+                                                       params<T> parms_, bool sym_grad, T gamma)
             : gamma(gamma), test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
             (level_set__, parametric_curve_cont, parms_,
              [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -3056,7 +3132,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_correct_parametric_cont(const Mesh &msh, Function &level_set_function,
-                                                    Para_Interface &parametric_curve_cont, params <T> parms_,
+                                                    Para_Interface &parametric_curve_cont, params<T> parms_,
                                                     bool sym_grad, T gamma) {
     return test_case_eshelby_correct_parametric_cont<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(
             level_set_function, parametric_curve_cont, parms_, sym_grad, gamma);
@@ -3075,7 +3151,7 @@ public:
 
     explicit test_case_eshelby_correct_parametric_cont_TGV_source(Function &level_set__,
                                                                   Para_Interface &parametric_curve_cont,
-                                                                  params <T> parms_, bool sym_grad, T gamma)
+                                                                  params<T> parms_, bool sym_grad, T gamma)
             : gamma(gamma), test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
             (level_set__, parametric_curve_cont, parms_,
              [](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -3180,7 +3256,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_correct_parametric_cont_TGV_source(const Mesh &msh, Function &level_set_function,
-                                                               Para_Interface &parametric_curve_cont, params <T> parms_,
+                                                               Para_Interface &parametric_curve_cont, params<T> parms_,
                                                                bool sym_grad, T gamma) {
     return test_case_eshelby_correct_parametric_cont_TGV_source<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(
             level_set_function, parametric_curve_cont, parms_, sym_grad, gamma);
@@ -3200,7 +3276,7 @@ public:
 
     explicit test_case_eshelby_correct_parametric_cont_DIRICHLET_eps(Function &level_set__,
                                                                      Para_Interface &parametric_curve_cont,
-                                                                     params <T> parms_, bool sym_grad, T gamma, T eps)
+                                                                     params<T> parms_, bool sym_grad, T gamma, T eps)
             : gamma(gamma), eps(eps), test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
             (level_set__, parametric_curve_cont, parms_,
              [eps](const typename Mesh::point_type &pt) -> Eigen::Matrix<T, 2, 1> {
@@ -3313,7 +3389,7 @@ public:
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_correct_parametric_cont_DIRICHLET_eps(const Mesh &msh, Function &level_set_function,
                                                                   Para_Interface &parametric_curve_cont,
-                                                                  params <T> parms_, bool sym_grad, T gamma, T eps) {
+                                                                  params<T> parms_, bool sym_grad, T gamma, T eps) {
     return test_case_eshelby_correct_parametric_cont_DIRICHLET_eps<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(
             level_set_function, parametric_curve_cont, parms_, sym_grad, gamma, eps);
 }
@@ -3332,7 +3408,7 @@ public:
     T eps = 1.0;
 
     explicit test_case_eshelby_parametric_cont_eps_DIR_domSym(Function &level_set__,
-                                                              Para_Interface &parametric_curve_cont, params <T> parms_,
+                                                              Para_Interface &parametric_curve_cont, params<T> parms_,
                                                               bool sym_grad, T gamma, T eps)
             : gamma(gamma), eps(eps), test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
             (level_set__, parametric_curve_cont, parms_,
@@ -3440,7 +3516,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_parametric_cont_eps_DIR_domSym(const Mesh &msh, Function &level_set_function,
-                                                           Para_Interface &parametric_curve_cont, params <T> parms_,
+                                                           Para_Interface &parametric_curve_cont, params<T> parms_,
                                                            bool sym_grad, T gamma, T eps) {
     return test_case_eshelby_parametric_cont_eps_DIR_domSym<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(
             level_set_function, parametric_curve_cont, parms_, sym_grad, gamma, eps);
@@ -3462,7 +3538,7 @@ public:
 
     explicit test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym(Function &level_set__,
                                                                           Para_Interface &parametric_curve_cont,
-                                                                          params <T> parms_, bool sym_grad, T gamma,
+                                                                          params<T> parms_, bool sym_grad, T gamma,
                                                                           T eps, T perturbation)
             : gamma(gamma), eps(eps), perturbation(perturbation),
               test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
@@ -3577,7 +3653,7 @@ public:
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym(const Mesh &msh, Function &level_set_function,
                                                                        Para_Interface &parametric_curve_cont,
-                                                                       params <T> parms_, bool sym_grad, T gamma, T eps,
+                                                                       params<T> parms_, bool sym_grad, T gamma, T eps,
                                                                        T perturbation) {
     return test_case_eshelby_parametric_cont_eps_perturbated_DIR_domSym<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(
             level_set_function, parametric_curve_cont, parms_, sym_grad, gamma, eps, perturbation);
@@ -3598,7 +3674,7 @@ public:
     T perturbation = 0.1;
 
     explicit test_case_shear_flow_perturbated(Function &level_set__, Para_Interface &parametric_curve_cont,
-                                              params <T> parms_, bool sym_grad, T gamma, T eps, T perturbation)
+                                              params<T> parms_, bool sym_grad, T gamma, T eps, T perturbation)
             : gamma(gamma), eps(eps), perturbation(perturbation),
               test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
                       (level_set__, parametric_curve_cont, parms_,
@@ -3711,7 +3787,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_shear_flow_perturbated(const Mesh &msh, Function &level_set_function,
-                                           Para_Interface &parametric_curve_cont, params <T> parms_, bool sym_grad,
+                                           Para_Interface &parametric_curve_cont, params<T> parms_, bool sym_grad,
                                            T gamma, T eps, T perturbation) {
     return test_case_shear_flow_perturbated<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(
             level_set_function, parametric_curve_cont, parms_, sym_grad, gamma, eps, perturbation);
@@ -3730,7 +3806,7 @@ public:
     T gamma = 1.0;
     T eps = 1.0;
 
-    explicit test_case_TGV_FPscheme(Function &level_set__, Para_Interface &parametric_curve_cont, params <T> parms_,
+    explicit test_case_TGV_FPscheme(Function &level_set__, Para_Interface &parametric_curve_cont, params<T> parms_,
                                     bool sym_grad, T gamma, T eps)
             : gamma(gamma), eps(eps), test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
             (level_set__, parametric_curve_cont, parms_,
@@ -3842,7 +3918,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_TGV_FPscheme(const Mesh &msh, Function &level_set_function, Para_Interface &parametric_curve_cont,
-                                 params <T> parms_, bool sym_grad, T gamma, T eps) {
+                                 params<T> parms_, bool sym_grad, T gamma, T eps) {
     return test_case_TGV_FPscheme<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(level_set_function,
                                                                                                   parametric_curve_cont,
                                                                                                   parms_, sym_grad,
@@ -3863,7 +3939,7 @@ public:
     T eps = 1.0;
     T perturbation = 0.1;
 
-    explicit test_case_shear_y(Function &level_set__, Para_Interface &parametric_curve_cont, params <T> parms_,
+    explicit test_case_shear_y(Function &level_set__, Para_Interface &parametric_curve_cont, params<T> parms_,
                                bool sym_grad, T gamma, T eps, T perturbation)
             : gamma(gamma), eps(eps), perturbation(perturbation),
               test_case_stokes_ref_pts_cont<T, Function, Mesh, Para_Interface>
@@ -3977,7 +4053,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_shear_y(const Mesh &msh, Function &level_set_function, Para_Interface &parametric_curve_cont,
-                            params <T> parms_, bool sym_grad, T gamma, T eps, T perturbation) {
+                            params<T> parms_, bool sym_grad, T gamma, T eps, T perturbation) {
     return test_case_shear_y<typename Mesh::coordinate_type, Mesh, Function, Para_Interface>(level_set_function,
                                                                                              parametric_curve_cont,
                                                                                              parms_, sym_grad, gamma,
@@ -3996,7 +4072,7 @@ public:
     T gamma = 1.0;
     T eps = 1.0;
 
-    explicit test_case_eshelby_LS_eps_DIR(Function &level_set__, Para_Interface &curve, params <T> parms_,
+    explicit test_case_eshelby_LS_eps_DIR(Function &level_set__, Para_Interface &curve, params<T> parms_,
                                           bool sym_grad, T gamma, T eps)
             : gamma(gamma), eps(eps), test_case_stokes_eps<T, Function, Mesh, Para_Interface>
             (level_set__, curve, parms_,
@@ -4103,7 +4179,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_LS_eps_DIR(const Mesh &msh, Function &level_set_function, Para_Interface &curve,
-                                       params <T> parms_, bool sym_grad, T gamma, T eps) {
+                                       params<T> parms_, bool sym_grad, T gamma, T eps) {
     return test_case_eshelby_LS_eps_DIR<T, Mesh, Function, Para_Interface>(level_set_function, curve, parms_, sym_grad,
                                                                            gamma, eps);
 }
@@ -4121,7 +4197,7 @@ public:
     T eps = 1.0;
     T sizeBox = 1;
 
-    explicit test_case_eshelby_LS_eps_DIR_domSym(Function &level_set__, Para_Interface &curve, params <T> parms_,
+    explicit test_case_eshelby_LS_eps_DIR_domSym(Function &level_set__, Para_Interface &curve, params<T> parms_,
                                                  bool sym_grad, T gamma, T eps, T sizeBox)
             : gamma(gamma), eps(eps), test_case_stokes_eps<T, Function, Mesh, Para_Interface>
             (level_set__, curve, parms_,
@@ -4231,7 +4307,7 @@ public:
 
 template<typename Mesh, typename T, typename Function, typename Para_Interface>
 auto make_test_case_eshelby_LS_eps_DIR_domSym(const Mesh &msh, Function &level_set_function, Para_Interface &curve,
-                                              params <T> parms_, bool sym_grad, T gamma, T eps, T sizeBox) {
+                                              params<T> parms_, bool sym_grad, T gamma, T eps, T sizeBox) {
     return test_case_eshelby_LS_eps_DIR_domSym<T, Mesh, Function, Para_Interface>(level_set_function, curve, parms_,
                                                                                   sym_grad, gamma, eps, sizeBox);
 }
