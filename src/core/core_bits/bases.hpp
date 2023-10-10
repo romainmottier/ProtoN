@@ -24,6 +24,8 @@
 
 #include <Eigen/Dense>
 
+using namespace Eigen;
+
 template<typename T>
 T iexp_pow(T x, size_t n)
 {
@@ -416,10 +418,10 @@ public:
         basis_size      = (basis_degree+2)*(basis_degree+1)/2;
     }
 
-    Matrix<VT, Dynamic, 1>
+    Eigen::Matrix<VT, Eigen::Dynamic, 1>
     eval_basis(const point_type& pt)
     {
-        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
+        Eigen::Matrix<VT, Eigen::Dynamic, 1> ret = Eigen::Matrix<VT, Eigen::Dynamic, 1>::Zero(basis_size);
 
         auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_h);
         auto by = (pt.y() - cell_bar.y()) / (0.5*cell_h);

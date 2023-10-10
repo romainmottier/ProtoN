@@ -20,7 +20,7 @@
  * DOI: 10.1016/j.cam.2017.09.017
  */
 
-
+#pragma once
 
 template<typename T>
 class postprocess_output_object {

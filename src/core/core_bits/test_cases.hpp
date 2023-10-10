@@ -20,6 +20,9 @@
  * DOI: 10.1016/j.cam.2017.09.017
  */
 
+#pragma once
+#include"../../methods/cuthho"
+
 template<typename T, typename Function, typename Mesh>
 class test_case {
 public:
@@ -80,14 +83,14 @@ public:
 };
 
 /////////////////////////////  TESTS CASES FOR LAPLACIAN  ////////////////////////////
-template<typename T>
-struct params {
-    T kappa_1, kappa_2;
-
-    params() : kappa_1(1.0), kappa_2(1.0) {}
-
-    params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {}
-};
+//template<typename T>
+//struct params {
+//    T kappa_1, kappa_2;
+//
+//    params() : kappa_1(1.0), kappa_2(1.0) {}
+//
+//    params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {}
+//};
 
 
 template<typename T, typename Function, typename Mesh>

@@ -357,6 +357,17 @@ make_hho_laplacian_ref_pts_cont(const cuthho_mesh<T, ET>& msh, const typename cu
 }
 
 
+template<typename T>
+struct params {
+    T kappa_1, kappa_2;
+
+    params() : kappa_1(1.0), kappa_2(1.0) {}
+
+    params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {}
+};
+
+
+
 template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, Dynamic>  >
 make_hho_laplacian_interface(const cuthho_mesh<T, ET>& msh,

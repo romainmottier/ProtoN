@@ -37,6 +37,9 @@
 #include <map>
 #include <iomanip>
 
+#include "level_set_transport_problem.hpp"
+using namespace level_set_transport;
+
 #include <Eigen/Dense>
 #include <Eigen/SparseCore>
 #include <Eigen/SparseLU>
@@ -3248,574 +3251,1655 @@ namespace computationQuantities {
 
 
 
-    template<typename Mesh, typename Cell, typename LS, typename TC, typename RealType, typename ASS, typename BDRY, typename SOL, typename VEL, typename PP1, typename PP2, typename Function1, typename Function2, typename Function3>
+    template<typename T>
     void
-    post_processing_functionLS_fast_2(const Mesh &msh, Cell &cl, size_t hdi_cell, size_t hdi_face,
-                                      LS &level_set_function, TC &test_case, ASS &assembler_sc, BDRY &bcs_vel,
-                                      const SOL &sol, VEL &velocity, RealType &H1_error, RealType &L2_error, PP1 &uT1_gp,
-                                      PP1 &uT2_gp,
-                                      PP1 &p_gp, PP2 &interface_file, RealType &L2_pressure_error, RealType &l1_u_n_error,
-                                      RealType &l2_u_n_error, RealType &linf_u_n_error, size_t &counter_interface_pts,
-                                      size_t &degree,
-                                      RealType &force_pressure_avg, RealType &force_pressure_max, size_t &counter_pt_Gamma,
-                                      PP1 &test_gammaH,
-                                      PP1 &test_press_jump, PP1 &test_grad_vel_jump, RealType &distance_pts,
-                                      RealType &force_gradVel_max,
-                                      RealType &force_gradVel_avg, PP1 &p1_gp, PP1 &p2_gp,
-                                      Function1 &sol_vel, Function2 &sol_p, Function3 &vel_grad) {
+    plotting_in_time_complete(const std::vector <T> &time_vec, const std::vector <T> &area_time,
+                              const std::vector <T> &l1_err_u_n_time, const std::vector <T> &linf_err_u_n_time,
+                              const std::vector <T> &max_val_u_n_time, const std::vector <T> &l1_err_curvature_time,
+                              const std::vector <T> &linf_err_curvature_time, T dt,
+                              const std::vector <std::pair<T, T>> &min_max_vec, const std::vector <T> &flux_interface_time,
+                              const std::vector <std::pair<T, T>> &rise_velocity_time,
+                              const std::vector <std::pair<T, T>> &centre_mass_err_time,
+                              const std::vector <T> &perimeter_time, const std::vector <T> &circularity_time,
+                              T circularity_ref, T perimetre_ref, T area_ref, T radius) {
+        std::cout << "IT does not work, I have some vector small without first iteration!!" << std::endl;
+        postprocess_output <T> postoutput;
+
+        auto testref0 = std::make_shared < gnuplot_output_object_time < T > > ("area_ref_time.dat");
+        auto testref1 = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_ref_time.dat");
+        auto testref2 = std::make_shared < gnuplot_output_object_time < T > > ("circularity_ref_time.dat");
+
+        T area_analytic = M_PI * radius * radius;
+        T perimeter_analytic = 2.0 * M_PI * radius;
+        auto testanal0 = std::make_shared < gnuplot_output_object_time < T > > ("area_anal_time.dat");
+        auto testanal1 = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_anal_time.dat");
 
 
-        vector_cell_basis <cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi_cell);
-        RealType kappa_1 = test_case.parms.kappa_1;
-        RealType kappa_2 = test_case.parms.kappa_2;
+        auto test0 = std::make_shared < gnuplot_output_object_time < T > > ("area_time.dat");
+        auto test1 = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_u_n_time.dat");
+        auto test2 = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_u_n_time.dat");
+        auto test1_counter = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_u_n_time_counter.dat");
+        auto test2_counter = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_u_n_time_counter.dat");
 
-        cell_basis <cuthho_poly_mesh<RealType>, RealType> pb(msh, cl, hdi_face);
-        auto cbs = cb.size();
-        auto pbs = pb.size();
-
-
-        level_set_function.cell_assignment(cl); // ----------------------------> TOGLIERE????
-        test_case.test_case_cell_assignment(cl); // ----------------------------> TOGLIERE????
-
-//    auto sol_vel = test_case.sol_vel;
-//    auto sol_p = test_case.sol_p;
-//    auto vel_grad = test_case.vel_grad;
-
-        assembler_sc.set_dir_func(bcs_vel); // CAMBIA QUALCOSA?? // ----------------------------> TOGLIERE????
+        auto test3 = std::make_shared < gnuplot_output_object_time < T > > ("max_val_u_n_time.dat");
+        auto test4 = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_curvature_time.dat");
+        auto test5 = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_curvature_time.dat");
+        auto test4_counter = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_curvature_time_counter.dat");
+        auto test5_counter = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_curvature_time_counter.dat");
 
 
-        Matrix<RealType, Dynamic, 1> vel_locdata_n, vel_locdata_p, vel_locdata;
-        Matrix<RealType, Dynamic, 1> P_locdata_n, P_locdata_p, P_locdata;
-        Matrix<RealType, Dynamic, 1> vel_cell_dofs_n, vel_cell_dofs_p, vel_cell_dofs;
+        auto test0b = std::make_shared < gnuplot_output_object_time < T > > ("area_time_normalised.dat");
+
+        auto test1b = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_u_n_time_normalised.dat");
+        auto test2b = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_u_n_time_normalised.dat");
+        auto test3b = std::make_shared < gnuplot_output_object_time < T > > ("max_val_u_n_time_normalised.dat");
+        auto test4b = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_curvature_time_normalised.dat");
+        auto test5b = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_curvature_time_normalised.dat");
+//auto test4c  = std::make_shared< gnuplot_output_object_time<T> >("l1_l1_err_curvature_err_time.dat");
+
+        auto test_dt = std::make_shared < gnuplot_output_object_time < T > > ("dt_M.dat");
+
+        auto test0c = std::make_shared < gnuplot_output_object_time < T > > ("area_time_err.dat");
+        auto test0c_counter = std::make_shared < gnuplot_output_object_time < T > > ("area_time_err_counter.dat");
+
+        auto testm0 = std::make_shared < gnuplot_output_object_time < T > > ("min_time.dat");
+        auto testm1 = std::make_shared < gnuplot_output_object_time < T > > ("min_normalised_time.dat");
+        auto testM0 = std::make_shared < gnuplot_output_object_time < T > > ("max_time.dat");
+        auto testM1 = std::make_shared < gnuplot_output_object_time < T > > ("max_normalised_time.dat");
+        auto testflux = std::make_shared < gnuplot_output_object_time < T > > ("flux_interface_time.dat");
+        auto testvelx = std::make_shared < gnuplot_output_object_time < T > > ("rise_velocity_err_x_time.dat");
+        auto testvely = std::make_shared < gnuplot_output_object_time < T > > ("rise_velocity_err_y_time.dat");
+        auto testvel = std::make_shared < gnuplot_output_object_time < T > > ("rise_velocity_err_time.dat");
+        auto testvel_counter = std::make_shared < gnuplot_output_object_time < T > > ("rise_velocity_err_time_counter.dat");
+        auto testcomx = std::make_shared < gnuplot_output_object_time < T > > ("centre_mass_err_x_time.dat");
+        auto testcomy = std::make_shared < gnuplot_output_object_time < T > > ("centre_mass_err_y_time.dat");
+        auto testcom = std::make_shared < gnuplot_output_object_time < T > > ("centre_mass_err_time.dat");
 
 
-        vel_locdata = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-        P_locdata = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
+        auto testper0 = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_time.dat");
+        auto testper1 = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_normalised_time.dat");
+        auto testper2 = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_err_time.dat");
+        auto testper2_counter = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_err_time_counter.dat");
 
-        vel_cell_dofs = vel_locdata.head(cbs);
+        auto testcirc = std::make_shared < gnuplot_output_object_time < T > > ("circularity_time.dat");
+        auto testcirc1 = std::make_shared < gnuplot_output_object_time < T > > ("circularity_error_time.dat");
+        auto testcirc1_counter =
+                std::make_shared < gnuplot_output_object_time < T > > ("circularity_error_time_counter.dat");
+
+        size_t tot = l1_err_u_n_time.size();
+
+        testm0->add_data(time_vec[0], min_max_vec[0].first);
+        testm1->add_data(time_vec[0], 1.0);
+        testM0->add_data(time_vec[0], min_max_vec[0].second);
+        testM1->add_data(time_vec[0], 1.0);
+
+        testcomx->add_data(time_vec[0], 0.0);
+        testcomy->add_data(time_vec[0], 0.0);
+        testcom->add_data(time_vec[0], 0.0);
 
 
+        testper0->add_data(time_vec[0], perimeter_time[0]);
+        testper1->add_data(time_vec[0], 1.0);
+        testper2->add_data(time_vec[0], std::abs(perimeter_time[0] - perimetre_ref) / perimetre_ref);
+        testper2_counter->add_data(0, std::abs(perimeter_time[0] - perimetre_ref) / perimetre_ref);
 
-// NOT AGGLO CELL
-        if (level_set_function.subcells.size() < 1) {
-//                assert(level_set_function.agglo_LS_cl.user_data.offset_subcells.size()==2);
-//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
-            auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
-            auto cl_old = velocity.msh.cells[offset_old];
-            auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
-//                auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
-            size_t i_local = 0;
-            for (const auto &ln_Qk: Lagrange_nodes_Qk) {
-                auto phi_HHO = cb.eval_basis(ln_Qk);
-                auto vel = phi_HHO.transpose() * vel_cell_dofs;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                i_local++;
+        testcirc->add_data(time_vec[0], circularity_time[0]);
+        testcirc1->add_data(time_vec[0], std::abs(circularity_time[0] - circularity_ref) / circularity_ref);
+        testcirc1_counter->add_data(0, std::abs(circularity_time[0] - circularity_ref) / circularity_ref);
 
-            }
+        test0c->add_data(time_vec[0], 0.0);
+        test0c_counter->add_data(0, 0.0);
+//test4c->add_data(time_vec[0] , 0.0 );
 
-        } else // AGGLO CELL
-        {
-            for (size_t i_subcell = 0;
-                 i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size(); i_subcell++) {
-                auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
-//std::cout<<"offset_old = "<<offset_old<<std::endl;
-                auto cl_old = velocity.msh.cells[offset_old];
-                auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
-//                    auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
-                size_t i_local = 0;
-                for (const auto &ln_Qk: Lagrange_nodes_Qk) {
-                    auto phi_HHO = cb.eval_basis(ln_Qk);
-                    auto vel = phi_HHO.transpose() * vel_cell_dofs;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                    i_local++;
 
-                }
+        test0->add_data(time_vec[0], area_time[0]);
+// ADD 8/01/21
+        test1->add_data(time_vec[0], l1_err_u_n_time[0]);
+        test2->add_data(time_vec[0], linf_err_u_n_time[0]);
+        test1_counter->add_data(0, l1_err_u_n_time[0]);
+        test2_counter->add_data(0, linf_err_u_n_time[0]);
+        test3->add_data(time_vec[0], max_val_u_n_time[0]);
+// UP TO HERE
+        test4->add_data(time_vec[0], l1_err_curvature_time[0]);
+        test5->add_data(time_vec[0], linf_err_curvature_time[0]);
+        test4_counter->add_data(0, l1_err_curvature_time[0]);
+        test5_counter->add_data(0, linf_err_curvature_time[0]);
 
+        test0b->add_data(time_vec[0], area_time[0] / area_time[0]);
+// ADD 8/01/21
+        test1b->add_data(time_vec[0], l1_err_u_n_time[0] / l1_err_u_n_time[0]);
+        test2b->add_data(time_vec[0], linf_err_u_n_time[0] / linf_err_u_n_time[0]);
+        test3b->add_data(time_vec[0], max_val_u_n_time[0] / max_val_u_n_time[0]);
+// UP TO HERE
+        test4b->add_data(time_vec[0], l1_err_curvature_time[0] / l1_err_curvature_time[0]);
+        test5b->add_data(time_vec[0], linf_err_curvature_time[0] / linf_err_curvature_time[0]);
+
+        testref0->add_data(time_vec[0], area_ref);
+        testref1->add_data(time_vec[0], perimetre_ref);
+        testref2->add_data(time_vec[0], circularity_ref);
+
+        testanal0->add_data(time_vec[0], area_analytic);
+        testanal1->add_data(time_vec[0], perimeter_analytic);
+
+
+        testflux->add_data(time_vec[0], flux_interface_time[0]);
+        testvelx->add_data(time_vec[0], std::abs(rise_velocity_time[0].first));
+        testvely->add_data(time_vec[0], std::abs(rise_velocity_time[0].second));
+        testvel->add_data(time_vec[0], std::abs(rise_velocity_time[0].first) + std::abs(rise_velocity_time[0].second));
+        testvel_counter->add_data(0, std::abs(rise_velocity_time[0].first) + std::abs(rise_velocity_time[0].second));
+
+        for (size_t i = 0; i < tot; i++) {
+            test0->add_data(time_vec[i + 1], area_time[i + 1]);
+            test1->add_data(time_vec[i + 1], l1_err_u_n_time[i + 1]);
+            test2->add_data(time_vec[i + 1], linf_err_u_n_time[i + 1]);
+            test1_counter->add_data(i + 1, l1_err_u_n_time[i + 1]);
+            test2_counter->add_data(i + 1, linf_err_u_n_time[i + 1]);
+            test3->add_data(time_vec[i + 1], max_val_u_n_time[i + 1]);
+//        test1->add_data(time_vec[i+1] ,l1_err_u_n_time[i] );
+//        test2->add_data(time_vec[i+1] ,linf_err_u_n_time[i] );
+//        test1_counter->add_data(i+1 ,l1_err_u_n_time[i] );
+//        test2_counter->add_data(i+1 ,linf_err_u_n_time[i] );
+//        test3->add_data(time_vec[i+1] ,max_val_u_n_time[i] );
+            test4->add_data(time_vec[i + 1], l1_err_curvature_time[i + 1]);
+            test5->add_data(time_vec[i + 1], linf_err_curvature_time[i + 1]);
+            test4_counter->add_data(i + 1, l1_err_curvature_time[i + 1]);
+            test5_counter->add_data(i + 1, linf_err_curvature_time[i + 1]);
+
+            test0b->add_data(time_vec[i + 1], area_time[i + 1] / area_time[0]);
+
+            test1b->add_data(time_vec[i + 1], l1_err_u_n_time[i + 1] / l1_err_u_n_time[0]);
+            test2b->add_data(time_vec[i + 1], linf_err_u_n_time[i + 1] / linf_err_u_n_time[0]);
+            test3b->add_data(time_vec[i + 1], max_val_u_n_time[i + 1] / max_val_u_n_time[0]);
+//        test1b->add_data(time_vec[i+1] ,l1_err_u_n_time[i]/l1_err_u_n_time[0] );
+//        test2b->add_data(time_vec[i+1] ,linf_err_u_n_time[i]/linf_err_u_n_time[0] );
+//        test3b->add_data(time_vec[i+1] ,max_val_u_n_time[i]/max_val_u_n_time[0]  );
+            test4b->add_data(time_vec[i + 1], l1_err_curvature_time[i + 1] / l1_err_curvature_time[0]);
+            test5b->add_data(time_vec[i + 1], linf_err_curvature_time[i + 1] / linf_err_curvature_time[0]);
+
+
+            testcomx->add_data(time_vec[i + 1],
+                               std::abs(centre_mass_err_time[i + 1].first - centre_mass_err_time[0].first) /
+                               centre_mass_err_time[0].first);
+            testcomy->add_data(time_vec[i + 1],
+                               std::abs(centre_mass_err_time[i + 1].second - centre_mass_err_time[0].second) /
+                               centre_mass_err_time[0].second);
+            testcom->add_data(time_vec[i + 1], std::abs(centre_mass_err_time[i + 1].first - centre_mass_err_time[0].first) /
+                                               centre_mass_err_time[0].first + std::abs(
+                    centre_mass_err_time[i + 1].second - centre_mass_err_time[0].second) / centre_mass_err_time[0].second);
+
+
+            testm0->add_data(time_vec[i + 1], min_max_vec[i + 1].first);
+            testm1->add_data(time_vec[i + 1], min_max_vec[i + 1].first / min_max_vec[0].first);
+            testM0->add_data(time_vec[i + 1], min_max_vec[i + 1].second);
+            testM1->add_data(time_vec[i + 1], min_max_vec[i + 1].second / min_max_vec[0].second);
+
+
+            testper0->add_data(time_vec[i + 1], perimeter_time[i + 1]);
+            testper1->add_data(time_vec[i + 1], perimeter_time[i + 1] / perimeter_time[0]);
+            testper2->add_data(time_vec[i + 1], std::abs(perimeter_time[i + 1] - perimetre_ref) / perimetre_ref);
+            testper2_counter->add_data(i + 1, std::abs(perimeter_time[i + 1] - perimetre_ref) / perimetre_ref);
+
+            testcirc->add_data(time_vec[i + 1], circularity_time[i + 1]);
+            testcirc1->add_data(time_vec[i + 1], std::abs(circularity_time[i + 1] - circularity_ref) / circularity_ref);
+            testcirc1_counter->add_data(i + 1, std::abs(circularity_time[i + 1] - circularity_ref) / circularity_ref);
+
+            test0c->add_data(time_vec[i + 1], std::abs(area_time[i + 1] - area_time[0]) / area_time[0]);
+            test0c_counter->add_data(i + 1, std::abs(area_time[i + 1] - area_time[0]) / area_time[0]);
+//test4c->add_data(time_vec[i+1] , std::abs(l1_err_curvature_time[i+1] - l1_err_curvature_time[0] )/l1_err_curvature_time[0]);
+
+            testflux->add_data(time_vec[i + 1], flux_interface_time[i + 1]);
+            testvelx->add_data(time_vec[i + 1], std::abs(rise_velocity_time[i + 1].first));
+            testvely->add_data(time_vec[i + 1], std::abs(rise_velocity_time[i + 1].second));
+            testvel->add_data(time_vec[i + 1],
+                              std::abs(rise_velocity_time[i + 1].first) + std::abs(rise_velocity_time[i + 1].second));
+            testvel_counter->add_data(i + 1, std::abs(rise_velocity_time[i + 1].first) +
+                                             std::abs(rise_velocity_time[i + 1].second));
+
+            testref0->add_data(time_vec[i + 1], area_ref);
+            testref1->add_data(time_vec[i + 1], perimetre_ref);
+            testref2->add_data(time_vec[i + 1], circularity_ref);
+
+            testanal0->add_data(time_vec[i + 1], area_analytic);
+            testanal1->add_data(time_vec[i + 1], perimeter_analytic);
+
+//std::cout<<"time_vec[i] = "<<time_vec[i]<<", time_vec[i+1] = "<<time_vec[i+1]<<", dt = "<<dt<<", error = "<<std::abs( std::abs( time_vec[i+1] - time_vec[i] ) - dt )<<std::endl;
+            if (std::abs(std::abs(time_vec[i + 1] - time_vec[i]) - dt) > 1e-10) {
+                test_dt->add_data(time_vec[i], 0.0);
+                test_dt->add_data(time_vec[i + 1], 0.0);
             }
         }
 
-        RealType kappa = test_case.parms.kappa_1;
-        if (location(msh, cl) == element_location::IN_POSITIVE_SIDE)
-            kappa = test_case.parms.kappa_2;
 
-        auto qps = integrate(msh, cl, 2 * hdi_cell);
-        for (auto &qp: qps) {
-// Compute H1-error //
-            auto t_dphi = cb.eval_gradients(qp.first);
-            Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+        postoutput.add_object(test0);
+        postoutput.add_object(test1);
+        postoutput.add_object(test2);
+        postoutput.add_object(test1_counter);
+        postoutput.add_object(test2_counter);
 
-            for (size_t i = 1; i < cbs; i++)
-                grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
 
-            Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-            Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
-            H1_error += qp.second * kappa * inner_product(grad_sym_diff, grad_sym_diff);
+        postoutput.add_object(test3);
+        postoutput.add_object(test4);
+        postoutput.add_object(test5);
+        postoutput.add_object(test4_counter);
+        postoutput.add_object(test5_counter);
 
-// Compute L2-error //
-            auto t_phi = cb.eval_basis(qp.first);
-            auto v = t_phi.transpose() * vel_cell_dofs;
-            Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
+        postoutput.add_object(test0b);
+        postoutput.add_object(test1b);
+        postoutput.add_object(test2b);
+        postoutput.add_object(test3b);
+        postoutput.add_object(test4b);
+        postoutput.add_object(test5b);
 
-            L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
+        postoutput.add_object(testcomx);
+        postoutput.add_object(testcomy);
+        postoutput.add_object(testcom);
 
-            uT1_gp->add_data(qp.first, v(0));
-            uT2_gp->add_data(qp.first, v(1));
-            if (interface_file) {
+        postoutput.add_object(testm0);
+        postoutput.add_object(testm1);
+        postoutput.add_object(testM0);
+        postoutput.add_object(testM1);
 
-                interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
+        postoutput.add_object(testper0);
+        postoutput.add_object(testper1);
+        postoutput.add_object(testper2);
+        postoutput.add_object(testper2_counter);
 
-            }
 
-// L2 - pressure - error //
-            auto p_phi = pb.eval_basis(qp.first);
-            RealType p_num = p_phi.dot(P_locdata);
-            RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
+        postoutput.add_object(testcirc);
+        postoutput.add_object(testcirc1);
+        postoutput.add_object(testcirc1_counter);
 
-            L2_pressure_error += qp.second * p_diff * p_diff / kappa;
+        postoutput.add_object(test0c);
+        postoutput.add_object(test0c_counter);
+//postoutput.add_object(test4c);
 
-            p_gp->add_data(qp.first, p_num);
-            if (level_set_function(qp.first, cl) > 0.0)
-                p2_gp->add_data(qp.first, p_num);
-            else
-                p1_gp->add_data(qp.first, p_num);
+        postoutput.add_object(testflux);
+        postoutput.add_object(testvelx);
+        postoutput.add_object(testvely);
+        postoutput.add_object(testvel);
+        postoutput.add_object(testvel_counter);
+
+
+        postoutput.add_object(testref0);
+        postoutput.add_object(testref1);
+        postoutput.add_object(testref2);
+
+        postoutput.add_object(testanal0);
+        postoutput.add_object(testanal1);
+
+
+        postoutput.add_object(test_dt);
+
+        postoutput.write();
+
+    }
+
+    template<typename T>
+    void
+    plotting_in_time_new(const std::vector <T> &time_vec, const std::vector <T> &area_time,
+                         const std::vector <T> &l1_err_u_n_time, const std::vector <T> &linf_err_u_n_time,
+                         const std::vector <T> &max_val_u_n_time, const std::vector <T> &l1_err_curvature_time,
+                         const std::vector <T> &linf_err_curvature_time, T dt,
+                         const std::vector <std::pair<T, T>> &min_max_vec, const std::vector <T> &flux_interface_time,
+                         const std::vector <std::pair<T, T>> &rise_velocity_time,
+                         const std::vector <std::pair<T, T>> &centre_mass_err_time, const std::vector <T> &perimeter_time,
+                         const std::vector <T> &circularity_time, T circularity_ref, T perimetre_ref, T area_ref, T radius,
+                         const std::vector <T> &L1_err_u_n_time, const std::vector <T> &l1_err_u_n_time_para,
+                         const std::vector <T> &linf_err_u_n_time_para, const std::vector <T> &L1_err_u_n_time_para,
+                         const std::vector <T> &max_val_u_n_time_para) {
+
+        postprocess_output <T> postoutput;
+
+//    auto testref0  = std::make_shared< gnuplot_output_object_time<T> >("area_ref_time.dat");
+//    auto testref1  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_ref_time.dat");
+//    auto testref2  = std::make_shared< gnuplot_output_object_time<T> >("circularity_ref_time.dat");
+
+        T area_analytic = M_PI * radius * radius;
+        T perimeter_analytic = 2.0 * M_PI * radius;
+//    auto testanal0  = std::make_shared< gnuplot_output_object_time<T> >("area_anal_time.dat");
+//    auto testanal1  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_anal_time.dat");
+
+
+        auto test0 = std::make_shared < gnuplot_output_object_time < T > > ("area_time.dat");
+        auto test1 = std::make_shared < gnuplot_output_object_time < T > > ("lpiccolo1_err_u_n_time.dat");
+        auto test2 = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_u_n_time.dat");
+
+        auto test_der_int = std::make_shared < gnuplot_output_object_time < T > > ("linf_der_interface_time.dat");
+
+//    auto test1_counter  = std::make_shared< gnuplot_output_object_time<T> >("lpiccolo1_err_u_n_time_counter.dat");
+//    auto test2_counter  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time_counter.dat");
+
+//    auto test3  = std::make_shared< gnuplot_output_object_time<T> >("max_val_u_n_time.dat");
+        auto test4 = std::make_shared < gnuplot_output_object_time < T > > ("l1_err_curvature_time.dat");
+        auto test5 = std::make_shared < gnuplot_output_object_time < T > > ("linf_err_curvature_time.dat");
+//    auto test4_counter  = std::make_shared< gnuplot_output_object_time<T> >("l1_err_curvature_time_counter.dat");
+//    auto test5_counter  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_curvature_time_counter.dat");
+
+        auto test_new0 = std::make_shared < gnuplot_output_object_time < T > > ("Lgrande1_err_u_n_time.dat");
+//    auto test_new1  = std::make_shared< gnuplot_output_object_time<T> >("lpiccolo1_err_u_n_time_para.dat");
+//    auto test_new2  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time_para.dat");
+//    auto test_new3  = std::make_shared< gnuplot_output_object_time<T> >("Lgrande1_err_u_n_time_para.dat");
+//    auto test_new4  = std::make_shared< gnuplot_output_object_time<T> >("max_val_u_n_time_para.dat");
+
+//    auto test_new0_counter  = std::make_shared< gnuplot_output_object_time<T> >("Lgrande1_err_u_n_time_counter.dat");
+//    auto test_new1_counter  = std::make_shared< gnuplot_output_object_time<T> >("lpiccolo1_err_u_n_time_para_counter.dat");
+//    auto test_new2_counter  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time_para_counter.dat");
+//    auto test_new3_counter  = std::make_shared< gnuplot_output_object_time<T> >("Lgrande1_err_u_n_time_para_counter.dat");
+//    auto test_new4_counter  = std::make_shared< gnuplot_output_object_time<T> >("max_val_u_n_time_para_counter.dat");
+
+
+
+
+//    auto test0b  = std::make_shared< gnuplot_output_object_time<T> >("area_time_normalised.dat");
+
+//    auto test1b  = std::make_shared< gnuplot_output_object_time<T> >("l1_err_u_n_time_normalised.dat");
+//    auto test2b  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_u_n_time_normalised.dat");
+//    auto test3b  = std::make_shared< gnuplot_output_object_time<T> >("max_val_u_n_time_normalised.dat");
+//    auto test4b  = std::make_shared< gnuplot_output_object_time<T> >("l1_err_curvature_time_normalised.dat");
+//    auto test5b  = std::make_shared< gnuplot_output_object_time<T> >("linf_err_curvature_time_normalised.dat");
+// //auto test4c  = std::make_shared< gnuplot_output_object_time<T> >("l1_l1_err_curvature_err_time.dat");
+
+        auto test_dt = std::make_shared < gnuplot_output_object_time < T > > ("dt_M.dat");
+        auto test_e = std::make_shared < gnuplot_output_object_time < T > > ("eccentricity.dat");
+
+        auto test0c = std::make_shared < gnuplot_output_object_time < T > > ("area_time_err.dat");
+        auto test0c_counter = std::make_shared < gnuplot_output_object_time < T > > ("area_time_err_counter.dat");
+
+//    auto testm0  = std::make_shared< gnuplot_output_object_time<T> >("min_time.dat");
+//    auto testm1  = std::make_shared< gnuplot_output_object_time<T> >("min_normalised_time.dat");
+//    auto testM0  = std::make_shared< gnuplot_output_object_time<T> >("max_time.dat");
+//    auto testM1  = std::make_shared< gnuplot_output_object_time<T> >("max_normalised_time.dat");
+        auto testflux = std::make_shared < gnuplot_output_object_time < T > > ("flux_interface_time.dat");
+//    auto testvelx  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_x_time.dat");
+//    auto testvely  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_y_time.dat");
+        auto testvel = std::make_shared < gnuplot_output_object_time < T > > ("rise_velocity_err_time.dat");
+//    auto testvel_counter  = std::make_shared< gnuplot_output_object_time<T> >("rise_velocity_err_time_counter.dat");
+        auto testcomx = std::make_shared < gnuplot_output_object_time < T > > ("centre_mass_err_x_time.dat");
+        auto testcomy = std::make_shared < gnuplot_output_object_time < T > > ("centre_mass_err_y_time.dat");
+        auto testcom = std::make_shared < gnuplot_output_object_time < T > > ("centre_mass_err_time.dat");
+
+
+        auto testper0 = std::make_shared < gnuplot_output_object_time < T > > ("perimeter_time.dat");
+//    auto testper1  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_normalised_time.dat");
+//    auto testper2  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_err_time.dat");
+//    auto testper2_counter  = std::make_shared< gnuplot_output_object_time<T> >("perimeter_err_time_counter.dat");
+
+        auto testcirc = std::make_shared < gnuplot_output_object_time < T > > ("circularity_time.dat");
+        auto testcirc1 = std::make_shared < gnuplot_output_object_time < T > > ("circularity_error_time.dat");
+        auto testcirc1_counter =
+                std::make_shared < gnuplot_output_object_time < T > > ("circularity_error_time_counter.dat");
+
+        size_t tot = l1_err_u_n_time.size();
+
+//    testm0->add_data(time_vec[0] ,min_max_vec[0].first );
+//    testm1->add_data(time_vec[0] ,1.0 );
+//    testM0->add_data(time_vec[0] ,min_max_vec[0].second );
+//    testM1->add_data(time_vec[0] ,1.0 );
+
+        testcomx->add_data(time_vec[0], 0.0);
+        testcomy->add_data(time_vec[0], 0.0);
+        testcom->add_data(time_vec[0], 0.0);
+
+
+        testper0->add_data(time_vec[0], perimeter_time[0]);
+//    testper1->add_data(time_vec[0] , 1.0 );
+//    testper2->add_data(time_vec[0] , std::abs(perimeter_time[0] - perimetre_ref)/perimetre_ref );
+//    testper2_counter->add_data(0 , std::abs(perimeter_time[0] - perimetre_ref)/perimetre_ref );
+
+        testcirc->add_data(time_vec[0], circularity_time[0]);
+        testcirc1->add_data(time_vec[0], std::abs(circularity_time[0] - circularity_ref) / circularity_ref);
+        testcirc1_counter->add_data(0, std::abs(circularity_time[0] - circularity_ref) / circularity_ref);
+
+        test0c->add_data(time_vec[0], 0.0);
+        test0c_counter->add_data(0, 0.0);
+//test4c->add_data(time_vec[0] , 0.0 );
+
+
+        test0->add_data(time_vec[0], area_time[0]);
+// ADD 8/01/21
+        test1->add_data(time_vec[0], l1_err_u_n_time[0]);
+        test2->add_data(time_vec[0], linf_err_u_n_time[0]);
+//    test1_counter->add_data(0 ,l1_err_u_n_time[0] );
+//    test2_counter->add_data(0 ,linf_err_u_n_time[0] );
+//    test3->add_data(time_vec[0] ,max_val_u_n_time[0] );
+// UP TO HERE
+        test4->add_data(time_vec[0], l1_err_curvature_time[0]);
+        test5->add_data(time_vec[0], linf_err_curvature_time[0]);
+//    test4_counter->add_data(0 ,l1_err_curvature_time[0] );
+//    test5_counter->add_data(0 ,linf_err_curvature_time[0] );
+
+        test_new0->add_data(time_vec[0], L1_err_u_n_time[0]);
+//    test_new1->add_data(time_vec[0] ,l1_err_u_n_time_para[0] );
+//    test_new2->add_data(time_vec[0] ,linf_err_u_n_time_para[0] );
+//    test_new3->add_data(time_vec[0] ,L1_err_u_n_time_para[0] );
+//    test_new4->add_data(time_vec[0] ,max_val_u_n_time_para[0] );
+//
+//    test_new0_counter->add_data(0 ,L1_err_u_n_time[0] );
+//    test_new1_counter->add_data(0 ,l1_err_u_n_time_para[0] );
+//    test_new2_counter->add_data(0 ,linf_err_u_n_time_para[0] );
+//    test_new3_counter->add_data(0,L1_err_u_n_time_para[0] );
+//    test_new4_counter->add_data(0 ,max_val_u_n_time_para[0] );
+//
+//
+//
+//    test0b->add_data(time_vec[0] ,area_time[0]/area_time[0] );
+// ADD 8/01/21
+//    test1b->add_data(time_vec[0] ,l1_err_u_n_time[0]/l1_err_u_n_time[0] );
+//    test2b->add_data(time_vec[0] ,linf_err_u_n_time[0]/linf_err_u_n_time[0] );
+//    test3b->add_data(time_vec[0] ,max_val_u_n_time[0]/max_val_u_n_time[0]  );
+// UP TO HERE
+//    test4b->add_data(time_vec[0] ,l1_err_curvature_time[0]/l1_err_curvature_time[0]  );
+//    test5b->add_data(time_vec[0] ,linf_err_curvature_time[0]/linf_err_curvature_time[0]  );
+//
+//    testref0->add_data(time_vec[0] , area_ref );
+//    testref1->add_data(time_vec[0] , perimetre_ref );
+//    testref2->add_data(time_vec[0] , circularity_ref );
+
+//    testanal0->add_data(time_vec[0] , area_analytic );
+//    testanal1->add_data(time_vec[0] , perimeter_analytic );
+
+
+        testflux->add_data(time_vec[0], flux_interface_time[0]);
+//    testvelx ->add_data(time_vec[0] , std::abs(rise_velocity_time[0].first) );
+//    testvely ->add_data(time_vec[0] , std::abs(rise_velocity_time[0].second) );
+        testvel->add_data(time_vec[0], std::abs(rise_velocity_time[0].first) + std::abs(rise_velocity_time[0].second));
+//    testvel_counter->add_data(0, std::abs(rise_velocity_time[0].first) + std::abs(rise_velocity_time[0].second) );
+        test_dt->add_data(time_vec[0], 0.0);
+//test_e->add_data(time_vec[0] , eccentricity_vec[0] );
+        test_der_int->add_data(time_vec[0], 0.0);
+        for (size_t i = 0; i < tot - 1; i++) {
+            test0->add_data(time_vec[i + 1], area_time[i + 1]);
+            test1->add_data(time_vec[i + 1], l1_err_u_n_time[i + 1]);
+            test2->add_data(time_vec[i + 1], linf_err_u_n_time[i + 1]);
+//test_der_int->add_data(time_vec[i+1] ,linf_der_time_interface[i] );
+
+//        test1_counter->add_data(i+1 ,l1_err_u_n_time[i+1] );
+//        test2_counter->add_data(i+1 ,linf_err_u_n_time[i+1] );
+//        test3->add_data(time_vec[i+1] ,max_val_u_n_time[i+1] );
+////        test1->add_data(time_vec[i+1] ,l1_err_u_n_time[i] );
+////        test2->add_data(time_vec[i+1] ,linf_err_u_n_time[i] );
+////        test1_counter->add_data(i+1 ,l1_err_u_n_time[i] );
+////        test2_counter->add_data(i+1 ,linf_err_u_n_time[i] );
+////        test3->add_data(time_vec[i+1] ,max_val_u_n_time[i] );
+            test4->add_data(time_vec[i + 1], l1_err_curvature_time[i + 1]);
+            test5->add_data(time_vec[i + 1], linf_err_curvature_time[i + 1]);
+//        test4_counter->add_data(i+1 ,l1_err_curvature_time[i+1] );
+//        test5_counter->add_data(i+1 ,linf_err_curvature_time[i+1] );
+
+//        test0b->add_data(time_vec[i+1] ,area_time[i+1]/area_time[0] );
+//
+//        test1b->add_data(time_vec[i+1] ,l1_err_u_n_time[i+1]/l1_err_u_n_time[0] );
+//        test2b->add_data(time_vec[i+1] ,linf_err_u_n_time[i+1]/linf_err_u_n_time[0] );
+//        test3b->add_data(time_vec[i+1] ,max_val_u_n_time[i+1]/max_val_u_n_time[0]  );
+////        test1b->add_data(time_vec[i+1] ,l1_err_u_n_time[i]/l1_err_u_n_time[0] );
+////        test2b->add_data(time_vec[i+1] ,linf_err_u_n_time[i]/linf_err_u_n_time[0] );
+////        test3b->add_data(time_vec[i+1] ,max_val_u_n_time[i]/max_val_u_n_time[0]  );
+//        test4b->add_data(time_vec[i+1] ,l1_err_curvature_time[i+1]/l1_err_curvature_time[0] );
+//        test5b->add_data(time_vec[i+1] ,linf_err_curvature_time[i+1]/linf_err_curvature_time[0]  );
+
+            test_new0->add_data(time_vec[i + 1], L1_err_u_n_time[i + 1]);
+//        test_new1->add_data(time_vec[i+1] ,l1_err_u_n_time_para[i+1] );
+//        test_new2->add_data(time_vec[i+1] ,linf_err_u_n_time_para[i+1] );
+//        test_new3->add_data(time_vec[i+1] ,L1_err_u_n_time_para[i+1] );
+//        test_new4->add_data(time_vec[i+1] ,max_val_u_n_time_para[i+1] );
+
+//        test_new0_counter->add_data(i+1 ,L1_err_u_n_time[i+1] );
+//        test_new1_counter->add_data(i+1 ,l1_err_u_n_time_para[i+1] );
+//        test_new2_counter->add_data(i+1 ,linf_err_u_n_time_para[i+1] );
+//        test_new3_counter->add_data(i+1,L1_err_u_n_time_para[i+1] );
+//        test_new4_counter->add_data(i+1 ,max_val_u_n_time_para[i+1] );
+
+            testcomx->add_data(time_vec[i + 1],
+                               std::abs(centre_mass_err_time[i + 1].first - centre_mass_err_time[0].first) /
+                               centre_mass_err_time[0].first);
+            testcomy->add_data(time_vec[i + 1],
+                               std::abs(centre_mass_err_time[i + 1].second - centre_mass_err_time[0].second) /
+                               centre_mass_err_time[0].second);
+            testcom->add_data(time_vec[i + 1], std::abs(centre_mass_err_time[i + 1].first - centre_mass_err_time[0].first) /
+                                               centre_mass_err_time[0].first + std::abs(
+                    centre_mass_err_time[i + 1].second - centre_mass_err_time[0].second) / centre_mass_err_time[0].second);
+
+
+//        testm0->add_data(time_vec[i+1] , min_max_vec[i+1].first );
+//        testm1->add_data(time_vec[i+1] ,min_max_vec[i+1].first/min_max_vec[0].first );
+//        testM0->add_data(time_vec[i+1] , min_max_vec[i+1].second );
+//        testM1->add_data(time_vec[i+1] ,min_max_vec[i+1].second/min_max_vec[0].second );
+
+
+            testper0->add_data(time_vec[i + 1], perimeter_time[i + 1]);
+//        testper1->add_data(time_vec[i+1] , perimeter_time[i+1]/perimeter_time[0] );
+//        testper2->add_data(time_vec[i+1] , std::abs( perimeter_time[i+1] - perimetre_ref) / perimetre_ref );
+//        testper2_counter->add_data(i+1 , std::abs( perimeter_time[i+1] - perimetre_ref) / perimetre_ref );
+
+            testcirc->add_data(time_vec[i + 1], circularity_time[i + 1]);
+            testcirc1->add_data(time_vec[i + 1], std::abs(circularity_time[i + 1] - circularity_ref) / circularity_ref);
+            testcirc1_counter->add_data(i + 1, std::abs(circularity_time[i + 1] - circularity_ref) / circularity_ref);
+
+            test0c->add_data(time_vec[i + 1], std::abs(area_time[i + 1] - area_time[0]) / area_time[0]);
+            test0c_counter->add_data(i + 1, std::abs(area_time[i + 1] - area_time[0]) / area_time[0]);
+//test4c->add_data(time_vec[i+1] , std::abs(l1_err_curvature_time[i+1] - l1_err_curvature_time[0] )/l1_err_curvature_time[0]);
+
+            testflux->add_data(time_vec[i + 1], flux_interface_time[i + 1]);
+//        testvelx ->add_data(time_vec[i+1] , std::abs(rise_velocity_time[i+1].first) );
+//        testvely ->add_data(time_vec[i+1] , std::abs(rise_velocity_time[i+1].second) );
+            testvel->add_data(time_vec[i + 1],
+                              std::abs(rise_velocity_time[i + 1].first) + std::abs(rise_velocity_time[i + 1].second));
+//        testvel_counter->add_data(i+1 , std::abs(rise_velocity_time[i+1].first) + std::abs(rise_velocity_time[i+1].second) );
+
+//        testref0->add_data(time_vec[i+1] , area_ref );
+//        testref1->add_data(time_vec[i+1] , perimetre_ref );
+//        testref2->add_data(time_vec[i+1] , circularity_ref );
+//
+//        testanal0->add_data(time_vec[i+1] , area_analytic );
+//        testanal1->add_data(time_vec[i+1] , perimeter_analytic );
+
+//std::cout<<"time_vec[i] = "<<time_vec[i]<<", time_vec[i+1] = "<<time_vec[i+1]<<", dt = "<<dt<<", error = "<<std::abs( std::abs( time_vec[i+1] - time_vec[i] ) - dt )<<std::endl;
+//        if( std::abs( std::abs( time_vec[i+1] - time_vec[i] ) - dt ) > 1e-10 ){
+//
+//            test_dt->add_data(time_vec[i+1] , 0.0 );
+//        }
+            test_dt->add_data(time_vec[i + 1], time_vec[i + 1] - time_vec[i]);
+//test_e->add_data(time_vec[i+1] , eccentricity_vec[i] );
+
         }
 
+
+        postoutput.add_object(test0);
+        postoutput.add_object(test1);
+        postoutput.add_object(test2);
+        postoutput.add_object(test_der_int);
+
+
+//    postoutput.add_object(test1_counter);
+//    postoutput.add_object(test2_counter);
+
+
+//    postoutput.add_object(test3);
+        postoutput.add_object(test4);
+        postoutput.add_object(test5);
+//    postoutput.add_object(test4_counter);
+//    postoutput.add_object(test5_counter);
+
+        postoutput.add_object(test_new0);
+//    postoutput.add_object(test_new1);
+//    postoutput.add_object(test_new2);
+//    postoutput.add_object(test_new3);
+//    postoutput.add_object(test_new4);
+//
+//    postoutput.add_object(test_new0_counter);
+//    postoutput.add_object(test_new1_counter);
+//    postoutput.add_object(test_new2_counter);
+//    postoutput.add_object(test_new3_counter);
+//    postoutput.add_object(test_new4_counter);
+//
+//
+//
+//
+//    postoutput.add_object(test0b);
+//    postoutput.add_object(test1b);
+//    postoutput.add_object(test2b);
+//    postoutput.add_object(test3b);
+//    postoutput.add_object(test4b);
+//    postoutput.add_object(test5b);
+
+        postoutput.add_object(testcomx);
+        postoutput.add_object(testcomy);
+        postoutput.add_object(testcom);
+
+//    postoutput.add_object(testm0);
+//    postoutput.add_object(testm1);
+//    postoutput.add_object(testM0);
+//    postoutput.add_object(testM1);
+
+        postoutput.add_object(testper0);
+//    postoutput.add_object(testper1);
+//    postoutput.add_object(testper2);
+//    postoutput.add_object(testper2_counter);
+
+
+        postoutput.add_object(testcirc);
+        postoutput.add_object(testcirc1);
+        postoutput.add_object(testcirc1_counter);
+
+        postoutput.add_object(test0c);
+        postoutput.add_object(test0c_counter);
+//postoutput.add_object(test4c);
+
+        postoutput.add_object(testflux);
+//    postoutput.add_object(testvelx);
+//    postoutput.add_object(testvely);
+        postoutput.add_object(testvel);
+//    postoutput.add_object(testvel_counter);
+
+
+//    postoutput.add_object(testref0);
+//    postoutput.add_object(testref1);
+//    postoutput.add_object(testref2);
+
+//    postoutput.add_object(testanal0);
+//    postoutput.add_object(testanal1);
+
+
+        postoutput.add_object(test_dt);
+        postoutput.add_object(test_e);
+
+        postoutput.write();
 
     }
 
 
-    template<typename Mesh, typename Cell, typename LS, typename TC, typename RealType, typename ASS, typename BDRY, typename SOL, typename VEL, typename PP1, typename PP2, typename Function1, typename Function2, typename Function3>
+    template<typename T>
     void
-    post_processing_functionLS_2(const Mesh &msh, Cell &cl, size_t hdi_cell, size_t hdi_face,
-                                 LS &level_set_function, TC &test_case, ASS &assembler_sc, BDRY &bcs_vel,
-                                 const SOL &sol, VEL &velocity, RealType &H1_error, RealType &L2_error, PP1 &uT1_gp,
-                                 PP1 &uT2_gp, PP1 &p_gp, PP2 &interface_file, RealType &L2_pressure_error,
-                                 RealType &l1_u_n_error,
-                                 RealType &l2_u_n_error, RealType &linf_u_n_error, size_t &counter_interface_pts,
-                                 size_t &degree,
-                                 RealType &force_pressure_avg, RealType &force_pressure_max, size_t &counter_pt_Gamma,
-                                 PP1 &test_gammaH,
-                                 PP1 &test_press_jump, PP1 &test_grad_vel_jump, RealType &distance_pts,
-                                 RealType &force_gradVel_max,
-                                 RealType &force_gradVel_avg, PP1 &test_veln_n, PP1 &p1_gp, PP1 &p2_gp,
-                                 PP1 &test_grad_vel_t_n,
-                                 Function1 &sol_vel, Function2 &sol_p, Function3 &vel_grad, PP1 &test_veln_t,
-                                 PP1 &test_velp_n, PP1 &test_velp_t) {
+    plotting_in_time(const std::vector <T> &time_vec, const std::vector <T> &area_time,
+                     const std::vector <T> &l1_err_u_n_time, const std::vector <T> &linf_err_u_n_time,
+                     const std::vector <T> &max_val_u_n_time, const std::vector <T> &l1_err_curvature_time,
+                     const std::vector <T> &linf_err_curvature_time, T dt) {
+
+        postprocess_output <T> postoutput;
+
+        auto test0 = std::make_shared < gnuplot_output_object_time < double > > ("area_time.dat");
+        auto test1 = std::make_shared < gnuplot_output_object_time < double > > ("l1_err_u_n_time.dat");
+        auto test2 = std::make_shared < gnuplot_output_object_time < double > > ("linf_err_u_n_time.dat");
+        auto test3 = std::make_shared < gnuplot_output_object_time < double > > ("max_val_u_n_time.dat");
+        auto test4 = std::make_shared < gnuplot_output_object_time < double > > ("l1_err_curvature_time.dat");
+        auto test5 = std::make_shared < gnuplot_output_object_time < double > > ("linf_err_curvature_time.dat");
+
+        auto test0b = std::make_shared < gnuplot_output_object_time < double > > ("area_time_normalised.dat");
+        auto test1b = std::make_shared < gnuplot_output_object_time < double > > ("l1_err_u_n_time_normalised.dat");
+        auto test2b = std::make_shared < gnuplot_output_object_time < double > > ("linf_err_u_n_time_normalised.dat");
+        auto test3b = std::make_shared < gnuplot_output_object_time < double > > ("max_val_u_n_time_normalised.dat");
+        auto test4b = std::make_shared < gnuplot_output_object_time < double > > ("l1_err_curvature_time_normalised.dat");
+        auto test5b = std::make_shared < gnuplot_output_object_time < double > > ("linf_err_curvature_time_normalised.dat");
+
+        auto test_dt = std::make_shared < gnuplot_output_object_time < double > > ("dt_M.dat");
 
 
-        vector_cell_basis <cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hdi_cell);
-        RealType kappa_1 = test_case.parms.kappa_1;
-        RealType kappa_2 = test_case.parms.kappa_2;
+        size_t tot = l1_err_u_n_time.size();
+        test0->add_data(time_vec[0], area_time[0]);
+        test4->add_data(time_vec[0], l1_err_curvature_time[0]);
+        test5->add_data(time_vec[0], linf_err_curvature_time[0]);
 
-        cell_basis <cuthho_poly_mesh<RealType>, RealType> pb(msh, cl, hdi_face);
-        auto cbs = cb.size();
-//auto pbs = pb.size();
-//    auto sol_vel = test_case.sol_vel;
-//    auto sol_p = test_case.sol_p;
-//    auto vel_grad = test_case.vel_grad;
+        test0b->add_data(time_vec[0], area_time[0] / area_time[0]);
+        test4b->add_data(time_vec[0], l1_err_curvature_time[0] / l1_err_curvature_time[0]);
+        test5b->add_data(time_vec[0], linf_err_curvature_time[0] / linf_err_curvature_time[0]);
 
-        level_set_function.cell_assignment(cl); // ----------------------------> TOGLIERE????
-        test_case.test_case_cell_assignment(cl); // ----------------------------> TOGLIERE????
+        for (size_t i = 0; i < tot; i++) {
+            test0->add_data(time_vec[i + 1], area_time[i + 1]);
+            test1->add_data(time_vec[i + 1], l1_err_u_n_time[i]);
+            test2->add_data(time_vec[i + 1], linf_err_u_n_time[i]);
+            test3->add_data(time_vec[i + 1], max_val_u_n_time[i]);
+            test4->add_data(time_vec[i + 1], l1_err_curvature_time[i + 1]);
+            test5->add_data(time_vec[i + 1], linf_err_curvature_time[i + 1]);
 
+            test0b->add_data(time_vec[i + 1], area_time[i + 1] / area_time[0]);
+            test1b->add_data(time_vec[i + 1], l1_err_u_n_time[i] / l1_err_u_n_time[0]);
+            test2b->add_data(time_vec[i + 1], linf_err_u_n_time[i] / linf_err_u_n_time[0]);
+            test3b->add_data(time_vec[i + 1], max_val_u_n_time[i] / max_val_u_n_time[0]);
+            test4b->add_data(time_vec[i + 1], l1_err_curvature_time[i + 1] / l1_err_curvature_time[0]);
+            test5b->add_data(time_vec[i + 1], linf_err_curvature_time[i + 1] / linf_err_curvature_time[0]);
 
-//auto bcs_vel = test_case.bcs_vel;
-//auto neumann_jump = test_case.neumann_jump;
-        assembler_sc.set_dir_func(bcs_vel); // CAMBIA QUALCOSA?? // ----------------------------> TOGLIERE????
-
-
-        Matrix<RealType, Dynamic, 1> vel_locdata_n, vel_locdata_p, vel_locdata;
-        Matrix<RealType, Dynamic, 1> P_locdata_n, P_locdata_p, P_locdata;
-        Matrix<RealType, Dynamic, 1> vel_cell_dofs_n, vel_cell_dofs_p, vel_cell_dofs;
-
-        if (location(msh, cl) == element_location::ON_INTERFACE) {
-            vel_locdata_n = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
-            vel_locdata_p = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-            P_locdata_n = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_NEGATIVE_SIDE);
-            P_locdata_p = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-
-
-            vel_cell_dofs_n = vel_locdata_n.head(cbs);
-            vel_cell_dofs_p = vel_locdata_p.head(cbs);
-
-
-// NOT AGGLO CELL
-            if (level_set_function.subcells.size() < 1) {
-
-                auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
-                auto cl_old = velocity.msh.cells[offset_old];
-                auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
-                size_t i_local = 0;
-                for (const auto &ln_Qk: Lagrange_nodes_Qk) {
-                    if (level_set_function(ln_Qk, cl_old) > 0.0) {
-                        auto phi_HHO = cb.eval_basis(ln_Qk);
-                        auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                        i_local++;
-                    } else {
-                        auto phi_HHO = cb.eval_basis(ln_Qk);
-                        auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                        i_local++;
-//  velocity.first(i_local,i_global) = cell_dofs_n.dot( phi_HHO );
-//  velocity.second(i_local,i_global) = 0; // elliptic case is scalar
-                    }
-                }
-
-            } else // AGGLO CELL
-            {
-
-                for (size_t i_subcell = 0;
-                     i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size(); i_subcell++) {
-                    auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
-//std::cout<<"offset_old = "<<offset_old<<std::endl;
-                    auto cl_old = velocity.msh.cells[offset_old];
-                    auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
-//                    auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
-                    size_t i_local = 0;
-                    for (const auto &ln_Qk: Lagrange_nodes_Qk) {
-                        if (level_set_function(ln_Qk, cl_old) > 0.0) {
-                            auto phi_HHO = cb.eval_basis(ln_Qk);
-                            auto vel = phi_HHO.transpose() * vel_cell_dofs_p;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                            i_local++;
-                        } else {
-                            auto phi_HHO = cb.eval_basis(ln_Qk);
-                            auto vel = phi_HHO.transpose() * vel_cell_dofs_n;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                            i_local++;
-//  velocity.first(i_local,i_global) = cell_dofs_n.dot( phi_HHO );
-//  velocity.second(i_local,i_global) = 0; // elliptic case is scalar
-                        }
-                    }
-
-                }
+//std::cout<<"time_vec[i] = "<<time_vec[i]<<", time_vec[i+1] = "<<time_vec[i+1]<<", dt = "<<dt<<", error = "<<std::abs( std::abs( time_vec[i+1] - time_vec[i] ) - dt )<<std::endl;
+            if (std::abs(std::abs(time_vec[i + 1] - time_vec[i]) - dt) > 1e-10) {
+                test_dt->add_data(time_vec[i], 0.0);
+                test_dt->add_data(time_vec[i + 1], 0.0);
             }
+        }
 
-//            tc2.toc();
-//            std::cout<<"time tc2 3 = "<<tc2<<std::endl;
-//            tc2.tic();
-            auto qps_n = integrate(msh, cl, 2 * hdi_cell, element_location::IN_NEGATIVE_SIDE);
-            for (auto &qp: qps_n) {
-// Compute H1-error //
-                auto t_dphi = cb.eval_gradients(qp.first);
-                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
 
-                for (size_t i = 1; i < cbs; i++)
-                    grad += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
+        postoutput.add_object(test0);
+        postoutput.add_object(test1);
+        postoutput.add_object(test2);
+        postoutput.add_object(test3);
+        postoutput.add_object(test4);
+        postoutput.add_object(test5);
+        postoutput.add_object(test0b);
+        postoutput.add_object(test1b);
+        postoutput.add_object(test2b);
+        postoutput.add_object(test3b);
+        postoutput.add_object(test4b);
+        postoutput.add_object(test5b);
 
-                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
-                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
-                H1_error += qp.second * kappa_1 * inner_product(grad_sym_diff, grad_sym_diff);
+        postoutput.add_object(test_dt);
 
-// Compute L2-error //
-                auto t_phi = cb.eval_basis(qp.first);
-                auto v = t_phi.transpose() * vel_cell_dofs_n;
-                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-//                L2_error += qp.second * sol_diff.dot(sol_diff);
-                L2_error += qp.second * kappa_1 * sol_diff.dot(sol_diff);
+        postoutput.write();
 
-                uT1_gp->add_data(qp.first, v(0));
-                uT2_gp->add_data(qp.first, v(1));
-
-                interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
+    }
 
 
 
-// L2 - pressure - error //
-                auto p_phi = pb.eval_basis(qp.first);
-                RealType p_num = p_phi.dot(P_locdata_n);
-                RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
-//                auto p_prova = test_case.sol_p( qp.first ) ;
-//                std::cout<<"In pt = "<<qp.first<<" --> pressure ANAL  = "<<p_prova<<" , pressure NUM = "<< p_num<<std::endl;
-//                L2_pressure_error += qp.second * p_diff * p_diff;
-                L2_pressure_error += qp.second * p_diff * p_diff / kappa_1;
-                p_gp->add_data(qp.first, p_num);
-                p1_gp->add_data(qp.first, p_num);
-            }
+/// Useful to plot level set pre FE transport problem
+/// in cuthho_export.hpp
+    template<typename Mesh, typename Function>
+    void
+    output_mesh_info2_pre_FEM(const Mesh &msh, const Function &level_set_function) {
+        using RealType = typename Mesh::coordinate_type;
 
-            auto qps_p = integrate(msh, cl, 2 * hdi_cell, element_location::IN_POSITIVE_SIDE);
-            for (auto &qp: qps_p) {
-// Compute H1-error //
-                auto t_dphi = cb.eval_gradients(qp.first);
-                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
+/************** OPEN SILO DATABASE **************/
+        silo_database silo;
+        silo.create("cuthho_meshinfo_preFEM_Stokes.silo");
+        silo.add_mesh(msh, "mesh");
 
-                for (size_t i = 1; i < cbs; i++)
-                    grad += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
-
-                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
-                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
-                H1_error += qp.second * kappa_2 * inner_product(grad_sym_diff, grad_sym_diff);
-
-// Compute L2-error //
-                auto t_phi = cb.eval_basis(qp.first);
-                auto v = t_phi.transpose() * vel_cell_dofs_p;
-                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-//                L2_error += qp.second * sol_diff.dot(sol_diff);
-                L2_error += qp.second * kappa_2 * sol_diff.dot(sol_diff);
-
-                uT1_gp->add_data(qp.first, v(0));
-                uT2_gp->add_data(qp.first, v(1));
-//                uT_gp->add_data( qp.first, std::make_pair(v(0),v(1)) );
-                if (interface_file) {
-
-                    interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
-
-                }
-// L2 - pressure - error //
-                auto p_phi = pb.eval_basis(qp.first);
-                RealType p_num = p_phi.dot(P_locdata_p);
-                RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
-//auto p_prova = test_case.sol_p( qp.first ) ;
-//std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
-//                L2_pressure_error += qp.second * p_diff * p_diff;
-                L2_pressure_error += qp.second * p_diff * p_diff / kappa_2;
-
-                p_gp->add_data(qp.first, p_num);
-                p2_gp->add_data(qp.first, p_num);
-            }
-            if (1) {
-                for (auto &interface_point: cl.user_data.interface) {
-                    auto t_phi = cb.eval_basis(interface_point);
-                    auto v = t_phi.transpose() * vel_cell_dofs_p;
-                    auto n = level_set_function.normal(interface_point);
-                    auto v_n = v.dot(n);
-                    l1_u_n_error += std::abs(v_n);
-                    l2_u_n_error += pow(v_n, 2.0);
-                    linf_u_n_error = std::max(linf_u_n_error, std::abs(v_n));
-                    counter_interface_pts++;
-                }
-            }
-//            tc2.toc();
-//            std::cout<<"time tc2 2 = "<<tc2<<std::endl;
-
-            if (1) // analysis power of pressure
-            {
-                auto parametric_interface = test_case.parametric_interface;
-                auto gamma = test_case.gamma;
-                auto msh_int = cl.user_data.integration_msh;
-                auto global_cells_i = parametric_interface.get_global_cells_interface(msh, cl);
-                Matrix<RealType, 2, 1> phi_t;
-                size_t degree_curve = msh_int.degree_curve;
-                RealType tot = 10.0;
-//                Interface_parametrisation_mesh1d curve(degree_curve) ;
-//            degree += 3*degree_curve -4 ; // 2*degree_curve ; // TO BE CHECKED
-//            auto qps = edge_quadrature<RealType>(degree);
-                auto neumann = test_case.neumann_jump;
-                for (size_t i_cell = 0; i_cell < msh_int.cells.size(); i_cell++) {
-                    auto pts = points(msh_int, msh_int.cells[i_cell]);
-                    size_t global_cl_i = global_cells_i[i_cell];
-//                auto qp_old = 0.5 *(*(qps.begin())).first.x() + 0.5;
-//                auto p = parametric_interface(t , pts , degree_curve ) ;
-//                point<RealType,2> pt_old ; //= typename Mesh::point_type( p(0) , p(1) ) ;
-
-                    for (RealType i = 0.0; i <= tot; i++) {
-                        auto t = 0.0 + i / tot;
-                        auto p = parametric_interface(t, pts, degree_curve);
-                        point<RealType, 2> pt = typename Mesh::point_type(p(0), p(1));
-//                    if( t == 0.0 )
-//                        pt_old = pt;
-                        auto p_phi = pb.eval_basis(pt);
-                        RealType p_pos = p_phi.dot(P_locdata_p);
-                        RealType p_neg = p_phi.dot(P_locdata_n);
-
-
-                        auto phi_HHO = cb.eval_basis(pt);
-                        auto t_dphi = cb.eval_gradients(pt);
-                        Matrix<RealType, 2, 2> grad_p = Matrix<RealType, 2, 2>::Zero();
-                        Matrix<RealType, 2, 2> grad_n = Matrix<RealType, 2, 2>::Zero();
-
-                        for (size_t i = 1; i < cbs; i++) {
-                            grad_p += vel_cell_dofs_p(i) * t_dphi[i].block(0, 0, 2, 2);
-                            grad_n += vel_cell_dofs_n(i) * t_dphi[i].block(0, 0, 2, 2);
-
-                        }
-                        Matrix<RealType, 2, 2> grad_sym_p = 0.5 * (grad_p + grad_p.transpose());
-                        Matrix<RealType, 2, 2> grad_sym_n = 0.5 * (grad_n + grad_n.transpose());
-                        auto vel_n = phi_HHO.transpose() * vel_cell_dofs_n;
-
-                        auto vel_p = phi_HHO.transpose() * vel_cell_dofs_p; // added 26/07/2023
-
-                        Matrix<RealType, 2, 1> phi_n = level_set_function.normal(pt);
-
-                        RealType val_un_n = (vel_n).transpose() * (phi_n);
-                        RealType val_up_n = (vel_p).transpose() * (phi_n);
-
-
-                        auto val_p = (p_pos - p_neg);
-                        Matrix<RealType, 2, 1> val_grad_u_n =
-                                (2.0 * kappa_1 * grad_sym_n - 2.0 * kappa_2 * grad_sym_p) * (phi_n);
-                        RealType val_u = (phi_n.transpose()) * val_grad_u_n;
-                        phi_t(0) = -phi_n(1);
-                        phi_t(1) = phi_n(0);
-
-                        RealType val_un_t = (vel_n).transpose() * (phi_t);
-                        RealType val_up_t = (vel_p).transpose() * (phi_t);
-
-                        RealType t_val_u_n = (phi_t.transpose()) * val_grad_u_n;
-//                    RealType val_u ;
-//                    if( signbit(phi_n(0)) == signbit(grads_u_n(0)) && signbit(phi_n(1)) == signbit(grads_u_n(1)) )
-//                        val_u = grads_u_n.norm();
-//                    else
-//                        val_u = -grads_u_n.norm();
-                        point<RealType, 2> curv_var = typename Mesh::point_type(distance_pts, 0.0);
-                        auto val_H = gamma * level_set_function.divergence(pt);
-                        test_press_jump->add_data(curv_var, val_p);
-                        test_gammaH->add_data(curv_var, val_H);
-                        test_grad_vel_jump->add_data(curv_var, val_u);
-                        test_grad_vel_t_n->add_data(curv_var, t_val_u_n);
-
-                        test_veln_n->add_data(curv_var, val_un_n);
-                        test_veln_t->add_data(curv_var, val_un_t);
-
-                        test_velp_n->add_data(curv_var, val_up_n);
-                        test_velp_t->add_data(curv_var, val_up_t);
-
-                        force_pressure_avg += val_p / val_H;
-                        force_pressure_max = std::max(force_pressure_max, std::abs(val_p / val_H));
-
-                        force_gradVel_avg += val_u / val_H;
-                        force_gradVel_max = std::max(force_gradVel_max, std::abs(val_u / val_H));
-
-
-                        counter_pt_Gamma++;
-
-                        RealType dist;
-
-                        if (t == 1)
-                            dist = 0.0;
-                        else
-                            dist = (parametric_interface(t + 1.0 / tot, pts, degree_curve) - p).norm();
-
-                        distance_pts += dist;
-
-                    }
-                }
-
-
-            }
-
-        } else {
-//            tc2.tic();
-            vel_locdata = assembler_sc.take_velocity(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-            P_locdata = assembler_sc.take_pressure(msh, cl, sol, element_location::IN_POSITIVE_SIDE);
-
-            vel_cell_dofs = vel_locdata.head(cbs);
-
-
-
-// NOT AGGLO CELL
-            if (level_set_function.subcells.size() < 1) {
-//                assert(level_set_function.agglo_LS_cl.user_data.offset_subcells.size()==2);
-//                assert( level_set_function.agglo_LS_cl.user_data.offset_subcells[0] == level_set_function.agglo_LS_cl.user_data.offset_subcells[1] );
-                auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[0];
-                auto cl_old = velocity.msh.cells[offset_old];
-                auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
-//                auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
-                size_t i_local = 0;
-                for (const auto &ln_Qk: Lagrange_nodes_Qk) {
-                    auto phi_HHO = cb.eval_basis(ln_Qk);
-                    auto vel = phi_HHO.transpose() * vel_cell_dofs;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                    i_local++;
-
-                }
-
-            } else // AGGLO CELL
-            {
-                for (size_t i_subcell = 0;
-                     i_subcell < level_set_function.agglo_LS_cl.user_data.offset_subcells.size(); i_subcell++) {
-                    auto offset_old = level_set_function.agglo_LS_cl.user_data.offset_subcells[i_subcell];
-//std::cout<<"offset_old = "<<offset_old<<std::endl;
-                    auto cl_old = velocity.msh.cells[offset_old];
-                    auto Lagrange_nodes_Qk = cl_old.user_data.Lagrange_nodes_Qk;
-//                    auto Lagrange_nodes_Qk = equidistriduted_nodes_ordered_bis<RealType,Mesh> (velocity.msh,cl_old,velocity.degree_FEM);
-                    size_t i_local = 0;
-                    for (const auto &ln_Qk: Lagrange_nodes_Qk) {
-                        auto phi_HHO = cb.eval_basis(ln_Qk);
-                        auto vel = phi_HHO.transpose() * vel_cell_dofs;
-// velocity.sol_HHO.first(i_local,offset_old) = vel(0);
-// velocity.sol_HHO.second(i_local,offset_old) = vel(1);
-//std::cout<<"In pt = "<<ln_Qk<<"-> vel(0) = "<<vel(0)<<" and vel(1) = "<<vel(1)<<std::endl;
-                        i_local++;
-
-                    }
-
-                }
-            }
-//            tc2.toc();
-//            std::cout<<"time tc2 1 = "<<tc2<<std::endl;
-//            tc2.tic();
-            RealType kappa = test_case.parms.kappa_1;
+/************** MAKE A SILO VARIABLE FOR CELL POSITIONING **************/
+        std::vector <RealType> cut_cell_markers;
+        for (auto &cl: msh.cells) {
             if (location(msh, cl) == element_location::IN_POSITIVE_SIDE)
-                kappa = test_case.parms.kappa_2;
-
-            auto qps = integrate(msh, cl, 2 * hdi_cell);
-            for (auto &qp: qps) {
-// Compute H1-error //
-                auto t_dphi = cb.eval_gradients(qp.first);
-                Matrix<RealType, 2, 2> grad = Matrix<RealType, 2, 2>::Zero();
-
-                for (size_t i = 1; i < cbs; i++)
-                    grad += vel_cell_dofs(i) * t_dphi[i].block(0, 0, 2, 2);
-
-                Matrix<RealType, 2, 2> grad_diff = vel_grad(qp.first) - grad;
-//                H1_error += qp.second * inner_product(grad_diff , grad_diff);
-                Matrix<RealType, 2, 2> grad_sym_diff = 0.5 * (grad_diff + grad_diff.transpose());
-                H1_error += qp.second * kappa * inner_product(grad_sym_diff, grad_sym_diff);
-
-// Compute L2-error //
-                auto t_phi = cb.eval_basis(qp.first);
-                auto v = t_phi.transpose() * vel_cell_dofs;
-                Matrix<RealType, 2, 1> sol_diff = sol_vel(qp.first) - v;
-//                L2_error += qp.second * sol_diff.dot(sol_diff);
-                L2_error += qp.second * kappa * sol_diff.dot(sol_diff);
-
-                uT1_gp->add_data(qp.first, v(0));
-                uT2_gp->add_data(qp.first, v(1));
-//                uT_gp->add_data( qp.first, std::make_pair(v(0),v(1)) );
-                if (interface_file) {
-
-                    interface_file << qp.first.x() << "   " << qp.first.y() << "   " << v(0) << "   " << v(1) << std::endl;
-
-                }
-
-// L2 - pressure - error //
-                auto p_phi = pb.eval_basis(qp.first);
-                RealType p_num = p_phi.dot(P_locdata);
-                RealType p_diff = test_case.sol_p(qp.first) - p_num; // era test_case STE
-//auto p_prova = test_case.sol_p( qp.first ) ;
-//std::cout<<"pressure ANAL  = "<<p_prova<<std::endl;
-//                L2_pressure_error += qp.second * p_diff * p_diff;
-                L2_pressure_error += qp.second * p_diff * p_diff / kappa;
-
-                p_gp->add_data(qp.first, p_num);
-                if (level_set_function(qp.first, cl) > 0.0)
-                    p2_gp->add_data(qp.first, p_num);
-                else
-                    p1_gp->add_data(qp.first, p_num);
-            }
-//            tc2.toc();
-//            std::cout<<"time tc2 0 = "<<tc2<<std::endl;
+                cut_cell_markers.push_back(1.0);
+            else if (location(msh, cl) == element_location::IN_NEGATIVE_SIDE)
+                cut_cell_markers.push_back(-1.0);
+            else if (location(msh, cl) == element_location::ON_INTERFACE)
+                cut_cell_markers.push_back(0.0);
+            else
+                throw std::logic_error("shouldn't have arrived here...");
         }
+        silo.add_variable("mesh", "cut_cells", cut_cell_markers.data(), cut_cell_markers.size(), zonal_variable_t);
+
+/************** MAKE A SILO VARIABLE FOR CELL HIGHLIGHT **************/
+        std::vector <RealType> highlight_markers;
+        for (auto &cl: msh.cells) {
+            if (cl.user_data.highlight)
+                highlight_markers.push_back(1.0);
+            else
+                highlight_markers.push_back(0.0);
+
+        }
+        silo.add_variable("mesh", "highlighted_cells", highlight_markers.data(), highlight_markers.size(),
+                          zonal_variable_t);
+
+/************** MAKE A SILO VARIABLE FOR LEVEL SET FUNCTION **************/
+        std::vector <RealType> level_set_vals;
+// for (auto& pt : msh.points)
+//    level_set_vals.push_back( level_set_function(pt) );
+        for (auto &n: msh.nodes)
+            level_set_vals.push_back(level_set_function(n));
+
+        silo.add_variable("mesh", "level_set", level_set_vals.data(), level_set_vals.size(), nodal_variable_t);
+
+/************** MAKE A SILO VARIABLE FOR NODE POSITIONING **************/
+        std::vector <RealType> node_pos;
+        for (auto &n: msh.nodes)
+            node_pos.push_back(location(msh, n) == element_location::IN_POSITIVE_SIDE ? +1.0 : -1.0);
+        silo.add_variable("mesh", "node_pos", node_pos.data(), node_pos.size(), nodal_variable_t);
+
+        std::vector <RealType> cell_set;
+        for (auto &cl: msh.cells) {
+            RealType r;
+
+            switch (cl.user_data.agglo_set) {
+                case cell_agglo_set::UNDEF:
+                    r = 0.0;
+                    break;
+
+                case cell_agglo_set::T_OK:
+                    r = 1.0;
+                    break;
+
+                case cell_agglo_set::T_KO_NEG:
+                    r = 2.0;
+                    break;
+
+                case cell_agglo_set::T_KO_POS:
+                    r = 3.0;
+                    break;
+
+            }
+
+            cell_set.push_back(r);
+        }
+        silo.add_variable("mesh", "agglo_set", cell_set.data(), cell_set.size(), zonal_variable_t);
+
+        silo.close();
+
+/*************  MAKE AN OUTPUT FOR THE INTERSECTION POINTS *************/
+        std::vector <RealType> int_pts_x;
+        std::vector <RealType> int_pts_y;
+
+        for (auto &fc: msh.faces) {
+            if (fc.user_data.location != element_location::ON_INTERFACE) continue;
+
+            RealType x = fc.user_data.intersection_point.x();
+            RealType y = fc.user_data.intersection_point.y();
+
+            int_pts_x.push_back(x);
+            int_pts_y.push_back(y);
+        }
+
+        std::ofstream points_file_pre_FEM("int_points_pre_FEM.3D", std::ios::out | std::ios::trunc);
+
+        if (points_file_pre_FEM) {
+// instructions
+            points_file_pre_FEM << "X   Y   Z   val" << std::endl;
+
+            for (size_t i = 0; i < int_pts_x.size(); i++) {
+                points_file_pre_FEM << int_pts_x[i] << "   " << int_pts_y[i]
+                                    << "   0.0     0.0" << std::endl;
+            }
+
+            points_file_pre_FEM.close();
+        } else
+            std::cerr << "points_file_pre_FEM has not been opened" << std::endl;
+
+
+/*************  MAKE AN OUTPUT FOR THE INTERFACE *************/
+        std::vector <RealType> int_x;
+        std::vector <RealType> int_y;
+
+        for (auto &cl: msh.cells) {
+            if (cl.user_data.location != element_location::ON_INTERFACE) continue;
+
+            for (size_t i = 0; i < cl.user_data.interface.size(); i++) {
+                RealType x = cl.user_data.interface.at(i).x();
+                RealType y = cl.user_data.interface.at(i).y();
+
+                int_x.push_back(x);
+                int_y.push_back(y);
+            }
+        }
+        std::ofstream interface_file_preFEM("interface_pre_FEM_Stokes.3D", std::ios::out | std::ios::trunc);
+
+        if (interface_file_preFEM) {
+// instructions
+            interface_file_preFEM << "X   Y   Z   val" << std::endl;
+
+            for (size_t i = 0; i < int_x.size(); i++) {
+                interface_file_preFEM << int_x[i] << "   " << int_y[i]
+                                      << "   0.0     0.0" << std::endl;
+            }
+
+            interface_file_preFEM.close();
+        } else
+            std::cerr << "interface_file_preFEM has not been opened" << std::endl;
+    }
+
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time_fast_para(const Mesh &msh, const VEC &interface_gamma, const VEC &tangent_gamma,
+                                   const VEC &normal_gamma, const std::vector <T> &curvature_gamma) {
+
+        std::string filename_stokes4 = "tangent_gamma_para.3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+// << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file4 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << tangent_gamma[i](0) << "   " << tangent_gamma[i](1) << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'tangent_gamma' has not been opened" << std::endl;
+
+        std::string filename_stokes0 = "normal_gamma_para.3D";
+        std::ofstream interface_file0(filename_stokes0, std::ios::out | std::ios::trunc);
+
+        if (interface_file0) {
+// instructions
+            interface_file0 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+// << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file0 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << normal_gamma[i](0) << "   " << normal_gamma[i](1) << std::endl;
+
+                i++;
+
+            }
+
+            interface_file0.close();
+        } else
+            std::cerr << "File 'normal_gamma' has not been opened" << std::endl;
+
+        std::string filename_stokes1 = "curvature_gamma_para.3D";
+        std::ofstream interface_file1(filename_stokes1, std::ios::out | std::ios::trunc);
+
+        if (interface_file1) {
+// instructions
+            interface_file1 << "X   Y   val0" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+//<< std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file1 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << curvature_gamma[i] << std::endl;
+
+                i++;
+
+            }
+
+            interface_file1.close();
+        } else
+            std::cerr << "File 'curvature_gamma' has not been opened" << std::endl;
 
 
     }
+
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time_fast_para_cont(const Mesh &msh, const VEC &interface_gamma, const VEC &tangent_gamma,
+                                        const VEC &normal_gamma, const std::vector <T> &curvature_gamma) {
+
+        std::string filename_stokes4 = "tangent_gamma_para_cont.3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+// << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file4 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << tangent_gamma[i](0) << "   " << tangent_gamma[i](1) << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'tangent_gamma' has not been opened" << std::endl;
+
+        std::string filename_stokes0 = "normal_gamma_para_cont.3D";
+        std::ofstream interface_file0(filename_stokes0, std::ios::out | std::ios::trunc);
+
+        if (interface_file0) {
+// instructions
+            interface_file0 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+// << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file0 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << normal_gamma[i](0) << "   " << normal_gamma[i](1) << std::endl;
+
+                i++;
+
+            }
+
+            interface_file0.close();
+        } else
+            std::cerr << "File 'normal_gamma' has not been opened" << std::endl;
+
+        std::string filename_stokes1 = "curvature_gamma_para_cont.3D";
+        std::ofstream interface_file1(filename_stokes1, std::ios::out | std::ios::trunc);
+
+        if (interface_file1) {
+// instructions
+            interface_file1 << "X   Y   val0" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;  << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file1 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << curvature_gamma[i] << std::endl;
+
+                i++;
+
+            }
+
+            interface_file1.close();
+        } else
+            std::cerr << "File 'curvature_gamma' has not been opened" << std::endl;
+
+
+    }
+
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time_fast(const Mesh &msh, const VEC &interface_gamma, const VEC &tangent_gamma,
+                              const VEC &normal_gamma, const std::vector <T> &curvature_gamma) {
+
+        std::string filename_stokes4 = "tangent_gamma.3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl; << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file4 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << tangent_gamma[i](0) << "   " << tangent_gamma[i](1) << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'tangent_gamma' has not been opened" << std::endl;
+
+        std::string filename_stokes0 = "normal_gamma.3D";
+        std::ofstream interface_file0(filename_stokes0, std::ios::out | std::ios::trunc);
+
+        if (interface_file0) {
+// instructions
+            interface_file0 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl; << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file0 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << normal_gamma[i](0) << "   " << normal_gamma[i](1) << std::endl;
+
+                i++;
+
+            }
+
+            interface_file0.close();
+        } else
+            std::cerr << "File 'normal_gamma' has not been opened" << std::endl;
+
+        std::string filename_stokes1 = "curvature_gamma.3D";
+        std::ofstream interface_file1(filename_stokes1, std::ios::out | std::ios::trunc);
+
+        if (interface_file1) {
+// instructions
+            interface_file1 << "X   Y   val0" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_gamma.begin();
+                 interface_point < interface_gamma.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl; << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                interface_file1 << (*interface_point)(0) << "   " << (*interface_point)(1) << "   "
+                                << curvature_gamma[i] << std::endl;
+
+                i++;
+
+            }
+
+            interface_file1.close();
+        } else
+            std::cerr << "File 'curvature_gamma' has not been opened" << std::endl;
+
+
+    }
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time_fast(const Mesh &msh, const VEC &interface_points, const std::vector <T> &val_u_n,
+                              const std::vector <std::pair<T, T>> &vec_n, size_t time_step, std::string &folder) {
+
+        std::string filename_stokes4 = folder + "vec_u_n_" + std::to_string(time_step) + ".3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file4 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_n[i] * vec_n[i].first << "   " << val_u_n[i] * vec_n[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+
+        std::string filename_stokes7 = folder + "vec_normal_" + std::to_string(time_step) + ".3D";
+        std::ofstream interface_file7(filename_stokes7, std::ios::out | std::ios::trunc);
+
+        if (interface_file7) {
+// instructions
+            interface_file7 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file7 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << vec_n[i].first << "   " << vec_n[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file7.close();
+        } else
+            std::cerr << "File 'vec_normal_' has not been opened" << std::endl;
+
+    }
+
+    template<typename Mesh, typename Level_Set, typename Velocity, typename T = typename Mesh::coordinate_type>
+    void
+    plot_u_n_interface(Mesh &msh_i, Level_Set &ls_cell, Velocity &u_projected, size_t time_step, std::string &folder) {
+
+
+        std::vector <T> val_u_n_fin; //val_u_nx_fin , val_u_ny_fin ;
+        std::vector <point<T, 2>> interface_points_plot_fin;
+        std::vector <std::pair<T, T>> vec_n; // , velocity_interface , velocity_field , points_vel_field;
+
+
+
+        for (auto &cl: msh_i.cells) {
+
+
+            if (cl.user_data.location == element_location::ON_INTERFACE) {
+
+                ls_cell.cell_assignment(cl);
+                u_projected.cell_assignment(cl);
+
+                for (auto interface_point = cl.user_data.interface.begin();
+                     interface_point < cl.user_data.interface.end(); interface_point++) {
+                    Eigen::Matrix<T, 2, 1> normal_cont_grad = ls_cell.normal(*interface_point);
+                    std::pair <T, T> normal_vec_grad_cont = std::make_pair(normal_cont_grad(0), normal_cont_grad(1));
+
+                    vec_n.push_back(normal_vec_grad_cont);
+
+                    auto u_pt = u_projected(*(interface_point));
+                    auto ls_n_pt = ls_cell.normal(*(interface_point));
+
+                    T u_n_0 = u_pt.first * ls_n_pt(0);
+                    T u_n_1 = u_pt.second * ls_n_pt(1);
+
+                    interface_points_plot_fin.push_back(*(interface_point));
+
+                    val_u_n_fin.push_back(u_n_0 + u_n_1);
+
+
+                }
+
+
+            }
+
+
+        }
+
+
+        goal_quantities_time_fast(msh_i, interface_points_plot_fin, val_u_n_fin, vec_n, time_step, folder);
+
+
+    }
+
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time(const Mesh &msh, const VEC &interface_points, const std::vector <T> &val_u_n,
+                         const std::vector <std::pair<T, T>> &vec_u_n, const std::vector <std::pair<T, T>> &velocity_field,
+                         const std::vector <std::pair<T, T>> &points_vel_field, size_t time_step) {
+/*
+    std::string filename_stokes0 = "val_u_nx_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file0(filename_stokes0, std::ios::out | std::ios::trunc);
+
+    if(interface_file0)
+    {
+        // instructions
+        interface_file0 << "X   Y   Z   val" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_nx[i]<<std::endl;
+            interface_file0 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << val_u_nx[i] << "    0.0"<< std::endl;
+
+            i++;
+
+        }
+
+        interface_file0.close();
+    }
+    else
+        std::cerr << "File 'val_u_nx' has not been opened" << std::endl;
+
+    std::string filename_stokes1 = "val_u_ny_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file1(filename_stokes1, std::ios::out | std::ios::trunc);
+
+       if(interface_file1)
+       {
+           // instructions
+           interface_file1 << "X   Y   Z   val" << std::endl;
+           size_t i = 0;
+           for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+           {
+               //std::cout<<val_u_ny[i]<<std::endl;
+               interface_file1 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+               << val_u_ny[i] << "    0.0"<< std::endl;
+               i++;
+           }
+
+           interface_file1.close();
+       }
+       else
+           std::cerr << "File 'val_u_ny' has not been opened" << std::endl;
+
+
+    std::string filename_stokes2 = "val_u_n_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file2(filename_stokes2, std::ios::out | std::ios::trunc);
+
+    if(interface_file2)
+    {
+        // instructions
+        interface_file2 << "X   Y   Z   val" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_n[i]<<std::endl;
+            interface_file2 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << val_u_n[i] << "    0.0"<< std::endl;
+            i++;
+        }
+
+        interface_file2.close();
+    }
+    else
+        std::cerr << "File 'val_u_n' has not been opened" << std::endl;
+
+
+
+    postprocess_output<double> postoutput_vec_u_n;
+    std::string filename_stokes3 = "vec_u_n_" + std::to_string(time_step) + ".dat";
+    auto test_vec_u_n = std::make_shared< gnuplot_output_object_vec<double> >(filename_stokes3);
+
+    size_t i = 0;
+    for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+    {
+        test_vec_u_n->add_data(*interface_point,std::make_pair( val_u_n[i]*vec_u_n[i].first , val_u_n[i]*vec_u_n[i].second ) );
+        i++;
+    }
+
+    postoutput_vec_u_n.add_object(test_vec_u_n);
+    postoutput_vec_u_n.write();
+
+   */
+        std::string filename_stokes4 = "vec_u_n_" + std::to_string(time_step) + ".3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file4 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_n[i] * vec_u_n[i].first << "   " << val_u_n[i] * vec_u_n[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+
+/*
+    std::string filename_stokes5 = "velocity_interface_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file5(filename_stokes5, std::ios::out | std::ios::trunc);
+
+    if(interface_file5)
+    {
+        // instructions
+        interface_file5 << "X   Y   val0   val1" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_nx[i]<<std::endl;
+            interface_file5 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << velocity_interface[i].first << "   " << velocity_interface[i].second<< std::endl;
+
+            i++;
+
+        }
+
+        interface_file5.close();
+    }
+    else
+        std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+
+     */
+//    std::string filename_stokes6 = "velocity_field_" + std::to_string(time_step) + ".3D";
+        std::string filename_stokes6 = "velocity_field_.3D";
+        std::ofstream interface_file6(filename_stokes6, std::ios::out | std::ios::trunc);
+
+        if (interface_file6) {
+// instructions
+            interface_file6 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto point_vel = points_vel_field.begin(); point_vel < points_vel_field.end(); point_vel++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file6 << (*point_vel).first << "   " << (*point_vel).second << "   "
+                                << velocity_field[i].first << "   " << velocity_field[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file6.close();
+        } else
+            std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+/*
+    std::string filename_stokes7 = "vec_normal_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file7(filename_stokes7, std::ios::out | std::ios::trunc);
+
+    if(interface_file7)
+    {
+        // instructions
+        interface_file7 << "X   Y   val0   val1" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_nx[i]<<std::endl;
+            interface_file7 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << vec_u_n[i].first << "   " << vec_u_n[i].second<< std::endl;
+
+            i++;
+
+        }
+
+        interface_file7.close();
+    }
+    else
+        std::cerr << "File 'vec_normal_' has not been opened" << std::endl;
+    */
+    }
+
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time(const Mesh &msh, T time, const VEC &interface_points, const std::vector <T> &val_u_nx,
+                         const std::vector <T> &val_u_ny, const std::vector <T> &val_u_n,
+                         const std::vector <std::pair<T, T>> &vec_u_n,
+                         const std::vector <std::pair<T, T>> &velocity_interface,
+                         const std::vector <std::pair<T, T>> &velocity_field,
+                         const std::vector <std::pair<T, T>> &points_vel_field, size_t time_step) {
+/*
+    std::string filename_stokes0 = "val_u_nx_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file0(filename_stokes0, std::ios::out | std::ios::trunc);
+
+    if(interface_file0)
+    {
+        // instructions
+        interface_file0 << "X   Y   Z   val" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_nx[i]<<std::endl;
+            interface_file0 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << val_u_nx[i] << "    0.0"<< std::endl;
+
+            i++;
+
+        }
+
+        interface_file0.close();
+    }
+    else
+        std::cerr << "File 'val_u_nx' has not been opened" << std::endl;
+
+    std::string filename_stokes1 = "val_u_ny_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file1(filename_stokes1, std::ios::out | std::ios::trunc);
+
+       if(interface_file1)
+       {
+           // instructions
+           interface_file1 << "X   Y   Z   val" << std::endl;
+           size_t i = 0;
+           for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+           {
+               //std::cout<<val_u_ny[i]<<std::endl;
+               interface_file1 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+               << val_u_ny[i] << "    0.0"<< std::endl;
+               i++;
+           }
+
+           interface_file1.close();
+       }
+       else
+           std::cerr << "File 'val_u_ny' has not been opened" << std::endl;
+
+
+    std::string filename_stokes2 = "val_u_n_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file2(filename_stokes2, std::ios::out | std::ios::trunc);
+
+    if(interface_file2)
+    {
+        // instructions
+        interface_file2 << "X   Y   Z   val" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_n[i]<<std::endl;
+            interface_file2 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << val_u_n[i] << "    0.0"<< std::endl;
+            i++;
+        }
+
+        interface_file2.close();
+    }
+    else
+        std::cerr << "File 'val_u_n' has not been opened" << std::endl;
+
+
+
+    postprocess_output<double> postoutput_vec_u_n;
+    std::string filename_stokes3 = "vec_u_n_" + std::to_string(time_step) + ".dat";
+    auto test_vec_u_n = std::make_shared< gnuplot_output_object_vec<double> >(filename_stokes3);
+
+    size_t i = 0;
+    for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+    {
+        test_vec_u_n->add_data(*interface_point,std::make_pair( val_u_n[i]*vec_u_n[i].first , val_u_n[i]*vec_u_n[i].second ) );
+        i++;
+    }
+
+    postoutput_vec_u_n.add_object(test_vec_u_n);
+    postoutput_vec_u_n.write();
+
+   */
+        std::string filename_stokes4 = "vec_u_n_" + std::to_string(time_step) + ".3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file4 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_n[i] * vec_u_n[i].first << "   " << val_u_n[i] * vec_u_n[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+
+/*
+    std::string filename_stokes5 = "velocity_interface_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file5(filename_stokes5, std::ios::out | std::ios::trunc);
+
+    if(interface_file5)
+    {
+        // instructions
+        interface_file5 << "X   Y   val0   val1" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_nx[i]<<std::endl;
+            interface_file5 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << velocity_interface[i].first << "   " << velocity_interface[i].second<< std::endl;
+
+            i++;
+
+        }
+
+        interface_file5.close();
+    }
+    else
+        std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+
+     */
+//    std::string filename_stokes6 = "velocity_field_" + std::to_string(time_step) + ".3D";
+        std::string filename_stokes6 = "velocity_field_.3D";
+        std::ofstream interface_file6(filename_stokes6, std::ios::out | std::ios::trunc);
+
+        if (interface_file6) {
+// instructions
+            interface_file6 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto point_vel = points_vel_field.begin(); point_vel < points_vel_field.end(); point_vel++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file6 << (*point_vel).first << "   " << (*point_vel).second << "   "
+                                << velocity_field[i].first << "   " << velocity_field[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file6.close();
+        } else
+            std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+/*
+    std::string filename_stokes7 = "vec_normal_" + std::to_string(time_step) + ".3D";
+    std::ofstream interface_file7(filename_stokes7, std::ios::out | std::ios::trunc);
+
+    if(interface_file7)
+    {
+        // instructions
+        interface_file7 << "X   Y   val0   val1" << std::endl;
+        size_t i = 0;
+        for(auto interface_point = interface_points.begin() ; interface_point < interface_points.end() ; interface_point++ )
+        {
+            //std::cout<<val_u_nx[i]<<std::endl;
+            interface_file7 << (*interface_point).x() << "   " <<  (*interface_point).y() << "   "
+            << vec_u_n[i].first << "   " << vec_u_n[i].second<< std::endl;
+
+            i++;
+
+        }
+
+        interface_file7.close();
+    }
+    else
+        std::cerr << "File 'vec_normal_' has not been opened" << std::endl;
+    */
+    }
+
+    template<typename Mesh, typename VEC, typename T>
+    void
+    goal_quantities_time(const Mesh &msh, T time, const VEC &interface_points, const std::vector <T> &val_u_nx,
+                         const std::vector <T> &val_u_ny, const std::vector <T> &val_u_n,
+                         const std::vector <std::pair<T, T>> &vec_u_n) {
+
+        std::string filename_stokes0 = "val_u_nx_" + std::to_string(time) + ".3D";
+        std::ofstream interface_file0(filename_stokes0, std::ios::out | std::ios::trunc);
+
+        if (interface_file0) {
+// instructions
+            interface_file0 << "X   Y   Z   val" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file0 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_nx[i] << "    0.0" << std::endl;
+
+                i++;
+
+            }
+
+            interface_file0.close();
+        } else
+            std::cerr << "File 'val_u_nx' has not been opened" << std::endl;
+
+        std::string filename_stokes1 = "val_u_ny_" + std::to_string(time) + ".3D";
+        std::ofstream interface_file1(filename_stokes1, std::ios::out | std::ios::trunc);
+
+        if (interface_file1) {
+// instructions
+            interface_file1 << "X   Y   Z   val" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_ny[i]<<std::endl;
+                interface_file1 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_ny[i] << "    0.0" << std::endl;
+                i++;
+            }
+
+            interface_file1.close();
+        } else
+            std::cerr << "File 'val_u_ny' has not been opened" << std::endl;
+
+
+        std::string filename_stokes2 = "val_u_n_" + std::to_string(time) + ".3D";
+        std::ofstream interface_file2(filename_stokes2, std::ios::out | std::ios::trunc);
+
+        if (interface_file2) {
+// instructions
+            interface_file2 << "X   Y   Z   val" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_n[i]<<std::endl;
+                interface_file2 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_n[i] << "    0.0" << std::endl;
+                i++;
+            }
+
+            interface_file2.close();
+        } else
+            std::cerr << "File 'val_u_n' has not been opened" << std::endl;
+
+
+        postprocess_output<double> postoutput_vec_u_n;
+        std::string filename_stokes3 = "vec_u_n_" + std::to_string(time) + ".dat";
+        auto test_vec_u_n = std::make_shared < gnuplot_output_object_vec < double > > (filename_stokes3);
+
+        size_t i = 0;
+        for (auto interface_point = interface_points.begin(); interface_point < interface_points.end(); interface_point++) {
+            test_vec_u_n->add_data(*interface_point,
+                                   std::make_pair(val_u_n[i] * vec_u_n[i].first, val_u_n[i] * vec_u_n[i].second));
+            i++;
+        }
+
+        postoutput_vec_u_n.add_object(test_vec_u_n);
+        postoutput_vec_u_n.write();
+
+
+        std::string filename_stokes4 = "vec_u_n_" + std::to_string(time) + ".3D";
+        std::ofstream interface_file4(filename_stokes4, std::ios::out | std::ios::trunc);
+
+        if (interface_file4) {
+// instructions
+            interface_file4 << "X   Y   val0   val1" << std::endl;
+            size_t i = 0;
+            for (auto interface_point = interface_points.begin();
+                 interface_point < interface_points.end(); interface_point++) {
+//std::cout<<val_u_nx[i]<<std::endl;
+                interface_file4 << (*interface_point).x() << "   " << (*interface_point).y() << "   "
+                                << val_u_n[i] * vec_u_n[i].first << "   " << val_u_n[i] * vec_u_n[i].second << std::endl;
+
+                i++;
+
+            }
+
+            interface_file4.close();
+        } else
+            std::cerr << "File 'vec_u_n' has not been opened" << std::endl;
+
+
+    }
+
+
 
 
 }

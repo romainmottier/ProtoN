@@ -22,9 +22,11 @@
 
 #pragma once
 #include <iterator>
+#include"core/core"
 #include "cuthho_mesh.hpp"
 // #include <boost/range/adaptor/reversed.hpp>
-
+#include "core/core_bits/level_set_transport_problem.hpp"
+using namespace random_functions;
 
 size_t
 degree_det_jacobian(size_t degree)
@@ -767,13 +769,6 @@ measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_t
     }
 
     return totmeas;
-}
-
-
-
-    
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
 }
 
 
@@ -1526,7 +1521,7 @@ struct Interface_parametrisation_mesh1d_global
         size_t i_inner = 2 ;
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
-        bool first_cut_cell_found = FALSE ;
+        bool first_cut_cell_found = false ;
     
 //        size_t last_k_offset ;
 //        bool come_back = false ;
@@ -1549,7 +1544,7 @@ struct Interface_parametrisation_mesh1d_global
                             i_cl_global++;
                             
                         }
-                        first_cut_cell_found = TRUE;
+                        first_cut_cell_found = true;
                         first_point = *cl.user_data.interface.begin() ;
                         cell_end_point = *(cl.user_data.interface.end() -1) ;
                     }
@@ -1616,7 +1611,7 @@ struct Interface_parametrisation_mesh1d_global
                             connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
                             i_cl_global++;
                         }
-                        first_cut_cell_found = TRUE;
+                        first_cut_cell_found = true;
                         first_point = *cl.user_data.interface.begin() ;
                         cell_end_point = *(cl.user_data.interface.end() -1) ;
                     }
@@ -1805,7 +1800,7 @@ struct Interface_parametrisation_mesh1d_global
         size_t i_inner = 2 ;
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
-        bool first_cut_cell_found = FALSE ;
+        bool first_cut_cell_found = false ;
         
        
     
@@ -1845,7 +1840,7 @@ struct Interface_parametrisation_mesh1d_global
                     i_cl_global++;
                 }
                     
-                first_cut_cell_found = TRUE;
+                first_cut_cell_found = true;
                 first_point = *cl.user_data.interface.begin() ;
                 cell_end_point = *(cl.user_data.interface.end() -1) ;
                 cl_i = 0;
@@ -1950,7 +1945,7 @@ struct Interface_parametrisation_mesh1d_global
         size_t i_inner = 2 ;
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
-        bool first_cut_cell_found = FALSE ;
+        bool first_cut_cell_found = false ;
         
         if( deg == 0 )
         {
@@ -1971,7 +1966,7 @@ struct Interface_parametrisation_mesh1d_global
                             i_cl_global++;
                         
                         }
-                        first_cut_cell_found = TRUE;
+                        first_cut_cell_found = true;
                         first_point = *cl.user_data.interface.begin() ;
                         cell_end_point = *(cl.user_data.interface.end() -1) ;
                     }
@@ -2037,7 +2032,7 @@ struct Interface_parametrisation_mesh1d_global
 //                            connectivity_cells[k_offset].push_back(i_cl_global); // ADD ORA
                             i_cl_global++;
                         }
-                        first_cut_cell_found = TRUE;
+                        first_cut_cell_found = true;
                         first_point = *cl.user_data.interface.begin() ;
                         cell_end_point = *(cl.user_data.interface.end() -1) ;
                     }
@@ -2147,7 +2142,7 @@ struct Interface_parametrisation_mesh1d_global
         size_t i_inner = 2 ;
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
-        bool first_cut_cell_found = FALSE ;
+        bool first_cut_cell_found = false ;
         
         if( deg == 0 )
         {
@@ -2167,7 +2162,7 @@ struct Interface_parametrisation_mesh1d_global
                         i_cl_global++;
                         
                     }
-                    first_cut_cell_found = TRUE;
+                    first_cut_cell_found = true;
                     first_point = *cl.user_data.interface.begin() ;
                     cell_end_point = *(cl.user_data.interface.end() -1) ;
                     cl_i = 0;
@@ -2225,7 +2220,7 @@ struct Interface_parametrisation_mesh1d_global
                         }
                         i_cl_global++;
                     }
-                    first_cut_cell_found = TRUE;
+                    first_cut_cell_found = true;
                     first_point = *cl.user_data.interface.begin() ;
                     cell_end_point = *(cl.user_data.interface.end() -1) ;
                     cl_i = 0;
@@ -2309,7 +2304,7 @@ struct Interface_parametrisation_mesh1d_global
         size_t i_inner = 2 ;
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
-        bool first_cut_cell_found = FALSE ;
+        bool first_cut_cell_found = false ;
         
         if( deg == 0 )
         {
@@ -2330,7 +2325,7 @@ struct Interface_parametrisation_mesh1d_global
                             i_cl_global++;
                         
                         }
-                        first_cut_cell_found = TRUE;
+                        first_cut_cell_found = true;
                         first_point = *cl.user_data.interface.begin() ;
                         cell_end_point = *(cl.user_data.interface.end() -1) ;
                     }
@@ -2396,7 +2391,7 @@ struct Interface_parametrisation_mesh1d_global
 //                            connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
                             i_cl_global++;
                         }
-                        first_cut_cell_found = TRUE;
+                        first_cut_cell_found = true;
                         first_point = *cl.user_data.interface.begin() ;
                         cell_end_point = *(cl.user_data.interface.end() -1) ;
                     }
@@ -2501,7 +2496,7 @@ struct Interface_parametrisation_mesh1d_global
         size_t i_inner = 2 ;
         point<T,2> first_point ;
         point<T,2> cell_end_point ;
-        bool first_cut_cell_found = FALSE ;
+        bool first_cut_cell_found = false ;
         
         if( deg == 0 )
         {
@@ -2521,7 +2516,7 @@ struct Interface_parametrisation_mesh1d_global
                         i_cl_global++;
                         
                     }
-                    first_cut_cell_found = TRUE;
+                    first_cut_cell_found = true;
                     first_point = *cl.user_data.interface.begin() ;
                     cell_end_point = *(cl.user_data.interface.end() -1) ;
                     cl_i = 0;
@@ -2579,7 +2574,7 @@ struct Interface_parametrisation_mesh1d_global
 //                            connectivity_cells_dd[k_offset].push_back(i_cl_global); // ADD ORA
                             i_cl_global++;
                     }
-                    first_cut_cell_found = TRUE;
+                    first_cut_cell_found = true;
                     first_point = *cl.user_data.interface.begin() ;
                     cell_end_point = *(cl.user_data.interface.end() -1) ;
                     cl_i = 0;
@@ -4477,7 +4472,7 @@ mapping_S( const Mesh& msh_next, const Mesh& msh_last , const typename Mesh::cel
             
             while( posn>limit_inf || pospp<msh_last.cells.size() || posnn>=0 || posp<limit_sup )
             {
-                bool cell_n_found = FALSE ;
+                bool cell_n_found = false ;
                 if( ret.size () == cl.user_data.offset_subcells.size() ) // || ret ==  cl.user_data.offset_subcells )
                     break;
                 
@@ -4491,12 +4486,12 @@ mapping_S( const Mesh& msh_next, const Mesh& msh_last , const typename Mesh::cel
                         if( i_last == i )
                         {
                             ret.push_back( std::make_pair(offset(msh_last, cl_lastn),i) ) ;
-                            cell_n_found = TRUE ;
+                            cell_n_found = true ;
                             break;
                         }
                     }
                 }
-                if( cell_n_found == TRUE || ret.size () == cl.user_data.offset_subcells.size() )
+                if( cell_n_found == true || ret.size () == cl.user_data.offset_subcells.size() )
                     break;
                 
 
@@ -4509,12 +4504,12 @@ mapping_S( const Mesh& msh_next, const Mesh& msh_last , const typename Mesh::cel
                         if( i_last == i )
                         {
                             ret.push_back( std::make_pair(offset(msh_last, cl_lastn),i) ) ;
-                            cell_n_found = TRUE ;
+                            cell_n_found = true ;
                             break;
                         }
                     }
                 }
-                if( cell_n_found == TRUE || ret.size () == cl.user_data.offset_subcells.size() )
+                if( cell_n_found == true || ret.size () == cl.user_data.offset_subcells.size() )
                     break;
 
                 
@@ -4527,12 +4522,12 @@ mapping_S( const Mesh& msh_next, const Mesh& msh_last , const typename Mesh::cel
                         if( i_last == i )
                         {
                             ret.push_back( std::make_pair(offset(msh_last, cl_lastp),i) ) ;
-                            cell_n_found = TRUE ;
+                            cell_n_found = true ;
                             break;
                         }
                     }
                 }
-                if( cell_n_found == TRUE || ret.size () == cl.user_data.offset_subcells.size() )
+                if( cell_n_found == true || ret.size () == cl.user_data.offset_subcells.size() )
                     break;
                 
                 if(pospp< msh_last.cells.size())
@@ -4544,12 +4539,12 @@ mapping_S( const Mesh& msh_next, const Mesh& msh_last , const typename Mesh::cel
                         if( i_last == i )
                         {
                             ret.push_back( std::make_pair(offset(msh_last, cl_lastp),i) ) ;
-                            cell_n_found = TRUE ;
+                            cell_n_found = true ;
                             break;
                         }
                     }
                 }
-                if( cell_n_found == TRUE || ret.size () == cl.user_data.offset_subcells.size() )
+                if( cell_n_found == true || ret.size () == cl.user_data.offset_subcells.size() )
                     break;
                 
                 
@@ -4917,7 +4912,7 @@ struct Parametric_Interface
 
         typedef typename Mesh::point_type point_type;
         size_t old_i = 0;
-        bool first_cut_cell = FALSE ;
+        bool first_cut_cell = false ;
         size_t Nx =  mip.Nx ;
         size_t Ny = mip.Ny ;
         T eps = 1e-5;
@@ -4956,7 +4951,7 @@ struct Parametric_Interface
 
                                 first_cell = offset_agglo;
                                 connectivity_this_agglo_HHO_cells[cell_i].push_back(offset_agglo) ;
-                                first_cut_cell = TRUE ;
+                                first_cut_cell = true ;
                                 break;
                             }
                             if(first_cut_cell)
@@ -4971,7 +4966,7 @@ struct Parametric_Interface
                 else
                 {
 
-                    bool found_cut_cell = FALSE ;
+                    bool found_cut_cell = false ;
                     for(auto& agglo_cl :msh_new.cells)
                     {
                         auto offset_vec = agglo_cl.user_data.offset_subcells;
@@ -4984,7 +4979,7 @@ struct Parametric_Interface
 
                                 first_cell = offset_agglo;
                                 connectivity_this_agglo_HHO_cells[cell_i].push_back(offset_agglo) ;
-                                found_cut_cell = TRUE;
+                                found_cut_cell = true;
                                 break;
                             }
                             if(found_cut_cell)
@@ -5355,7 +5350,7 @@ struct Parametric_Interface
 //{
 //    typedef typename Mesh::point_type point_type;
 //    size_t old_i = 0;
-//    bool first_cut_cell = FALSE ;
+//    bool first_cut_cell = false ;
 //    size_t Nx =  mip.Nx ;
 //    size_t Ny = mip.Ny ;
 //    T eps = 1e-5;
@@ -5413,7 +5408,7 @@ struct Parametric_Interface
 ////                            cl.user_data.interface.push_back(pt);
 ////                        }
 //
-//                        first_cut_cell = TRUE ;
+//                        first_cut_cell = true ;
 //                        break;
 //                    }
 //
@@ -5427,7 +5422,7 @@ struct Parametric_Interface
 //            {
 ////                if(pt_in_cell(msh, pt, msh.cells[old_i]))
 ////                    continue;
-//                bool found_cut_cell = FALSE ;
+//                bool found_cut_cell = false ;
 //                for(int i = -1 ; i < 2 ; i++)
 //                {
 //                    for(int j = -1 ; j < 2 ; j++)
@@ -5469,7 +5464,7 @@ struct Parametric_Interface
 ////                            {
 ////                                msh.cells[cl_HHO_i].user_data.interface.push_back(pt);
 ////                            }
-//                            found_cut_cell = TRUE;
+//                            found_cut_cell = true;
 //
 //                        }
 //                        else if(cl_HHO_i == first_cell && pt_in_cell(msh, pt, cl))
@@ -5512,7 +5507,7 @@ set_cut_cell(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interf
 {
     typedef typename Mesh::point_type point_type;
     size_t old_i = 0;
-    bool first_cut_cell = FALSE ;
+    bool first_cut_cell = false ;
     size_t Nx =  mip.Nx ;
     size_t Ny = mip.Ny ;
     T eps = 1e-5;
@@ -5554,7 +5549,7 @@ set_cut_cell(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interf
                         old_i = offset(msh,cl);
                         first_cell = old_i;
                         parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
-                        first_cut_cell = TRUE ;
+                        first_cut_cell = true ;
                         break;
                     }
                     
@@ -5567,7 +5562,7 @@ set_cut_cell(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interf
             else
             {
 
-                bool found_cut_cell = FALSE ;
+                bool found_cut_cell = false ;
                 for(int i = -1 ; i < 2 ; i++)
                 {
                     for(int j = -1 ; j < 2 ; j++)
@@ -5583,7 +5578,7 @@ set_cut_cell(Mesh& msh, const mesh_init_params<T>& mip, Curve& parametric_interf
                             
                             parametric_interface.connectivity_this_HHO_cells[cell_i].push_back(old_i) ;
                           
-                            found_cut_cell = TRUE;
+                            found_cut_cell = true;
                             
                         }
 

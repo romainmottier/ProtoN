@@ -389,12 +389,12 @@ measure(const Mesh& msh, const typename Mesh::face_type& fc)
 /**********************************************************************************/
 /**********************************************************************************/
 template<typename T, size_t N, typename CellUD, typename FaceUD, typename NodeUD>
-std::array< Matrix<typename mesh<T, N, CellUD, FaceUD, NodeUD>::coordinate_type, 2, 1>, N >
+std::array< Eigen::Matrix<typename mesh<T, N, CellUD, FaceUD, NodeUD>::coordinate_type, 2, 1>, N >
 normals(const mesh<T, N, CellUD, FaceUD, NodeUD>& msh,
         const typename mesh<T, N, CellUD, FaceUD, NodeUD>::cell_type& cl)
 {
     //using Mesh = mesh<T, N, CellUD, FaceUD, NodeUD>;
-    std::array< Matrix<T,2,1>, N >  ret;
+    std::array< Eigen::Matrix<T,2,1>, N >  ret;
 
     auto pts = points(msh, cl);
     auto numpts = pts.size();
@@ -415,12 +415,12 @@ normals(const mesh<T, N, CellUD, FaceUD, NodeUD>& msh,
 
 
 template<typename T, typename CellUD, typename FaceUD, typename NodeUD>
-std::vector< Matrix<typename mesh<T, 0, CellUD, FaceUD, NodeUD>::coordinate_type, 2, 1> >
+std::vector< Eigen::Matrix<typename mesh<T, 0, CellUD, FaceUD, NodeUD>::coordinate_type, 2, 1> >
 normals(const mesh<T, 0, CellUD, FaceUD, NodeUD>& msh,
         const typename mesh<T, 0, CellUD, FaceUD, NodeUD>::cell_type& cl)
 {
     //using Mesh = mesh<T, 0, CellUD, FaceUD, NodeUD>;
-    std::vector< Matrix<T,2,1> > ret;
+    std::vector< Eigen::Matrix<T,2,1> > ret;
 
     auto pts = points(msh, cl);
     auto numpts = pts.size();
