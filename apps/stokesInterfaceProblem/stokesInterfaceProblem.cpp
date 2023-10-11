@@ -1308,27 +1308,26 @@ int main(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     using RealType = double;
-    RealType sizeBox = 0.5;
+    RealType sizeBox = 0.5; // domain is a box (-sizeBox,sizeBox)^2
+    std::string folder = "simu_weightCircle_"; // folder to save results
+    int time_gap = 20; // every time_gap the results are saved
 
-    std::string folder = "simu_weightCircle_";
-    int time_gap = 20;
 
-
-    size_t degree = 1;
-    size_t int_refsteps = 0; // 4
-    size_t degree_FEM = 2;
-    size_t degree_curve = 2;
-    size_t degree_curvature = 1; // degree_curve -1 ;
+    size_t degree = 1; // HHO degre
+    size_t int_refsteps = 0; // Number of refine interface points for each mesh cell
+    size_t degree_FEM = 2; // LS degre
+    size_t degree_curve = 2; // Degree of the interface approximation
+    size_t degree_curvature = 1; // Degree of the interface curvature (after smoothing projection)
     bool dump_debug = false;
     bool solve_interface = true;
     bool solve_fictdom = false;
     bool agglomeration = true;
 
-    bool high_order = false; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
-    bool entropic = false; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
+    bool high_order = false; // If false is low-order LS , if true  high-order LS
+    bool entropic = false; // If false is low-order LS , if true  entropic LS
     bool entropic_mass_consistent = false;
-    bool compressed = false; // IF FALSE IS PHI_L, IF TRUE  PHI_HP
-    bool cut_off_active = false; // IF FALSE IS SMOOTH, IF TRUE  CUT_OFF
+    bool compressed = false;
+    bool cut_off_active = false; // If false is smooth LS , if true  cut-off LS
 
     mesh_init_params <RealType> mip;
     mip.Nx = 5;
@@ -1340,7 +1339,7 @@ int main(int argc, char **argv) {
     mip.max_y = sizeBox;
 
 
-    size_t T_N = 10000;
+    size_t T_N = 10000; // max number of time step
     int ch;
     while ((ch = getopt(argc, argv, "k:q:M:N:r:T:l:p:ifDAdhesgc")) != -1) {
         switch (ch) {
@@ -1439,7 +1438,6 @@ int main(int argc, char **argv) {
     cuthho_poly_mesh <RealType> msh(mip);
     typedef cuthho_poly_mesh <RealType> Mesh;
     typedef RealType T;
-//    typedef typename Mesh::point_type point_type;
     offset_definition(msh);
 
     std::cout << "Mesh size = " << mip.Nx << "x" << mip.Ny << std::endl;
@@ -1466,9 +1464,8 @@ int main(int argc, char **argv) {
     std::cout << "Level Set (finite element approximation): Bernstein basis in space Q^{k_phi},  k_phi = " << degree_FEM
               << std::endl;
 
-/**************************************TRANSPORT PROBLEM METHOD *****************************************/
+/************** TRANSPORT PROBLEM METHOD **************/
     auto method_transport_pb = Transport_problem_method<Mesh, FiniteSpace>(fe_data, msh);
-//typedef  Transport_problem_method<Mesh, FiniteSpace> Method_Transport;
 
     size_t degree_gradient = degree_FEM;
     size_t degree_div = degree_FEM;
@@ -1482,67 +1479,39 @@ int main(int argc, char **argv) {
 
 
 /************** ANALYTIC LEVEL SET FUNCTION  **************/
-
-
-    bool circle = false, ellipse = false;
-    bool flower = true;
+// This data have to be updated depending on the starting shape of the bubble
+    constexpr bool circle = true;
+    constexpr bool ellipse = false;
+    constexpr bool flower = false;
     RealType radius_a, radius_b, radius;
     RealType x_centre = 0.0;
-    RealType y_centre = 0.0; // 0.5 with all problems, but TGV 0.3
+    RealType y_centre = 0.0;
     T oscillation = 0.0;
-//T h = std::max( fe_data.hx , fe_data.hy) ;
-    if (circle) {
-        radius = 1.0 / 3.0; // I ALWAYS USED 1.0/9.0
-    }
 
-    if (ellipse) {
+    using Fonction = std::conditional_t<circle, circle_level_set<T>,
+            std::conditional_t<ellipse, elliptic_level_set<T>, flower_level_set<T>>>;
+
+    std::unique_ptr<Fonction> level_set_function_anal_ptr;
+
+    if constexpr (circle) {
+        radius = 1.0 / 3.0;
+        std::cout<<"Initial interface: CIRCLE"<<std::endl;
+        level_set_function_anal_ptr = std::make_unique<Fonction>(radius, x_centre, y_centre );
+    }
+    if constexpr (ellipse) {
         radius_a = 1.0 / 12.0;
         radius_b = 1.0 / 24.0;
-//        T eps_circ = 1e-4;
-//        radius_a = 1.0/3.0-eps_circ;
-//        radius_b = 1.0/3.0+eps_circ;
-        std::cout << bold << yellow << "Initial Analytic Area of the ELLIPSE: " << M_PI * radius_a * radius_b
-                  << std::endl;
         radius = sqrt(radius_a * radius_b);
-        std::cout << bold << yellow << "Final radius expected of the circle : " << radius << reset << std::endl;
+        level_set_function_anal_ptr = std::make_unique<Fonction>( radius_a, radius_b, x_centre, y_centre);
     }
 
-    if (flower) {
+    if constexpr (flower) {
         oscillation = 0.04;
         radius = 1.0 / 3.0;
-
-
+        level_set_function_anal_ptr = std::make_unique<Fonction>(radius, x_centre, y_centre, 4, oscillation);
     }
 
-
-
-
-///---------->!!!!!!!!  THIS DATA BELOW HAS TO BE UPLOAD DEPENDING ON THE PROBLEM:
-
-// ------------------------------------ CIRCLE LEVEL SET ------------------------------------
-
-// std::cout<<"Initial interface: CIRCLE"<<std::endl;
-// auto level_set_function_anal = circle_level_set<RealType>(radius, x_centre, y_centre );
-// typedef  circle_level_set<T> Fonction;
-
-
-// ------------------------------------ FLOWER LEVEL SET ------------------------------------
-
-    std::cout << "Initial interface: FLOWER" << std::endl;
-    auto level_set_function_anal = flower_level_set<T>(radius, x_centre, y_centre, 4, oscillation); //0.11
-    typedef flower_level_set <T> Fonction;
-
-// ------------------------------------ ELLIPTIC LEVEL SET -----------------------------------
-//    std::cout<<"Initial interface: ELLIPSE"<<std::endl;
-//    auto level_set_function_anal = elliptic_level_set<RealType>( radius_a, radius_b, x_centre, y_centre);
-//    typedef  elliptic_level_set<T> Fonction;
-
-// ------------> OLD STUFF IMPLEMENTATION
-//auto level_set_function_anal = elliptic_distance_ls<RealType>( radius_a, radius_b, x_centre, y_centre , h);
-//typedef  elliptic_distance_ls<T> Fonction;
-//auto level_set_function_anal = circle_distance_ls<RealType>(radius, x_centre, y_centre ,2*h );
-//typedef  circle_distance_ls<T> Fonction;
-
+    Fonction& level_set_function_anal = *level_set_function_anal_ptr;
 
 
 

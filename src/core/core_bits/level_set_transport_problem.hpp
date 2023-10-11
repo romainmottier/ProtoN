@@ -30814,6 +30814,130 @@ namespace level_set_transport{
     }
 
 
+    template<typename T, typename Mesh, typename FiniteSpace>
+    struct L2_projection {
+        SparseMatrix <T> Global_Mass; // Global mass, saved for FEM problem
+        Matrix<T, Dynamic, 1> RHS;    // Known term
+        std::vector <Triplet<T>> triplets; // Position elements: Sparse Matrix Notation
+
+        Eigen::Matrix <T, Dynamic, Dynamic> sol_HHO; // projection saved in HHO format: cell by cell
+        Matrix<T, Dynamic, 1> sol_FEM; // projection saved in Continuos FE format: global nodes
+        Eigen::Matrix<T, Dynamic, 1> vertices; // saving level_set on vertices mesh
+
+
+        size_t number_elements;
+
+        size_t n_cls; // #cells
+        size_t local_dim; // Local Dimension (degree_FEM+1)*(degree_FEM+1)
+        size_t n_vertices; // #vertices
+
+        size_t degree_FEM;
+        Mesh msh;
+        size_t Nx, Ny;
+        mesh_init_params <T> params;
+
+        std::vector <std::vector<std::pair < size_t, bool>>>
+                connectivity_matrix;
+
+        size_t dim_HHO; // Global dimension Discontinuous framework = Local dimension * #cells
+        size_t ndof_FE; // Global dimension FE continuous = #nodes
+
+
+        L2_projection(const FiniteSpace &fe_data, const Mesh &msh)
+                : degree_FEM(fe_data.order), local_dim(fe_data.local_ndof), msh(msh), Nx(fe_data.Nx), Ny(fe_data.Ny),
+                  params(fe_data.params), dim_HHO(fe_data.ndof_disc), n_cls(fe_data.n_cls), n_vertices(fe_data.n_vertices),
+                  connectivity_matrix(fe_data.connectivity_matrix), ndof_FE(fe_data.ndof_FE) {
+            sol_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero(local_dim, n_cls);
+            sol_FEM = Matrix<T, Dynamic, 1>::Zero(ndof_FE);
+            vertices = Eigen::Matrix<T, Dynamic, 1>::Zero(n_vertices, 1);
+        }
+
+
+        L2_projection() = default;
+
+
+        void set_discrete_points(Eigen::Matrix <T, Dynamic, Dynamic> &values_new) {
+            std::cout << "L2 projection for phi_tilde post-resolution." << std::endl;
+            sol_HHO = values_new;
+        }
+
+
+        void converting_into_HHO_formulation(const Eigen::Matrix<T, Dynamic, 1> &values_new) {
+            std::cout << "L2 projection for phi_tilde post-resolution." << std::endl;
+            for (size_t counter_bis = 0; counter_bis < n_cls; counter_bis++) {
+                for (size_t i = 0; i < local_dim; i++) {
+                    size_t asm_map = connectivity_matrix[counter_bis][i].first;
+                    sol_HHO(i, counter_bis) = values_new(asm_map);
+                }
+                size_t i_vertex = counter_bis + floor(counter_bis / Nx);
+                vertices(i_vertex) = sol_HHO(0, counter_bis);
+                vertices(i_vertex + 1) = sol_HHO(1, counter_bis);
+                vertices(i_vertex + Nx + 2) = sol_HHO(2, counter_bis);
+                vertices(i_vertex + Nx + 1) = sol_HHO(3, counter_bis);
+            }
+
+        }
+
+        void converting_into_FE_formulation(const Eigen::Matrix <T, Dynamic, Dynamic> &values_new) {
+            std::cout << "L2 projection for phi_tilde post-resolution." << std::endl;
+            for (size_t counter_bis = 0; counter_bis < n_cls; counter_bis++) {
+                for (size_t i = 0; i < local_dim; i++) {
+                    size_t asm_map = connectivity_matrix[counter_bis][i].first;
+                    sol_FEM(asm_map) = values_new(i, counter_bis);
+                }
+            }
+
+
+        }
+
+
+        T operator()(const typename Mesh::node_type &node) const {
+            return vertices(node.ptid);
+        }
+
+        T operator()(const point<T, 2> &pt, const Mesh &msh, const typename Mesh::cell_type &cl) const {
+
+            size_t counter = offset(msh, cl);
+            cell_basis_Bernstein<Mesh, T> cb(msh, cl, degree_FEM);
+//cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+            auto values_cell = (sol_HHO.block(0, counter, local_dim, 1)).col(0);
+            T tmp = values_cell.dot(cb.eval_basis(pt));
+            return tmp;
+        }
+
+        Eigen::Matrix<T, 2, 1> gradient(const point<T, 2> &pt, const Mesh &msh, const typename Mesh::cell_type &cl) const {
+
+// MATRIX NOTATION
+            size_t counter = offset(msh, cl);
+            Eigen::Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
+            cell_basis_Bernstein<Mesh, T> cb(msh, cl, degree_FEM);
+//cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
+            auto values_cell = sol_HHO.col(counter);
+            auto grad_eval = cb.eval_gradients(pt);
+            ret(0) = values_cell.dot(grad_eval.col(0));
+// std::cout<<"Value of derivative new along x"<<ret(0)<<std::endl;
+            ret(1) = values_cell.dot(grad_eval.col(1));
+//values_cell.dot( grad_eval.col(1) );
+// std::cout<<"Value of derivative new along y"<<ret(1)<<std::endl;
+            return ret;
+
+        }
+
+
+// IT WORKS FOR NOT-AGGLOMERATED MESHES --> FAST
+        Eigen::Matrix<T, 2, 1> normal(const point<T, 2> &pt, const Mesh &msh, const typename Mesh::cell_type &cl) const {
+            Eigen::Matrix<T, 2, 1> ret;
+            ret = gradient(pt, msh, cl);
+            return ret / ret.norm();
+
+        }
+
+
+    };
+
+
+
+
     template<typename Fonction, typename Mesh, typename Vel_Field, typename FiniteSpace, typename Method_Transport, typename T = typename Mesh::coordinate_type>
     std::pair <T, T>
     run_FEM_BERNSTEIN_CORRECT_FAST_NEW_D_NEW_DIRICHLET_COND_NEW_LS(const Mesh &msh, const FiniteSpace &fe_data,
@@ -37267,128 +37391,6 @@ namespace level_set_transport{
 
 
     }
-
-
-    template<typename T, typename Mesh, typename FiniteSpace>
-    struct L2_projection {
-        SparseMatrix <T> Global_Mass; // Global mass, saved for FEM problem
-        Matrix<T, Dynamic, 1> RHS;    // Known term
-        std::vector <Triplet<T>> triplets; // Position elements: Sparse Matrix Notation
-
-        Eigen::Matrix <T, Dynamic, Dynamic> sol_HHO; // projection saved in HHO format: cell by cell
-        Matrix<T, Dynamic, 1> sol_FEM; // projection saved in Continuos FE format: global nodes
-        Eigen::Matrix<T, Dynamic, 1> vertices; // saving level_set on vertices mesh
-
-
-        size_t number_elements;
-
-        size_t n_cls; // #cells
-        size_t local_dim; // Local Dimension (degree_FEM+1)*(degree_FEM+1)
-        size_t n_vertices; // #vertices
-
-        size_t degree_FEM;
-        Mesh msh;
-        size_t Nx, Ny;
-        mesh_init_params <T> params;
-
-        std::vector <std::vector<std::pair < size_t, bool>>>
-        connectivity_matrix;
-
-        size_t dim_HHO; // Global dimension Discontinuous framework = Local dimension * #cells
-        size_t ndof_FE; // Global dimension FE continuous = #nodes
-
-
-        L2_projection(const FiniteSpace &fe_data, const Mesh &msh)
-                : degree_FEM(fe_data.order), local_dim(fe_data.local_ndof), msh(msh), Nx(fe_data.Nx), Ny(fe_data.Ny),
-                  params(fe_data.params), dim_HHO(fe_data.ndof_disc), n_cls(fe_data.n_cls), n_vertices(fe_data.n_vertices),
-                  connectivity_matrix(fe_data.connectivity_matrix), ndof_FE(fe_data.ndof_FE) {
-            sol_HHO = Eigen::Matrix<T, Dynamic, Dynamic>::Zero(local_dim, n_cls);
-            sol_FEM = Matrix<T, Dynamic, 1>::Zero(ndof_FE);
-            vertices = Eigen::Matrix<T, Dynamic, 1>::Zero(n_vertices, 1);
-        }
-
-
-        L2_projection() = default;
-
-
-        void set_discrete_points(Eigen::Matrix <T, Dynamic, Dynamic> &values_new) {
-            std::cout << "L2 projection for phi_tilde post-resolution." << std::endl;
-            sol_HHO = values_new;
-        }
-
-
-        void converting_into_HHO_formulation(const Eigen::Matrix<T, Dynamic, 1> &values_new) {
-            std::cout << "L2 projection for phi_tilde post-resolution." << std::endl;
-            for (size_t counter_bis = 0; counter_bis < n_cls; counter_bis++) {
-                for (size_t i = 0; i < local_dim; i++) {
-                    size_t asm_map = connectivity_matrix[counter_bis][i].first;
-                    sol_HHO(i, counter_bis) = values_new(asm_map);
-                }
-                size_t i_vertex = counter_bis + floor(counter_bis / Nx);
-                vertices(i_vertex) = sol_HHO(0, counter_bis);
-                vertices(i_vertex + 1) = sol_HHO(1, counter_bis);
-                vertices(i_vertex + Nx + 2) = sol_HHO(2, counter_bis);
-                vertices(i_vertex + Nx + 1) = sol_HHO(3, counter_bis);
-            }
-
-        }
-
-        void converting_into_FE_formulation(const Eigen::Matrix <T, Dynamic, Dynamic> &values_new) {
-            std::cout << "L2 projection for phi_tilde post-resolution." << std::endl;
-            for (size_t counter_bis = 0; counter_bis < n_cls; counter_bis++) {
-                for (size_t i = 0; i < local_dim; i++) {
-                    size_t asm_map = connectivity_matrix[counter_bis][i].first;
-                    sol_FEM(asm_map) = values_new(i, counter_bis);
-                }
-            }
-
-
-        }
-
-
-        T operator()(const typename Mesh::node_type &node) const {
-            return vertices(node.ptid);
-        }
-
-        T operator()(const point<T, 2> &pt, const Mesh &msh, const typename Mesh::cell_type &cl) const {
-
-            size_t counter = offset(msh, cl);
-            cell_basis_Bernstein<Mesh, T> cb(msh, cl, degree_FEM);
-//cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
-            auto values_cell = (sol_HHO.block(0, counter, local_dim, 1)).col(0);
-            T tmp = values_cell.dot(cb.eval_basis(pt));
-            return tmp;
-        }
-
-        Eigen::Matrix<T, 2, 1> gradient(const point<T, 2> &pt, const Mesh &msh, const typename Mesh::cell_type &cl) const {
-
-// MATRIX NOTATION
-            size_t counter = offset(msh, cl);
-            Eigen::Matrix<T, 2, 1> ret = Matrix<T, 2, 1>::Zero(2, 1);
-            cell_basis_Bernstein<Mesh, T> cb(msh, cl, degree_FEM);
-//cell_basis_Lagrangian<Mesh,T> cb(msh, cl, degree_FEM);
-            auto values_cell = sol_HHO.col(counter);
-            auto grad_eval = cb.eval_gradients(pt);
-            ret(0) = values_cell.dot(grad_eval.col(0));
-// std::cout<<"Value of derivative new along x"<<ret(0)<<std::endl;
-            ret(1) = values_cell.dot(grad_eval.col(1));
-//values_cell.dot( grad_eval.col(1) );
-// std::cout<<"Value of derivative new along y"<<ret(1)<<std::endl;
-            return ret;
-
-        }
-
-
-// IT WORKS FOR NOT-AGGLOMERATED MESHES --> FAST
-        Eigen::Matrix<T, 2, 1> normal(const point<T, 2> &pt, const Mesh &msh, const typename Mesh::cell_type &cl) const {
-            Eigen::Matrix<T, 2, 1> ret;
-            ret = gradient(pt, msh, cl);
-            return ret / ret.norm();
-
-        }
-
-
-    };
 
 
 
