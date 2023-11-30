@@ -866,12 +866,12 @@ int main(int argc, char **argv) {
 // Interface Stokes Problem: Two-fluid problem STATIONARY
 // Loop varying \mu and ellipse radii
 
-#if 0
+#if 1
 
 int main(int argc, char **argv) {
     using RealType = double;
-    RealType sizeBox = 1.0;
-    std::string folder = "simulation_mu_eps_1"
+    RealType sizeBox = 2.0;
+    std::string folder = "simulation_fullGradient"
     size_t degree = 1;
     size_t int_refsteps = 4;
     size_t degree_FEM = 0;
@@ -992,9 +992,9 @@ int main(int argc, char **argv) {
 
     std::vector <RealType> int_refstepsVec{0};
     std::vector <RealType> degree_curveVec{4};
-    std::vector <RealType> mu_vec{0.01, 0.1, 1.0, 10.0, 100.0}; // 0.01,0.1,1,10,100
-    std::vector <RealType> radius_a_vec{1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0};
-    std::vector <RealType> radius_b_vec{1.0 / 6.0, 2.0 / 9.0, 4.0 / 15.0, 10.0 / 57.0, 10.0 / 33.0, 4.0 / 21.0};
+    std::vector <RealType> mu_vec{1.0}; // 0.01, 0.1, 1.0, 10.0, 100.0
+    std::vector <RealType> radius_a_vec{1.0 / 3.0}; // , 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0
+    std::vector <RealType> radius_b_vec{1.0 / 6.0}; // , 2.0 / 9.0, 4.0 / 15.0, 10.0 / 57.0, 10.0 / 33.0, 4.0 / 21.0
 
 
     int nOfRadii = radius_a_vec.size();
@@ -1241,7 +1241,7 @@ int main(int argc, char **argv) {
 // ----------------- RESOLUTION OF THE STOKES PROBLEM (HHO) ------------------
 // -----------------------------------------------------------------------------------------
 
-                bool sym_grad = TRUE;
+                bool sym_grad = FALSE; //
                 auto prm = params<T>();
                 prm.kappa_1 = mu; // 100.0;
                 prm.kappa_2 = 1.0;
@@ -1304,7 +1304,7 @@ int main(int argc, char **argv) {
 // Interface Stokes Problem: Two-fluid problem with FIXED POINT
 // -------- Code paper: interface evolution under shear flow - perturbed flow - null flow
 
-#if 1
+#if 0
 
 int main(int argc, char **argv) {
     using RealType = double;
