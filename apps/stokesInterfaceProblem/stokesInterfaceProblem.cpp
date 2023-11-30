@@ -871,7 +871,7 @@ int main(int argc, char **argv) {
 int main(int argc, char **argv) {
     using RealType = double;
     RealType sizeBox = 2.0;
-    std::string folder = "simulation_fullGradient"
+    std::string folder = "simulation_fullGradient";
     size_t degree = 1;
     size_t int_refsteps = 4;
     size_t degree_FEM = 0;
