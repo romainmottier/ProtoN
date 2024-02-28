@@ -3,7 +3,7 @@ include(FindPackageHandleStandardArgs)
 
 option(USING_INTEL_TBB "Whether the TBB library will be linked in" OFF)
 if(USING_INTEL_TBB)
-	find_file(TBB_HEADER_FILE tbb.h HINTS /usr/local/TBB/*/include/tbb/ NO_DEFAULT_PATH)
+	find_file(TBB_HEADER_FILE tbb.h HINTS /opt/intel/oneapi/tbb/latest/include/oneapi/ NO_DEFAULT_PATH)
 
 	if(NOT TBB_HEADER_FILE MATCHES "tbb.h")
 		set (TBB_HEADER_FILE "" CACHE PATH "Path to 'tbb.h' file")
@@ -16,7 +16,7 @@ if(USING_INTEL_TBB)
 			set(TBB_INCLUDE_DIRS ${TBB_ROOT_DIR}/include)		
 			set(TBB_LIBRARIES ${TBB_ROOT_DIR}/lib/libtbb.dylib)
 		else() # Linux
-			#set(TBB_LIBRARIES ${TBB_ROOT_DIR}/lib/intel64/gcc4.7/libtbb.so)
+			set(TBB_LIBRARIES ${TBB_ROOT_DIR}/lib/intel64/gcc4.8/libtbb.so)
 		endif()
 	#include_directories(${TBB_INCLUDE_DIRS})
 	#link_libraries(${TBB_LIBRARIES})

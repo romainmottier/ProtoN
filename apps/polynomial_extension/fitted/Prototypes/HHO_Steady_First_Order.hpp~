@@ -1,0 +1,81 @@
+#ifndef HHOSteadyFirstOrder_hpp
+#define HHOSteadyFirstOrder_hpp
+
+void HHOSteadyFirstOrder(int argc, char **argv);
+
+void HHOSteadyFirstOrder(int argc, char **argv){
+
+  std::cout << std::endl;
+  std::cout << bold << red << " HHO FOR STEADY DIFFUSION PROBLEM" << reset << std::endl;
+  std::cout << std::endl;
+  
+  using RealType     = double;   
+  size_t degree      = 0;        // Poynomial degree of the method 
+  size_t n_divs      = 0;        // Mesh level of refinement
+    
+/////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////// Inputs
+/////////////////////////////////////////////////////////
+
+  int opt;
+  while ( (opt = getopt(argc, argv, "k:l:n")) != -1 ){
+    switch(opt){         
+    case 'k':
+      {
+	degree = atoi(optarg);
+      }
+      break;
+    case 'l':
+      {
+	n_divs = atoi(optarg);
+      }
+      break;
+    case '?':     
+    default:
+      std::cout << "wrong arguments" << std::endl;
+      exit(1);
+    }
+  }
+
+  std::cout << bold << cyan << "   • Input parameters" << reset << std::endl;
+  std::cout << bold << green << "      ";
+  std::cout << bold << "- Mesh refinement level : l = " << n_divs << std::endl;
+  std::cout << "      ";
+  std::cout << "- Polynomial degree of the method : k = " << degree << std::endl;
+  std::cout << std::endl;
+
+
+/////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////// Convergence test
+/////////////////////////////////////////////////////////
+
+  std::cout << bold << cyan;
+  std::cout << "   • Convergence test for all polynomial degrees up to " << degree << " :";
+  std::cout << std::endl << std::endl;
+
+  // Loop over polynomial degrees 
+  for(size_t k = 0; k <= degree; k++){
+
+    std::cout << bold << green << "      ";
+    std::cout << "- Polynomial degree : k = " << k << std::endl;
+
+    // Creating HHO approximation spaces and corresponding linear operator
+    // Mixed order : k+1, k / Equal Order : k, k
+    hho_degree_info hho_di(k+1,k);
+    
+    ////////////////////////////////////////
+    //////////////////////////////////////// Loop over level of mesh refinement 
+    ////////////////////////////////////////
+
+    for(size_t l = 0; l <= n_divs; l++){
+
+
+  }
+  }
+
+  return;
+
+}
+
+
+#endif

@@ -27,7 +27,8 @@
 
 #include "core/core"
 
-
+#include "src/methods/cuthho_bits/cuthho_geom.hpp"
+#include "src/methods/cuthho_bits/cuthho_utils.hpp"
 
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
@@ -189,8 +190,7 @@ make_hho_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl
     // auto h = measure(msh, cl);
     auto h = diameter(msh, cl);
 
-    for (size_t i = 0; i < fcs.size(); i++)
-    {
+    for (size_t i = 0; i < fcs.size(); i++) {
         auto fc = fcs[i];
         face_basis<Mesh,T> fb(msh, fc, facdeg);
 
@@ -206,26 +206,22 @@ make_hho_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl
             auto c_phi = cb.eval_basis(qp.first);
             auto f_phi = fb.eval_basis(qp.first);
 
-            mass += qp.second * f_phi * f_phi.transpose();
+            mass  += qp.second * f_phi * f_phi.transpose();
             trace += qp.second * f_phi * c_phi.transpose();
         }
 
         oper.block(0, 0, fbs, cbs) = mass.llt().solve(trace);
         
         if (scaled_Q) {
-            data += oper.transpose() * mass * oper * (1./h);
-        }else{
+            data += oper.transpose() * mass * oper * (1.0/h);
+        }
+        else {
             data += oper.transpose() * mass * oper;
         }
     }
 
     return data;
 }
-
-
-
-
-
 
 template<typename Mesh>
 Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
@@ -316,14 +312,11 @@ make_hho_fancy_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl
     return data;
 }
 
-
-
-
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
              Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
-make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
-{
+make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di) {
+    
     using T = typename Mesh::coordinate_type;
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
@@ -332,8 +325,8 @@ make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, con
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
 
-    cell_basis<Mesh,T>            cb(msh, cl, celdeg);
-    vector_cell_basis<Mesh,T>     gb(msh, cl, graddeg);
+    cell_basis<Mesh,T>        cb(msh, cl, celdeg);
+    vector_cell_basis<Mesh,T> gb(msh, cl, graddeg);
 
     auto cbs = cell_basis<Mesh,T>::size(celdeg);
     auto fbs = face_basis<Mesh,T>::size(facdeg);
@@ -341,17 +334,14 @@ make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, con
 
     const auto num_faces = faces(msh, cl).size();
 
-    matrix_type         gr_lhs = matrix_type::Zero(gbs, gbs);
-    matrix_type         gr_rhs = matrix_type::Zero(gbs, cbs + num_faces * fbs);
+    matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
+    matrix_type gr_rhs = matrix_type::Zero(gbs, cbs + num_faces * fbs);
 
-    if(celdeg > 0)
-    {
+    if(celdeg > 0) {
         const auto qps = integrate(msh, cl, celdeg - 1 + facdeg);
-        for (auto& qp : qps)
-        {
+        for (auto& qp : qps) {
             const auto c_dphi = cb.eval_gradients(qp.first);
             const auto g_phi  = gb.eval_basis(qp.first);
-
             gr_lhs.block(0, 0, gbs, gbs) += qp.second * g_phi * g_phi.transpose();
             gr_rhs.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
         }
@@ -359,12 +349,10 @@ make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, con
 
     const auto fcs = faces(msh, cl);
     const auto ns = normals(msh, cl);
-    for (size_t i = 0; i < fcs.size(); i++)
-    {
+    for (size_t i = 0; i < fcs.size(); i++) {
         const auto fc = fcs[i];
         const auto n  = ns[i];
         face_basis<Mesh,T> fb(msh, fc, facdeg);
-
         const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg));
         for (auto& qp : qps_f)
         {
@@ -407,8 +395,8 @@ make_hho_gradrec_mixed_vector(const Mesh& msh, const typename Mesh::cell_type& c
 
     const auto num_faces = faces(msh, cl).size();
 
-    matrix_type         gr_lhs = matrix_type::Zero(gbs, gbs);
-    matrix_type         gr_rhs = matrix_type::Zero(gbs, cbs + num_faces * fbs);
+    matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
+    matrix_type gr_rhs = matrix_type::Zero(gbs, cbs + num_faces * fbs);
 
     if(celdeg > 0)
     {
@@ -661,8 +649,8 @@ public:
                 if ( asm_map[j].assemble() )
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
                 else
-                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
-            }
+                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
+		    }
         }
         
         RHS.block(cell_LHS_offset, 0, cbs, 1) += rhs.block(0, 0, cbs, 1);
@@ -768,8 +756,8 @@ public:
             {
                 if ( asm_map[j].assemble() )
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
-                else
-                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
+                else 
+                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
             }
         }
         
@@ -846,7 +834,7 @@ public:
             if ( asm_map[j].assemble() ){
 //                    triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
             }else{
-                    RHS(asm_map[i]) -= lhs(i,j)*dirichlet_data(j);
+                    RHS[asm_map[i]] -= lhs(i,j)*dirichlet_data(j);
             }
             
             }

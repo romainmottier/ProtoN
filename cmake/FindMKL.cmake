@@ -2,6 +2,10 @@
 # This source file is part of EMT, the ElectroMagneticTool.
 #
 # Copyright (C) 2013-2015, Matteo Cicuttin - matteo.cicuttin@uniud.it
+#
+# This source file is part of EMT, the ElectroMagneticTool.
+#
+# Copyright (C) 2013-2015, Matteo Cicuttin - matteo.cicuttin@uniud.it
 # Department of Electrical Engineering, University of Udine
 # All rights reserved.
 #
@@ -41,30 +45,29 @@ endif ()
 if ( CYGWIN )
 find_library(MKL_iomp5_LIBRARY
     NAMES   libiomp5md
-    PATHS	"/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/compiler/"
+    PATHS   "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/compiler/"
             "${INTEL_MKL_LIB_SEARCH_DIRS}"
 )
 else ()
 find_library(MKL_iomp5_LIBRARY
     NAMES   iomp5
-    PATHS	/opt/intel/lib
-    			/opt/intel/lib/intel64
-    		    /opt/intel/lib/intel64_lin
+    PATHS   /opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/
+	    /opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin/
             "${INTEL_MKL_LIB_SEARCH_DIRS}"
 )
 endif()
 
 find_library(MKL_mkl_core_LIBRARY
     NAMES   mkl_core
-    PATHS   /opt/intel/mkl/lib
-	    /opt/intel/mkl/lib/intel64
+    PATHS   /opt/intel/oneapi/mkl/latest/lib/
+	    /opt/intel/oneapi/mkl/latest/lib/intel64
 	    "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
             "${INTEL_MKL_LIB_SEARCH_DIRS}"
 )
 find_library(MKL_mkl_intel_thread_LIBRARY
     NAMES   mkl_intel_thread
-    PATHS   /opt/intel/mkl/lib
-            /opt/intel/mkl/lib/intel64
+    PATHS   /opt/intel/oneapi/mkl/latest/lib/
+	    /opt/intel/oneapi/mkl/latest/lib/intel64
 	    "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
             "${INTEL_MKL_LIB_SEARCH_DIRS}"
 )
@@ -79,8 +82,8 @@ if (APPLE)
 else ()
 	find_library(MKL_runtime_LIBRARY
 		NAMES   mkl_rt
-		PATHS   /opt/intel/mkl/lib			
-	    		/opt/intel/mkl/lib/intel64
+		PATHS   /opt/intel/oneapi/mkl/latest/lib/
+	    		/opt/intel/oneapi/mkl/latest/lib/intel64
 			"/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
 			"${INTEL_MKL_LIB_SEARCH_DIRS}"
 	)
@@ -88,7 +91,8 @@ endif ()
 
 find_path(MKL_INCLUDE_DIRS
     NAMES   mkl.h
-    PATHS   /opt/intel/mkl/include
+    PATHS   /opt/intel/oneapi/mkl/latest/
+	    /opt/intel/oneapi/mkl/latest/include
 	    "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/mkl/include"
             "${INTEL_MKL_INCLUDE_SEARCH_DIRS}/include"
 )
@@ -113,5 +117,7 @@ if (MKL_mkl_core_LIBRARY AND
 endif ()
 
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS)
+
+
 
 

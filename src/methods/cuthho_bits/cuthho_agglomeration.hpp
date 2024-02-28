@@ -25,72 +25,65 @@
 
 template<typename T, size_t ET, typename Function>
 void
-detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
+detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
+
     typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
     const T threshold = 0.3;
     const T threshold_cells = 0.3;
 
-    for (auto& cl : msh.cells)
-    {
+    // Loop over cells
+    for (auto& cl : msh.cells) {
+
         auto fcs = faces(msh, cl);
         auto pts = points(msh, cl);
         auto nds = nodes(msh, cl);
 
         if (fcs.size() != 4)
-            throw std::invalid_argument("This works only on quads for now");
-
-        if( !is_cut(msh, cl) )
-        {
-            cl.user_data.agglo_set = cell_agglo_set::T_OK;
-            continue;
+          throw std::invalid_argument("This works only on quads for now");
+        if( !is_cut(msh, cl) ) {
+          cl.user_data.agglo_set = cell_agglo_set::T_OK;
+          continue;
         }
 
         //// another criterion on the area of the cell
-        if( measure(msh, cl, element_location::IN_NEGATIVE_SIDE)
-            < threshold_cells * measure(msh, cl) )
-        {
+        if(measure(msh, cl, element_location::IN_NEGATIVE_SIDE) < threshold_cells*measure(msh, cl)) {
+          cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
+          continue;
+        }
+        else if(measure(msh, cl, element_location::IN_POSITIVE_SIDE) < threshold_cells*measure(msh, cl)) {
+          cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
+          continue;
+        }
+
+        // If it is a quadrilateral we have 6 possible configurations of the
+        // element-cut intersection. 
+
+        auto agglo_set_single_node = [&](size_t n) -> void {
+          auto f1 = (n == 0) ? fcs.size()-1 : n-1;
+          auto f2 = n;
+
+          auto ma = measure(msh, fcs[f1]);
+          auto pa = (pts[n] - fcs[f1].user_data.intersection_point);
+          auto da = pa.to_vector().norm() / ma;
+
+          auto mb = measure(msh, fcs[f2]);
+          auto pb = (pts[n] - fcs[f2].user_data.intersection_point);
+          auto db = pb.to_vector().norm() / mb;
+
+          assert(da >= 0 && da <= 1);
+          assert(db >= 0 && db <= 1);
+
+          if (std::min(da, db) > threshold) {
+            cl.user_data.agglo_set = cell_agglo_set::T_OK;
+            return;
+          }
+
+          if (location(msh, nds[n]) == element_location::IN_NEGATIVE_SIDE)
             cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
-            continue;
-        }
-        else if( measure(msh, cl, element_location::IN_POSITIVE_SIDE)
-            < threshold_cells * measure(msh, cl) )
-        {
+          else
             cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
-            continue;
-        }
-
-        /* If it is a quadrilateral we have 6 possible configurations of the
-         * element-cut intersection. */
-
-        auto agglo_set_single_node = [&](size_t n) -> void
-        {
-            auto f1 = (n == 0) ? fcs.size()-1 : n-1;
-            auto f2 = n;
-
-            auto ma = measure(msh, fcs[f1]);
-            auto pa = (pts[n] - fcs[f1].user_data.intersection_point);
-            auto da = pa.to_vector().norm() / ma;
-
-            auto mb = measure(msh, fcs[f2]);
-            auto pb = (pts[n] - fcs[f2].user_data.intersection_point);
-            auto db = pb.to_vector().norm() / mb;
-
-            assert(da >= 0 && da <= 1);
-            assert(db >= 0 && db <= 1);
-
-            if ( std::min(da, db) > threshold )
-            {
-                cl.user_data.agglo_set = cell_agglo_set::T_OK;
-                return;
-            }
-
-            if ( location(msh, nds[n]) == element_location::IN_NEGATIVE_SIDE )
-                cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
-            else
-                cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
         };
         
         auto agglo_set_double_node = [&](size_t f1, size_t f2) -> void
@@ -123,15 +116,12 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
                 cl.user_data.agglo_set = (m2 <= threshold) ? cell_agglo_set::T_KO_NEG : cell_agglo_set::T_KO_POS;
         };
 
-        for (size_t i = 0; i < fcs.size(); i++)
-        {
+        for (size_t i = 0; i < fcs.size(); i++) {
             auto f1 = i;
             auto f2 = (i+1) % fcs.size();
             auto n = (i+1) % fcs.size();
-
             if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
                 agglo_set_single_node(n);
-
         }
 
         if ( is_cut(msh, fcs[0]) && is_cut(msh, fcs[2]) )
@@ -161,16 +151,12 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
 // two neighbors have at least one common face
 template<typename T, size_t ET>
 void
-make_neighbors_info(cuthho_mesh<T, ET>& msh)
-{
-    for (size_t i = 0; i < msh.cells.size(); i++)
-    {
+make_neighbors_info(cuthho_mesh<T, ET>& msh) {
+    for (size_t i = 0; i < msh.cells.size(); i++) {
         auto fc_i = faces(msh,msh.cells[i]);
-        for (size_t j = i+1; j < msh.cells.size(); j++)
-        {
+        for (size_t j = i+1; j < msh.cells.size(); j++) {
             auto &cl1 = msh.cells.at(i);
             auto &cl2 = msh.cells.at(j);
-
             // two f_neighbors have at least one common face
             bool are_f_neighbors = false;
             auto fc_j = faces(msh,msh.cells[j]);
@@ -179,44 +165,28 @@ make_neighbors_info(cuthho_mesh<T, ET>& msh)
                     if ( fc_i[i_face] == fc_j[j_face] )
                         are_f_neighbors = true;
 
-            if (are_f_neighbors)
-            {
+            if (are_f_neighbors) {
                 auto ofs_cl1 = offset(msh, cl1);
                 auto ofs_cl2 = offset(msh, cl2);
-
                 cl1.user_data.f_neighbors.insert(ofs_cl2);
                 cl2.user_data.f_neighbors.insert(ofs_cl1);
             }
-            else
-            {
+            else {
                 // two d_neighbors have at least one common node
                 bool are_d_neighbors = false;
                 for (size_t ip = 0; ip < cl1.ptids.size(); ip++)
                     for (size_t jp = 0; jp < cl2.ptids.size(); jp++)
                         if ( cl1.ptids[ip] == cl2.ptids[jp] )
                             are_d_neighbors = true;
-
-                if (are_d_neighbors)
-                {
+                if (are_d_neighbors) {
                     auto ofs_cl1 = offset(msh, cl1);
                     auto ofs_cl2 = offset(msh, cl2);
-
                     cl1.user_data.d_neighbors.insert(ofs_cl2);
                     cl2.user_data.d_neighbors.insert(ofs_cl1);
                 }
-
             }
         }
     }
-
-    /*
-    for (auto& cl : msh.cells)
-    {
-        for (auto& n : cl.user_data.neighbors)
-            std::cout << n << " ";
-        std::cout << std::endl;
-    }
-    */
 }
 
 
@@ -227,26 +197,24 @@ template<typename T, size_t ET>
 void
 make_neighbors_info_cartesian(cuthho_mesh<T, ET>& msh)
 {
-    std::cout << "WARNING : make_neighbors_info_cartesian "
-              << "works for cartesian meshes only !!"
-              << std::endl;
+    //std::cout << "WARNING : make_neighbors_info_cartesian "
+    //          << "works for cartesian meshes only !!"
+    //          << std::endl;
 
     size_t N = sqrt(msh.cells.size());
 
     //////////////////  face neighbors  ///////////////////
     // first row of cells -> look left
-    for (size_t i = 1; i < N; i++)
-    {
+    for (size_t i = 1; i < N; i++) {
         auto &cl1 = msh.cells.at(i);
         auto &cl2 = msh.cells.at(i-1);
-
         cl1.user_data.f_neighbors.insert(i-1);
         cl2.user_data.f_neighbors.insert(i);
     }
 
     // other rows of cells
-    for (size_t j = 1; j < N; j++)
-    {
+    for (size_t j = 1; j < N; j++) {
+
         // first cell of the row -> look bottom
         auto &cl1 = msh.cells.at( j*N );
         auto &cl2 = msh.cells.at( (j-1)*N );
@@ -254,56 +222,46 @@ make_neighbors_info_cartesian(cuthho_mesh<T, ET>& msh)
         cl2.user_data.f_neighbors.insert( j*N );
 
         // other cells -> look left and bottom
-        for (size_t i = 1; i < N; i++)
-        {
+        for (size_t i = 1; i < N; i++) {
             auto &cl_c = msh.cells.at( j*N + i ); // current
             auto &cl_l = msh.cells.at( j*N + i - 1 ); // left
             auto &cl_b = msh.cells.at( (j-1)*N + i ); // bottom
-
             cl_c.user_data.f_neighbors.insert( j*N + i - 1 );
             cl_c.user_data.f_neighbors.insert( (j-1)*N + i );
-
             cl_l.user_data.f_neighbors.insert( j*N + i );
             cl_b.user_data.f_neighbors.insert( j*N + i );
         }
+
     }
 
     //////////////////////  diagonal neighbors  //////////////////////
     // first row of cells -> look left top
-    for (size_t i = 1; i < N; i++)
-    {
+    for (size_t i = 1; i < N; i++) {
         auto &cl1 = msh.cells.at(i);
         auto &cl2 = msh.cells.at(N + i-1);
-
         cl1.user_data.d_neighbors.insert(N + i-1);
         cl2.user_data.d_neighbors.insert(i);
     }
 
     // other rows of cells
-    for (size_t j = 1; j < N-1; j++)
-    {
+    for (size_t j = 1; j < N-1; j++) {
         // first cell of the row -> nothing to do
         // other cells -> look left top and left bottom
-        for (size_t i = 1; i < N; i++)
-        {
+        for (size_t i = 1; i < N; i++) {
             auto &cl_c = msh.cells.at( j*N + i ); // current
             auto &cl_l = msh.cells.at( (j+1)*N + i - 1 ); // left top
             auto &cl_b = msh.cells.at( (j-1)*N + i - 1 ); // left bottom
-
             cl_c.user_data.d_neighbors.insert( (j+1)*N + i - 1 );
             cl_c.user_data.d_neighbors.insert( (j-1)*N + i - 1 );
-
             cl_l.user_data.d_neighbors.insert( j*N + i );
             cl_b.user_data.d_neighbors.insert( j*N + i );
         }
     }
 
     // last row -> look left bottom
-    for (size_t i = 1; i < N; i++)
-    {
+    for (size_t i = 1; i < N; i++) {
         auto &cl1 = msh.cells.at( (N-1)*N + i);
         auto &cl2 = msh.cells.at( (N-2)*N + i-1);
-
         cl1.user_data.d_neighbors.insert((N-2)*N + i-1);
         cl2.user_data.d_neighbors.insert((N-1)*N + i);
     }
@@ -608,8 +566,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     const auto fcs2 = faces(msh, cl2);
 
     std::vector<typename Mesh::face_type> com_faces;
-    for(size_t i = 0; i < fcs1.size(); i++)
-    {
+    for(size_t i = 0; i < fcs1.size(); i++) {
         const auto fc1 = fcs1[i];
         for(size_t j = 0; j < fcs2.size(); j++)
         {
@@ -635,8 +592,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
 
     // choose the agglomeration technique
     typename Mesh::cell_type cl;
-    if(com_faces.size() == 0)
-    {
+    if(com_faces.size() == 0) {
         std::cout << "com nodes nb = " << com_nodes.size() << std::endl;
         if( com_nodes.size() == 1 )
         {
@@ -645,13 +601,11 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
         else
             throw std::invalid_argument("The cells have no common faces.");
     }
-    else if( com_faces.size() == 1 )
-    {
+    else if( com_faces.size() == 1 ) {
         assert(com_nodes.size() == 2); // only the nodes of the common face
         cl = merge_cells_face(cl1, cl2, com_faces[0]);
     }
-    else if( com_faces.size() == 2 )
-    {
+    else if( com_faces.size() == 2 ) {
         std::cout << "com nodes nb = " << com_nodes.size() << std::endl;
         assert(com_nodes.size() == 3); // only the case with two adjascent common faces
         cl = merge_cells_two_faces(cl1, cl2, com_faces);
@@ -678,26 +632,21 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     // p0, p1 and interface
     bool cut1 = cl1.user_data.location == element_location::ON_INTERFACE;
     bool cut2 = cl2.user_data.location == element_location::ON_INTERFACE;
-    if(cut1 && !cut2)
-    {
+    if(cut1 && !cut2) {
         cl.user_data.interface = cl1.user_data.interface;
         cl.user_data.p0 = cl1.user_data.p0;
         cl.user_data.p1 = cl1.user_data.p1;
     }
-    else if(!cut1 && cut2)
-    {
+    else if(!cut1 && cut2) {
         cl.user_data.interface = cl2.user_data.interface;
         cl.user_data.p0 = cl2.user_data.p0;
         cl.user_data.p1 = cl2.user_data.p1;
     }
-    else if(cut1 && cut2)
-    {
+    else if(cut1 && cut2) {
         if(cl1.user_data.p0[0] == cl2.user_data.p1[0] &&
-           cl1.user_data.p0[1] == cl2.user_data.p1[1])
-        {
+           cl1.user_data.p0[1] == cl2.user_data.p1[1]) {
             cl.user_data.interface = cl2.user_data.interface;
-            for(size_t i = 0; i < cl1.user_data.interface.size(); i++ )
-            {
+            for(size_t i = 0; i < cl1.user_data.interface.size(); i++ ) {
                 cl.user_data.interface.push_back(cl1.user_data.interface[i]);
             }
             cl.user_data.p0 = cl2.user_data.p0;
@@ -721,10 +670,8 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     if(cl1.user_data.distorted || cl2.user_data.distorted )
         cl.user_data.distorted = true;
 
-
     // for tests
     cl.user_data.highlight = true;
-
 
     // integration -> save composite quadrature
     size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8
@@ -841,8 +788,7 @@ public:
 template<typename Mesh>
 typename Mesh::cell_type
 find_good_neighbor(const Mesh& msh, const typename Mesh::cell_type cl,
-                   const element_location where)
-{
+                   const element_location where) {
     typename Mesh::cell_type best_neigh = cl;
 
     element_location other_where;
@@ -856,15 +802,13 @@ find_good_neighbor(const Mesh& msh, const typename Mesh::cell_type cl,
 
     auto f_neigh = cl.user_data.f_neighbors;
 
-    for (std::set<size_t>::iterator it = f_neigh.begin(); it != f_neigh.end(); ++it)
-    {
+    for (std::set<size_t>::iterator it = f_neigh.begin(); it != f_neigh.end(); ++it) {
         auto cl_n = msh.cells[*it];
 
         // if cl_n is on the wrong size -> do not consider it
         if (location(msh, cl_n) != where
             && location(msh, cl_n) != element_location::ON_INTERFACE)
             continue;
-
 
         // if cl_n is a small cut of the same size -> do not consider it
         if (where == element_location::IN_NEGATIVE_SIDE && cl_n.user_data.agglo_set == cell_agglo_set::T_KO_NEG)
@@ -873,8 +817,7 @@ find_good_neighbor(const Mesh& msh, const typename Mesh::cell_type cl,
             continue;
 
         // search for the "best" neighbor -> the one with the smallest volume in other_where
-        if( area > measure(msh, cl_n, other_where) )
-        {
+        if( area > measure(msh, cl_n, other_where) ) {
             area = measure(msh, cl_n, other_where);
             best_neigh = cl_n;
         }
@@ -1033,35 +976,123 @@ output_agglo_lists(Mesh& msh, std::vector<int> table_neg, std::vector<int> table
 
     // loop on the cells
     size_t cp = 0;
-    for (auto cl : msh.cells)
-    {
+    for (auto cl : msh.cells) {
         size_t TN = table_neg.at(cp);
-        if( TN != -1)
-        {
+        if( TN != -1) {
             auto bar_cl = barycenter(msh,cl);
             auto bar_neigh = barycenter(msh,msh.cells.at(TN));
-
             auto vect = bar_neigh - bar_cl;
-
             output << bar_cl[0] << "   " << bar_cl[1] << "   0.   "
                    << vect[0] << "   " << vect[1] << std::endl;
         }
 
 
         size_t TP = table_pos.at(cp);
-        if( TP != -1)
-        {
+        if( TP != -1) {
             auto bar_cl = barycenter(msh,cl);
             auto bar_neigh = barycenter(msh,msh.cells.at(TP));
-
             auto vect = bar_neigh - bar_cl;
-
             output << bar_cl[0] << "   " << bar_cl[1] << "   0.   "
                    << vect[0] << "   " << vect[1] << std::endl;
         }
         cp++;
     }
 
+    output.close();
+}
+
+template<typename Mesh>
+void
+output_agglo_lists_step4(Mesh& msh, std::vector<int> table_neg, std::vector<int> table_pos,
+                   std::string file) {
+    // number of arrows
+    size_t nb_arrows = 0;
+    for (size_t i=0; i<table_neg.size(); i++) {
+      if(table_neg.at(i) != -1)
+        nb_arrows++;
+    }
+    for (size_t i=0; i<table_pos.size(); i++) {
+      if(table_pos.at(i) != -1)
+        nb_arrows++;
+    }
+
+    // initiate the output file
+    std::ofstream output(file, std::ios::out | std::ios::trunc);
+    if( !output )
+        std::cerr << "agglo output file has not been opened" << std::endl;
+
+    output << "5 " << nb_arrows << " 12" << std::endl;
+    output << "x" << std::endl;
+    output << "y" << std::endl;
+    output << "z" << std::endl;
+    output << "u" << std::endl;
+    output << "v" << std::endl;
+
+    output << "0.  1.  10" << std::endl;
+    output << "0.  1.  10" << std::endl;
+    output << "0.  0.  10" << std::endl;
+    output << "-1  1.  10" << std::endl;
+    output << "-1  1.  10" << std::endl;
+
+
+    // loop on the cells
+    size_t cp = 0;
+    for (auto cl : msh.cells) {
+        size_t TN = table_neg.at(cp);
+        if( TN != -1) {
+          auto h = diameter(msh, cl);
+          auto bar_cl = barycenter(msh,cl);
+          auto bar_neigh = barycenter(msh,msh.cells.at(TN));
+          auto vect = bar_neigh - bar_cl;
+          // VERS LE HAUT
+          if (vect[0] <= 1e-5 && vect[1] > 0) {
+            bar_cl[0] = bar_cl[0] - h/6.0;
+          }
+          // VERS LE BAS
+          if (vect[0] <= 1e-5 && vect[1] < 0) {
+            // EN HAUT A GAUCHE
+            if (bar_cl[0] <= 0.5 && bar_cl[1] >= 0.5) 
+                bar_cl[0] = bar_cl[0] + h/6.0;
+            else 
+                bar_cl[0] = bar_cl[0] - h/6.0;
+          }
+          // VERS LA DROITE
+          else if (vect[1] <= 1e-5 && vect[0] > 0){
+            // EN BAS A GAUCHE
+            if (bar_cl[0] <= 0.5 && bar_cl[1] <= 0.5) 
+                bar_cl[1] = bar_cl[1] + h/6.0;
+            // ELSE
+            else 
+                bar_cl[1] = bar_cl[1] - h/6.0;
+          }
+          // VERS LA GAUCHE 
+          else if (vect[1] <= 1e-5 && vect[0] < 0){
+            // EN HAUT A GAUCHE
+            if (bar_cl[0] >= 0.5 && bar_cl[1] <= 0.5) 
+                bar_cl[1] = bar_cl[1] + h/6.0;
+            else
+                bar_cl[1] = bar_cl[1] + h/6.0;
+          }
+          output << bar_cl[0] << "   " << bar_cl[1] << "   0.   "
+                 << vect[0] << "   " << vect[1] << std::endl;
+        }
+        size_t TP = table_pos.at(cp);
+        if( TP != -1) {
+          auto h = diameter(msh, cl);
+          auto bar_cl = barycenter(msh,cl);
+          auto bar_neigh = barycenter(msh,msh.cells.at(TP));
+          auto vect = bar_neigh - bar_cl;
+        //   if (vect[0] <= 1e-5) {
+        //     bar_cl[0] = bar_cl[0];
+        //   }
+        //   else if (vect[1] <= 1e-5) {
+        //     bar_cl[1] = bar_cl[1]; 
+        //   }
+          output << bar_cl[0] << "   " << bar_cl[1] << "   0.   "
+                 << vect[0] << "   " << vect[1] << std::endl;
+        }
+        cp++;
+    }
     output.close();
 }
 
@@ -1075,16 +1106,15 @@ output_agglo_lists(Mesh& msh, std::vector<int> table_neg, std::vector<int> table
 // no iterations after merging bad cells once
 template<typename Mesh, typename Function>
 void
-make_agglomeration(Mesh& msh, const Function& level_set_function)
-{
+make_agglomeration(Mesh& msh, const Function& level_set_function) {
+
     // initiate lists to store the agglomeration infos
     std::vector<int> agglo_table_neg, agglo_table_pos;
     size_t nb_cells = msh.cells.size();
     agglo_table_neg.resize(nb_cells);
     agglo_table_pos.resize(nb_cells);
     
-    for(size_t i=0; i < nb_cells; i++)
-    {
+    for(size_t i=0; i < nb_cells; i++) {
         agglo_table_neg.at(i) = -1;
         agglo_table_pos.at(i) = -1;
     }
@@ -1093,8 +1123,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
     size_t nb_step1 = 0;
     size_t nb_step2 = 0;
     // start the process for domain 1, and then domain 2
-    for(size_t domain=1; domain < 3; domain++)
-    {
+    for(size_t domain=1; domain < 3; domain++) {
         // loop on the cells
         for (auto cl : msh.cells)
         {
@@ -1122,15 +1151,14 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
             // if cl is already agglomerated : no need for further agglomerations
             bool already_agglo = false;
             size_t offset_cl = offset(msh, cl);
-            for (size_t i = 0; i < agglo_table_pos.size(); i++)
-            {
+            for (size_t i = 0; i < agglo_table_pos.size(); i++) {
                 if( agglo_table_pos.at(i) == offset_cl || agglo_table_neg.at(i) == offset_cl )
                 {
                     already_agglo = true;
                     break;
                 }
             }
-            if( already_agglo )
+            if (already_agglo)
                 continue;
 
 
@@ -1142,13 +1170,11 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
             size_t offset1 = offset(msh,cl);
             size_t offset2 = offset(msh,best_neigh);
 
-            if(where == element_location::IN_NEGATIVE_SIDE)
-            {
+            if(where == element_location::IN_NEGATIVE_SIDE) {
                 agglo_table_neg.at(offset1) = offset2;
                 nb_step1++;
             }
-            else
-            {
+            else {
                 agglo_table_pos.at(offset1) = offset2;
                 nb_step2++;
             }
@@ -1159,10 +1185,10 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
         if(domain == 2)
             output_agglo_lists(msh, agglo_table_neg, agglo_table_pos, "agglo_two.okc");
     }
+
     //////////////   CHANGE THE AGGLO FOR THE CELLS OF DOMAIN 1 THAT ARE TARGETTED ///////
     size_t nb_step3 = 0;
-    for (auto cl : msh.cells)
-    {
+    for (auto cl : msh.cells) {
         if(cl.user_data.agglo_set != cell_agglo_set::T_KO_NEG)
             continue;
 
@@ -1384,8 +1410,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
 
     size_t nb_cells_after = msh.cells.size();
     size_t nb_cut_after = 0;
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
         if( location(msh, cl) == element_location::ON_INTERFACE )
             nb_cut_after++;
     }
@@ -1406,5 +1431,224 @@ make_agglomeration(Mesh& msh, const Function& level_set_function)
     output_cells << " NB_CELLS_STEP_3 = " << nb_step3 << std::endl;
 
     output_cells.close();
+}
+
+////// make_agglomeration
+// the main agglomeration routine
+// currently, the mesh obtained must have convex cells
+// obtained by merging sub_cells with one face in common
+// for non-convex cells -> modify measure and integrate
+// for merging more general cells -> modify merge_cells
+// for diagonal cells -> modify make_neighbors_info
+// no iterations after merging bad cells once
+template<typename Mesh, typename Function>
+void
+make_polynomial_extension(Mesh& msh, const Function& level_set_function) {
+
+    // Initiate lists to store the pairing infos
+    std::vector<int> table_neg, table_pos;
+    size_t nb_cells = msh.cells.size();
+    table_neg.resize(nb_cells);
+    table_pos.resize(nb_cells);
+    for(size_t i=0; i < nb_cells; i++) {
+      table_neg.at(i) = -1;
+      table_pos.at(i) = -1;
+    }
+
+    ///////////////////////   LOOK FOR NEIGHBORS  ////////////////
+    size_t nb_step1 = 0;
+    size_t nb_step2 = 0;
+
+    // start the process for domain 1, and then domain 2
+    for(size_t domain=1; domain < 3; domain++) {
+
+        // loop on the cells
+        for (auto cl : msh.cells) {
+            element_location where;
+            if(domain == 1)
+                where = element_location::IN_NEGATIVE_SIDE;
+            else if(domain == 2)
+                where = element_location::IN_POSITIVE_SIDE;
+            else 
+                throw std::logic_error("pb with domain");
+                
+            if(cl.user_data.agglo_set == cell_agglo_set::T_OK)
+                continue;
+            else if(cl.user_data.agglo_set == cell_agglo_set::UNDEF)
+                throw std::logic_error("UNDEF agglo_set");
+            else if(cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG
+                    && where != element_location::IN_NEGATIVE_SIDE)
+                continue;
+            else if(cl.user_data.agglo_set == cell_agglo_set::T_KO_POS
+                    && where != element_location::IN_POSITIVE_SIDE)
+                continue;
+
+
+            // if cl is already agglomerated : no need for further agglomerations
+            bool already_agglo = false;
+            size_t offset_cl = offset(msh, cl);
+            for (size_t i = 0; i < table_pos.size(); i++) {
+                if( table_pos.at(i) == offset_cl || table_neg.at(i) == offset_cl ) {
+                    already_agglo = true;
+                    break;
+                }
+            }
+            if( already_agglo )
+                continue;
+
+
+            typename Mesh::cell_type best_neigh = find_good_neighbor(msh, cl, where);
+
+            auto f_neigh = cl.user_data.f_neighbors;
+
+            // prepare agglomeration of cells cl and best_neigh
+            size_t offset1 = offset(msh,cl);
+            size_t offset2 = offset(msh,best_neigh);
+
+            if(where == element_location::IN_NEGATIVE_SIDE) {
+                table_neg.at(offset1) = offset2;
+                nb_step1++;
+            }
+            else {
+                table_pos.at(offset1) = offset2;
+                nb_step2++;
+            }
+        }
+
+        if(domain == 1)
+            output_agglo_lists(msh, table_neg, table_pos, "agglo_one.okc");
+        if(domain == 2)
+            output_agglo_lists(msh, table_neg, table_pos, "agglo_two.okc");
+    }
+    //////////////   CHANGE THE AGGLO FOR THE CELLS OF DOMAIN 1 THAT ARE TARGETTED ///////
+    size_t nb_step3 = 0;
+    for (auto cl : msh.cells) {
+        if(cl.user_data.agglo_set != cell_agglo_set::T_KO_NEG)
+            continue;
+
+        size_t offset1 = offset(msh,cl);
+
+        // are there cells that try to agglomerate with cl ?
+        bool agglo = false;
+        size_t cl2_offset;
+        for(size_t i = 0; i < table_pos.size(); i++) {
+            if(table_pos.at(i) == offset1) {
+                agglo = true;
+                cl2_offset = i;
+                break;
+            }
+        }
+        if(!agglo)
+            continue;
+
+        // at this point cl2_offset tries to agglomerate with cl
+        size_t cl1_agglo = table_neg.at(offset1);
+        
+        // -> check that no one tries to agglomerate with cl1_agglo
+        agglo = false;
+        for(size_t i = 0; i < table_neg.size(); i++) {
+            if( i == offset1)
+                continue;
+
+            if(table_neg.at(i) == cl1_agglo) {
+                agglo = true;
+                break;
+            }
+        }
+        if(!agglo && msh.cells.at(cl1_agglo).user_data.agglo_set == cell_agglo_set::T_KO_POS)
+            continue;
+
+        // at this point we risk chain agglomerations
+        // -> remove the target of cl
+        nb_step3++;
+        table_neg.at(offset1) = -1;
+    }
+    output_agglo_lists(msh, table_neg, table_pos, "agglo_three.okc");
+    
+
+    ///////////////////////////////////////////////////////////////////////////// STEP 4 
+    // ALL BAD CUT CELLS MUST POINT TOWARDS A CELL
+
+    // loop on the cells
+    for (auto cl : msh.cells) {
+        // FIND THE CELL OFFSET
+        auto offset_cl = offset(msh,cl);
+        auto TN = table_neg.at(offset_cl);
+        auto TP = table_pos.at(offset_cl);
+        if (TN == -1) {    
+            if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {  
+                for(size_t i = 0; i < table_pos.size(); i++) {
+                    if(table_pos.at(i) == offset_cl) {
+                        table_neg.at(offset_cl) = i;
+                    break;
+                    }
+                }
+            }
+        }
+        if (TP == -1) {
+            if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) { 
+                for(size_t i = 0; i < table_neg.size(); i++) {
+                    if(table_neg.at(i) == offset_cl) {
+                        table_pos.at(offset_cl) = i;
+                    break;
+                    }
+                }
+            }
+        }
+    }
+
+    // FILLING THE STRUCTURE paired_cells / dependent_cells_neg / dependent_cells_pos
+    for (auto &cl : msh.cells) {
+        auto offset_cl = offset(msh,cl);
+        if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
+            // std::cout << "Cell: " << offset_cl << std::endl;
+            if (table_neg.at(offset_cl) != -1) {
+                cl.user_data.paired_cell = table_neg.at(offset_cl);
+            }
+            if (table_pos.at(offset_cl) != -1) {
+                cl.user_data.paired_cell = table_pos.at(offset_cl);
+            }    
+            // std::cout << "Paired cell: " << cl.user_data.paired_cells;
+            // std::cout << std::endl << std::endl;
+            auto& good_cl = msh.cells[cl.user_data.paired_cell];
+            good_cl.user_data.dependent_cells_neg.insert(offset_cl);
+        }
+        if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
+            // std::cout << "Cell: " << offset_cl << std::endl;
+            if (table_neg.at(offset_cl) != -1) {
+                cl.user_data.paired_cell = table_neg.at(offset_cl);
+            }
+            if (table_pos.at(offset_cl) != -1) {
+                cl.user_data.paired_cell = table_pos.at(offset_cl);
+            }    
+            // std::cout << "Paired cell: " << cl.user_data.paired_cells;
+            // std::cout << std::endl << std::endl;
+            auto& good_cl = msh.cells[cl.user_data.paired_cell];
+            good_cl.user_data.dependent_cells_pos.insert(offset_cl);
+        }
+    }
+    // Verification
+    for (auto &cl : msh.cells) {
+        auto offset_cl = offset(msh,cl);
+        // std::cout << "Cell: " << offset_cl << std::endl;
+        // std::cout << "Negative dependent cells:   ";
+        for (auto& cells : cl.user_data.dependent_cells_neg) {
+            // std::cout << cells << "   ";
+        }
+        // std::cout << std::endl << "Positive dependent cells:   ";
+        for (auto& cells : cl.user_data.dependent_cells_pos) {
+            // std::cout << cells << "   ";
+        }
+        // std::cout << std::endl << std::endl;
+    }
+    // Display of the arrows
+    std::vector<int> table;
+    table.resize(nb_cells);
+    for(size_t i=0; i < nb_cells; i++) {
+        table.at(i) = -1;
+    }
+    output_agglo_lists_step4(msh, table_neg, table, "agglo_four.okc");
+    output_agglo_lists_step4(msh, table, table_pos, "agglo_five.okc");
+
 }
 

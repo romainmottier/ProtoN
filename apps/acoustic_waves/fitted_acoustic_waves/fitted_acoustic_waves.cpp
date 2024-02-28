@@ -21,6 +21,7 @@
  */
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <vector>
 #include <array>
@@ -1046,13 +1047,13 @@ int main(int argc, char **argv)
 {
         
     // fitted methods
-//    HHOFirstOrderExample(argc, argv);
-//    HeterogeneousEHHOFirstOrder(argc, argv);
-//    HeterogeneousIHHOFirstOrder(argc, argv);
-//    HeterogeneousIHHOSecondOrder(argc, argv);
-//    EHHOFirstOrder(argc, argv);
-//    IHHOFirstOrder(argc, argv);
-    IHHOSecondOrder(argc, argv);
+      HHOFirstOrderExample(argc, argv);
+  //    HeterogeneousEHHOFirstOrder(argc, argv);
+  //    HeterogeneousIHHOFirstOrder(argc, argv);
+  //    HeterogeneousIHHOSecondOrder(argc, argv);
+  //    EHHOFirstOrder(argc, argv);
+  //    IHHOFirstOrder(argc, argv);
+  //    IHHOSecondOrder(argc, argv);
 
     return 0;
 }

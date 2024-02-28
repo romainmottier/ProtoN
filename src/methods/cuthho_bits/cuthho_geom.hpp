@@ -886,13 +886,65 @@ make_test_points(const cuthho_quad_mesh<T>& msh, const typename cuthho_quad_mesh
 
 
 template<typename T, size_t ET>
-void dump_mesh(const cuthho_mesh<T, ET>& msh)
-{
-    std::ofstream ofs("mesh_dump.m");
+void dump_mesh(const cuthho_mesh<T, ET>& msh) {
+    std::ofstream ofs2("mesh_dump.py");
     size_t i = 0;
+    ofs2 << "import matplotlib.pyplot as plt" << std::endl;
+    ofs2 << "import numpy as np" << std::endl;
+    ofs2 << "plt.figure(figsize=(10,10),dpi=100) " << std::endl << std::endl;
+
+    for (auto& fc : msh.faces) {
+      auto pts = points(msh, fc);
+      if (fc.is_boundary)
+        ofs2 << "plt.plot([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], color='k', linewidth=1)" << std::endl;
+      else if ( is_cut(msh, fc) )
+        ofs2 << "plt.plot([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], color='darkred', linewidth=2)" << std::endl;
+      else
+        ofs2 << "plt.plot([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], color='k', linewidth=1)" << std::endl;
+      auto bar = barycenter(msh, fc);
+      ofs2 << "#plt.text(" << bar.x() << ", " << bar.y() << ", '" << i << "')" << std::endl;
+      i++;
+    }
+    i = 0;
+    for (auto& cl : msh.cells) {
+        auto bar = barycenter(msh, cl);
+        ofs2 << "#plt.text(" << bar.x() << ", " << bar.y() << ", '" << i << "');" << std::endl;
+
+        if ( is_cut(msh, cl) ) {
+            auto p0 = cl.user_data.p0;
+            auto p1 = cl.user_data.p1;
+            auto q = p1 - p0;
+            ofs2 << "#plt.quiver(" << p0.x() << ", " << p0.y() << ", " << q.x() << ", " << q.y() << ", 0)" << std::endl;
+            for (size_t i = 1; i < cl.user_data.interface.size(); i++) {
+                auto s = cl.user_data.interface.at(i-1);
+                auto l = cl.user_data.interface.at(i) - s;
+                ofs2 << "#plt.quiver(" << s.x() << ", " << s.y() << ", " << l.x() << ", " << l.y() << ", 0)" << std::endl;
+            }
+            // Interface refinment points
+            for (auto& ip : cl.user_data.interface)
+                ofs2 << "#plt.plot(" << ip.x() << ", " << ip.y() << ", 'dr')" << std::endl;
+            // Barycenter of negative side
+            auto tpn = collect_triangulation_points(msh, cl, element_location::IN_NEGATIVE_SIDE);
+            auto bn = barycenter(tpn);
+            ofs2 << "#plt.plot(" << bn.x() << ", " << bn.y() << ", 'dr')" << std::endl;
+            // Barycenter of positive side
+            auto tpp = collect_triangulation_points(msh, cl, element_location::IN_POSITIVE_SIDE);
+            auto bp = barycenter(tpp);
+            ofs2 << "#plt.plot(" << bp.x() << ", " << bp.y() << ", 'db')" << std::endl;
+        }
+        i++;
+    }
+    ofs2 << "t = np.linspace(0, 2*np.pi, 1000)" << std::endl;
+    ofs2 << "x = (1.0/3.0) * np.cos(t) + 0.5" << std::endl;
+    ofs2 << "y = (1.0/3.0) * np.sin(t) + 0.5" << std::endl;
+    ofs2 << "plt.plot(x, y, linewidth=2, color='navy')" << std::endl;
+    ofs2 << "plt.show()";
+    ofs2.close();
+
+    std::ofstream ofs("mesh_dump.m");
+    i = 0;
     ofs << "hold on;" << std::endl;
-    for (auto& fc : msh.faces)
-    {
+    for (auto& fc : msh.faces) {
         auto pts = points(msh, fc);
         if (fc.is_boundary)
             ofs << "line([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], 'Color', 'r');" << std::endl;
@@ -900,28 +952,24 @@ void dump_mesh(const cuthho_mesh<T, ET>& msh)
             ofs << "line([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], 'Color', 'g');" << std::endl;
         else
             ofs << "line([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], 'Color', 'k');" << std::endl;
-
         auto bar = barycenter(msh, fc);
-        ofs << "text(" << bar.x() << ", " << bar.y() << ", '" << i << "');" << std::endl;
+        ofs << "% text(" << bar.x() << ", " << bar.y() << ", '" << i << "');" << std::endl;
 
         i++;
     }
 
     i = 0;
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
         auto bar = barycenter(msh, cl);
-        ofs << "text(" << bar.x() << ", " << bar.y() << ", '" << i << "');" << std::endl;
+        ofs << "% text(" << bar.x() << ", " << bar.y() << ", '" << i << "');" << std::endl;
 
-        if ( is_cut(msh, cl) )
-        {
+        if ( is_cut(msh, cl) ) {
             auto p0 = cl.user_data.p0;
             auto p1 = cl.user_data.p1;
             auto q = p1 - p0;
             ofs << "quiver(" << p0.x() << ", " << p0.y() << ", " << q.x() << ", " << q.y() << ", 0)" << std::endl;
 
-            for (size_t i = 1; i < cl.user_data.interface.size(); i++)
-            {
+            for (size_t i = 1; i < cl.user_data.interface.size(); i++) {
                 auto s = cl.user_data.interface.at(i-1);
                 auto l = cl.user_data.interface.at(i) - s;
                 ofs << "quiver(" << s.x() << ", " << s.y() << ", " << l.x() << ", " << l.y() << ", 0)" << std::endl;
@@ -1239,8 +1287,20 @@ public:
             auto pts = points(msh, fc);
             base = face_bar - pts[0];
         }
+        // else if ( loc == where && loc != element_location::ON_INTERFACE)
+        // {
+        //     std::cout << "UNCUT FACES" << std::endl;
+        //     face_bar        = barycenter(msh, fc);
+        //     face_h          = diameter(msh, fc);
+        //     basis_degree    = degree;
+        //     basis_size      = degree+1;
+
+        //     auto pts = points(msh, fc);
+        //     base = face_bar - pts[0];
+        // }
         else
         {
+            // std::cout << "CUT FACES" << std::endl;
             face_bar        = barycenter(msh, fc, where);
             face_h          = diameter(msh, fc, where);
             basis_degree    = degree;
@@ -1410,4 +1470,227 @@ diameter(const cuthho_mesh<T, ET>& msh,
     auto vect = (tp[0] - tp[1]).to_vector();
     T ret = vect.norm();
     return ret;
+}
+
+// template<typename T, size_t ET>
+// auto  
+// faces_extended(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl)
+// {
+
+//     std::vector<typename cuthho_mesh<T, ET>::face_type> fcs = faces(msh, cl);
+//     auto ns  = normals(msh, cl); 
+    
+//     // UNCUT CELLS 
+//     if (!is_cut(msh, cl)) {
+//     //     auto nb_dp_cl = cl.user_data.dependent_cells_neg.size();
+//     //     auto dependent_cells = cl.user_data.dependent_cells_neg;
+//     //     if (cl.user_data.location == element_location::IN_POSITIVE_SIDE) {
+//     //         std::cout << "Positive side" << std::endl;
+//     //         nb_dp_cl = cl.user_data.dependent_cells_pos.size(); // Number of dependent cells 
+//     //         dependent_cells = cl.user_data.dependent_cells_pos;
+//     //     }
+//     //     else {
+//     //         std::cout << "Negative side" << std::endl;
+//     //     }
+//     //     auto offset_cl = offset(msh,cl);
+//     //     std::cout << "Uncut Cell: " << offset_cl << std::endl;
+//     //     std::cout << "Number of dependant cells: " << nb_dp_cl << std::endl;
+//     //     std::cout << "Dependent cells:   ";
+//     //     for (auto& dp_cl : dependent_cells) {
+//     //         std::cout << dp_cl << "  ";
+//     //         auto dp_cell = msh.cells[dp_cl];
+//     //         auto fcs_dp = faces(msh, dp_cell);
+//     //         auto ns_dp  = normals(msh, dp_cell);
+//     //         fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+//     //         ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+//     //     }
+//     //     std::cout << std::endl << std::endl;
+//     //     const auto num_faces = fcs.size();
+//     }
+//     // TKO NEG 
+//     else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
+//         // Adding the faces of the dependent terms
+//         auto nb_dp_cl = cl.user_data.dependent_cells_pos.size(); // Number of dependent cells 
+//         auto dependent_cells = cl.user_data.dependent_cells_pos;
+//         auto offset_cl = offset(msh,cl);
+//         std::cout << "TKO_NEG: " << offset_cl << std::endl;
+//         std::cout << "Number of dependant cells: " << nb_dp_cl << std::endl;
+//         std::cout << "Dependent cells:   ";
+//         for (auto& dp_cl : dependent_cells) {
+//             std::cout << dp_cl << "  ";
+//             auto dp_cell = msh.cells[dp_cl];
+//             auto fcs_dp = faces(msh, dp_cell);
+//             auto ns_dp  = normals(msh, dp_cell);
+//             fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+//             ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+//         }
+//         std::cout << std::endl << std::endl;
+//         auto num_faces = fcs.size();
+//     }
+//     // TKO_POS
+//     else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
+//         auto nb_dp_cl = cl.user_data.dependent_cells_neg.size();
+//         auto dependent_cells = cl.user_data.dependent_cells_neg;
+//         auto offset_cl = offset(msh,cl);
+//         std::cout << "TKO_POS: " << offset_cl << std::endl;
+//         std::cout << "Number of dependant cells: " << nb_dp_cl << std::endl;
+//         std::cout << "Dependent cells:   ";
+//         for (auto& dp_cl : dependent_cells) {
+//             std::cout << dp_cl << "  ";
+//             auto dp_cell = msh.cells[dp_cl];
+//             auto fcs_dp = faces(msh, dp_cell);
+//             auto ns_dp  = normals(msh, dp_cell);
+//             fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+//             ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+//         }
+//         std::cout << std::endl << std::endl;
+//     }
+//     // TOK
+//     else if (cl.user_data.agglo_set == cell_agglo_set::T_OK) {
+//         auto nb_dp_cl = cl.user_data.dependent_cells_neg.size();
+//         auto dependent_cells = cl.user_data.dependent_cells_neg;        
+//         auto offset_cl = offset(msh,cl);
+//         std::cout << "TOK: " << offset_cl << std::endl;
+//         std::cout << "Number NEG of dependant cells: " << nb_dp_cl << std::endl;
+//         std::cout << "Dependent cells:   ";
+//         for (auto& dp_cl : dependent_cells) {
+//             std::cout << dp_cl << "  ";
+//             auto dp_cell = msh.cells[dp_cl];
+//             auto fcs_dp = faces(msh, dp_cell);
+//             auto ns_dp  = normals(msh, dp_cell);
+//             fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+//             ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+//         }
+//         nb_dp_cl = cl.user_data.dependent_cells_pos.size(); // Number of dependent cells 
+//         dependent_cells = cl.user_data.dependent_cells_pos;
+//         std::cout << "Number POS of dependant cells: " << nb_dp_cl << std::endl;
+//         std::cout << "Dependent cells:   ";
+//         for (auto& dp_cl : dependent_cells) {
+//             std::cout << dp_cl << "  ";
+//             auto dp_cell = msh.cells[dp_cl];
+//             auto fcs_dp = faces(msh, dp_cell);
+//             auto ns_dp  = normals(msh, dp_cell);
+//             fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+//             ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+//         }
+//         std::cout << std::endl << std::endl;
+//     }
+
+//     return  std::make_pair(fcs, ns);
+// }
+
+
+template<typename T, size_t ET>
+auto  
+faces_extended_uncut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl)
+{
+
+    std::vector<typename cuthho_mesh<T, ET>::face_type> fcs = faces(msh, cl);
+    auto ns  = normals(msh, cl); 
+    
+        auto nb_dp_cl = cl.user_data.dependent_cells_neg.size();
+        auto dependent_cells = cl.user_data.dependent_cells_neg;
+        if (cl.user_data.location == element_location::IN_POSITIVE_SIDE) {
+            // std::cout << "Positive side" << std::endl;
+            nb_dp_cl = cl.user_data.dependent_cells_pos.size(); // Number of dependent cells 
+            dependent_cells = cl.user_data.dependent_cells_pos;
+        }
+        else {
+            // std::cout << "Negative side" << std::endl;
+        }
+        auto offset_cl = offset(msh,cl);
+        // std::cout << "Uncut Cell: " << offset_cl << std::endl;
+        // std::cout << "Number of dependant cells: " << nb_dp_cl << std::endl;
+        // std::cout << "Dependent cells:   ";
+        for (auto& dp_cl : dependent_cells) {
+            // std::cout << dp_cl << "  ";
+            auto dp_cell = msh.cells[dp_cl];
+            auto fcs_dp = faces(msh, dp_cell);
+            auto ns_dp  = normals(msh, dp_cell);
+            fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+            ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+        }
+        // std::cout << std::endl << std::endl;
+        const auto num_faces = fcs.size();
+
+    return  std::make_pair(fcs, ns);
+}
+
+
+template<typename T, size_t ET>
+auto  
+faces_extended_TOK(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where)
+{
+
+    auto offset_cl = offset(msh,cl);
+    // std::cout << "TOK Cell: " << offset_cl << std::endl;
+
+    std::vector<typename cuthho_mesh<T, ET>::face_type> fcs = faces(msh, cl);
+    auto ns  = normals(msh, cl); 
+    
+    auto nb_dp_cl = cl.user_data.dependent_cells_neg.size();
+    auto dependent_cells = cl.user_data.dependent_cells_neg;
+    if (where == element_location::IN_POSITIVE_SIDE) {
+        // std::cout << "Positive side" << std::endl;
+        // std::cout << "Number of positive dependant cells: " << nb_dp_cl << std::endl;
+        // std::cout << "Dependent cells:   ";
+        nb_dp_cl = cl.user_data.dependent_cells_pos.size(); // Number of dependent cells 
+        dependent_cells = cl.user_data.dependent_cells_pos;   
+    }
+    else {
+        // std::cout << "Negative side" << std::endl;    
+        // std::cout << "Number of negative dependant cells: " << nb_dp_cl << std::endl;
+        // std::cout << "Dependent cells:   ";
+    }
+    for (auto& dp_cl : dependent_cells) {
+        // std::cout << dp_cl << "  ";
+        auto dp_cell = msh.cells[dp_cl];
+        auto fcs_dp = faces(msh, dp_cell);
+        auto ns_dp  = normals(msh, dp_cell);
+        fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+        ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+    }
+    // std::cout << std::endl << std::endl;
+    
+    return  std::make_pair(fcs, ns);
+}
+
+
+template<typename T, size_t ET>
+auto  
+faces_extended_TKOibar(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where)
+{
+
+    auto offset_cl = offset(msh,cl);
+    // std::cout << "TKO Cell " << offset_cl << ": ";
+
+    std::vector<typename cuthho_mesh<T, ET>::face_type> fcs = faces(msh, cl);
+    auto ns  = normals(msh, cl); 
+    
+    auto nb_dp_cl = cl.user_data.dependent_cells_neg.size();
+    auto dependent_cells = cl.user_data.dependent_cells_neg;
+    if (where == element_location::IN_POSITIVE_SIDE) {        
+        nb_dp_cl = cl.user_data.dependent_cells_pos.size(); // Number of dependent cells 
+        dependent_cells = cl.user_data.dependent_cells_pos;  
+        // std::cout << "TKO_NEG" << std::endl;
+        // std::cout << "Number of positive dependant cells: " << nb_dp_cl << std::endl;
+        // std::cout << "Dependent cells:   "; 
+    }
+    else {
+        // std::cout << "TKO_POS" << std::endl;    
+        // std::cout << "Number of negative dependant cells: " << nb_dp_cl << std::endl;
+        // std::cout << "Dependent cells:   ";
+    }
+    for (auto& dp_cl : dependent_cells) {
+        // std::cout << dp_cl << "  ";
+        auto dp_cell = msh.cells[dp_cl];
+        auto fcs_dp = faces(msh, dp_cell);
+        auto ns_dp  = normals(msh, dp_cell);
+        fcs.insert(fcs.end(), fcs_dp.begin(), fcs_dp.end());
+        ns.insert(ns.end(), ns_dp.begin(), ns_dp.end());
+    }
+    // std::cout << std::endl << std::endl;
+    const auto num_faces = fcs.size();
+    
+    return  std::make_pair(fcs, ns);
 }
