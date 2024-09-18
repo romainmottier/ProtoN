@@ -14,16 +14,22 @@ include(safeguards)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_CXX_FLAGS_DEBUG "-g -fpermissive -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -fpermissive")
 
-#find_package(MKL)
-#if (MKL_FOUND)
-#	include_directories(${MKL_INCLUDE_DIRS})
-#	set(LINK_LIBS ${LINK_LIBS} ${MKL_LIBRARIES})
-#	set(HAVE_INTEL_MKL TRUE)
-#endif()
+find_package(MKL)
+if (MKL_FOUND)
+	include_directories(${MKL_INCLUDE_DIRS})
+	set(LINK_LIBS ${LINK_LIBS} ${MKL_LIBRARIES})
+	set(HAVE_INTEL_MKL TRUE)
+endif()
+
+find_package(TBB)
+if (TBB_FOUND)
+  include_directories(${TBB_INCLUDE_DIRS})
+  set(LINK_LIBS ${LINK_LIBS} ${TBB_LIBRARIES})
+  set(HAVE_INTEL_TBB TRUE)
+endif()
 
 find_package(SILO REQUIRED)
 if (SILO_FOUND)
@@ -57,6 +63,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(LINK_LIBS "${LINK_LIBS}" pthread)
 endif()
 
+configure_file (
+  "${PROJECT_SOURCE_DIR}/config.h.in"
+  "${PROJECT_BINARY_DIR}/config.h"
+  )
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
 

@@ -83,14 +83,18 @@ public:
 };
 
 /////////////////////////////  TESTS CASES FOR LAPLACIAN  ////////////////////////////
-//template<typename T>
-//struct params {
-//    T kappa_1, kappa_2;
-//
-//    params() : kappa_1(1.0), kappa_2(1.0) {}
-//
-//    params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {}
-//};
+template<typename T>
+struct params
+{
+    T kappa_1, kappa_2;
+    T c_1, c_2;
+
+    params() : kappa_1(1.0), kappa_2(1.0), c_1(1.0), c_2(1.0) {}
+    params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {
+        c_1 = 1.0;
+        c_2 = 1.0;
+    }
+};
 
 
 template<typename T, typename Function, typename Mesh>

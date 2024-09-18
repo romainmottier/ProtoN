@@ -197,6 +197,8 @@ output_mesh_info(const Mesh& msh, const Function& level_set_function)
 
     /************** MAKE A SILO VARIABLE FOR CELL POSITIONING **************/
     std::vector<RealType> cut_cell_markers;
+    std::vector<RealType> cell_indexes;
+    size_t cell_ind = 0;
     for (auto& cl : msh.cells)
     {
         if ( location(msh, cl) == element_location::IN_POSITIVE_SIDE )
@@ -207,8 +209,12 @@ output_mesh_info(const Mesh& msh, const Function& level_set_function)
             cut_cell_markers.push_back(0.0);
         else
             throw std::logic_error("shouldn't have arrived here...");
+        cell_indexes.push_back(cell_ind);
+        cell_ind++;
+        
     }
     silo.add_variable("mesh", "cut_cells", cut_cell_markers.data(), cut_cell_markers.size(), zonal_variable_t);
+    silo.add_variable("mesh", "cell_index", cell_indexes.data(), cell_indexes.size(), zonal_variable_t);
 
     /************** MAKE A SILO VARIABLE FOR CELL HIGHLIGHT **************/
     std::vector<RealType> highlight_markers;

@@ -1803,8 +1803,8 @@ int main(int argc, char **argv)
     bool agglomeration      = false;
 
     mesh_init_params<RealType> mip;
-    mip.Nx = 5;
-    mip.Ny = 5;
+    mip.Nx = 8;
+    mip.Ny = 8;
 
     /* k <deg>:     method degree
      * M <num>:     number of cells in x direction
@@ -1927,8 +1927,8 @@ int main(int argc, char **argv)
 
     // auto method = make_Nitsche_interface_method(msh, 1.0, test_case);
     // auto method = make_sym_gradrec_interface_method(msh, 1.0, test_case);
-    // auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-    auto method = make_Nitsche_interface_method_2(msh, 1.0, test_case);
+     auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+//    auto method = make_Nitsche_interface_method_2(msh, 1.0, test_case);
 
     if (solve_interface)
         run_cuthho_interface(msh, degree, method, test_case);

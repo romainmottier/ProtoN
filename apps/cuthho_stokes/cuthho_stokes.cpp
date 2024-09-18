@@ -627,7 +627,7 @@ template<typename T, size_t ET, typename testType>
 auto make_sym_gradrec_stokes_interface_method(const cuthho_mesh<T, ET>& msh, const T eta_,
                                               const T gamma_, testType test_case, bool sym)
 {
-    return Sym_gradrec_stokes_interface_method<T, ET, testType>(eta_, gamma_, sym);
+    return Sym_gradrec_stokes_interface_method<T, ET, testType>(eta_, gamma_, sym);x
 }
 
 ////////////////////////  GRADREC INTERFACE METHOD (method used in the article)
@@ -1411,7 +1411,7 @@ void convergence_test(void)
 #if 0
 int main(int argc, char **argv)
 {
-    convergence_test();
+//    convergence_test();
     // tests_stabilization();
     // interface_residus();
     return 1;

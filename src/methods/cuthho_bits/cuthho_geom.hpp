@@ -204,7 +204,8 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         size_t k = 0;
         for (size_t i = 0; i < fcs.size(); i++)
         {
-            if ( is_cut(msh, fcs[i]) )
+            bool face_is_cut_Q = is_cut(msh, fcs[i]);
+            if ( face_is_cut_Q )
                 cut_faces.at(k++) = std::make_pair(i, fcs[i].user_data.intersection_point);
         }
 
@@ -235,7 +236,8 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             auto p0 = cut_faces[0].second;
             auto p1 = cut_faces[1].second;
             auto pt = p1 - p0;
-            auto pn = p0 + point<T,2>(-pt.y(), pt.x());
+            auto pt_t = point<T,2>(-pt.y(), pt.x());
+            auto pn = p0 + pt_t;
 
             if ( level_set_function(pn) >= 0 )
             {
@@ -7106,6 +7108,30 @@ make_integrateOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
         ret.insert(ret.end(), qpts.begin(), qpts.end());
     }
     
+    return ret;
+}
+
+
+template<typename T, size_t ET>
+std::vector< std::pair<point<T,2>, T> >
+make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+               size_t degree, const element_location& where)
+{
+    std::vector< std::pair<point<T,2>, T> > ret;
+
+    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
+        return ret;
+
+    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+        return integrate(msh, cl, degree);
+
+    auto tris = triangulate(msh, cl, where);
+    for (auto& tri : tris)
+    {
+        auto qpts = triangle_quadrature(tri.pts[0], tri.pts[1], tri.pts[2], degree);
+        ret.insert(ret.end(), qpts.begin(), qpts.end());
+    }
+
     return ret;
 }
 

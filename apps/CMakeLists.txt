@@ -17,3 +17,4 @@
 #add_subdirectory(interface_stokes_functional)
 #add_subdirectory(interface_stokes_test_cases)
 add_subdirectory(stokesInterfaceProblem)
+add_subdirectory(acoustic_waves)
