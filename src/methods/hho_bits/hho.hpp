@@ -1128,9 +1128,9 @@ public:
                 else
                 {
                     if (j < cbs)
-                        RHS(asm_map_row[i]) -= lhs(i,j)*gamma(cell_offset);
+                        RHS[asm_map_row[i]] -= lhs(i,j)*gamma(cell_offset);
                     else
-                        RHS(asm_map_row[i]) -= lhs(i,j)*dirichlet_data(j);
+                        RHS[asm_map_row[i]] -= lhs(i,j)*dirichlet_data(j);
                 }
             }
         }

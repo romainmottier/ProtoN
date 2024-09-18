@@ -44,7 +44,7 @@ using namespace Eigen;
 #include "core/solvers"
 #include "methods/hho"
 
-#include "sol2/sol.hpp"
+#include "sol/sol.hpp"
 
 #include "dataio/silo_io.hpp"
 

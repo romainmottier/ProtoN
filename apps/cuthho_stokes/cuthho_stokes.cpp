@@ -607,7 +607,7 @@ template<typename T, size_t ET, typename testType>
 auto make_sym_gradrec_stokes_interface_method(const cuthho_mesh<T, ET>& msh, const T eta_,
                                               const T gamma_, testType test_case, bool sym)
 {
-    return Sym_gradrec_stokes_interface_method<T, ET, testType>(eta_, gamma_, sym);x
+    return Sym_gradrec_stokes_interface_method<T, ET, testType>(eta_, gamma_, sym);
 }
 
 ///////////////////////////////////////

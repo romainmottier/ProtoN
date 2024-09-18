@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.18)
 project (ProtoN)
 
 if ( WIN32 )
@@ -12,9 +12,12 @@ set (CMAKE_MODULE_PATH
 
 include(safeguards)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++14 -g -fpermissive")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++14 -O3 -mavx -g -fpermissive")
-set(CMAKE_CXX_FLAGS_RELEASEASSERT "-std=c++14 -O3 -mavx -g -fpermissive")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fpermissive")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx -DNDEBUG -fpermissive")
+set(CMAKE_CXX_FLAGS_RELEASEASSERT "-O3 -mavx -g -fpermissive")
 
 find_package(MKL)
 if (MKL_FOUND)
@@ -51,7 +54,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(LINK_LIBS "${LINK_LIBS}" pthread)
 endif()
 
-find_package(Spectra REQUIRED)
+include_directories(contrib/spectra/include/)
 
 configure_file (
   "${PROJECT_SOURCE_DIR}/config.h.in"
@@ -59,6 +62,9 @@ configure_file (
   )
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
+
+add_subdirectory(contrib/sol2)
+set(LINK_LIBS "${LINK_LIBS}" sol2::sol2)
 
 include_directories(src)
 include_directories(contrib)
