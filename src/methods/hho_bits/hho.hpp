@@ -27,8 +27,9 @@
 
 #include "core/core"
 
-#include "src/methods/cuthho_bits/cuthho_geom.hpp"
-#include "src/methods/cuthho_bits/cuthho_utils.hpp"
+//#include "src/methods/cuthho_bits/cuthho_geom.hpp"
+//#include "src/methods/cuthho_bits/cuthho_utils.hpp"
+#include "src/methods/cuthho"
 
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,

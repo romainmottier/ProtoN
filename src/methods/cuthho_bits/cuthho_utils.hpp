@@ -381,7 +381,7 @@ make_hho_laplacian_ref_pts_cont(const cuthho_mesh<T, ET>& msh, const typename cu
     return std::make_pair(oper, data);
 }
 
-
+/*
 template<typename T>
 struct params {
     T kappa_1, kappa_2;
@@ -390,8 +390,19 @@ struct params {
 
     params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {}
 };
+*/
+template<typename T>
+struct params
+{
+    T kappa_1, kappa_2;
+    T c_1, c_2;
 
-
+    params() : kappa_1(1.0), kappa_2(1.0), c_1(1.0), c_2(1.0) {}
+    params(T kap1, T kap2) : kappa_1(kap1), kappa_2(kap2) {
+        c_1 = 1.0;
+        c_2 = 1.0;
+    }
+};
 
 template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, Dynamic>  >
@@ -515,112 +526,9 @@ make_hho_laplacian_interface(const cuthho_mesh<T, ET>& msh,
 
 
 
-// make_hho_cut_stabilization
-// stabilization term on the faces
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
-                           const typename cuthho_mesh<T, ET>::cell_type& cl,
-                           const hho_degree_info& di, element_location where, bool scaled_Q = true)
-{
-    if ( !is_cut(msh, cl) )
-        return make_hho_naive_stabilization(msh, cl, di);
-
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
-    Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    auto hT = diameter(msh, cl);
-
-    for (size_t i = 0; i < num_faces; i++)
-    {
-        auto fc = fcs[i];
-        // face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg);
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
-
-        Matrix<T, Dynamic, Dynamic> oper = Matrix<T, Dynamic, Dynamic>::Zero(fbs, cbs+num_faces*fbs);
-        Matrix<T, Dynamic, Dynamic> mass = Matrix<T, Dynamic, Dynamic>::Zero(fbs, fbs);
-        Matrix<T, Dynamic, Dynamic> trace = Matrix<T, Dynamic, Dynamic>::Zero(fbs, cbs);
-
-        oper.block(0, cbs+i*fbs, fbs, fbs) = -If;
-
-        auto qps = integrate(msh, fc, facdeg + celdeg, where);
-        for (auto& qp : qps)
-        {
-            auto c_phi = cb.eval_basis(qp.first);
-            auto f_phi = fb.eval_basis(qp.first);
-
-            mass += qp.second * f_phi * f_phi.transpose();
-            trace += qp.second * f_phi * c_phi.transpose();
-        }
-
-        if (qps.size() == 0) /* Avoid to invert a zero matrix */
-            continue;
 
 
-        oper.block(0, 0, fbs, cbs) = mass.ldlt().solve(trace);
-        
-        if (scaled_Q) {
-            data += oper.transpose() * mass * oper * (1./hT);
-        }else{
-            data += oper.transpose() * mass * oper;
-        }
-    }
-
-    return data;
-}
-
-
-
-
-// make_hho_cut_interface_penalty
-// eta is the penalty (Nitsche's) parameter
-// return eta h_T^{-1} (u_T , v_T)_{Gamma}
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh,
-                               const typename cuthho_mesh<T, ET>::cell_type& cl,
-                               const hho_degree_info& di, const T eta, bool scaled_Q = true)
-{
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-    auto num_faces = faces(msh, cl).size();
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
-
-    auto hT = diameter(msh, cl);
-
-    auto iqps = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps)
-    {
-        const auto c_phi  = cb.eval_basis(qp.first);
-
-        if (scaled_Q) {
-            data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
-        }else{
-            data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
-        }
-        
-    }
-
-    return data;
-}
+//////////////////////////////////////// PENALTY TERM ////////////////////////////////////////
 
 // make_hho_cut_interface_penalty
 // eta is the penalty (Nitsche's) parameter
@@ -712,7 +620,6 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
 
     return data;
 }
-
 //// make_hho_stabilization_interface
 // stabilization terms on the faces
 template<typename T, size_t ET>
@@ -742,8 +649,9 @@ make_hho_stabilization_parametric_interface(const cuthho_mesh<T, ET>& msh,
 
     //auto hT = diameter(msh, cl);
 
-    const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE, scaled_Q);
-    const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE, scaled_Q);
+
+    const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE);
+    const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE);
 
     // cells--cells
     data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
@@ -825,7 +733,6 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
 
     return data;
 }
-
 
 //////////////////////////////////////// EXTENDED STABILIZATION ////////////////////////////////////////
 

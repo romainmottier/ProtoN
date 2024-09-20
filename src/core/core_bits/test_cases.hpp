@@ -83,6 +83,7 @@ public:
 };
 
 /////////////////////////////  TESTS CASES FOR LAPLACIAN  ////////////////////////////
+/*
 template<typename T>
 struct params
 {
@@ -95,7 +96,7 @@ struct params
         c_2 = 1.0;
     }
 };
-
+*/
 
 template<typename T, typename Function, typename Mesh>
 class test_case_laplacian : public test_case<T, Function, Mesh> {
