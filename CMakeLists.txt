@@ -74,15 +74,9 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
 
-add_subdirectory(contrib/sol2)
-<<<<<<< HEAD
-set(SOL2_BUILD_LUA OFF CACHE BOOL "Override sol2 build lua option")
-set(LINK_LIBS ${LINK_LIBS} sol2::sol2)
-
 include_directories(contrib/spectra/include)
-=======
+add_subdirectory(contrib/sol2)
 set(LINK_LIBS "${LINK_LIBS}" sol2::sol2)
->>>>>>> romain_rebase_test
 
 include_directories(src)
 add_subdirectory(apps)
