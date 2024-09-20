@@ -225,7 +225,6 @@ make_mass_matrix(const Mesh& msh, const typename Mesh::cell_type& cl,
         Matrix<T, Dynamic, Dynamic> face_mm = make_mass_matrix(msh, fc, hdi.face_degree(), di);
         mass_mat.block(cbs+i*fbs, cbs+i*fbs, fbs, fbs) = face_mm;
     }
-
     return mass_mat;
 }
 
@@ -357,7 +356,6 @@ project_function(const Mesh& msh, const typename Mesh::cell_type& cl,
                  hho_degree_info& hdi, const Function& f, size_t di = 0)
 {
     using T = typename Mesh::coordinate_type;
-
     auto cbs = cell_basis<Mesh,T>::size(hdi.cell_degree());
     auto fbs = face_basis<Mesh,T>::size(hdi.face_degree());
 
@@ -388,10 +386,6 @@ T condition_number(const Matrix<T, Dynamic, Dynamic>& A)
     T cond = svd.singularValues()(0) / svd.singularValues()(svd.singularValues().size()-1);
     return cond;
 }
-
-
-
-
 
 class timecounter
 {
@@ -729,4 +723,3 @@ make_vector_mass_matrix(const Mesh& msh, const typename Mesh::face_type& fc, siz
 
     return vector_assembly(scalar_matrix);
 }
-

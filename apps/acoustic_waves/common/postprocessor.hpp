@@ -321,6 +321,9 @@ public:
        std::vector<RealType> flux_l2_error_vec(msh.cells.size());
        for (auto& cell : msh.cells)
        {
+           auto offset_cl = offset(msh,cell);
+           std::cout << "Postprocess of Uncut cells: " << offset_cl << std::endl;
+
            l2_error_vec[cell_i] = 0.0;
             RealType h_l = diameter(msh, cell);
            if (h_l < h) {
@@ -408,8 +411,8 @@ public:
            cell_i++;
        }
        
-       scalar_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
-       flux_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
+       scalar_l2_error = std::accumulate(l2_error_vec.begin(), l2_error_vec.end(),0.0);
+       flux_l2_error   = std::accumulate(flux_l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
        tc.toc();
        
        std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;

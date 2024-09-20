@@ -505,7 +505,6 @@ public:
                 pos++;
             }
         }
-
         assert(pos == basis_size);
 
         return ret;

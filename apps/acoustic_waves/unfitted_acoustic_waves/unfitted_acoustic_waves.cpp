@@ -1130,21 +1130,21 @@ void CutHHOFirstOrderConvTest(int argc, char **argv);
 int main(int argc, char **argv)
 {
 
-//    HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
-//    HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
-//    HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
+  //    HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
+    //   HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
+  //   HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
     
-//    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
-    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
+  //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
+  //    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
-//    ICutHHOSecondOrder(argc, argv);
-//    ICutHHOFirstOrder(argc, argv);
-//    ECutHHOFirstOrder(argc, argv);
-//    ECutHHOFirstOrderCFL(argc, argv);
-//    ECutHHOFirstOrderEigenCFL(argc, argv);
+  //    ICutHHOSecondOrder(argc, argv);
+  //    ICutHHOFirstOrder(argc, argv);
+  //    ECutHHOFirstOrder(argc, argv);
+  //    ECutHHOFirstOrderCFL(argc, argv);
+  //    ECutHHOFirstOrderEigenCFL(argc, argv);
     
-//    CutHHOSecondOrderConvTest(argc, argv);
-//    CutHHOFirstOrderConvTest(argc, argv);
+     CutHHOSecondOrderConvTest(argc, argv);
+  //    CutHHOFirstOrderConvTest(argc, argv);
     return 0;
 }
 
@@ -1925,9 +1925,9 @@ void ECutHHOFirstOrderCFL(int argc, char **argv){
     bool report_energy_Q = true;
 
     size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t l_divs          = 2;
+    size_t nt_divs       = 2;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     /* k <deg>:     method degree
@@ -2135,9 +2135,9 @@ void ECutHHOFirstOrderEigenCFL(int argc, char **argv){
     bool report_energy_Q = true;
 
     size_t degree           = 0;
-    size_t l_divs          = 0;
+    size_t l_divs          = 4;
     size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     /* k <deg>:     method degree
@@ -2311,10 +2311,10 @@ void HeterogeneousGar6moreICutHHOSecondOrder(int argc, char **argv){
     bool direct_solver_Q = true;
     bool sc_Q = true;
     
-    size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t degree           = 2;
+    size_t l_divs          = 2;
+    size_t nt_divs       = 2;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     int ch;
@@ -2454,10 +2454,10 @@ void HeterogeneousGar6moreICutHHOFirstOrder(int argc, char **argv){
     bool direct_solver_Q = true;
     bool sc_Q = true;
     
-    size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t degree           = 2;
+    size_t l_divs          = 2;
+    size_t nt_divs       = 2;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     int ch;
@@ -2612,10 +2612,10 @@ void HeterogeneousFlowerICutHHOSecondOrder(int argc, char **argv){
     bool direct_solver_Q = true;
     bool sc_Q = true;
     
-    size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t degree           = 2;
+    size_t l_divs          = 2;
+    size_t nt_divs       = 2;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     int ch;
@@ -2757,10 +2757,10 @@ void HeterogeneousFlowerICutHHOFirstOrder(int argc, char **argv){
     bool direct_solver_Q = true;
     bool sc_Q = true;
     
-    size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t degree           = 2;
+    size_t l_divs          = 2;
+    size_t nt_divs       = 2;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     int ch;
@@ -2917,10 +2917,10 @@ void HeterogeneousFlowerECutHHOFirstOrder(int argc, char **argv){
     
     bool report_energy_Q = false;
     
-    size_t degree           = 0;
-    size_t l_divs          = 0;
-    size_t nt_divs       = 0;
-    size_t int_refsteps     = 4;
+    size_t degree           = 2;
+    size_t l_divs          = 2;
+    size_t nt_divs       = 2;
+    size_t int_refsteps     = 1;
     bool dump_debug         = false;
 
     int ch;
@@ -3282,7 +3282,7 @@ template<typename Mesh, typename testType, typename meth>
 void newmark_step_cuthho_interface_scatter(size_t it, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell)
 {
     using RealType = typename Mesh::coordinate_type;
-    bool write_silo_Q = false;
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -3382,7 +3382,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 sdirk_step_cuthho_interface(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, dirk_hho_scheme<RealType> & analysis, bool write_error_Q){
     
-    bool write_silo_Q = false;
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -3483,7 +3483,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 erk_step_cuthho_interface(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, erk_hho_scheme<RealType> & analysis, bool write_error_Q){
     
-    bool write_silo_Q = false;
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -3585,7 +3585,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 erk_step_cuthho_interface_cfl(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, erk_hho_scheme<RealType> & analysis, bool write_error_Q){
     
-    bool write_silo_Q = false;
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto bcs_fun = test_case.bcs_fun;
@@ -3753,7 +3753,7 @@ void
 erk_step_cuthho_interface_scatter(size_t it, size_t s, RealType ti, RealType dt, Matrix<RealType, Dynamic, Dynamic> a, Matrix<RealType, Dynamic, Dynamic> b, Matrix<RealType, Dynamic, Dynamic> c, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<RealType, Dynamic, 1> & x_dof, erk_hho_scheme<RealType> & analysis, std::ofstream &sensor_1_log, std::ofstream &sensor_2_log, std::ofstream &sensor_3_log, std::pair<typename Mesh::point_type,size_t> &s1_pt_cell, std::pair<typename Mesh::point_type,size_t> &s2_pt_cell, std::pair<typename Mesh::point_type,size_t> &s3_pt_cell){
     
     
-    bool write_silo_Q = false;
+    bool write_silo_Q = true;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;

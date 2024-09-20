@@ -30,104 +30,89 @@
 
 include(FindPackageHandleStandardArgs)
 
-if (CYGWIN)
-	SET(_CFLP "${CMAKE_FIND_LIBRARY_PREFIXES}")
-	SET(_CFLS "${CMAKE_FIND_LIBRARY_SUFFIXES}")
-	SET(CMAKE_FIND_LIBRARY_PREFIXES "")
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
-endif ()
-
-
-if ( CYGWIN )
-find_library(MKL_iomp5_LIBRARY
-    NAMES   libiomp5md
-    PATHS	"/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/compiler/"
-            "${INTEL_MKL_LIB_SEARCH_DIRS}"
-)
-else ()
-find_library(MKL_iomp5_LIBRARY
-    NAMES   iomp5
-    PATHS	/opt/intel/lib
-    			/opt/intel/lib/intel64
-    		    /opt/intel/lib/intel64_lin
-            "${INTEL_MKL_LIB_SEARCH_DIRS}"
-)
-endif()
-
-find_library(MKL_mkl_core_LIBRARY
-    NAMES   mkl_core
-    PATHS   /opt/intel/mkl/lib
-	    /opt/intel/mkl/lib/intel64
-	    "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
-            "${INTEL_MKL_LIB_SEARCH_DIRS}"
-)
-find_library(MKL_mkl_intel_thread_LIBRARY
-    NAMES   mkl_intel_thread
-    PATHS   /opt/intel/mkl/lib
-            /opt/intel/mkl/lib/intel64
-	    "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
-            "${INTEL_MKL_LIB_SEARCH_DIRS}"
-)
-
-if (APPLE)
-	find_library(MKL_runtime_LIBRARY
-		NAMES   mkl_intel_lp64
-		PATHS   /opt/intel/mkl/lib
-			"/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
-            "${INTEL_MKL_LIB_SEARCH_DIRS}"
-)
-else ()
-	find_library(MKL_runtime_LIBRARY
-		NAMES   mkl_rt
-		PATHS   /opt/intel/mkl/lib			
-	    		/opt/intel/mkl/lib/intel64
-			"/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/redist/intel64/mkl/"
-			"${INTEL_MKL_LIB_SEARCH_DIRS}"
-	)
-endif ()
+set(MKL_HINTS /usr /opt/intel /opt/intel/mkl /opt/intel/oneapi/mkl /opt/intel/oneapi)
 
 find_path(MKL_INCLUDE_DIRS
-    NAMES   mkl.h
-    PATHS   /opt/intel/mkl/include
-	    "/cygdrive/C/Program\ Files\ \(x86\)/Intel/Composer\ XE/mkl/include"
-            "${INTEL_MKL_INCLUDE_SEARCH_DIRS}/include"
-)
+    NAMES mkl.h
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES mkl mkl/include include)
 
-
-if (CYGWIN)
-	SET(CMAKE_FIND_LIBRARY_PREFIXES "${_CFLP}")
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES "${_CFLS}")
+if (MKL_INCLUDE_DIRS)
+    message(STATUS "MKL: found include")
 endif()
 
-f(MKL_iomp5_LIBRARY)
-message(ok iomp)
-endif()
-if(MKL_INCLUDE_DIRS)
-message(ok include)
-endif()
-if(MKL_mkl_core_LIBRARY)
-message(ok core)
-endif()
-if(MKL_mkl_intel_thread_LIBRARY)
-message(ok thread)
-endif()
-if(MKL_runtime_LIBRARY)
-message(ok run)
+###########################################################
+## iomp5
+find_library(MKL_iomp5_LIBRARY
+    NAMES iomp5
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin)
+
+if (MKL_iomp5_LIBRARY)
+    message(STATUS "MKL: found iomp5")
+    list(APPEND MKL_LIBRARIES ${MKL_iomp5_LIBRARY})
 endif()
 
+###########################################################
+## mkl_core 
+find_library(MKL_mkl_core_LIBRARY
+    NAMES   mkl_core
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                  mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
 
-if (MKL_mkl_core_LIBRARY AND
-	MKL_runtime_LIBRARY AND
-	MKL_mkl_intel_thread_LIBRARY AND
-	MKL_iomp5_LIBRARY AND
-	MKL_INCLUDE_DIRS)
-	set(MKL_FOUND TRUE)
-	set(MKL_LIBRARIES ${MKL_mkl_core_LIBRARY} 
-					  ${MKL_runtime_LIBRARY}
-					  ${MKL_mkl_intel_thread_LIBRARY} ${MKL_iomp5_LIBRARY})
-	set (HAVE_PARDISO TRUE)
+if (MKL_mkl_core_LIBRARY)
+    message(STATUS "MKL: found mkl_core")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_core_LIBRARY})
+endif()
+
+###########################################################
+## mkl_intel_lp64 
+find_library(MKL_mkl_intel_lp64_LIBRARY
+    NAMES   mkl_intel_lp64
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                  mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+
+if (MKL_mkl_intel_lp64_LIBRARY)
+    message(STATUS "MKL: found mkl_intel_lp64")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_intel_lp64_LIBRARY})
+endif()
+
+###########################################################
+## mkl_intel_thread 
+find_library(MKL_mkl_intel_thread_LIBRARY
+    NAMES   mkl_intel_thread
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                  mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+
+if (MKL_mkl_intel_thread_LIBRARY)
+    message(STATUS "MKL: found mkl_intel_thread")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_intel_thread_LIBRARY})
+endif()
+
+###########################################################
+## mkl_runtime 
+if (APPLE)
+    find_library(MKL_runtime_LIBRARY
+        NAMES   mkl_intel
+        HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+        PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                      mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+else ()
+    find_library(MKL_runtime_LIBRARY
+        NAMES   mkl_rt
+        HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+        PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                      mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
 endif ()
 
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS)
+if (MKL_runtime_LIBRARY)
+    message(STATUS "MKL: found mkl_runtime")
+    list(APPEND MKL_LIBRARIES ${MKL_runtime_LIBRARY})
+endif()
+
+find_package_handle_standard_args(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS)
 
 
