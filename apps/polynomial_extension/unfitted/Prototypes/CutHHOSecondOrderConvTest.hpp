@@ -16,7 +16,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     size_t l_divs        = 2;          // Space level refinment -l
     size_t nt_divs       = 1;          // Time level refinment  -n
     size_t int_refsteps  = 4;          // Interface refinment   -r
-    bool dump_debug      = false;      // Debug & Silo files    -d 
+    bool dump_debug      = true;      // Debug & Silo files    -d 
 
     int ch;
     while ( (ch = getopt(argc, argv, "k:l:r:n:d")) != -1 ) {
