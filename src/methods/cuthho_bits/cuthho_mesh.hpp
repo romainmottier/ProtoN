@@ -56,16 +56,17 @@ struct cell_cuthho_info
     std::vector< std::pair<point<T,2>, T> > integration_n; // composite integration rules
     std::vector< std::pair<point<T,2>, T> > integration_p;
 
-    // Structure for the polynomial extension: Pair: bool = 0 = NEGATIVE SIDE
-    //                                               bool = 1 = POSITIVE SIDE
-    std::vector< std::pair<T, element_location> > PairOK;
-    std::vector< std::pair<T, element_location> > PairKO;
+    // Tuple - Pair: T - i - N_i^{-1}(T)
+    std::vector< std::tuple<T, element_location, std::vector<T>> > Pair_OK;
+    std::vector< std::tuple<T, element_location, std::vector<T>> > Pair_KO;
+    std::vector< std::pair<T, element_location> > PairOK;  // PairOK = (T,i) - PairOK.second() =   
+    std::vector< std::pair<T, element_location> > PairKO;  // PairKO = (T,i) - PairOK.second() = N_i^{-1}(T)  
     size_t paired_cell; // DEPENDANT POSITIVE CELLS (POINT THE CURRENT CELL)
     std::set<size_t> dependent_cells_neg; // DEPENDANT POSITIVE CELLS (POINT THE CURRENT CELL)
     std::set<size_t> dependent_cells_pos; // DEPENDANT NEGATIVE CELLS (POINT THE CURRENT CELL)
     size_t local_dofs;
 
-    bool highlight; // for tests
+    bool highlight; 
     cell_cuthho_info() :
         location(element_location::UNDEF),
         agglo_set(cell_agglo_set::UNDEF),

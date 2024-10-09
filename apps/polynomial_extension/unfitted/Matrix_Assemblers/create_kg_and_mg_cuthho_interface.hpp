@@ -6,7 +6,6 @@ template<typename Mesh, typename testType, typename meth>
 std::vector<std::pair<size_t,size_t>>
 create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg);
 
-
 template<typename Mesh, typename testType, typename meth>
 std::vector<std::pair<size_t,size_t>>
 create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg){
@@ -48,6 +47,8 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
     return cell_basis_data;
 }
 
+
+
 template<typename Mesh, typename testType, typename meth>
 std::vector<std::pair<size_t,size_t>>
 test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg){
@@ -70,7 +71,7 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
     auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
     std::vector<std::pair<size_t,size_t>> cell_basis_data = assembler.compute_cell_basis_data(msh);
     size_t system_size = assembler.compute_dofs_data(msh, hdi);
-    auto dofs_proj = assembler.make_projection_operator(msh, hdi, system_size, sol_fun);
+    // auto dofs_proj = assembler.make_projection_operator(msh, hdi, system_size, sol_fun);
     // for (auto& cell : msh.cells) {
     //   auto contrib = method.make_contrib(msh, cell, test_case, hdi);
     //   auto lc = contrib.first;

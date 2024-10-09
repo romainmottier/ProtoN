@@ -122,14 +122,11 @@ public:
         }
 };
 
-
 /******************************************************************************************/
 /*******************                                               ************************/
 /*******************               SCALAR ASSEMBLERS               ************************/
 /*******************                                               ************************/
 /******************************************************************************************/
-
-
 template<typename Mesh, typename Function>
 class virt_scalar_assembler
 {
@@ -822,7 +819,6 @@ public:
 
 };
 
-
 //////////////////////////////   FICTITIOUS DOMAIN ASSEMBLERS   /////////////////////////////
 template<typename Mesh, typename Function>
 class virt_fict_assembler : public virt_scalar_assembler<Mesh, Function>
@@ -879,7 +875,6 @@ public:
     }
 };
 
-/////////////////////////////////////////
 template<typename Mesh, typename Function>
 class fict_assembler : public virt_fict_assembler<Mesh, Function>
 {
@@ -939,7 +934,6 @@ auto make_fict_assembler(const Mesh& msh, const Function dirichlet_bf,
     return fict_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where);
 }
 
-/////////////////////////////////////////
 template<typename Mesh, typename Function>
 class fict_condensed_assembler : public virt_fict_assembler<Mesh, Function>
 {
@@ -1020,9 +1014,7 @@ auto make_fict_condensed_assembler(const Mesh& msh, const Function dirichlet_bf,
     return fict_condensed_assembler<Mesh, Function>(msh, dirichlet_bf, hdi, where);
 }
 
-
 ////////////////////////////////  INTERFACE ASSEMBLERS  /////////////////////////
-
 template<typename Mesh, typename Function>
 class virt_interface_assembler : public virt_scalar_assembler<Mesh, Function>
 {
@@ -1092,9 +1084,6 @@ public:
         }
     }
 };
-
-
-////////////////////////////////////////////////
 
 template<typename Mesh, typename Function>
 class interface_assembler : public virt_interface_assembler<Mesh, Function>
@@ -1480,46 +1469,48 @@ public:
 
         // Filling the structure cell dofs 
         auto offset_ddl = 0;
+        std::cout << "CBS = " << cbs << std::endl;
+        std::cout << "FBS = " << fbs << std::endl;
         for(size_t i=0; i < nb_cells; i++) {
             auto& cl = msh.cells[i];
             auto num_faces = faces(msh, cl).size();
             auto dofs = 0;
             if (!is_cut(msh, cl)) {
-                // std::cout << "UNCUT CELL: " << offset(msh, cl) << std::endl;
+                std::cout << "UNCUT CELL: " << offset(msh, cl) << std::endl;
                 dofs += cbs + num_faces*fbs; // DOFS OF THE CURRENT CELL
-                // std::cout << "Dependant cells:   ";
+                std::cout << "Dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_neg) {
-                    // std::cout << dp_cl << "   ";
+                    std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
-                // std::cout << std::endl;
-                // std::cout << "Dependant cells:   ";
+                std::cout << std::endl;
+                std::cout << "Dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_pos) {
-                    // std::cout << dp_cl << "   ";
+                    std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
                 cl.user_data.local_dofs = dofs;
-                // std::cout << std::endl;
+                std::cout << std::endl;
             }
             else {
-                // std::cout << "CUT CELL: " << offset(msh, cl) << std::endl;    
+                std::cout << "CUT CELL: " << offset(msh, cl) << std::endl;    
                 dofs += 2*(cbs + num_faces*fbs); // DOFS OF THE CURRENT CELL
-                // std::cout << "Negative dependant cells:   ";
+                std::cout << "Negative dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_neg) {
-                    // std::cout << dp_cl << "   ";
+                    std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
-                // std::cout << std::endl;
-                // std::cout << "Positive dependant cells:   ";
+                std::cout << std::endl;
+                std::cout << "Positive dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_pos) {
-                    // std::cout << dp_cl << "   ";
+                    std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
-                // std::cout << std::endl;
+                std::cout << std::endl;
                 if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG || cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
                     num_faces = faces(msh, msh.cells[cl.user_data.paired_cell]).size();
                     if (!is_cut(msh,msh.cells[cl.user_data.paired_cell])) {
@@ -1531,7 +1522,7 @@ public:
                 }
                 cl.user_data.local_dofs = dofs;
             }
-            // std::cout << "local dofs = " << cl.user_data.local_dofs << std::endl << std::endl;
+            std::cout << "local dofs = " << cl.user_data.local_dofs << std::endl << std::endl;
         }
         // Vérif n_dofs
         auto n_dofs = 0;
@@ -1545,19 +1536,19 @@ public:
             auto fbs   = face_basis<Mesh,T>::size(facdeg);
             auto local_dofs = 0;
             if (!is_cut(msh, cl)) {
-                local_dofs = cbs;
+                local_dofs = cbs + 4*fbs;
             }
             else {
-                local_dofs = 2*cbs;
+                local_dofs = 2*(cbs + 4*fbs);
             }
             verif_dofs += local_dofs;
             n_dofs += cl.user_data.local_dofs;
             cp_dp += cl.user_data.dependent_cells_neg.size() + cl.user_data.dependent_cells_pos.size();
         }
-        // std::cout << "verif_dofs = " << verif_dofs << std::endl;
-        // std::cout << "n_dofs = "     << n_dofs     << std::endl;
-        // std::cout << "minus  = " << n_dofs-cp_dp*3*(cbs+4*fbs) << std::endl;
-        // std::cout << "COMPUTE_DOFS_DATA OK" << std::endl;
+        std::cout << "verif_dofs = " << verif_dofs << std::endl;
+        std::cout << "n_dofs = "     << n_dofs     << std::endl;
+        std::cout << "minus  = " << n_dofs-cp_dp*3*(cbs+4*fbs) << std::endl;
+        std::cout << "COMPUTE_DOFS_DATA OK" << std::endl;
 
         auto is_dirichlet = [&](const typename Mesh::face_type& fc) -> bool {
             return fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
@@ -1640,15 +1631,13 @@ auto make_one_field_interface_assembler(const Mesh& msh, Function dirichlet_bf, 
     return one_field_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
 
-// POLYNOMIAL EXTENSION ASSEMBLER - ELLIPTIC PROBLEM - MIXED FORMULATION
+// ELLIPTIC PROBLEM - MIXED FORMULATION
 template<typename Mesh, typename Function>
 class two_fields_interface_assembler : public virt_interface_assembler<Mesh, Function>
 {
     using T = typename Mesh::coordinate_type;
     std::vector< size_t > m_elements_with_bc_eges;
 public:
-            
-
 
     two_fields_interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info hdi)
         : virt_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
@@ -1963,9 +1952,6 @@ auto make_two_fields_interface_assembler(const Mesh& msh, Function dirichlet_bf,
     return two_fields_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
 
-/////////////////////////////////////////////////
-
-
 template<typename Mesh, typename Function>
 class interface_condensed_assembler : public virt_interface_assembler<Mesh, Function>
 {
@@ -2074,7 +2060,6 @@ public:
     }
 };
 
-
 template<typename Mesh, typename Function>
 auto make_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
                                          hho_degree_info hdi)
@@ -2082,16 +2067,13 @@ auto make_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
     return interface_condensed_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
 
-
 /******************************************************************************************/
 /*******************                                               ************************/
 /*******************               STOKES ASSEMBLERS               ************************/
 /*******************                                               ************************/
 /******************************************************************************************/
 
-
 ////////////////////////  STATIC CONDENSATION  //////////////////////////
-
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
 stokes_static_condensation_compute
@@ -2147,7 +2129,6 @@ stokes_static_condensation_compute
 
     return std::make_pair(lhs_sc, rhs_sc);
 }
-
 
 // full static condensation (velocity + pressure)
 // in this version we keep only the velocity face dofs
@@ -2271,7 +2252,6 @@ stokes_full_static_condensation_compute
     return std::make_pair(lhs_sc, rhs_sc);
 }
 
-
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
 stokes_full_static_condensation_compute
@@ -2285,8 +2265,6 @@ stokes_full_static_condensation_compute
     return stokes_full_static_condensation_compute
         (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, cell_size, face_size);
 }
-
-
 
 template<typename T>
 Matrix<T, Dynamic, 1>
@@ -2371,7 +2349,6 @@ stokes_full_static_condensation_recover_v
     return ret;
 }
 
-
 template<typename T>
 Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_v
@@ -2386,7 +2363,6 @@ stokes_full_static_condensation_recover_v
     return stokes_full_static_condensation_recover_v
         (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, cell_size, face_size, sol_sc);
 }
-
 
 template<typename T>
 Matrix<T, Dynamic, 1>
@@ -2471,7 +2447,6 @@ stokes_full_static_condensation_recover_p
     return ret;
 }
 
-
 template<typename T>
 Matrix<T, Dynamic, 1>
 stokes_full_static_condensation_recover_p
@@ -2487,10 +2462,7 @@ stokes_full_static_condensation_recover_p
         (lhs_A, lhs_B, lhs_C, rhs_A, rhs_B, mult, cell_size, face_size, sol_sc);
 }
 
-
 //////////////////////////////  STOKES ASSEMBLERS  ///////////////////////////////
-
-
 template<typename Mesh, typename Function>
 class virt_stokes_assembler
 {
@@ -2845,8 +2817,6 @@ public:
 };
 
 ///////////////////////////   STOKES FICTITIOUS DOMAIN  /////////////////////////////////
-
-
 template<typename Mesh, typename Function>
 class virt_stokes_fict_assembler : public virt_stokes_assembler<Mesh, Function>
 {
@@ -2901,9 +2871,6 @@ public:
         this->num_cells = compressed_offset;
     }
 };
-
-///////////////////////////////////////////////////////////////////
-
 
 template<typename Mesh, typename Function>
 class stokes_fict_assembler : public virt_stokes_fict_assembler<Mesh, Function>
@@ -3027,16 +2994,12 @@ public:
 
 };
 
-
 template<typename Mesh, typename Function>
 auto make_stokes_fict_assembler(const Mesh& msh, Function& dirichlet_bf,
                                 hho_degree_info hdi, element_location where)
 {
     return stokes_fict_assembler<Mesh,Function>(msh, dirichlet_bf, hdi, where);
 }
-
-///////////////////////////////////////////////////////
-
 
 template<typename Mesh, typename Function>
 class stokes_fict_condensed_assembler : public virt_stokes_fict_assembler<Mesh, Function>
@@ -3210,10 +3173,7 @@ auto make_stokes_fict_condensed_assembler(const Mesh& msh, Function& dirichlet_b
     return stokes_fict_condensed_assembler<Mesh,Function>(msh, dirichlet_bf, hdi, where);
 }
 
-
 ///////////////////////////////   STOKES INTERFACE  ///////////////////////////////
-
-
 template<typename Mesh, typename Function>
 class virt_stokes_interface_assembler : public virt_stokes_assembler<Mesh, Function>
 {
@@ -3272,9 +3232,6 @@ public:
         }
     }
 };
-
-/////////////////////////////////////////////////
-
 
 template<typename Mesh, typename Function>
 class stokes_interface_assembler : public virt_stokes_interface_assembler<Mesh, Function>
@@ -3411,16 +3368,11 @@ public:
     }
 };
 
-
 template<typename Mesh, typename Function>
 auto make_stokes_interface_assembler(const Mesh& msh, Function& dirichlet_bf, hho_degree_info hdi)
 {
     return stokes_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
-
-///////////////////////////////////////////////////////
-
-
 
 template<typename Mesh, typename Function>
 class stokes_interface_condensed_assembler : public virt_stokes_interface_assembler<Mesh, Function>
@@ -3660,7 +3612,6 @@ public:
         return loc_sol.tail(pbs);
     }
 };
-
 
 template<typename Mesh, typename Function>
 auto make_stokes_interface_condensed_assembler(const Mesh& msh, Function& dirichlet_bf,
