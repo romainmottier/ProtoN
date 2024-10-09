@@ -6734,19 +6734,23 @@ collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
         auto fc_nodes = nodes(msh, fc);
         assert(fc_nodes.size() == 2);
 
+        auto node_inside = fc.user_data.node_inside;
+        assert(node_inside == 0 or node_inside == 1);
+        auto node_outside = (node_inside == 0) ? 1 : 0;
+
         if( on_interface && fc.user_data.intersection_point == ivertices.front() ){
             if (where == element_location::IN_NEGATIVE_SIDE)
-                n_first = fc_nodes[fc.user_data.node_inside];
+                n_first = fc_nodes[node_inside];
             else
-                n_second = fc_nodes[1-fc.user_data.node_inside];
+                n_second = fc_nodes[node_outside];
         }
     
         if( on_interface && fc.user_data.intersection_point == ivertices.back() )
         {
             if (where == element_location::IN_NEGATIVE_SIDE)
-                n_second = fc_nodes[fc.user_data.node_inside];
+                n_second = fc_nodes[node_inside];
             else
-                n_first = fc_nodes[1-fc.user_data.node_inside];
+                n_first = fc_nodes[node_outside];
     
         }
 
