@@ -1467,63 +1467,60 @@ public:
         auto cbs   = cell_basis<Mesh,T>::size(celdeg);
         auto fbs   = face_basis<Mesh,T>::size(facdeg);
 
-        // Filling the structure cell dofs 
+        // FILLING THE STRUCTURE LOCAL DOFS
         auto offset_ddl = 0;
-        std::cout << "Basis size: " << std::endl;
-        std::cout << "   cbs = " << cbs << std::endl;
-        std::cout << "   fbs = " << fbs << std::endl;
+        // std::cout << "Basis size: " << std::endl;
+        // std::cout << "   cbs = " << cbs << std::endl;
+        // std::cout << "   fbs = " << fbs << std::endl;
 
         for(size_t i=0; i < nb_cells; i++) {
             auto& cl = msh.cells[i];
             auto num_faces = faces(msh, cl).size();
             auto dofs = 0;
-            // Loop over PairOK subcells
-            for (auto& pairOK : cl.user_data.PairOK) {
-                
-            }
             if (!is_cut(msh, cl)) {
-                std::cout << "UNCUT CELL: " << offset(msh, cl) << std::endl;
+                // std::cout << "UNCUT CELL: " << offset(msh, cl) << std::endl;
                 dofs += cbs + num_faces*fbs; // DOFS OF THE CURRENT CELL
-                std::cout << "Dependant cells:   ";
+                // std::cout << "Dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_neg) {
-                    std::cout << dp_cl << "   ";
+                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
-                std::cout << std::endl;
-                std::cout << "Dependant cells:   ";
+                // std::cout << std::endl;
+                // std::cout << "Dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_pos) {
-                    std::cout << dp_cl << "   ";
+                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
                 cl.user_data.local_dofs = dofs;
-                std::cout << std::endl;
+                // std::cout << std::endl;
             }
             else {
-                std::cout << "CUT CELL: " << offset(msh, cl) << std::endl;    
+                // std::cout << "CUT CELL: " << offset(msh, cl) << std::endl;    
                 dofs += 2*(cbs + num_faces*fbs); // DOFS OF THE CURRENT CELL
-                std::cout << "Negative dependant cells:   ";
+                // std::cout << "Negative dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_neg) {
-                    std::cout << dp_cl << "   ";
+                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
-                std::cout << std::endl;
-                std::cout << "Positive dependant cells:   ";
+                // std::cout << std::endl;
+                // std::cout << "Positive dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_pos) {
-                    std::cout << dp_cl << "   ";
+                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
-                std::cout << std::endl;
+                // std::cout << std::endl;
                 cl.user_data.local_dofs = dofs;
             }
-            std::cout << "local dofs = " << cl.user_data.local_dofs << std::endl << std::endl;
+            // std::cout << "local dofs = " << cl.user_data.local_dofs << std::endl << std::endl;
         }
-        // Vérif n_dofs
+
+        // COMPUTATION OF THE SYSTEM SIZE
         auto n_dofs = 0;
-        auto verif_dofs = 0;
+        auto system_size = 0;
         auto cp_dp = 0;
         for(size_t i=0; i < nb_cells; i++) {
             auto cl = msh.cells[i];
@@ -1538,35 +1535,17 @@ public:
             else {
                 local_dofs = 2*(cbs + 4*fbs);
             }
-            verif_dofs += local_dofs;
+            system_size += local_dofs;
+            // DEBUG
             n_dofs += cl.user_data.local_dofs;
             cp_dp += cl.user_data.dependent_cells_neg.size() + cl.user_data.dependent_cells_pos.size();
         }
-        std::cout << "verif_dofs = " << verif_dofs << std::endl;
-        std::cout << "n_dofs = "     << n_dofs     << std::endl;
-        std::cout << "minus  = " << n_dofs-cp_dp*3*(cbs+4*fbs) << std::endl;
-        std::cout << "COMPUTE_DOFS_DATA OK" << std::endl;
+        // std::cout << "system_size = " << system_size << std::endl;
+        // std::cout << "n_dofs = "     << n_dofs     << std::endl;
+        // std::cout << "minus  = " << n_dofs-cp_dp*2*(cbs+4*fbs) << std::endl;
+        // std::cout << "COMPUTE_DOFS_DATA OK" << std::endl;
 
-        auto is_dirichlet = [&](const typename Mesh::face_type& fc) -> bool {
-            return fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-        };
-
-        for(size_t i=0; i < msh.faces.size(); i++) {
-            auto fbs = face_basis<Mesh,T>::size(facdeg);
-            if (is_dirichlet(msh.faces[i])) {
-                continue;
-            }
-            else if (!is_cut(msh, msh.faces[i])) {
-                verif_dofs += fbs;
-            } 
-            else {
-                verif_dofs += 2*fbs;
-            }
-
-
-        }
-
-        return verif_dofs;
+        return system_size;
     }
 
 
