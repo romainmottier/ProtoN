@@ -15,7 +15,8 @@ include(safeguards)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -fpermissive -fsanitize=address")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fpermissive")
+set(CMAKE_CXX_FLAGS_DEBUGSANITIZED "-g -fpermissive -fsanitize=address")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx -DNDEBUG -fpermissive")
 set(CMAKE_CXX_FLAGS_RELEASEASSERT "-O3 -mavx -g -fpermissive")
 
