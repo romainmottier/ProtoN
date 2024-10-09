@@ -1469,12 +1469,18 @@ public:
 
         // Filling the structure cell dofs 
         auto offset_ddl = 0;
-        std::cout << "CBS = " << cbs << std::endl;
-        std::cout << "FBS = " << fbs << std::endl;
+        std::cout << "Basis size: " << std::endl;
+        std::cout << "   cbs = " << cbs << std::endl;
+        std::cout << "   fbs = " << fbs << std::endl;
+
         for(size_t i=0; i < nb_cells; i++) {
             auto& cl = msh.cells[i];
             auto num_faces = faces(msh, cl).size();
             auto dofs = 0;
+            // Loop over PairOK subcells
+            for (auto& pairOK : cl.user_data.PairOK) {
+                
+            }
             if (!is_cut(msh, cl)) {
                 std::cout << "UNCUT CELL: " << offset(msh, cl) << std::endl;
                 dofs += cbs + num_faces*fbs; // DOFS OF THE CURRENT CELL
@@ -1511,15 +1517,6 @@ public:
                     dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
                 }
                 std::cout << std::endl;
-                if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG || cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
-                    num_faces = faces(msh, msh.cells[cl.user_data.paired_cell]).size();
-                    if (!is_cut(msh,msh.cells[cl.user_data.paired_cell])) {
-                        dofs += cbs + num_faces*fbs; // ADING THE DOFS OF THE PAIRED CELL FOR THE COMPUTATION OF JUMP IN THE CURRENT CELL
-                    }
-                    else {
-                        dofs += 2*(cbs + num_faces*fbs); // ADING THE DOFS OF THE PAIRED CELL FOR THE COMPUTATION OF JUMP IN THE CURRENT CELL
-                    }
-                }
                 cl.user_data.local_dofs = dofs;
             }
             std::cout << "local dofs = " << cl.user_data.local_dofs << std::endl << std::endl;
