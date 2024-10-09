@@ -54,12 +54,9 @@ public:
         return *this;
     }
     
-    bool operator==(const point& other)
+    bool operator==(const point& other) const
     {
-        if ( m_coords == other.m_coords )
-            return 1 ;
-        else
-            return 0 ;
+        return m_coords == other.m_coords;
     }
 
     template<typename U = T>

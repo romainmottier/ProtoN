@@ -6693,78 +6693,72 @@ collect_triangulation_points_curve_old(const cuthho_mesh<T, ET>& msh,
 
     return ret;
 }
-    
-    
 
-
-
-    
-    
 template<typename T, size_t ET>
 std::vector< typename cuthho_mesh<T, ET>::point_type >
-collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh< T , ET>::cell_type& cl, typename cuthho_mesh<T, ET>::point_type& bar , const element_location& where )
- {
+collect_triangulation_points_curve(const cuthho_mesh<T, ET>& msh,
+    const typename cuthho_mesh<T, ET>::cell_type& cl,
+    typename cuthho_mesh<T, ET>::point_type& bar,
+    const element_location& where )
+{
         
     typedef typename cuthho_mesh<T, ET>::point_type     point_type;
     typedef typename cuthho_mesh<T, ET>::node_type      node_type;
 
     assert( is_cut(msh, cl) );
     
-    
-    
-        
     auto node2pt = [&](const node_type& n) -> auto {
         return msh.points.at(n.ptid);
     };
         
-   
-    
-    std::vector< point_type > ret;
+    const auto &ivertices = cl.user_data.integration_msh.interface_vertices;
+    std::vector<point_type> ret;
 
     auto insert_interface = [&](void) -> void {
         if (where == element_location::IN_NEGATIVE_SIDE)
-            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.begin(), cl.user_data.integration_msh.interface_vertices.end());
+            ret.insert(ret.end(), ivertices.begin(), ivertices.end());
         else if (where == element_location::IN_POSITIVE_SIDE)
-            ret.insert(ret.end(), cl.user_data.integration_msh.interface_vertices.rbegin(), cl.user_data.integration_msh.interface_vertices.rend());
+            ret.insert(ret.end(), ivertices.rbegin(), ivertices.rend());
         else
-            throw std::logic_error("If you've got here there is some issue...");
+            throw std::logic_error("Invalid value for `where` parameter");
     };
-        
-
        
-    std::vector<size_t> fc_numb ;
-    node_type n_first , n_second ;
+    std::vector<size_t> fc_numb;
+    node_type n_first, n_second;
     
-    for(auto& fc: faces(msh, cl))
+    auto fcs = faces(msh, cl);
+    for(const auto& fc : fcs)
     {
-        if( fc.user_data.location == element_location::ON_INTERFACE && fc.user_data.intersection_point == cl.user_data.integration_msh.interface_vertices.front() ){
+        bool on_interface = fc.user_data.location == element_location::ON_INTERFACE;
+        assert(ivertices.size() > 0);
+        auto fc_nodes = nodes(msh, fc);
+        assert(fc_nodes.size() == 2);
+
+        if( on_interface && fc.user_data.intersection_point == ivertices.front() ){
             if (where == element_location::IN_NEGATIVE_SIDE)
-                n_first = nodes(msh, fc)[fc.user_data.node_inside] ;
+                n_first = fc_nodes[fc.user_data.node_inside];
             else
-                n_second = nodes(msh, fc)[1-fc.user_data.node_inside] ;
+                n_second = fc_nodes[1-fc.user_data.node_inside];
         }
     
-        if( fc.user_data.location == element_location::ON_INTERFACE && fc.user_data.intersection_point == cl.user_data.integration_msh.interface_vertices.back() )
+        if( on_interface && fc.user_data.intersection_point == ivertices.back() )
         {
             if (where == element_location::IN_NEGATIVE_SIDE)
-                n_second = nodes(msh, fc)[fc.user_data.node_inside] ;
+                n_second = fc_nodes[fc.user_data.node_inside];
             else
-                n_first = nodes(msh, fc)[1-fc.user_data.node_inside] ;
+                n_first = fc_nodes[1-fc.user_data.node_inside];
     
         }
 
     }
     
     
-    if( n_first == n_second )
+    if( n_first == n_second ) {
         insert_interface();
-
-    else
-    {
+    } else {
         ret.push_back( node2pt(n_first) );
         insert_interface();
         ret.push_back( node2pt(n_second) );
-            
     }
 
     return ret;

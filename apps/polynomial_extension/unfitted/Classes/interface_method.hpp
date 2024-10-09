@@ -14,13 +14,11 @@ protected:
 
     virtual std::pair<Mat, Vect>
     make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                     const testType &test_case, const hho_degree_info hdi) {
-    }
+                     const testType &test_case, const hho_degree_info hdi) = 0;
 
     virtual Vect
     make_contrib_rhs_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                     const testType &test_case, const hho_degree_info hdi) {
-    }
+                     const testType &test_case, const hho_degree_info hdi) = 0;
 
 public:
 

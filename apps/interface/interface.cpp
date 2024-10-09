@@ -1698,7 +1698,7 @@ test_new_method(const Mesh msh , const FonctionD& level_set_disc , const Fonctio
 
 // Lagrangian basis b_kl(x,y) = b_k(x)*b_l(y) over a set of equidistributed 2-dimensional nodes (3D CASE NOT YET IMPLEMENTED)
 
-
+#if 0
 int binomial_coeff_fx(int n , int k) {
 
         int C[n + 1][k + 1];
@@ -1724,9 +1724,11 @@ int binomial_coeff_fx(int n , int k) {
       
         return C[n][k];
 }
+#endif
 
 //#define POWER_CACHE
 
+#if 0
 template<typename Mesh, typename VT>
 class cell_basis_Bernstein
 {
@@ -1971,7 +1973,7 @@ public:
     }
 };
 
-
+#endif
 template< typename Mesh , typename T = typename Mesh::coordinate_type >
 void
 testing_basis (const Mesh msh , size_t degree_FEM )

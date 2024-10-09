@@ -69,9 +69,7 @@ protected:
     make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
                      const testType test_case, const hho_degree_info hdi,
                      const element_location where = element_location::IN_NEGATIVE_SIDE,
-                     const params<T>& parms = params<T>())
-    {
-    }
+                     const params<T>& parms = params<T>()) = 0;
 
 public:
     std::pair< std::pair<Mat,Mat>, std::pair<Vect,Vect> >
@@ -458,9 +456,7 @@ protected:
 
     virtual std::pair<Mat, Vect>
     make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                     const testType test_case, const hho_degree_info hdi)
-    {
-    }
+                     const testType test_case, const hho_degree_info hdi) = 0;
 
 public:
     std::pair<Mat, Vect>
