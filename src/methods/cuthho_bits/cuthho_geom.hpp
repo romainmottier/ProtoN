@@ -6993,53 +6993,53 @@ triangle_quadrature_curve(const std::vector< point<T,2> >& tri, const Cell& cl, 
 }
 
 
-template<typename T, size_t ET>
-std::vector< std::pair<point<T,2>, T> >
-make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
-{
-    std::vector< std::pair<point<T,2>, T> > ret;
+// template<typename T, size_t ET>
+// std::vector< std::pair<point<T,2>, T> >
+// make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where , bool used_from_integrate_fc = false)
+// {
+//     std::vector< std::pair<point<T,2>, T> > ret;
 
-    if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
-        return ret;
+//     if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
+//         return ret;
 
-    if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
-        return integrate(msh, cl, degree);
+//     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
+//         return integrate(msh, cl, degree);
     
-    // (1) TOLTO PER CONTROLLARE CASE LINEARE
-    if(!used_from_integrate_fc){
-        size_t degree_int = cl.user_data.integration_msh.degree_curve;
-        degree += degree_det_jacobian(degree_int) ;
-    }
+//     // (1) TOLTO PER CONTROLLARE CASE LINEARE
+//     if(!used_from_integrate_fc){
+//         size_t degree_int = cl.user_data.integration_msh.degree_curve;
+//         degree += degree_det_jacobian(degree_int) ;
+//     }
         
   
-    auto tris = triangulate_curve(msh, cl, where);
-    //size_t degree_int = cl.user_data.integration_msh.degree;
-    //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
-   // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
-    for (auto& tri : tris)
-    {
-        // fatto io da qua
-        /*
-        auto v0 = tri.pts[1] - tri.pts[0];
-        auto v1 = tri.pts[2] - tri.pts[0];
-        auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
-        auto counter = offset(msh,cl);
-        if(area < 0){
-               for( auto& r : cl.user_data.interface ){
-                  std::cout<<"In cella num "<<counter<<std::endl;
-                   std::cout<<"Point r: x is "<<r.x()<<", y is "<<r.y()<<std::endl;
-               }
+//     auto tris = triangulate_curve(msh, cl, where);
+//     //size_t degree_int = cl.user_data.integration_msh.degree;
+//     //cell_basis_triangle_Lagrange<T> cb_tri(degree_int);
+//    // std::cout<<"the size of tris is "<<tris.size()<<std::endl;
+//     for (auto& tri : tris)
+//     {
+//         // fatto io da qua
+//         /*
+//         auto v0 = tri.pts[1] - tri.pts[0];
+//         auto v1 = tri.pts[2] - tri.pts[0];
+//         auto area = (v0.x() * v1.y() - v0.y() * v1.x()) / 2.0;
+//         auto counter = offset(msh,cl);
+//         if(area < 0){
+//                for( auto& r : cl.user_data.interface ){
+//                   std::cout<<"In cella num "<<counter<<std::endl;
+//                    std::cout<<"Point r: x is "<<r.x()<<", y is "<<r.y()<<std::endl;
+//                }
            
-           }
-         */
-        // a qua
+//            }
+//          */
+//         // a qua
     
-        auto qpts = triangle_quadrature_curve(tri,cl, degree);
-        ret.insert(ret.end(), qpts.begin(), qpts.end());
-    }
+//         auto qpts = triangle_quadrature_curve(tri,cl, degree);
+//         ret.insert(ret.end(), qpts.begin(), qpts.end());
+//     }
     
-    return ret;
-}
+//     return ret;
+// }
 
 
 
@@ -7047,31 +7047,31 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 
 
 
-template<typename T, size_t ET>
-std::vector< std::pair<point<T,2>, T> > // HO INVERTITO I NOMI PER FARE LA PROVA
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-          size_t degree, const element_location& where)
-{
-    // (2) TOLTO PER CONTROLLARE CASE LINEARE
-    if ( is_cut(msh, cl) ){
-        size_t degree_int = cl.user_data.integration_msh.degree_curve;
-        degree += degree_det_jacobian(degree_int) ;
-    }
+// template<typename T, size_t ET>
+// std::vector< std::pair<point<T,2>, T> > // HO INVERTITO I NOMI PER FARE LA PROVA
+// integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+//           size_t degree, const element_location& where)
+// {
+//     // (2) TOLTO PER CONTROLLARE CASE LINEARE
+//     if ( is_cut(msh, cl) ){
+//         size_t degree_int = cl.user_data.integration_msh.degree_curve;
+//         degree += degree_det_jacobian(degree_int) ;
+//     }
     
-    if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
-        return cl.user_data.integration_n;
+//     if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
+//         return cl.user_data.integration_n;
 
-    if( cl.user_data.integration_p.size() != 0 && where == element_location::IN_POSITIVE_SIDE)
-        return cl.user_data.integration_p;
+//     if( cl.user_data.integration_p.size() != 0 && where == element_location::IN_POSITIVE_SIDE)
+//         return cl.user_data.integration_p;
 
-    return make_integrate(msh, cl, degree, where,true);
-}
+//     return make_integrate(msh, cl, degree, where,true);
+// }
 
 
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrateOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                size_t degree, const element_location& where)
 {
     std::vector< std::pair<point<T,2>, T> > ret;
@@ -7136,7 +7136,7 @@ make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrateOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
           size_t degree, const element_location& where)
 {
     

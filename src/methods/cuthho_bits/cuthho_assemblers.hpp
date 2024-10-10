@@ -1072,7 +1072,7 @@ public:
                         num_dirichlet_faces += 1;
             }
         }
-         std::cout<<"Number of all faces (faces on interface counted twice) =  "<<num_all_faces<<std::endl;
+
         /* We assume that cut cells can not have dirichlet faces */
 //        auto num_dirichlet_faces = std::count_if(msh.faces.begin(), msh.faces.end(), is_dirichlet);
         this->num_other_faces = num_all_faces - num_dirichlet_faces;

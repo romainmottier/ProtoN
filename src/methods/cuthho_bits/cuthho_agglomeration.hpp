@@ -2547,9 +2547,8 @@ make_agglomeration_no_double_points(Mesh& msh,  size_t degree_det_jac_curve)
     output_cells.close();
 }
 
-
-////// make_agglomeration
-// the main agglomeration routine
+////// make_polynomial_extension
+// the main polynomial_extension routine
 // currently, the mesh obtained must have convex cells
 // obtained by merging sub_cells with one face in common
 // for non-convex cells -> modify measure and integrate
@@ -2712,10 +2711,14 @@ make_polynomial_extension(Mesh& msh, const Function& level_set_function) {
         }
     }
 
-    // FILLING THE STRUCTURE paired_cells / dependent_cells_neg / dependent_cells_pos
+    // FILLING THE STRUCTURE paired_cells / dependent_cells_neg / dependent_cells_pos / paire(T,i)
     for (auto &cl : msh.cells) {
         auto offset_cl = offset(msh,cl);
-        if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
+        if (cl.user_data.location != element_location::ON_INTERFACE) { // UNCUT CELL
+            auto PAIROK = std::make_pair(offset_cl, cl.user_data.location);
+            cl.user_data.PairOK.push_back(PAIROK);
+        }
+        else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
             // std::cout << "Cell: " << offset_cl << std::endl;
             if (table_neg.at(offset_cl) != -1) {
                 cl.user_data.paired_cell = table_neg.at(offset_cl);
@@ -2723,12 +2726,17 @@ make_polynomial_extension(Mesh& msh, const Function& level_set_function) {
             if (table_pos.at(offset_cl) != -1) {
                 cl.user_data.paired_cell = table_pos.at(offset_cl);
             }    
-            // std::cout << "Paired cell: " << cl.user_data.paired_cells;
+            // std::cout << "Paired cell: " << cl.user_data.paired_cell;
             // std::cout << std::endl << std::endl;
             auto& good_cl = msh.cells[cl.user_data.paired_cell];
             good_cl.user_data.dependent_cells_neg.insert(offset_cl);
+            // TKONEG: Pair(T,i)
+            auto PAIROK = std::make_pair(offset_cl, element_location::IN_POSITIVE_SIDE); 
+            auto PAIRKO = std::make_pair(offset_cl, element_location::IN_NEGATIVE_SIDE); 
+            cl.user_data.PairOK.push_back(PAIROK);
+            cl.user_data.PairKO.push_back(PAIRKO);
         }
-        if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
+        else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
             // std::cout << "Cell: " << offset_cl << std::endl;
             if (table_neg.at(offset_cl) != -1) {
                 cl.user_data.paired_cell = table_neg.at(offset_cl);
@@ -2736,26 +2744,143 @@ make_polynomial_extension(Mesh& msh, const Function& level_set_function) {
             if (table_pos.at(offset_cl) != -1) {
                 cl.user_data.paired_cell = table_pos.at(offset_cl);
             }    
-            // std::cout << "Paired cell: " << cl.user_data.paired_cells;
+            // std::cout << "Paired cell: " << cl.user_data.paired_cell;
             // std::cout << std::endl << std::endl;
             auto& good_cl = msh.cells[cl.user_data.paired_cell];
             good_cl.user_data.dependent_cells_pos.insert(offset_cl);
+            // TKOPOS: Pair(T,i)
+            auto PAIROK = std::make_pair(offset_cl, element_location::IN_NEGATIVE_SIDE); 
+            auto PAIRKO = std::make_pair(offset_cl, element_location::IN_POSITIVE_SIDE); 
+            cl.user_data.PairOK.push_back(PAIROK);
+            cl.user_data.PairKO.push_back(PAIRKO);
         }
+        else {
+            // TOKCELL: Pair(T,i)
+            auto PAIROK1 = std::make_pair(offset_cl, element_location::IN_POSITIVE_SIDE); 
+            auto PAIROK2 = std::make_pair(offset_cl, element_location::IN_NEGATIVE_SIDE); 
+            cl.user_data.PairOK.push_back(PAIROK1);
+            cl.user_data.PairOK.push_back(PAIROK2);
+        }
+
     }
-    // Verification
+    // Filling the tuple Pair_OK / Pair_KO
     for (auto &cl : msh.cells) {
         auto offset_cl = offset(msh,cl);
-        // std::cout << "Cell: " << offset_cl << std::endl;
-        // std::cout << "Negative dependent cells:   ";
-        for (auto& cells : cl.user_data.dependent_cells_neg) {
-            // std::cout << cells << "   ";
+        if (cl.user_data.location != element_location::ON_INTERFACE) { // UNCUT CELL
+            std::vector<double> dp_cells;
+            element_location loc;
+            if (cl.user_data.location == element_location::IN_NEGATIVE_SIDE) {
+                loc = element_location::IN_NEGATIVE_SIDE;
+                for (auto& dp_cl: cl.user_data.dependent_cells_neg) {
+                    dp_cells.push_back(dp_cl);
+                }
+            }
+            else {
+                loc = element_location::IN_POSITIVE_SIDE;
+                for (auto& dp_cl: cl.user_data.dependent_cells_pos) {
+                    dp_cells.push_back(dp_cl);
+                }   
+            }
+            auto tuple = std::make_tuple(offset_cl, loc, dp_cells);
+            cl.user_data.Pair_OK.push_back(tuple);
         }
-        // std::cout << std::endl << "Positive dependent cells:   ";
-        for (auto& cells : cl.user_data.dependent_cells_pos) {
-            // std::cout << cells << "   ";
+        else if (cl.user_data.agglo_set == cell_agglo_set::T_OK) { // CUT CELL TOK
+            std::vector<double> dp_cells_neg;
+            std::vector<double> dp_cells_pos;
+            for (auto& dp_cl: cl.user_data.dependent_cells_neg) {
+                dp_cells_neg.push_back(dp_cl);
+            }
+            for (auto& dp_cl: cl.user_data.dependent_cells_pos) {
+                dp_cells_pos.push_back(dp_cl);
+            }
+            auto tuple_neg = std::make_tuple(offset_cl, element_location::IN_NEGATIVE_SIDE, dp_cells_neg);
+            auto tuple_pos = std::make_tuple(offset_cl, element_location::IN_POSITIVE_SIDE, dp_cells_pos);
+            cl.user_data.Pair_OK.push_back(tuple_neg);
+            cl.user_data.Pair_OK.push_back(tuple_pos);
         }
-        // std::cout << std::endl << std::endl;
-    }
+        else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) { // CUT CELL TKONEG
+            std::vector<double> dp_cells_neg;
+            std::vector<double> dp_cells_pos;
+            for (auto& dp_cl: cl.user_data.dependent_cells_pos) {
+                dp_cells_pos.push_back(dp_cl);
+            }
+            auto tuple_neg = std::make_tuple(offset_cl, element_location::IN_NEGATIVE_SIDE, dp_cells_neg);
+            auto tuple_pos = std::make_tuple(offset_cl, element_location::IN_POSITIVE_SIDE, dp_cells_pos);
+            cl.user_data.Pair_KO.push_back(tuple_neg);
+            cl.user_data.Pair_OK.push_back(tuple_pos);
+        }
+        else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) { // CUT CELL TKONEG
+            std::vector<double> dp_cells_neg;
+            std::vector<double> dp_cells_pos;
+            for (auto& dp_cl: cl.user_data.dependent_cells_neg) {
+                dp_cells_neg.push_back(dp_cl);
+            }
+            auto tuple_neg = std::make_tuple(offset_cl, element_location::IN_NEGATIVE_SIDE, dp_cells_neg);
+            auto tuple_pos = std::make_tuple(offset_cl, element_location::IN_POSITIVE_SIDE, dp_cells_pos);
+            cl.user_data.Pair_OK.push_back(tuple_neg);
+            cl.user_data.Pair_KO.push_back(tuple_pos);
+        }
+    }   
+
+    // // Debug
+    // for (auto &cl : msh.cells) {
+    //     auto offset_cl = offset(msh,cl);
+    //     std::cout << "Cell: " << offset_cl << std::endl;
+    //     std::cout << "Negative dependent cells:   ";
+    //     for (auto& cells : cl.user_data.dependent_cells_neg) {
+    //         std::cout << cells << "   ";
+    //     }
+    //     std::cout << std::endl << "Positive dependent cells:   ";
+    //     for (auto& cells : cl.user_data.dependent_cells_pos) {
+    //         std::cout << cells << "   ";
+    //     }
+    //     std::cout << std::endl << "PAIROK:   ";
+    //     for (auto& cells : cl.user_data.PairOK) {
+    //         if (cells.second == element_location::IN_NEGATIVE_SIDE) {
+    //             std::cout << "(" << cells.first << ", " << "NEGATIVE SIDE" << ")" << "   ";
+    //         }
+    //         if (cells.second == element_location::IN_POSITIVE_SIDE) {
+    //             std::cout << "(" << cells.first << ", " << "POSITIVE SIDE" << ")" << "   ";
+    //         }
+    //     }
+    //     std::cout << std::endl << "PAIRKO:   ";
+    //     for (auto& cells : cl.user_data.PairKO) {
+    //         if (cells.second == element_location::IN_NEGATIVE_SIDE) {
+    //             std::cout << "(" << cells.first << ", " << "NEGATIVE SIDE" << ")" << "   ";
+    //         }
+    //         if (cells.second == element_location::IN_POSITIVE_SIDE) {
+    //             std::cout << "(" << cells.first << ", " << "POSITIVE SIDE" << ")" << "   ";
+    //         }
+    //     }
+    //     std::cout << std::endl << "TUPLE PAIROK:   ";
+    //     for (auto& cells : cl.user_data.Pair_OK) {
+    //         if (std::get<1>(cells) == element_location::IN_NEGATIVE_SIDE) {
+    //             std::cout << "(" << std::get<0>(cells) << ", " << "NEGATIVE SIDE";
+    //             for (auto& dp_cl : std::get<2>(cells)) {
+    //                 std::cout << ", " << dp_cl;
+    //             }
+    //             std::cout << ")";
+    //         }
+    //         if (std::get<1>(cells) == element_location::IN_POSITIVE_SIDE) {
+    //             std::cout << "(" << std::get<0>(cells) << ", " << "POSITIVE SIDE";
+    //             for (auto& dp_cl : std::get<2>(cells)) {
+    //                 std::cout << ", " << dp_cl;
+    //             }
+    //             std::cout << ")";
+    //         }
+    //     }
+    //     std::cout << std::endl << "TUPLE PAIRKO:   ";
+    //     for (auto& cells : cl.user_data.Pair_KO) {
+    //         if (std::get<1>(cells) == element_location::IN_NEGATIVE_SIDE) {
+    //             std::cout << "(" << std::get<0>(cells) << ", " << "NEGATIVE SIDE" << ") ";
+    //         }
+    //         if (std::get<1>(cells) == element_location::IN_POSITIVE_SIDE) {
+    //             std::cout << "(" << std::get<0>(cells) << ", " << "POSITIVE SIDE" << ") ";
+    //         }
+    //     }  
+    //     std::cout << std::endl << std::endl;
+    // }
+    
     // Display of the arrows
     std::vector<int> table;
     table.resize(nb_cells);
