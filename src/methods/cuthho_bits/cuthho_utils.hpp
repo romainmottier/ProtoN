@@ -563,97 +563,6 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
     return data;
 }
 
-// CUT STABILIZATION EXTENDED
-template<typename T, size_t ET, typename Function>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization_interface_extended(const cuthho_mesh<T, ET>& msh,
-                                 const typename cuthho_mesh<T, ET>::cell_type& cl,
-                                 const Function& level_set_function,
-                                 const hho_degree_info& di,
-                                 const params<T>& parms = params<T>(), bool scaled_Q = true) {
-                                    
-    if ( !is_cut(msh, cl) )
-        throw std::invalid_argument("The cell is not cut ...");
-
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto local_dofs = cbs + num_faces*fbs;
-    auto total_dofs = cl.user_data.local_dofs;
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(total_dofs, total_dofs);
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-    auto hT = diameter(msh, cl);
-
-    // STABILIZATION IN THE CURRENT CELL
-    const auto stab_n = make_hho_cut_stabilization(msh, cl, di, element_location::IN_NEGATIVE_SIDE, scaled_Q);
-    const auto stab_p = make_hho_cut_stabilization(msh, cl, di, element_location::IN_POSITIVE_SIDE, scaled_Q);
-    // CELLS -- CELLS BLOCK
-    data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
-    data.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * stab_p.block(0, 0, cbs, cbs);
-    // CELLS -- FACES BLOCK
-    data.block(0, 2*cbs, cbs, num_faces*fbs) += parms.kappa_1 * stab_n.block(0, cbs, cbs, num_faces*fbs);
-    data.block(cbs, 2*cbs + num_faces*fbs, cbs, num_faces*fbs) += parms.kappa_2 * stab_p.block(0, cbs, cbs, num_faces*fbs);
-    // FACES -- CELLS BLOCK
-    data.block(2*cbs, 0, num_faces*fbs, cbs) += parms.kappa_1 * stab_n.block(cbs, 0, num_faces*fbs, cbs);
-    data.block(2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs) += parms.kappa_2 * stab_p.block(cbs, 0, num_faces*fbs, cbs);
-    // FACES -- FACES BLOCK
-    data.block(2*cbs, 2*cbs, num_faces*fbs, num_faces*fbs) += parms.kappa_1 * stab_n.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
-    data.block(2*cbs + num_faces*fbs, 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs) += parms.kappa_2 * stab_p.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
-
-    // REMOVING THE STABILIZATION IN THE ILL-CUT PART 
-    if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
-        data.block(0, 0, cbs, cbs) += Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);                                                  // CELLS -- CELLS BLOCK
-        data.block(0, 2*cbs, cbs, num_faces*fbs) += Matrix<T, Dynamic, Dynamic>::Zero(cbs, num_faces*fbs);                          // CELLS -- FACES BLOCK
-        data.block(2*cbs, 0, num_faces*fbs, cbs) += Matrix<T, Dynamic, Dynamic>::Zero(num_faces*fbs, cbs);                          // FACES -- CELLS BLOCK
-        data.block(2*cbs, 2*cbs, num_faces*fbs, num_faces*fbs) += Matrix<T, Dynamic, Dynamic>::Zero(num_faces*fbs, num_faces*fbs);  // FACES -- FACES BLOCK
-    }
-    else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
-        data.block(cbs, cbs, cbs, cbs) += Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);                                                                             // CELLS -- CELLS BLOCK
-        data.block(cbs, 2*cbs + num_faces*fbs, cbs, num_faces*fbs) += Matrix<T, Dynamic, Dynamic>::Zero(cbs, num_faces*fbs);                                       // CELLS -- FACES BLOCK
-        data.block(2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs) += Matrix<T, Dynamic, Dynamic>::Zero(num_faces*fbs, cbs);                                       // FACES -- CELLS BLOCK
-        data.block(2*cbs + num_faces*fbs, 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs) += Matrix<T, Dynamic, Dynamic>::Zero(num_faces*fbs, num_faces*fbs); // FACES -- FACES BLOCK
-    }
-
-    // SETTING DEPENDENT CELLS
-    Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> stab_n_ex, stab_p_ex;
-    typename cuthho_mesh<T, ET>::cell_type dp_cell;
-    size_t offset_dofs_extended = 3*local_dofs; 
-    if (cl.user_data.agglo_set == cell_agglo_set::T_OK) 
-        offset_dofs_extended = 2*local_dofs; 
-    
-    // STABILIZATION IN THE NEGATIVE DEPENDENT CELLS
-    auto dp_cells = cl.user_data.dependent_cells_neg;
-    for (auto &dp_cl : dp_cells) {
-        dp_cell = msh.cells[dp_cl];
-        stab_n_ex = make_hho_cut_stabilization_extended(msh, dp_cell, di, element_location::IN_NEGATIVE_SIDE, scaled_Q);
-        data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n_ex.block(0, 0, cbs, cbs);                                                     // CELLS -- CELLS BLOCK
-        data.block(0, offset_dofs_extended + 2*cbs, cbs, num_faces*fbs) += parms.kappa_1 * stab_n_ex.block(0, cbs, cbs, num_faces*fbs);                           // CELLS -- FACES BLOCK
-        data.block(offset_dofs_extended + 2*cbs, 0, num_faces*fbs, cbs) += parms.kappa_1 * stab_n_ex.block(cbs, 0, num_faces*fbs, cbs);                           // FACES -- CELLS BLOCK
-        data.block(offset_dofs_extended + 2*cbs, offset_dofs_extended + 2*cbs, num_faces*fbs, num_faces*fbs) += parms.kappa_1 * stab_n_ex.block(cbs, cbs, num_faces*fbs, num_faces*fbs); // FACES -- FACES BLOCK
-        offset_dofs_extended += 2*local_dofs; 
-    }
-
-    // STABILIZATION IN THE POSITIVE DEPENDENT CELLS
-    dp_cells = cl.user_data.dependent_cells_pos;
-    for (auto &dp_cl : dp_cells) {
-        dp_cell = msh.cells[dp_cl];
-        stab_p_ex = make_hho_cut_stabilization_extended(msh, dp_cell, di, element_location::IN_POSITIVE_SIDE, scaled_Q);
-        data.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * stab_p_ex.block(0, 0, cbs, cbs);                                                                                 // CELLS -- CELLS BLOCK
-        data.block(cbs, offset_dofs_extended + 2*cbs + num_faces*fbs, cbs, num_faces*fbs) += parms.kappa_2 * stab_p_ex.block(0, cbs, cbs, num_faces*fbs);                                         // CELLS -- FACES BLOCK
-        data.block(offset_dofs_extended + 2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs) += parms.kappa_2 * stab_p_ex.block(cbs, 0, num_faces*fbs, cbs);                                         // FACES -- CELLS BLOCK
-        data.block(offset_dofs_extended + 2*cbs + num_faces*fbs, offset_dofs_extended + 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs) += parms.kappa_2 * stab_p_ex.block(cbs, cbs, num_faces*fbs, num_faces*fbs); // FACES -- FACES BLOCK
-        offset_dofs_extended += 2*local_dofs; 
-    }
-
-    return data;
-}
-
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
@@ -713,6 +622,8 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
     return data;
 }
 
+////////////////////////////////////////////////// POLYNOMIAL EXTENSION
+// STABILIZATION s° 
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_stabilization_extended(const cuthho_mesh<T, ET>& msh,
@@ -771,94 +682,7 @@ make_hho_cut_stabilization_extended(const cuthho_mesh<T, ET>& msh,
     return data;
 }
 
-////////////////////////////////////////////////// PARAMETRIC INTERFACE
-template<typename T, size_t ET , typename INTERFACE>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_cut_parametric_interface_penalty(const cuthho_mesh<T, ET>& msh,
-                               const typename cuthho_mesh<T, ET>::cell_type& cl, const INTERFACE& parametric_interface,
-                               const hho_degree_info& di, const T eta)
-{
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-    auto num_faces = faces(msh, cl).size();
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
-
-    auto hT = diameter(msh, cl);
-
-    auto iqps = integrate_interface(msh, cl,parametric_interface, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps)
-    {
-        const auto c_phi  = cb.eval_basis(qp.first);
-
-        data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
-    }
-
-    return data;
-}
-
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization_parametric_interface(const cuthho_mesh<T, ET>& msh,
-                                 const typename cuthho_mesh<T, ET>::cell_type& cl,
-                                 const hho_degree_info& di,
-                                 const params<T>& parms = params<T>())
-{
-    if ( !is_cut(msh, cl) )
-        throw std::invalid_argument("The cell is not cut ...");
-
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-
-    Matrix<T, Dynamic, Dynamic> data
-        = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs+2*num_faces*fbs, 2*cbs+2*num_faces*fbs);
-    // Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    //auto hT = diameter(msh, cl);
-
-
-    const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE);
-    const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE);
-
-    // cells--cells
-    data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
-    data.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * stab_p.block(0, 0, cbs, cbs);
-    // cells--faces
-    data.block(0, 2*cbs, cbs, num_faces*fbs)
-        += parms.kappa_1 * stab_n.block(0, cbs, cbs, num_faces*fbs);
-    data.block(cbs, 2*cbs + num_faces*fbs, cbs, num_faces*fbs)
-        += parms.kappa_2 * stab_p.block(0, cbs, cbs, num_faces*fbs);
-    // faces--cells
-    data.block(2*cbs, 0, num_faces*fbs, cbs)
-        += parms.kappa_1 * stab_n.block(cbs, 0, num_faces*fbs, cbs);
-    data.block(2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs)
-        += parms.kappa_2 * stab_p.block(cbs, 0, num_faces*fbs, cbs);
-    // faces--faces
-    data.block(2*cbs, 2*cbs, num_faces*fbs, num_faces*fbs)
-        += parms.kappa_1 * stab_n.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
-    data.block(2*cbs + num_faces*fbs, 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs)
-        += parms.kappa_2 * stab_p.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
-
-    return data;
-}
-
-//////////////////////////////////////// EXTENDED STABILIZATION ////////////////////////////////////////
-
-// UNCUT STABILIZATION EXTENDED
+// UNCUT STABILIZATION s°
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_naive_stabilization_extended(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, 
@@ -995,7 +819,90 @@ make_hho_naive_stabilization_extended(const cuthho_mesh<T, ET>& msh, const typen
     return data;
 }
 
+////////////////////////////////////////////////// PARAMETRIC INTERFACE
+template<typename T, size_t ET , typename INTERFACE>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
+make_hho_cut_parametric_interface_penalty(const cuthho_mesh<T, ET>& msh,
+                               const typename cuthho_mesh<T, ET>::cell_type& cl, const INTERFACE& parametric_interface,
+                               const hho_degree_info& di, const T eta)
+{
+    auto celdeg = di.cell_degree();
+    auto facdeg = di.face_degree();
 
+    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+
+    auto num_faces = faces(msh, cl).size();
+
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+
+    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
+
+    auto hT = diameter(msh, cl);
+
+    auto iqps = integrate_interface(msh, cl,parametric_interface, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
+    for (auto& qp : iqps)
+    {
+        const auto c_phi  = cb.eval_basis(qp.first);
+
+        data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
+    }
+
+    return data;
+}
+
+template<typename T, size_t ET>
+Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
+make_hho_stabilization_parametric_interface(const cuthho_mesh<T, ET>& msh,
+                                 const typename cuthho_mesh<T, ET>::cell_type& cl,
+                                 const hho_degree_info& di,
+                                 const params<T>& parms = params<T>())
+{
+    if ( !is_cut(msh, cl) )
+        throw std::invalid_argument("The cell is not cut ...");
+
+    auto celdeg = di.cell_degree();
+    auto facdeg = di.face_degree();
+
+    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+
+    auto fcs = faces(msh, cl);
+    auto num_faces = fcs.size();
+
+    Matrix<T, Dynamic, Dynamic> data
+        = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs+2*num_faces*fbs, 2*cbs+2*num_faces*fbs);
+    // Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
+
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+
+    //auto hT = diameter(msh, cl);
+
+
+    const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE);
+    const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE);
+
+    // cells--cells
+    data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
+    data.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * stab_p.block(0, 0, cbs, cbs);
+    // cells--faces
+    data.block(0, 2*cbs, cbs, num_faces*fbs)
+        += parms.kappa_1 * stab_n.block(0, cbs, cbs, num_faces*fbs);
+    data.block(cbs, 2*cbs + num_faces*fbs, cbs, num_faces*fbs)
+        += parms.kappa_2 * stab_p.block(0, cbs, cbs, num_faces*fbs);
+    // faces--cells
+    data.block(2*cbs, 0, num_faces*fbs, cbs)
+        += parms.kappa_1 * stab_n.block(cbs, 0, num_faces*fbs, cbs);
+    data.block(2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs)
+        += parms.kappa_2 * stab_p.block(cbs, 0, num_faces*fbs, cbs);
+    // faces--faces
+    data.block(2*cbs, 2*cbs, num_faces*fbs, num_faces*fbs)
+        += parms.kappa_1 * stab_n.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
+    data.block(2*cbs + num_faces*fbs, 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs)
+        += parms.kappa_2 * stab_p.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
+
+    return data;
+}
 
 //////////////////////////////////////// PENALTY TERM ////////////////////////////////////////
 template<typename T, size_t ET>
@@ -1031,7 +938,7 @@ make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh,
     return data;
 }
 
-//////////////////////////////////////// EXTENDED PENALTY TERM ////////////////////////////////////////
+////////////////////////////////////////////////// POLYNOMIAL EXTENSION
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_interface_penalty_extended(const cuthho_mesh<T, ET>& msh,
@@ -1425,8 +1332,7 @@ make_hho_gradrec_mixed_vector_interface(const cuthho_mesh<T, ET>& msh,
     
 }
 
-
-//////////////////////////////////////// EXTENDED GRADREC RECONSTRUCTION ////////////////////////////////////////
+////////////////////////////////////////////////// POLYNOMIAL EXTENSION
 
 // UNCUT GRADIENT RECONSTRUCTION
 template<typename T, size_t ET, typename Function>
@@ -2003,7 +1909,6 @@ make_NS_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
 }
 
 //////////////////////////////////////// RHS TERMS ////////////////////////////////////////
-
 // MAKE VOLUMIC RHS
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -2124,7 +2029,6 @@ make_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
     return -GR.transpose() * source_vect;
 }
 
-
 // MAKE RHS FOR THE FILE CUTHHO_SQUARE.CPP
 template<typename T, size_t ET, typename F1, typename F2, typename F3>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -2235,7 +2139,6 @@ make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
     return ret;
 }
 
-
 //////////////////////////////////////// MISCELLANEOUS ////////////////////////////////////////
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
@@ -2278,6 +2181,7 @@ project_function(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
     return ret;
 }
 
+////////////////////////////////////////////////// POLYNOMIAL EXTENSION
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
 project_function_TOK(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
@@ -2433,7 +2337,6 @@ project_function_uncut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh
 
     return ret;
 }
-
 
 template<typename Mesh>
 class cut_assembler
@@ -2659,14 +2562,11 @@ public:
     }
 };
 
-
 template<typename Mesh>
 auto make_cut_assembler(const Mesh& msh, hho_degree_info& hdi, element_location where)
 {
     return cut_assembler<Mesh>(msh, hdi, where);
 }
-
-
 
 /******************************************************************************************/
 /*******************                                               ************************/
@@ -2700,9 +2600,7 @@ make_hho_cut_parametric_interface_vector_penalty(const cuthho_mesh<T, ET>& msh,
     return vector_assembly(scalar_penalty);
 }
 
-
 /////  GRADREC
-
 template<typename T, size_t ET, typename Function>
 std::pair< Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, Dynamic>  >
 make_hho_gradrec_matrix
@@ -2732,7 +2630,6 @@ make_hho_gradrec_matrix_interface(const cuthho_mesh<T, ET>& msh,
 }
 
 /////// STAB
-
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_vector_cut_stabilization(const cuthho_mesh<T, ET>& msh,
@@ -2757,7 +2654,6 @@ make_hho_vector_stabilization_interface(const cuthho_mesh<T, ET>& msh,
     return vector_assembly(scalar_stab);
 }
 
-
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_vector_stabilization_parametric_interface(const cuthho_mesh<T, ET>& msh,
@@ -2769,9 +2665,8 @@ make_hho_vector_stabilization_parametric_interface(const cuthho_mesh<T, ET>& msh
 
     return vector_assembly(scalar_stab);
 }
+
 /////////   RHS
-
-
 // make volumic rhs
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -2793,7 +2688,6 @@ make_vector_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
     }
     return ret;
 }
-
 
 // make_vector_rhs_penalty
 // return (g , v_T)_{Gamma} * eta/h_T
@@ -2818,7 +2712,6 @@ make_vector_rhs_penalty(const cuthho_mesh<T, ET>& msh,
     }
     return ret;
 }
-
 
 // make_vector_GR_rhs
 // return -(g , GR(v_T) . n)_{Gamma}
@@ -2872,10 +2765,6 @@ make_vector_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
     return -GR.transpose() * source_vect;
 }
 
-
-
-
-
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
 make_vector_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc,
@@ -2896,8 +2785,6 @@ make_vector_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
 
     return ret;
 }
-
-
 
 // make_vector_Dirichlet_jump
 template<typename T, size_t ET, typename F1, typename F2>
@@ -2942,7 +2829,6 @@ make_vector_Dirichlet_jump(const cuthho_mesh<T, ET>& msh,
     return ret;
 }
 
-
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_vector_flux_jump_reference_pts(const cuthho_mesh<T, ET>& msh,
@@ -2982,7 +2868,6 @@ make_vector_flux_jump_reference_pts(const cuthho_mesh<T, ET>& msh,
 
     return ret;
 }
-
 
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -3025,7 +2910,6 @@ make_vector_flux_jump_reference_pts_cont(const cuthho_mesh<T, ET>& msh,
 
     return ret;
 }
-
 
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -3072,8 +2956,6 @@ make_vector_flux_jump_parametric_interface(const cuthho_mesh<T, ET>& msh,
     return ret;
 }
 
-
-            
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_vector_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location where, const F1& flux_jump)
@@ -3096,9 +2978,7 @@ make_vector_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<
     return ret;
 }
 
-
 /////////  MASS MATRIX
-
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
 make_vector_mass_matrix(const cuthho_mesh<T, ET>& msh,
@@ -3110,7 +2990,6 @@ make_vector_mass_matrix(const cuthho_mesh<T, ET>& msh,
     return vector_assembly(scalar_matrix);
 }
 
-
 /******************************************************************************************/
 /*******************                                               ************************/
 /*******************                STOKES PROBLEM                 ************************/
@@ -3118,7 +2997,6 @@ make_vector_mass_matrix(const cuthho_mesh<T, ET>& msh,
 /******************************************************************************************/
 
 ///////////////////////   DIVERGENCE RECONSTRUCTION  ///////////////////////////
-
 template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, Dynamic>  >
 make_hho_divergence_reconstruction(const cuthho_mesh<T, ET>& msh,
@@ -3202,8 +3080,6 @@ make_hho_divergence_reconstruction(const cuthho_mesh<T, ET>& msh,
 
     return std::make_pair(oper, data);
 }
-
-
 
 //// make_hho_divergence_reconstruction_interface
 // return the divergence reconstruction for the interface pb
@@ -3439,8 +3315,6 @@ make_hho_divergence_reconstruction_interface_ref_pts
     return std::make_pair(oper, dr_rhs);
 }
 
-
-
 //// make_hho_divergence_reconstruction_interface_ref_pts
 // return the divergence reconstruction for the interface pb
 // coeff -> scales the interface term
@@ -3564,7 +3438,6 @@ make_hho_divergence_reconstruction_interface_ref_pts_cont
 
     return std::make_pair(oper, dr_rhs);
 }
-
 
 //// make_hho_divergence_reconstruction_interface_ref_pts
 // return the divergence reconstruction for the interface pb
@@ -3693,9 +3566,7 @@ make_hho_divergence_reconstruction_parametric_interface
     return std::make_pair(oper, dr_rhs);
 }
 
-
 ///////////////////////   Stokes Stabilization
-
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_stokes_interface_stabilization
@@ -3846,8 +3717,6 @@ make_stokes_interface_stabilization_ref_pts
     return ret;
 }
 
-
-
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_stokes_interface_stabilization_ref_pts_cont
@@ -3935,7 +3804,6 @@ make_stokes_interface_stabilization_ref_pts_cont
     return ret;
 }
 
-
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_stokes_parametric_interface_stabilization
@@ -4020,8 +3888,6 @@ make_stokes_parametric_interface_stabilization
 
     return ret;
 }
-
-
 
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -4118,7 +3984,6 @@ make_stokes_interface_stabilization_RHS_ref_pts
     return ret;
 }
 
-
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_stokes_interface_stabilization_RHS_ref_pts_cont
@@ -4180,7 +4045,6 @@ make_stokes_interface_stabilization_RHS_ref_pts_cont
     return ret;
 }
 
-
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_stokes_parametric_interface_stabilization_RHS
@@ -4240,7 +4104,6 @@ make_stokes_parametric_interface_stabilization_RHS
     return ret;
 }
 
-
 ///////////////////////   RHS  pressure
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -4271,10 +4134,7 @@ make_pressure_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, E
     return ret;
 }
 
-
 ////////////////////////  SYMMETRICAL GRADIENT RECONSTRUCTIONS
-
-
 // coeff scales the interface term
 template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,
@@ -4360,7 +4220,6 @@ make_hho_gradrec_sym_matrix
 
     return std::make_pair(oper, data);
 }
-
 
 //// make_hho_gradrec_sym_matrix_interface
 // return the gradient reconstruction for the interface pb
@@ -4463,8 +4322,6 @@ make_hho_gradrec_sym_matrix_interface
 
     return std::make_pair(oper, data);
 }
-
-
 
 //// make_hho_gradrec_sym_matrix_interface_ref_pts
 // return the gradient reconstruction for the interface pb
@@ -4589,9 +4446,6 @@ make_hho_gradrec_sym_matrix_interface_ref_pts
 
     return std::make_pair(oper, data);
 }
-
-
-
 
 //// make_hho_gradrec_sym_matrix_interface_ref_pts
 // return the gradient reconstruction for the interface pb
@@ -4721,8 +4575,6 @@ make_hho_gradrec_sym_matrix_parametric_interface
     return std::make_pair(oper, data);
 }
 
-
-
 //// make_hho_gradrec_sym_matrix_interface_ref_pts
 // return the gradient reconstruction for the interface pb
 // coeff -> scales the interface term
@@ -4848,5 +4700,3 @@ make_hho_gradrec_sym_matrix_interface_ref_pts_cont
     return std::make_pair(oper, data);
 }
 
-
-//////////////////////////////////////// PARAMETRIC INTERFACES ////////////////////////////////////////
