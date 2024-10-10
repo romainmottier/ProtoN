@@ -349,6 +349,7 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
 //
 //    }
     
+/*
     mesh_impl(mesh_impl& other): mesh_impl( other.msh_parms )
     {
         points = other.points;
@@ -368,7 +369,7 @@ struct mesh_impl<T, 0, CellUD, FaceUD, NodeUD> {
         cells = other.cells;
         msh_parms = other.msh_parms;
     }
-    
+*/    
 
     mesh_impl(const mesh_init_params<T>& parms)
     {
@@ -566,7 +567,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
    
     
 
-
+/*
     mesh_impl& operator=( const mesh_impl& other)
     {
          
@@ -594,6 +595,7 @@ struct mesh_impl<T, 1, CellUD, FaceUD, NodeUD> {
         
     
     }
+    */
     
     mesh_impl( size_t degree_curve ): degree_curve(degree_curve){}
     
