@@ -1769,7 +1769,6 @@ make_rhs_penalty(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
     return ret;
 }
 
-
 // MAKE GR RHS
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
@@ -2111,7 +2110,6 @@ project_function_uncut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh
 
     return ret;
 }
-
 
 template<typename Mesh>
 class cut_assembler
