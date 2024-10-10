@@ -1429,8 +1429,8 @@ make_agglomeration(Mesh& msh, const Function& level_set_function) {
     output_cells.close();
 }
 
-////// make_agglomeration
-// the main agglomeration routine
+////// make_polynomial_extension
+// the main polynomial_extension routine
 // currently, the mesh obtained must have convex cells
 // obtained by merging sub_cells with one face in common
 // for non-convex cells -> modify measure and integrate
