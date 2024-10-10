@@ -72,7 +72,7 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
     size_t system_size = assembler.compute_dofs_data(msh, hdi);
     // auto dofs_proj = assembler.make_projection_operator(msh, hdi, system_size, sol_fun);
     for (auto& cell : msh.cells) {
-    //   auto contrib = method.make_contrib(msh, cell, test_case, hdi);
+      auto contrib = method.make_contrib(msh, cell, test_case, hdi);
     //   auto lc = contrib.first;
     //   auto f = contrib.second;
     //   auto cell_mass = method.make_contrib_mass(msh, cell, test_case, hdi);
