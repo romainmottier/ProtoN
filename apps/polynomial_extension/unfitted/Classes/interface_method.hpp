@@ -41,10 +41,12 @@ public:
 
         // PARAMETERS
         T kappa;
-        if (location(msh, cl) == element_location::IN_NEGATIVE_SIDE)
+        if (location(msh, cl) == element_location::IN_NEGATIVE_SIDE){
             kappa = test_case.parms.kappa_1;
-        else
+        }
+        else {
             kappa = test_case.parms.kappa_2;
+        }
         auto stab_parms = test_case.parms;
         auto level_set_function = test_case.level_set_;
 

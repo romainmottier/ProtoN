@@ -31,6 +31,7 @@
 //#include "src/methods/cuthho_bits/cuthho_utils.hpp"
 #include "src/methods/cuthho"
 
+//////////////////////////////////////// LAPLACIAN ////////////////////////////////////////
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
              Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
@@ -167,7 +168,7 @@ make_hho_mixed_laplacian(const Mesh& msh, const typename Mesh::cell_type& cl, co
     return std::make_pair(oper, data_mixed);
 }
 
-
+//////////////////////////////////////// STABILIZATION ////////////////////////////////////////
 template<typename Mesh>
 Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
 make_hho_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di, bool scaled_Q = true)
@@ -313,6 +314,7 @@ make_hho_fancy_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl
     return data;
 }
 
+//////////////////////////////////////// GRADIENT RECONSTRUCTION ////////////////////////////////////////
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
              Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
@@ -372,7 +374,6 @@ make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, con
 
     return std::make_pair(oper, data);
 }
-
 
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
@@ -447,12 +448,7 @@ make_hho_gradrec_mixed_vector(const Mesh& msh, const typename Mesh::cell_type& c
 
 }
 
-
-
-
 /////////////////////////  ASSEMBLERS  ////////////////////////////
-
-
 template<typename Mesh>
 class assembler
 {
@@ -905,7 +901,6 @@ public:
     }
 };
 
-
 template<typename Mesh>
 auto make_assembler(const Mesh& msh, hho_degree_info hdi)
 {
@@ -921,8 +916,6 @@ auto make_assembler(const Mesh& msh, hho_degree_info hdi, bool mixed_Q)
 /* Assembler for the obstacle problem (see "Bubbles enriched quadratic finite
  * element method for the 3D-elliptic obstacle problem - S. Gaddam, T. Gudi",
  * eqn. 5.1 onwards) */
-
-
 template<typename Mesh>
 class obstacle_assembler
 {
@@ -1205,9 +1198,9 @@ public:
     }
 };
 
-    template<typename T, typename Mesh>
-    Matrix<T, Dynamic, 1>
-    take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info di,
+template<typename T, typename Mesh>
+Matrix<T, Dynamic, 1>
+take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl, hho_degree_info di,
                     const Matrix<T, Dynamic, 1>& expanded_solution)
     {
         auto celdeg = di.cell_degree();
@@ -1236,21 +1229,17 @@ public:
         return ret;
     }
 
-
 template<typename Mesh>
 auto make_obstacle_assembler(const Mesh& msh, const std::vector<bool>& in_A, hho_degree_info hdi)
 {
     return obstacle_assembler<Mesh>(msh, in_A, hdi);
 }
 
-
-
 /******************************************************************************************/
 /*******************                                               ************************/
 /*******************               VECTOR  LAPLACIAN               ************************/
 /*******************                                               ************************/
 /******************************************************************************************/
-
 
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
@@ -1264,8 +1253,6 @@ make_hho_gradrec_matrix(const Mesh& msh, const typename Mesh::cell_type& cl, con
     return std::make_pair(oper, data);
 }
 
-
-
 template<typename Mesh>
 Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
 make_hho_vector_naive_stabilization(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
@@ -1275,7 +1262,6 @@ make_hho_vector_naive_stabilization(const Mesh& msh, const typename Mesh::cell_t
     return vector_assembly(scalar_stab);
 }
            
-            
 template<typename Mesh>
 Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
 make_vector_hho_stabilization(const Mesh&                                                     msh,
@@ -1430,7 +1416,6 @@ make_hho_divergence_reconstruction(const Mesh& msh, const typename Mesh::cell_ty
 }
 
 ///////  SYMMETRICAL GRADIENT RECONSTRUCTIONS
-
 
 template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,

@@ -56,7 +56,7 @@ public:
         stab_parms.kappa_2 = 1.0/(parms.kappa_2); // rho_2 = kappa_2  
 
         // EXTENDED STABILIZATION
-        Mat stab = make_hho_stabilization_interface_extended(msh, cl, level_set_function, hdi, stab_parms);
+        Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, stab_parms);
 
         // EXTENDED PENALTY
         // // // auto penalty_extended = make_hho_cut_interface_penalty_extended(msh, cl, hdi, eta, stab_parms);
