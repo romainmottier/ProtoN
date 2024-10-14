@@ -121,61 +121,61 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             std::vector<std::pair<size_t,size_t>> cell_basis_data = test_operators(msh, hdi, method, test_case, Kg, Mg);
 
             return;
-            // ##################################################
-            // ################################################## Static condensation
-            // ##################################################
-            linear_solver<RealType> analysis;
-            if (sc_Q) {
-              size_t n_dof = Kg.rows();
-              size_t n_cell_dof = 0;
-              for (auto &chunk : cell_basis_data) {
-                n_cell_dof += chunk.second;
-              }
-              size_t n_face_dof = n_dof - n_cell_dof;
-              analysis.set_Kg(Kg, n_face_dof);
-              analysis.condense_equations_irregular_blocks(cell_basis_data);
-            }
-            else {
-              analysis.set_Kg(Kg);
-            }
+            // // // // ##################################################
+            // // // // ################################################## Static condensation
+            // // // // ##################################################
+            // // // linear_solver<RealType> analysis;
+            // // // if (sc_Q) {
+            // // //   size_t n_dof = Kg.rows();
+            // // //   size_t n_cell_dof = 0;
+            // // //   for (auto &chunk : cell_basis_data) {
+            // // //     n_cell_dof += chunk.second;
+            // // //   }
+            // // //   size_t n_face_dof = n_dof - n_cell_dof;
+            // // //   analysis.set_Kg(Kg, n_face_dof);
+            // // //   analysis.condense_equations_irregular_blocks(cell_basis_data);
+            // // // }
+            // // // else {
+            // // //   analysis.set_Kg(Kg);
+            // // // }
             
-            // ##################################################
-            // ################################################## Solver
-            // ##################################################
-            if (direct_solver_Q) {
-              analysis.set_direct_solver(true);
-            }
-            else {
-              analysis.set_iterative_solver();
-            }
-            analysis.factorize();
+            // // // // ##################################################
+            // // // // ################################################## Solver
+            // // // // ##################################################
+            // // // if (direct_solver_Q) {
+            // // //   analysis.set_direct_solver(true);
+            // // // }
+            // // // else {
+            // // //   analysis.set_iterative_solver();
+            // // // }
+            // // // analysis.factorize();
             
-            // ##################################################
-            // ################################################## Assembly and loop over cells
-            // ##################################################
-            auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
-            assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
-            // Loop over cells 
-            for (auto& cl : msh.cells) {
-              auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
-              assembler.assemble_rhs(msh, cl, f);
-            }
-            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-            x_dof = analysis.solve(assembler.RHS);
+            // // // // ##################################################
+            // // // // ################################################## Assembly and loop over cells
+            // // // // ##################################################
+            // // // auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
+            // // // assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+            // // // // Loop over cells 
+            // // // for (auto& cl : msh.cells) {
+            // // //   auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
+            // // //   assembler.assemble_rhs(msh, cl, f);
+            // // // }
+            // // // Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            // // // x_dof = analysis.solve(assembler.RHS);
 
-            // ##################################################
-            // ################################################## postprocess
-            // ##################################################
-            error_file << "Number of equations : " << analysis.n_equations() << std::endl;
-            if (dump_debug) {
-              std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
-              postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
-            }
-            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
+            // // // // ##################################################
+            // // // // ################################################## postprocess
+            // // // // ##################################################
+            // // // error_file << "Number of equations : " << analysis.n_equations() << std::endl;
+            // // // if (dump_debug) {
+            // // //   std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
+            // // //   postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+            // // // }
+            // // // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
         }
-        error_file << std::endl << std::endl;
+        // error_file << std::endl << std::endl;
     }
-    error_file.close();
+    // error_file.close();
     std::cout << std::endl;
 }
 

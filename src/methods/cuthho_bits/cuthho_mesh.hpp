@@ -42,8 +42,6 @@ enum class cell_agglo_set {
     UNDEF
 };
 
-
-
 template<typename T>
 struct cell_cuthho_info
 {
@@ -88,7 +86,6 @@ struct cell_cuthho_info
     {}
 };
 
-
 template<typename T>
 struct face_cuthho_info
 {
@@ -117,8 +114,6 @@ struct node_cuthho_info
     {}
 };
 
-
-
 template<typename Mesh>
 void
 set_integration_mesh( Mesh& msh, size_t degree)
@@ -131,9 +126,6 @@ set_integration_mesh( Mesh& msh, size_t degree)
     }
 
 }
-
-
-
 
 template<typename T, size_t ET>
 using cuthho_mesh = mesh<T, ET, cell_cuthho_info<T>, face_cuthho_info<T>, node_cuthho_info<T>>;
