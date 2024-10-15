@@ -7186,7 +7186,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interfaceOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
+integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
                     size_t degree, element_location where)
 {
     assert( is_cut(msh, cl) );
@@ -7232,47 +7232,45 @@ integrate_interfaceOLD(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh
     return ret;
 }
 
-
-
-template<typename T, size_t ET>
-std::vector< std::pair<point<T,2>, T> >
-integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
-{
-    assert( is_cut(msh, cl) );
-    typedef typename cuthho_mesh<T, ET>::point_type point_type ;
-    std::vector< std::pair<point<T,2>, T> > ret;
+// template<typename T, size_t ET>
+// std::vector< std::pair<point<T,2>, T> >
+// integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where )
+// {
+//     assert( is_cut(msh, cl) );
+//     typedef typename cuthho_mesh<T, ET>::point_type point_type ;
+//     std::vector< std::pair<point<T,2>, T> > ret;
     
     
-    auto integration_msh = cl.user_data.integration_msh ;
-    size_t degree_int = integration_msh.degree_curve ;
-    auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
-    size_t degree_jacobian = para_curve.degree_det;
+//     auto integration_msh = cl.user_data.integration_msh ;
+//     size_t degree_int = integration_msh.degree_curve ;
+//     auto para_curve = Interface_parametrisation_mesh1d(degree_int) ;
+//     size_t degree_jacobian = para_curve.degree_det;
     
-    degree += (degree_jacobian) ;
-    auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
+//     degree += (degree_jacobian) ;
+//     auto qps = edge_quadrature<T>(degree); // Gauss Legendre integration points/weights [-1,1]
     
     
     
-    for (size_t i = 0; i < integration_msh.cells.size(); i++)
-    {
-        auto pts = points(integration_msh,integration_msh.cells[i]);
+//     for (size_t i = 0; i < integration_msh.cells.size(); i++)
+//     {
+//         auto pts = points(integration_msh,integration_msh.cells[i]);
         
-        for (auto itor = qps.begin(); itor != qps.end(); itor++)
-        {
-            auto qp = *itor;
-            auto t = 0.5 * qp.first.x() + 0.5;
-            auto p = para_curve(t , pts , degree_int ) ;
-            point<T,2> pt = point_type( p(0) , p(1) ) ;
-            T jacobian = para_curve.jacobian( t , pts , degree_int ) ;
-            auto w = 0.5 * qp.second * jacobian ;
-            //std::cout<<"t = "<<t << " , pt = "<<pt <<std::endl;
-            // change of variable of g-l quadrature' nodes to [0,1]
-            ret.push_back( std::make_pair(pt, w) );
-        }
-    }
+//         for (auto itor = qps.begin(); itor != qps.end(); itor++)
+//         {
+//             auto qp = *itor;
+//             auto t = 0.5 * qp.first.x() + 0.5;
+//             auto p = para_curve(t , pts , degree_int ) ;
+//             point<T,2> pt = point_type( p(0) , p(1) ) ;
+//             T jacobian = para_curve.jacobian( t , pts , degree_int ) ;
+//             auto w = 0.5 * qp.second * jacobian ;
+//             //std::cout<<"t = "<<t << " , pt = "<<pt <<std::endl;
+//             // change of variable of g-l quadrature' nodes to [0,1]
+//             ret.push_back( std::make_pair(pt, w) );
+//         }
+//     }
     
-    return ret;
-}
+//     return ret;
+// }
 
 template<typename T, size_t ET>
 T
