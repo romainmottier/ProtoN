@@ -39,7 +39,7 @@ template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
 make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where)
 {
-    std::cout << offset(msh,cl) << std::endl;
+
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
 
