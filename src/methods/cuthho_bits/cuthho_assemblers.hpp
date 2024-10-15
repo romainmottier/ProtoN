@@ -1485,53 +1485,29 @@ public:
             auto num_faces = faces(msh, cl).size();
             auto dofs = 0;
             if (!is_cut(msh, cl)) {
-                // std::cout << "UNCUT CELL: " << offset(msh, cl) << std::endl;
-                dofs += cbs + num_faces*fbs; // DOFS OF THE CURRENT CELL
-                // std::cout << "Dependant cells:   ";
+                dofs += cbs + num_faces*fbs;
                 for (auto &dp_cl : cl.user_data.dependent_cells_neg) {
-                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
-                    dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
+                    dofs += 2*(cbs + num_faces*fbs); 
                 }
-                // std::cout << std::endl;
-                // std::cout << "Dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_pos) {
-                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
-                    dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
+                    dofs += 2*(cbs + num_faces*fbs); 
                 }
                 cl.user_data.local_dofs = dofs;
-                // std::cout << std::endl;
             }
             else {
-                // std::cout << "CUT CELL: " << offset(msh, cl) << std::endl;    
-                dofs += 2*(cbs + num_faces*fbs); // DOFS OF THE CURRENT CELL
-                // std::cout << "Negative dependant cells:   ";
+                dofs += 2*(cbs + num_faces*fbs); 
                 for (auto &dp_cl : cl.user_data.dependent_cells_neg) {
-                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
-                    dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
+                    dofs += 2*(cbs + num_faces*fbs); 
                 }
-                // std::cout << std::endl;
-                // std::cout << "Positive dependant cells:   ";
                 for (auto &dp_cl : cl.user_data.dependent_cells_pos) {
-                    // std::cout << dp_cl << "   ";
                     num_faces = faces(msh, msh.cells[dp_cl]).size();
-                    dofs += 2*(cbs + num_faces*fbs); // ADDING DOFS OF BOTH SIDES OF THE DEPENDENT CELLS
-                }
-                // std::cout << std::endl;
-                if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG || cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
-                    num_faces = faces(msh, msh.cells[cl.user_data.paired_cell]).size();
-                    if (!is_cut(msh,msh.cells[cl.user_data.paired_cell])) {
-                        dofs += cbs + num_faces*fbs; // ADING THE DOFS OF THE PAIRED CELL FOR THE COMPUTATION OF JUMP IN THE CURRENT CELL
-                    }
-                    else {
-                        dofs += 2*(cbs + num_faces*fbs); // ADING THE DOFS OF THE PAIRED CELL FOR THE COMPUTATION OF JUMP IN THE CURRENT CELL
-                    }
+                    dofs += 2*(cbs + num_faces*fbs); 
                 }
                 cl.user_data.local_dofs = dofs;
             }
-            // std::cout << "local dofs = " << cl.user_data.local_dofs << std::endl << std::endl;
         }
         // Vérif n_dofs
         auto n_dofs = 0;
