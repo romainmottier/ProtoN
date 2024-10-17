@@ -29,8 +29,8 @@ public:
         auto dir_jump = test_case.dirichlet_jump;
 
         // OPERATORS
-        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function);
-        auto stab_o = make_hho_stabilization(msh, P_OK, hdi, stab_parms);
+        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function); // renvoie les contribution des coté i et ibar 
+        auto stab_o = make_hho_stabilization(msh, P_OK, hdi, stab_parms);          // renvoie les contribtions des cotés i et ibar 
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, stab_parms);
         auto stab = stab_o + stab_ill_dofs;
 

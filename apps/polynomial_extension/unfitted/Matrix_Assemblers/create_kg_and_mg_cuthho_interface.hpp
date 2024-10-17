@@ -78,7 +78,7 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
       auto lc = contrib.first;
       auto f = contrib.second;
       auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-    //   assembler.assemble_extended(msh, cell, lc, f);  
+    //   assembler.assemble_extended(msh, pair, lc, f);  
     //   assembler.assemble_mass(msh, msh.cells[std::get<0>(pair)], cell_mass);
     } 
     std::cout << "POK DONE" << std::endl;

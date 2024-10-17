@@ -20,6 +20,8 @@
  * DOI: 10.1016/j.cam.2017.09.017
  */
 
+ using Tuple = std::tuple<double,element_location,std::vector<double>>;
+
 ////////////////////////  STATIC CONDENSATION  //////////////////////////
 template<typename T>
 std::pair<   Matrix<T, Dynamic, Dynamic>, Matrix<T, Dynamic, 1>  >
@@ -251,21 +253,22 @@ void set_dir_func(const Function& f) {
     }
     
     std::vector<assembly_index>
-    init_asm_map_extended(const Mesh& msh, const typename Mesh::cell_type& cl)
-    {
-        bool double_unknowns = ( location(msh, cl) == element_location::ON_INTERFACE
-                                 && loc_zone == element_location::ON_INTERFACE );
+    init_asm_map_extended(const Mesh& msh, Tuple P) {
 
-        std::vector<assembly_index> asm_map;
-
+        // CELL INFOS
+        auto cell_index = std::get<0>(P);
+        auto cl = msh.cells[cell_index];
+        
         // DOFS
         auto celdeg = di.cell_degree();
         auto facdeg = di.face_degree();
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
         auto fbs = face_basis<Mesh,T>::size(facdeg);
         auto fcs = faces(msh, cl);
-        auto num_faces = fcs.size();
-        asm_map.reserve(cl.user_data.local_dofs);
+        auto num_faces = fcs.size();    
+        auto local_dofs = cbs + num_faces*fbs;    
+        std::vector<assembly_index> asm_map;
+        asm_map.reserve(local_dofs);
 
         // CELL OFFSET
         size_t cell_offset = cell_table.at(offset(msh, cl)); 
@@ -541,39 +544,44 @@ void set_dir_func(const Function& f) {
     }
          
     void
-    assemble_bis_extended(const Mesh& msh, const typename Mesh::cell_type& cl,
+    assemble_bis_extended(const Mesh& msh, Tuple P,
                  const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs)
     {
+        
+        // CELL INFOS
+        auto cell_index = std::get<0>(P);
+        auto cl = msh.cells[cell_index];
+
         if( !(location(msh, cl) == loc_zone
               || location(msh, cl) == element_location::ON_INTERFACE
               || loc_zone == element_location::ON_INTERFACE ) )
             return;
         
-        auto asm_map = init_asm_map_extended(msh, cl);
-        auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
-        assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
+        auto asm_map = init_asm_map_extended(msh, P);
+        // auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
+        // assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
 
-        // ASSEMBLY OF STIFFNESS MATRIX
-        for (size_t i = 0; i < lhs.rows(); i++) {
-            if (!asm_map[i].assemble())
-                continue;
-            for (size_t j = 0; j < lhs.cols(); j++) {
-                if (asm_map[j].assemble())
-                    triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
-                else {
-	                int itmp=asm_map[i];
-                    RHS(itmp) -= lhs(i,j)*dirichlet_data(j);
-		        }
-            }
-        }
+        // // ASSEMBLY OF STIFFNESS MATRIX
+        // for (size_t i = 0; i < lhs.rows(); i++) {
+        //     if (!asm_map[i].assemble())
+        //         continue;
+        //     for (size_t j = 0; j < lhs.cols(); j++) {
+        //         if (asm_map[j].assemble())
+        //             triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
+        //         else {
+	    //             int itmp=asm_map[i];
+        //             RHS(itmp) -= lhs(i,j)*dirichlet_data(j);
+		//         }
+        //     }
+        // }
         
-        // ASSEMBLY OF THE RHS
-        for (size_t i = 0; i < rhs.rows(); i++) {
-            if (!asm_map[i].assemble())
-                continue;
-            int itmp   = asm_map[i]; 
-            RHS(itmp) += rhs(i);       
-        }
+        // // ASSEMBLY OF THE RHS
+        // for (size_t i = 0; i < rhs.rows(); i++) {
+        //     if (!asm_map[i].assemble())
+        //         continue;
+        //     int itmp   = asm_map[i]; 
+        //     RHS(itmp) += rhs(i);       
+        // }
     }
                   
     void
@@ -1220,10 +1228,10 @@ public:
     }
 
     void
-    assemble_extended(const Mesh& msh, const typename Mesh::cell_type& cl,
+    assemble_extended(const Mesh& msh, Tuple P,
              const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs)
     {
-        this->assemble_bis_extended(msh, cl, lhs, rhs);
+        this->assemble_bis_extended(msh, P, lhs, rhs);
     }
            
     void
