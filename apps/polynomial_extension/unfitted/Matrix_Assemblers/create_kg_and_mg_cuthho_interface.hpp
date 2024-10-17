@@ -74,25 +74,26 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
     // auto dofs_proj = assembler.make_projection_operator(msh, hdi, system_size, sol_fun);
     // Loop over POK
     for (auto& pair : Pairs.first) {
-      auto contrib = method.make_contrib_POK(msh, pair, hdi, test_case);
-      auto lc = contrib.first;
-      auto f = contrib.second;
-      auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-    //   assembler.assemble_extended(msh, pair, lc, f);  
-    //   assembler.assemble_mass(msh, msh.cells[std::get<0>(pair)], cell_mass);
+        std::cout << "Cell: " << std::get<0>(pair) << std::endl;
+        auto contrib = method.make_contrib_POK(msh, pair, hdi, test_case);
+        auto lc = contrib.first;
+        auto f = contrib.second;
+        auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
+        assembler.assemble_extended(msh, pair, lc, f);  
+        //   assembler.assemble_mass(msh, msh.cells[std::get<0>(pair)], cell_mass);
     } 
     std::cout << "POK DONE" << std::endl;
     // Loop over PKO
     for (auto& pair : Pairs.second) {
-      auto contrib = method.make_contrib_PKO(msh, pair, hdi, test_case);
-      auto lc = contrib.first;
-      auto f = contrib.second;
+        auto contrib = method.make_contrib_PKO(msh, pair, hdi, test_case);
+        auto lc = contrib.first;
+        auto f = contrib.second;
         //   auto sub_cell_mass = method.make_contrib_mass(msh, cell, test_case, hdi);
-            //   size_t n_dof = assembler.n_dof(msh,cell);
-    //   Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof,n_dof);
-    //   mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
-    //   assembler.assemble_extended(msh, cell, lc, f);  
-    //   assembler.assemble_mass(msh, cell, mass);
+        //   size_t n_dof = assembler.n_dof(msh,cell);
+        //   Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof,n_dof);
+        //   mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
+        //   assembler.assemble_extended(msh, cell, lc, f);  
+        //   assembler.assemble_mass(msh, cell, mass);
     } 
     std::cout << "PKO DONE" << std::endl;
     // Loop over cut cells 

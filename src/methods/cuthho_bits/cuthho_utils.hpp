@@ -699,7 +699,13 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
 
     auto fcs = faces(msh, cl);
     auto num_faces = fcs.size();
-    auto local_dofs = cbs + num_faces*fbs;
+
+    auto current_dofs = cbs + num_faces*fbs;
+    if (is_cut(msh,cl)) 
+        current_dofs = 2*current_dofs;
+    auto extended_dofs = 2*(cbs + num_faces*fbs);
+    auto nb_dp_cells = std::get<2>(PAIRE).size();
+    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
 
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
     Matrix<T, Dynamic, Dynamic> If   = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
@@ -758,7 +764,13 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
 
     auto fcs = faces(msh, cl);
     auto num_faces = fcs.size();
-    auto local_dofs = cbs + num_faces*fbs;
+
+    auto current_dofs = cbs + num_faces*fbs;
+    if (is_cut(msh,cl)) 
+        current_dofs = 2*current_dofs;
+    auto extended_dofs = 2*(cbs + num_faces*fbs);
+    auto nb_dp_cells = std::get<2>(PAIRE).size();
+    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
 
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
     Matrix<T, Dynamic, Dynamic> If   = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
@@ -1237,7 +1249,12 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     auto fcs = faces(msh, cl);
     auto ns  = normals(msh, cl);
     auto num_faces = fcs.size();
-    auto local_dofs = cbs + num_faces*fbs; 
+    auto current_dofs = cbs + num_faces*fbs;
+    if (is_cut(msh,cl)) 
+        current_dofs = 2*current_dofs;
+    auto extended_dofs = 2*(cbs + num_faces*fbs);
+    auto nb_dp_cells = std::get<2>(P_OK).size();
+    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
     
     matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
     matrix_type gr_rhs = matrix_type::Zero(gbs, local_dofs);

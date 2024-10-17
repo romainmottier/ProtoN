@@ -276,72 +276,32 @@ void set_dir_func(const Function& f) {
         auto cbs_cut = 2*cbs; // CELL DEGREES OF FREEDOM OF DEPENDENT CELLS 
 
         ///////////////////////////////////////////// ASSEMBLY OF THE DOFS OF THE CURRENT CELLS 
-        {
-            // CELL DOFS
-            auto cbs_loc = cbs; 
-            if(is_cut(msh,cl))
-                cbs_loc = 2*cbs;
-            for (size_t i = 0; i < cbs_loc; i++)
-                asm_map.push_back(assembly_index(cell_LHS_offset+i, true));
-            // FACES DOFS
+        // CELL DOFS
+        auto cbs_loc = cbs; 
+        if(is_cut(msh,cl))
+            cbs_loc = 2*cbs;
+        for (size_t i = 0; i < cbs_loc; i++)
+            asm_map.push_back(assembly_index(cell_LHS_offset+i, true));
+        // FACES DOFS
+        for (size_t face_i = 0; face_i < num_faces; face_i++) {
+            auto fc = fcs[face_i];
+            auto face_LHS_offset = face_SOL_offset(msh, fc);
+            bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
+            for (size_t i = 0; i < fbs; i++)
+                asm_map.push_back(assembly_index(face_LHS_offset+i, !dirichlet));
+        }
+        // ASSEMBLY OF THE FACES IN THE POSITIVE SIDE IF THE CELL IS CUT 
+        if(is_cut(msh,cl)) {
             for (size_t face_i = 0; face_i < num_faces; face_i++) {
                 auto fc = fcs[face_i];
-                auto face_LHS_offset = face_SOL_offset(msh, fc);
+                auto d = (location(msh, fc) == element_location::ON_INTERFACE) ? fbs : 0;
+                auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
                 bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
                 for (size_t i = 0; i < fbs; i++)
-                    asm_map.push_back(assembly_index(face_LHS_offset+i, !dirichlet));
-            }
-            // ASSEMBLY OF THE FACES IN THE POSITIVE SIDE IF THE CELL IS CUT 
-            if(is_cut(msh,cl)) {
-                for (size_t face_i = 0; face_i < num_faces; face_i++) {
-                    auto fc = fcs[face_i];
-                    auto d = (location(msh, fc) == element_location::ON_INTERFACE) ? fbs : 0;
-                    auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
-                    bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                    if (dirichlet)
-                        std::cout << "Dirichlet boundary on cut cell detected." << std::endl;
-                    for (size_t i = 0; i < fbs; i++)
-                        asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
-                }
+                    asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
             }
         }
-
-        ///////////////////////////////////////////// ASSEMBLY OF THE PAIRED DOFS IF THE CURRENT CELL IS ILL-CUT 
-        ///////////////////////////////////////////// PAIRED CELL = WHICH STABILIZES THE CURRENT CELL 
-        if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG || cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
-            // CELL DOFS
-            auto cbs_loc = cbs; 
-            auto paired_cl = msh.cells[cl.user_data.paired_cell];
-            cell_offset = cell_table.at(offset(msh, paired_cl)); 
-            cell_LHS_offset = cell_offset*cbs;
-            if(is_cut(msh,paired_cl))
-                cbs_loc = 2*cbs;
-            for (size_t i = 0; i < cbs_loc; i++) 
-                asm_map.push_back(assembly_index(cell_LHS_offset+i, true));
-            // FACES DOFS
-            fcs = faces(msh, paired_cl);
-            for (size_t face_i = 0; face_i < num_faces; face_i++) {
-                auto fc = fcs[face_i];
-                auto face_LHS_offset = face_SOL_offset(msh, fc);
-                bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                for (size_t i = 0; i < fbs; i++)
-                    asm_map.push_back(assembly_index(face_LHS_offset+i, !dirichlet));
-            }
-            // ASSEMBLY OF THE FACES IN THE POSITIVE SIDE IF THE CELL IS CUT 
-            if(is_cut(msh,paired_cl)) {
-                for (size_t face_i = 0; face_i < num_faces; face_i++) {
-                    auto fc = fcs[face_i];
-                    auto d = (location(msh, fc) == element_location::ON_INTERFACE) ? fbs : 0;
-                    auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
-                    bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                    if (dirichlet)
-                        std::cout << "Dirichlet boundary on cut cell detected." << std::endl;
-                    for (size_t i = 0; i < fbs; i++)
-                        asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
-                }
-            }
-        }
-
+    
         ///////////////////////////////////////////// ASSEMBLY OF THE DEPENDEND DOFS 
         // DEPENDENT CELLS = CELLS STABILIZED BY THE CURRENT CELL
         // LOOP OVER DEPENDENT CELLS
@@ -371,8 +331,6 @@ void set_dir_func(const Function& f) {
                     auto d = (location(msh, fc) == element_location::ON_INTERFACE) ? fbs : 0;
                     auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
                     bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                    if (dirichlet)
-                        std::cout << "Dirichlet boundary on cut cell detected." << std::endl;
                     for (size_t i = 0; i < fbs; i++)
                         asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
                 }
@@ -558,6 +516,8 @@ void set_dir_func(const Function& f) {
             return;
         
         auto asm_map = init_asm_map_extended(msh, P);
+        std::cout << "   asm_map.size() = " << asm_map.size() << std::endl;
+        std::cout << "   lhs.size() = " << lhs.rows() << "x" << lhs.cols() << std::endl;
         // auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
         // assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
 
