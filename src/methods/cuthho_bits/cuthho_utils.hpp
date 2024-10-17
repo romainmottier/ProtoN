@@ -1292,7 +1292,12 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     auto fcs = faces(msh, cl);
     auto ns  = normals(msh, cl);
     auto num_faces = fcs.size();
-    auto local_dofs = cbs + num_faces*fbs; 
+    auto current_dofs = cbs + num_faces*fbs;
+    if (is_cut(msh,cl)) 
+        current_dofs = 2*current_dofs;
+    auto extended_dofs = 2*(cbs + num_faces*fbs);
+    auto nb_dp_cells = std::get<2>(P_KO).size();
+    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
     
     matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
     matrix_type gr_rhs = matrix_type::Zero(gbs, local_dofs);
@@ -1887,34 +1892,14 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
 {
     if ( location(msh, cl) == where )
         return make_rhs(msh, cl, degree, f);
-    /*
-    if(cl.user_data.offset_subcells>1)
-    {
-        for (auto offset:cl.user_data.offset_subcells)
-        {
-            cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
-            auto cbs = cb.size();
-            //  std::cout<<"I M in make_rhs cuttho_utils  "<<std::endl;
-            Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-            auto qps = integrate(msh, cl, 2*degree, where);
-            for (auto& qp : qps)
-            {
-                auto phi = cb.eval_basis(qp.first);
-                //std::cout<<"Point to find "<<qp.first.x()<<","<<qp.first.y()<<std::endl;
-                ret += qp.second * phi * f(qp.first);
-            }
-        }
-    }
-    */
+
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
-   //  std::cout<<"I M in make_rhs cuttho_utils  "<<std::endl;
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
     auto qps = integrate(msh, cl, 2*degree, where);
     for (auto& qp : qps)
     {
         auto phi = cb.eval_basis(qp.first);
-        //std::cout<<"Point to find "<<qp.first.x()<<","<<qp.first.y()<<std::endl;
         ret += qp.second * phi * f(qp.first);
     }
     return ret;

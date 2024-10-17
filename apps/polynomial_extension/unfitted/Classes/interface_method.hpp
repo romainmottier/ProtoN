@@ -28,6 +28,10 @@ public:
         auto level_set_function = test_case.level_set_;
         auto dir_jump = test_case.dirichlet_jump;
 
+        // SUB-CELL INFOS
+        auto cell_index = std::get<0>(P_OK);
+        auto cl = msh.cells[cell_index];
+
         // OPERATORS
         auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function); // renvoie les contribution des coté i et ibar 
         auto stab_o = make_hho_stabilization(msh, P_OK, hdi, stab_parms);          // renvoie les contribtions des cotés i et ibar 
@@ -35,8 +39,8 @@ public:
         auto stab = stab_o + stab_ill_dofs;
 
         Mat lc = kappa * (gr.second + stab); 
-        Mat f  = Mat::Zero(3,1);
-        // Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+        // Mat f  = Mat::Zero(3,1);
+        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
 
         return std::make_pair(lc, f);
     }
@@ -59,8 +63,11 @@ public:
         auto stab = make_hho_stabilization(msh, P_KO, hdi, stab_parms);
 
         Mat lc = kappa * (gr.second + stab);    
-        Mat f  = Mat::Zero(3,1);
-        // Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+
+        // SUB-CELL INFOS
+        auto cell_index = std::get<0>(P_KO);
+        auto cl = msh.cells[cell_index];
+        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
 
         return std::make_pair(lc, f);
     }
@@ -72,12 +79,22 @@ public:
         auto cell_index = std::get<0>(P);
         auto cl = msh.cells[cell_index];
         auto loc = std::get<1>(P);      
-        auto celdeg = hdi.cell_degree();
-        auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg); 
         
-        auto local_dofs = cbs;
-        if (is_cut(msh,cl))
-            local_dofs = 2*cbs;
+        // DISCRETIZATION INFOS
+        const auto celdeg  = hdi.cell_degree();
+        const auto facdeg  = hdi.face_degree();
+        const auto graddeg = hdi.grad_degree();
+        cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
+        auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+        auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+        auto fcs = faces(msh, cl);
+        auto num_faces = fcs.size();
+        auto current_dofs = cbs + num_faces*fbs;
+        if (is_cut(msh,cl)) 
+            current_dofs = 2*current_dofs;
+        auto extended_dofs = 2*(cbs + num_faces*fbs);
+        auto nb_dp_cells = std::get<2>(P).size();
+        auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
 
         Mat cell_mass = Mat::Zero(local_dofs,local_dofs);
         Mat mass = make_mass_matrix(msh, cl, hdi.cell_degree(), loc);
@@ -87,12 +104,10 @@ public:
         }
         else {
             mass *= (1.0/(test_case.parms.c_2*test_case.parms.c_2*test_case.parms.kappa_2));
-            if (is_cut(msh,cl)) {
+            if (is_cut(msh,cl))
                 cell_mass.block(cbs,cbs,cbs,cbs) = mass;
-            }
-            else {
+            else
                 cell_mass.block(0,0,cbs,cbs) = mass;
-            }
         }
 
         return cell_mass;

@@ -221,6 +221,7 @@ class linear_solver
         std::vector< Triplet<T> > triplets_cc;
         triplets_cc.resize(nnz_cc);
         m_Kcc_inv = SparseMatrix<T>( m_n_c_dof, m_n_c_dof );
+
         #ifdef HAVE_INTEL_TBB2
         size_t stride_eq = 0;
         size_t stride_l = 0;
@@ -253,6 +254,7 @@ class linear_solver
             stride_n_block_eq   += n_cells * n_cbs;
             stride_n_block_l    += n_cells * n_cbs * n_cbs;
         }
+
         #else
 
         size_t stride_eq = 0;
@@ -280,12 +282,14 @@ class linear_solver
             stride_eq   += n_cbs;
             stride_l    += n_cbs * n_cbs;
         }
+
         #endif
         
         m_Kcc_inv.setFromTriplets( triplets_cc.begin(), triplets_cc.end() );
         triplets_cc.clear();
         m_K = m_Kff - m_Kfc*m_Kcc_inv*m_Kcf;
         m_is_decomposed_Q = false;
+
         return;
 
     }

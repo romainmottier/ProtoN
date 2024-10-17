@@ -305,38 +305,34 @@ void set_dir_func(const Function& f) {
         ///////////////////////////////////////////// ASSEMBLY OF THE DEPENDEND DOFS 
         // DEPENDENT CELLS = CELLS STABILIZED BY THE CURRENT CELL
         // LOOP OVER DEPENDENT CELLS
-        std::set<std::set<size_t>> dp_cell_domains;
-        dp_cell_domains.insert(cl.user_data.dependent_cells_neg);
-        dp_cell_domains.insert(cl.user_data.dependent_cells_pos);
-        for (auto &where : dp_cell_domains) {
-            for (auto &dp_cl : where) {
-                // CELL DOFS
-                auto dp_cell = msh.cells[dp_cl];
-                cell_offset = cell_table.at(offset(msh, dp_cell)); 
-                cell_LHS_offset = cell_offset*cbs;
-                for (size_t i = 0; i < cbs_cut; i++)
-                    asm_map.push_back(assembly_index(cell_LHS_offset+i, true));
-                // FACES DOFS
-                fcs = faces(msh, dp_cell);
-                for (size_t face_i = 0; face_i < num_faces; face_i++) {
-                    auto fc = fcs[face_i];
-                    auto face_LHS_offset = face_SOL_offset(msh, fc);
-                    bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                    for (size_t i = 0; i < fbs; i++)
-                        asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet));
-                }
-                // ASSEMBLY OF THE FACES IN THE POSITIVE SIDE 
-                for (size_t face_i = 0; face_i < num_faces; face_i++) {
-                    auto fc = fcs[face_i];
-                    auto d = (location(msh, fc) == element_location::ON_INTERFACE) ? fbs : 0;
-                    auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
-                    bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
-                    for (size_t i = 0; i < fbs; i++)
-                        asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
-                }
+        auto dp_cells = std::get<2>(P);
+        for (auto dp_cl : dp_cells) {
+            // CELL DOFS
+            auto dp_cell = msh.cells[dp_cl];
+            cell_offset = cell_table.at(offset(msh, dp_cell)); 
+            cell_LHS_offset = cell_offset*cbs;
+            for (size_t i = 0; i < cbs_cut; i++)
+                asm_map.push_back(assembly_index(cell_LHS_offset+i, true));
+            // FACES DOFS
+            fcs = faces(msh, dp_cell);
+            for (size_t face_i = 0; face_i < num_faces; face_i++) {
+                auto fc = fcs[face_i];
+                auto face_LHS_offset = face_SOL_offset(msh, fc);
+                bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
+                for (size_t i = 0; i < fbs; i++)
+                    asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet));
+            }
+            // ASSEMBLY OF THE FACES IN THE POSITIVE SIDE 
+            for (size_t face_i = 0; face_i < num_faces; face_i++) {
+                auto fc = fcs[face_i];
+                auto d = (location(msh, fc) == element_location::ON_INTERFACE) ? fbs : 0;
+                auto face_LHS_offset = face_SOL_offset(msh, fc) + d;
+                bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET;
+                for (size_t i = 0; i < fbs; i++)
+                    asm_map.push_back( assembly_index(face_LHS_offset+i, !dirichlet) );
             }
         }
-
+                
         return asm_map;
     }
 
@@ -516,32 +512,30 @@ void set_dir_func(const Function& f) {
             return;
         
         auto asm_map = init_asm_map_extended(msh, P);
-        std::cout << "   asm_map.size() = " << asm_map.size() << std::endl;
-        std::cout << "   lhs.size() = " << lhs.rows() << "x" << lhs.cols() << std::endl;
-        // auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
-        // assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
+        auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
+        assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
 
-        // // ASSEMBLY OF STIFFNESS MATRIX
-        // for (size_t i = 0; i < lhs.rows(); i++) {
-        //     if (!asm_map[i].assemble())
-        //         continue;
-        //     for (size_t j = 0; j < lhs.cols(); j++) {
-        //         if (asm_map[j].assemble())
-        //             triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
-        //         else {
-	    //             int itmp=asm_map[i];
-        //             RHS(itmp) -= lhs(i,j)*dirichlet_data(j);
-		//         }
-        //     }
-        // }
+        // ASSEMBLY OF STIFFNESS MATRIX
+        for (size_t i = 0; i < lhs.rows(); i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            for (size_t j = 0; j < lhs.cols(); j++) {
+                if (asm_map[j].assemble())
+                    triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
+                else {
+	                int itmp=asm_map[i];
+                    RHS(itmp) -= lhs(i,j)*dirichlet_data(j);
+		        }
+            }
+        }
         
-        // // ASSEMBLY OF THE RHS
-        // for (size_t i = 0; i < rhs.rows(); i++) {
-        //     if (!asm_map[i].assemble())
-        //         continue;
-        //     int itmp   = asm_map[i]; 
-        //     RHS(itmp) += rhs(i);       
-        // }
+        // ASSEMBLY OF THE RHS
+        for (size_t i = 0; i < rhs.rows(); i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            int itmp   = asm_map[i]; 
+            RHS(itmp) += rhs(i);       
+        }
     }
                   
     void
@@ -574,7 +568,6 @@ void set_dir_func(const Function& f) {
 
         auto asm_map = init_asm_map(msh, cl);
         auto dirichlet_data = get_dirichlet_data(msh, cl);
-
         assert( asm_map.size() == mass.rows() && asm_map.size() == mass.cols() );
 
         // MASS
@@ -590,7 +583,38 @@ void set_dir_func(const Function& f) {
             }
         }
     }
-            
+
+    void
+    assemble_bis_mass_extended(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& mass) {
+
+        // CELL INFOS
+        auto cell_index = std::get<0>(P);
+        auto cl = msh.cells[cell_index];
+
+        if( !(location(msh, cl) == loc_zone
+              || location(msh, cl) == element_location::ON_INTERFACE
+              || loc_zone == element_location::ON_INTERFACE ) )
+            return;
+
+        auto asm_map = init_asm_map_extended(msh, P);
+        auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
+        assert( asm_map.size() == mass.rows() && asm_map.size() == mass.cols() );
+
+        // MASS
+        for (size_t i = 0; i < mass.rows(); i++)
+        {
+            if (!asm_map[i].assemble())
+                continue;
+
+            for (size_t j = 0; j < mass.cols(); j++)
+            {
+                if ( asm_map[j].assemble() )
+                    triplets_mass.push_back( Triplet<T>(asm_map[i], asm_map[j], mass(i,j)) );
+            }
+        }
+    }
+
+
     Matrix<T, Dynamic, 1>
     get_solF(const Mesh& msh, const typename Mesh::cell_type& cl,
              const Matrix<T, Dynamic, 1>& solution) {
@@ -1205,6 +1229,13 @@ public:
              const Matrix<T, Dynamic, Dynamic>& mass)
     {
         this->assemble_bis_mass(msh, cl, mass);
+    }
+
+    void
+    assemble_mass_extended(const Mesh& msh, Tuple P,
+             const Matrix<T, Dynamic, Dynamic>& mass)
+    {
+        this->assemble_bis_mass_extended(msh, P, mass);
     }
 
     void classify_cells(const Mesh& msh){
