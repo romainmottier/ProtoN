@@ -445,13 +445,10 @@ public:
            }
            
            auto offset_cl = offset(msh,cell);
-           std::cout << "Cell " << offset_cl << " : ";
 
            cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
            auto cbs = cell_basis.size();
            if (location(msh, cell) == element_location::ON_INTERFACE) {
-
-               std::cout << "CUT" << std::endl;
                
                auto dofs_n = assembler.take_local_data_extended(msh, cell, x_dof, element_location::IN_NEGATIVE_SIDE);
                auto dofs_p = assembler.take_local_data_extended(msh, cell, x_dof, element_location::IN_POSITIVE_SIDE);
@@ -503,8 +500,6 @@ public:
            }
            else {
                
-               std::cout << "UNCUT" << std::endl;
-
                auto dofs = assembler.take_local_data_extended(msh, cell, x_dof);
                 auto cell_dofs = dofs.head(cbs);
 

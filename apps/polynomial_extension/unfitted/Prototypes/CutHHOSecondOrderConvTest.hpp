@@ -19,7 +19,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     bool sc_Q = false;
     
     int ch;
-    while ( (ch = getopt(argc, argv, "k:l:r:n:d:c:s")) != -1 ) {
+    // ../unfitted_elasto_acoustic_waves -k 0 -l 0 -r 4 -n 0 -c 0 -s 1 -f 1
+    while ( (ch = getopt(argc, argv, "k:l:n:r:c:s:f:")) != -1 ) {
         switch(ch) {
             case 'k':
                 degree = atoi(optarg);
@@ -27,20 +28,20 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             case 'l':
                 l_divs = atoi(optarg);
             break;
-            case 'r':
-                int_refsteps = atoi(optarg);
-            break;
             case 'n':
                 nt_divs = atoi(optarg);
             break;
-            case 'd':
-                dump_debug = atoi(optarg);
+            case 'r':
+                int_refsteps = atoi(optarg);
             break;
             case 'c':
                 sc_Q = atoi(optarg);
             break;
             case 's':
                 direct_solver_Q = atoi(optarg);
+            break;
+            case 'f':
+                dump_debug = atoi(optarg);
             break;
             case '?':
             default:
@@ -172,19 +173,19 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
             x_dof = analysis.solve(assembler.RHS);
 
-            // // // // ##################################################
-            // // // // ################################################## postprocess
-            // // // // ##################################################
-            // // // error_file << "Number of equations : " << analysis.n_equations() << std::endl;
-            // // // if (dump_debug) {
-            // // //   std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
-            // // //   postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
-            // // // }
-            // // // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
+            // ##################################################
+            // ################################################## postprocess
+            // ##################################################
+            error_file << "Number of equations : " << analysis.n_equations() << std::endl;
+            if (dump_debug) {
+              std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
+              postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+            }
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
         }
-        // error_file << std::endl << std::endl;
+        error_file << std::endl << std::endl;
     }
-    // error_file.close();
+    error_file.close();
     std::cout << std::endl;
 }
 

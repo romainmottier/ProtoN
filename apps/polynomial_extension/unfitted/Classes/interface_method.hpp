@@ -157,23 +157,45 @@ public:
     //     return mass;
     // }
     
-    // Vect
-    // make_contrib_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
-    //              const testType &test_case, const hho_degree_info hdi) {
-    //     if( location(msh, cl) != element_location::ON_INTERFACE )
-    //         return make_contrib_rhs_uncut(msh, cl, hdi, test_case);
-    //     else // on interface
-    //         return make_contrib_rhs_cut(msh, cl, test_case, hdi);
-    // }
+    Vect
+    make_contrib_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
+                 const testType &test_case, const hho_degree_info hdi) {
+        if( location(msh, cl) != element_location::ON_INTERFACE )
+            return make_contrib_rhs_uncut(msh, cl, hdi, test_case);
+        else // on interface
+            return make_contrib_rhs_cut(msh, cl, test_case, hdi);
+    }
     
-    // Vect
-    // make_contrib_rhs_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
-    //                    const hho_degree_info hdi, const testType &test_case)
-    // {
-    //     Mat f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
-    //     return f;
-    // }
-    
+    Vect
+    make_contrib_rhs_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                       const hho_degree_info hdi, const testType &test_case)
+    {
+        Mat f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+        return f;
+    }
+
+    Vect
+    make_contrib_rhs_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
+                     const testType &test_case, const hho_degree_info hdi) {
+
+        auto parms = test_case.parms;
+        auto level_set_function = test_case.level_set_;
+        auto dir_jump = test_case.dirichlet_jump;
+
+        auto celdeg = hdi.cell_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+
+        ///////////////    RHS
+        Vect f = Vect::Zero(cbs*2);
+        // neg part
+        // // // f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        // // // // pos part
+        // // // f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+
+        return f;
+    }
+
+
     // std::pair<Mat, Vect>
     // make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
     //                    const hho_degree_info hdi, const testType &test_case) {

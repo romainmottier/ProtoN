@@ -1323,7 +1323,7 @@ public:
 
         if (location(msh, cl) == element_location::ON_INTERFACE) {
             if (cl.user_data.agglo_set == cell_agglo_set::T_OK) {
-                std::cout << "TOK" << std::endl;
+                // std::cout << "TOK" << std::endl;
                 if (where == element_location::IN_NEGATIVE_SIDE)
                     cell_SOL_offset = this->cell_table.at(cell_offset)*cbs;
                 else if (where == element_location::IN_POSITIVE_SIDE)
@@ -1331,7 +1331,7 @@ public:
                 else  throw std::invalid_argument("Invalid location");
             }
             if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
-                std::cout << "TKOneg" << std::endl;
+                // std::cout << "TKOneg" << std::endl;
                 if (where == element_location::IN_NEGATIVE_SIDE)
                     cell_SOL_offset = this->cell_table.at(cell_offset)*cbs;
                 else if (where == element_location::IN_POSITIVE_SIDE)
@@ -1339,7 +1339,7 @@ public:
                 else  throw std::invalid_argument("Invalid location");
             }
             if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
-                std::cout << "TKOpos" << std::endl;
+                // std::cout << "TKOpos" << std::endl;
                 if (where == element_location::IN_NEGATIVE_SIDE)
                     cell_SOL_offset = this->cell_table.at(cell_offset)*cbs;
                 else if (where == element_location::IN_POSITIVE_SIDE)
