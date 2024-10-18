@@ -31,15 +31,16 @@ public:
         // SUB-CELL INFOS
         auto cell_index = std::get<0>(P_OK);
         auto cl = msh.cells[cell_index];
+        auto celdeg = hdi.cell_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
         // OPERATORS
-        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function); // renvoie les contribution des coté i et ibar 
-        auto stab_o = make_hho_stabilization(msh, P_OK, hdi, stab_parms);          // renvoie les contribtions des cotés i et ibar 
+        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function); 
+        auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);          
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, stab_parms);
-        auto stab = stab_o + stab_ill_dofs;
+        auto stab = stab_usual + stab_ill_dofs;
 
         Mat lc = kappa * (gr.second + stab); 
-        // Mat f  = Mat::Zero(3,1);
         Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
 
         return std::make_pair(lc, f);
@@ -49,6 +50,10 @@ public:
     make_contrib_PKO(const Mesh& msh, Tuple P_KO, const hho_degree_info hdi, const testType &test_case) {
 
         // CELL INFOS & PARAMETERS
+        auto cell_index = std::get<0>(P_KO);
+        auto cl = msh.cells[cell_index];
+        auto celdeg = hdi.cell_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
         T kappa;
         auto stab_parms = test_case.parms;
         if (std::get<1>(P_KO) == element_location::IN_NEGATIVE_SIDE)
@@ -64,9 +69,6 @@ public:
 
         Mat lc = kappa * (gr.second + stab);    
 
-        // SUB-CELL INFOS
-        auto cell_index = std::get<0>(P_KO);
-        auto cl = msh.cells[cell_index];
         Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
 
         return std::make_pair(lc, f);
@@ -113,49 +115,6 @@ public:
         return cell_mass;
 
     }
-
-    // Mat
-    // make_contrib_mass(const Mesh& msh, Tuple P, const testType &test_case, const hho_degree_info hdi) {
-
-    //     if (location(msh, cl) != element_location::ON_INTERFACE)
-    //         return make_contrib_uncut_mass(msh, P, hdi, test_case);
-
-    //     else // on interface
-    //         return make_contrib_cut_mass(msh, P, hdi, test_case);
-
-    // }
-
-    // Mat
-    // make_contrib_uncut_mass(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
-        
-    //     T c;
-    //     if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
-    //         c = test_case.parms.c_1;
-    //     else
-    //         c = test_case.parms.c_2;
-    //     Mat mass = make_mass_matrix(msh, cl, hdi.cell_degree());
-    //     mass *= (1.0/(c*c*test_case.parms.kappa_1));
-    //     return mass;
-    // }
-    
-    // Mat
-    // make_contrib_cut_mass(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
-
-    //     Mat mass_neg = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-    //     Mat mass_pos = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
-    //     mass_neg *= (1.0/(test_case.parms.c_1*test_case.parms.c_1*test_case.parms.kappa_1));
-    //     mass_pos *= (1.0/(test_case.parms.c_2*test_case.parms.c_2*test_case.parms.kappa_2));
-        
-    //     size_t n_data_neg = mass_neg.rows();
-    //     size_t n_data_pos = mass_pos.rows();
-    //     size_t n_data = n_data_neg + n_data_pos;
-        
-    //     Mat mass = Mat::Zero(n_data,n_data);
-    //     mass.block(0,0,n_data_neg,n_data_neg) = mass_neg;
-    //     mass.block(n_data_neg,n_data_neg,n_data_pos,n_data_pos) = mass_pos;
-
-    //     return mass;
-    // }
     
     Vect
     make_contrib_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
@@ -188,41 +147,13 @@ public:
         ///////////////    RHS
         Vect f = Vect::Zero(cbs*2);
         // neg part
-        // // // f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
-        // // // // pos part
-        // // // f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        // pos part
+        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
 
         return f;
     }
 
-
-    // std::pair<Mat, Vect>
-    // make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
-    //                    const hho_degree_info hdi, const testType &test_case) {
-
-    //     // PARAMETERS
-    //     T kappa;
-    //     if (location(msh, cl) == element_location::IN_NEGATIVE_SIDE){
-    //         kappa = test_case.parms.kappa_1;
-    //     }
-    //     else {
-    //         kappa = test_case.parms.kappa_2;
-    //     }
-    //     auto stab_parms = test_case.parms;
-    //     auto level_set_function = test_case.level_set_;
-
-    //     // OPERATORS
-    //     auto gr  = make_hho_gradrec_vector_extended(msh, cl, hdi, level_set_function);
-    //     Mat stab = make_hho_naive_stabilization_extended(msh, cl, hdi, stab_parms);
-    //     Mat lc   = kappa * (gr.second + stab);    
-    //     Mat f    = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
-
-    //      std::cout << "r = " << gr.second << std::endl;
-    //      std::cout << "s = " << stab << std::endl;
-    //      std::cout << "f = " << f << std::endl;
-        
-    //     return std::make_pair(lc, f);
-    // }
 
 };
 

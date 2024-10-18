@@ -15,17 +15,6 @@ public:
     gradrec_interface_method(T eta_)
         : interface_method<T,ET,testType>(), eta(eta_) {}
 
-    void
-    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl, const testType &test_case, const hho_degree_info hdi) {
-
-        auto celdeg = hdi.cell_degree();
-        auto cbs = cell_basis<Mesh,T>::size(celdeg);
-
-        auto penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
-        // ADD ASSEMBLY OF THE PENALTY TERME
-        return;
-        
-    }
 
     Vect
     make_contrib_rhs_cut(const Mesh& msh, const typename Mesh::cell_type& cl,

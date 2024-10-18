@@ -92,13 +92,6 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
         assembler.assemble_mass_extended(msh, pair, cell_mass);
     } 
     std::cout << "PKO DONE" << std::endl;
-    // Loop over cut cells 
-    for (auto& cl : msh.cells) {
-        if (is_cut(msh,cl)) {
-            method.make_contrib_cut(msh, cl, test_case, hdi);         
-        }
-    }
-    std::cout << "PENALTY DONE" << std::endl;
         
     assembler.finalize();
     tc.toc();
