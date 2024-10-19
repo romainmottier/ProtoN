@@ -412,6 +412,8 @@ void set_dir_func(const Function& f) {
         return dirichlet_data;
     }
 
+
+    // ON UTILISE LE FAIT QUE LES CELLLULES COUP2ES NE TOUCHENT PAS LE BORD DU DOMAINE 
     Matrix<T, Dynamic, 1>
     get_dirichlet_data_extended(const Mesh& msh, const typename Mesh::cell_type& cl) {
 
@@ -514,6 +516,7 @@ void set_dir_func(const Function& f) {
         auto asm_map = init_asm_map_extended(msh, P);
         auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
         assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
+        assert(dirichlet_data.size() == lhs.cols());
 
         // ASSEMBLY OF STIFFNESS MATRIX
         for (size_t i = 0; i < lhs.rows(); i++) {

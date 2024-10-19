@@ -148,7 +148,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             else {
               analysis.set_Kg(Kg);
             }
-            
+
             // ##################################################
             // ################################################## Solver
             // ##################################################
@@ -158,7 +158,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             else {
               analysis.set_iterative_solver();
             }
-            analysis.factorize();
+            analysis.factorize(); // SEG FAULT HERE
             
             // ##################################################
             // ################################################## Assembly and loop over cells
