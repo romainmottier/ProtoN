@@ -626,8 +626,8 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
 // STABILIZATION s° + s^\Gamma
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, 
-                                      const hho_degree_info& di, const params<T>& parms = params<T>(),  bool scaled_Q = true) {
+make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, const params<T>& parms = params<T>(),  bool scaled_Q = true) {
+    
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(PAIRE);
     auto loc = std::get<1>(PAIRE);
