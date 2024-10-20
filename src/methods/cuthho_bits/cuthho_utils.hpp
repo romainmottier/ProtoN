@@ -992,7 +992,7 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh,
         Matrix<T,2,1> n = level_set_function.normal(qp.first);
         const vector_type qp_g_phi_n = qp.second * g_phi * n;
 
-        interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+        interface_term.block(0 , 0, gbs, cbs)   -= qp_g_phi_n * c_phi.transpose();
         interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
     }
     gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
