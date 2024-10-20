@@ -67,7 +67,7 @@ typedef cuthho_poly_mesh<RealType>  mesh_type;
 
 // Classes interface methods 
 #include "Classes/interface_method.hpp"
-#include "Classes/gradrec_interface_method.hpp"
+#include "Classes/cut_interface_method.hpp"
 #include "Classes/mixed_interface_method.hpp"
 #include "Classes/gradrec_mixed_interface_method.hpp"
 

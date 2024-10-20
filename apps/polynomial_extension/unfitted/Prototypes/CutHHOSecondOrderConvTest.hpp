@@ -126,7 +126,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 output_mesh_info(msh, level_set_function);
             }
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
-            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            auto method = make_cut_interface_method(msh, 1.0, test_case);
             
             // std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             std::vector<std::pair<size_t,size_t>> cell_basis_data = test_operators(msh, hdi, method, test_case, Kg, Mg);
@@ -181,9 +181,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
               std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
               postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
             }
-            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
+            // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
         }
-        error_file << std::endl << std::endl;
+        // error_file << std::endl << std::endl;
     }
     error_file.close();
     std::cout << std::endl;

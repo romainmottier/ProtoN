@@ -15,64 +15,67 @@ protected:
 
 public:
 
-    std::pair<Mat, Vect>
-    make_contrib_POK(const Mesh& msh, Tuple P_OK, const hho_degree_info hdi, const testType &test_case) {
+    // std::pair<Mat, Vect>
+    // make_contrib_POK(const Mesh& msh, Tuple P_OK, const hho_degree_info hdi, const testType &test_case) {
 
-        // CELL INFOS & PARAMETERS
-        T kappa;
-        auto stab_parms = test_case.parms;
-        if (std::get<1>(P_OK) == element_location::IN_NEGATIVE_SIDE)
-            kappa = stab_parms.kappa_1;
-        else 
-            kappa = stab_parms.kappa_2; 
-        auto level_set_function = test_case.level_set_;
-        auto dir_jump = test_case.dirichlet_jump;
+    //     // CELL INFOS & PARAMETERS
+    //     T kappa;
+    //     auto stab_parms = test_case.parms;
+    //     if (std::get<1>(P_OK) == element_location::IN_NEGATIVE_SIDE)
+    //         kappa = stab_parms.kappa_1;
+    //     else 
+    //         kappa = stab_parms.kappa_2; 
+    //     auto level_set_function = test_case.level_set_;
+    //     auto dir_jump = test_case.dirichlet_jump;
 
-        // SUB-CELL INFOS
-        auto cell_index = std::get<0>(P_OK);
-        auto cl = msh.cells[cell_index];
-        auto celdeg = hdi.cell_degree();
-        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+    //     // SUB-CELL INFOS
+    //     auto cell_index = std::get<0>(P_OK);
+    //     auto cl = msh.cells[cell_index];
+    //     auto celdeg = hdi.cell_degree();
+    //     auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
-        // OPERATORS
-        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function); 
-        auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);          
-        auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, stab_parms);
-        auto stab = stab_usual + stab_ill_dofs;
+    //     // OPERATORS
+    //     auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function); 
+    //     auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);          
+    //     auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, stab_parms);
+    //     auto stab = stab_usual + stab_ill_dofs;
 
-        Mat lc = kappa * (gr.second + stab); 
-        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+    //     Mat lc = kappa * (gr.second + stab); 
 
-        return std::make_pair(lc, f);
-    }
+    //     // AJOUTER SECOND MEMBRE CORRECTEMENT 
+    //     Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+
+    //     return std::make_pair(lc, f);
+    // }
     
-    std::pair<Mat, Vect>
-    make_contrib_PKO(const Mesh& msh, Tuple P_KO, const hho_degree_info hdi, const testType &test_case) {
+    // std::pair<Mat, Vect>
+    // make_contrib_PKO(const Mesh& msh, Tuple P_KO, const hho_degree_info hdi, const testType &test_case) {
 
-        // CELL INFOS & PARAMETERS
-        auto cell_index = std::get<0>(P_KO);
-        auto cl = msh.cells[cell_index];
-        auto celdeg = hdi.cell_degree();
-        auto cbs = cell_basis<Mesh,T>::size(celdeg);
-        T kappa;
-        auto stab_parms = test_case.parms;
-        if (std::get<1>(P_KO) == element_location::IN_NEGATIVE_SIDE)
-            kappa = stab_parms.kappa_1;
-        else 
-            kappa = stab_parms.kappa_2; 
-        auto level_set_function = test_case.level_set_;
-        auto dir_jump = test_case.dirichlet_jump;
+    //     // CELL INFOS & PARAMETERS
+    //     auto cell_index = std::get<0>(P_KO);
+    //     auto cl = msh.cells[cell_index];
+    //     auto celdeg = hdi.cell_degree();
+    //     auto cbs = cell_basis<Mesh,T>::size(celdeg);
+    //     T kappa;
+    //     auto stab_parms = test_case.parms;
+    //     if (std::get<1>(P_KO) == element_location::IN_NEGATIVE_SIDE)
+    //         kappa = stab_parms.kappa_1;
+    //     else 
+    //         kappa = stab_parms.kappa_2; 
+    //     auto level_set_function = test_case.level_set_;
+    //     auto dir_jump = test_case.dirichlet_jump;
 
-        // OPERATORS
-        auto gr = make_hho_gradrec_vector_PKO(msh, P_KO, hdi, level_set_function);
-        auto stab = make_hho_stabilization(msh, P_KO, hdi, stab_parms);
+    //     // OPERATORS
+    //     auto gr = make_hho_gradrec_vector_PKO(msh, P_KO, hdi, level_set_function);
+    //     auto stab = make_hho_stabilization(msh, P_KO, hdi, stab_parms);
 
-        Mat lc = kappa * (gr.second + stab);    
+    //     Mat lc = kappa * (gr.second + stab);  
+          
+    //     // AJOUTER SECOND MEMBRE CORRECTEMENT 
+    //     Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
 
-        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
-
-        return std::make_pair(lc, f);
-    }
+    //     return std::make_pair(lc, f);
+    // }
 
     Mat
     make_contrib_mass(const Mesh& msh, Tuple P, const testType &test_case, const hho_degree_info hdi) {

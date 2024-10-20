@@ -6,7 +6,6 @@ template<typename Mesh, typename testType, typename meth>
 std::vector<std::pair<size_t,size_t>>
 create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg);
 
-
 template<typename Mesh, typename testType, typename meth>
 std::vector<std::pair<size_t,size_t>>
 create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_case, SparseMatrix<typename Mesh::coordinate_type> & Kg, SparseMatrix<typename Mesh::coordinate_type> & Mg){
@@ -82,7 +81,7 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
         auto lc = contrib.first;
         auto f = contrib.second;
         auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-        assembler.assemble_extended(msh, pair, lc, f);  
+        // assembler.assemble_extended(msh, pair, lc, f);  
         // assembler.assemble_mass_extended(msh, pair, cell_mass); // A COMMENTER POUR LE PRPBLEME ELLIPTIC
     } 
     std::cout << "POK DONE" << std::endl;
@@ -92,7 +91,7 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
         auto lc = contrib.first;
         auto f = contrib.second;
         auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-        assembler.assemble_extended(msh, pair, lc, f);  
+        // assembler.assemble_extended(msh, pair, lc, f);  
         // assembler.assemble_mass_extended(msh, pair, cell_mass);
     } 
     std::cout << "PKO DONE" << std::endl;
