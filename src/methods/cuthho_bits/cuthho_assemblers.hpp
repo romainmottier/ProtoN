@@ -265,10 +265,8 @@ void set_dir_func(const Function& f) {
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
         auto fbs = face_basis<Mesh,T>::size(facdeg);
         auto fcs = faces(msh, cl);
-        auto num_faces = fcs.size();    
-        auto local_dofs = cbs + num_faces*fbs;    
+        auto num_faces = fcs.size();      
         std::vector<assembly_index> asm_map;
-        asm_map.reserve(local_dofs);
 
         // CELL OFFSET
         size_t cell_offset = cell_table.at(offset(msh, cl)); 
@@ -415,7 +413,12 @@ void set_dir_func(const Function& f) {
 
     // ON UTILISE LE FAIT QUE LES CELLLULES COUP2ES NE TOUCHENT PAS LE BORD DU DOMAINE 
     Matrix<T, Dynamic, 1>
-    get_dirichlet_data_extended(const Mesh& msh, const typename Mesh::cell_type& cl) {
+    get_dirichlet_data_extended(const Mesh& msh, Tuple P) {
+
+        // CELL INFOS
+        auto cell_index = std::get<0>(P);
+        auto cl = msh.cells[cell_index];
+        auto dp_cells = std::get<2>(P);
 
         // DOFS
         auto celdeg = di.cell_degree();
@@ -424,9 +427,12 @@ void set_dir_func(const Function& f) {
         auto fbs = face_basis<Mesh,T>::size(facdeg);
         auto fcs = faces(msh, cl);
         auto num_faces = fcs.size();
-        auto local_dofs = cbs + num_faces*fbs;
-        if (is_cut(msh,cl))
-            local_dofs = 2*local_dofs;
+        auto current_dofs = cbs + num_faces*fbs;
+        if (is_cut(msh,cl)) 
+            current_dofs = 2*current_dofs;
+        auto extended_dofs = 2*(cbs + num_faces*fbs);
+        auto nb_dp_cells = dp_cells.size();
+        auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
 
         Matrix<T, Dynamic, 1> dirichlet_data = Matrix<T, Dynamic, 1>::Zero(local_dofs);
 
@@ -501,9 +507,8 @@ void set_dir_func(const Function& f) {
          
     void
     assemble_bis_extended(const Mesh& msh, Tuple P,
-                 const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs)
-    {
-        
+                 const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs) {
+
         // CELL INFOS
         auto cell_index = std::get<0>(P);
         auto cl = msh.cells[cell_index];
@@ -514,7 +519,7 @@ void set_dir_func(const Function& f) {
             return;
         
         auto asm_map = init_asm_map_extended(msh, P);
-        auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
+        auto dirichlet_data = get_dirichlet_data_extended(msh, P);
         assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
         assert(dirichlet_data.size() == lhs.cols());
 
@@ -600,7 +605,7 @@ void set_dir_func(const Function& f) {
             return;
 
         auto asm_map = init_asm_map_extended(msh, P);
-        auto dirichlet_data = get_dirichlet_data_extended(msh, cl);
+        auto dirichlet_data = get_dirichlet_data_extended(msh, P);
         assert( asm_map.size() == mass.rows() && asm_map.size() == mass.cols() );
 
         // MASS

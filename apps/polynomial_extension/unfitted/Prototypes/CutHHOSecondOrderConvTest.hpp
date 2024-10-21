@@ -182,6 +182,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
               postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
             }
             // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
+        std::cout << std::endl;
         }
         // error_file << std::endl << std::endl;
     }

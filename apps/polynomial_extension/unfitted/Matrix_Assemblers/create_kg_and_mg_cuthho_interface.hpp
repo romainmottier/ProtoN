@@ -81,20 +81,20 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
         auto lc = contrib.first;
         auto f = contrib.second;
         auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-        // assembler.assemble_extended(msh, pair, lc, f);  
-        // assembler.assemble_mass_extended(msh, pair, cell_mass); // A COMMENTER POUR LE PRPBLEME ELLIPTIC
+        assembler.assemble_extended(msh, pair, lc, f);  
+        assembler.assemble_mass_extended(msh, pair, cell_mass); // A COMMENTER POUR LE PRPBLEME ELLIPTIC
     } 
-    std::cout << "POK DONE" << std::endl;
+    std::cout << "         POK DONE" << std::endl;
     // Loop over PKO
     for (auto& pair : Pairs.second) {
         auto contrib = method.make_contrib_PKO(msh, pair, hdi, test_case);
         auto lc = contrib.first;
         auto f = contrib.second;
         auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-        // assembler.assemble_extended(msh, pair, lc, f);  
-        // assembler.assemble_mass_extended(msh, pair, cell_mass);
+        assembler.assemble_extended(msh, pair, lc, f);  
+        assembler.assemble_mass_extended(msh, pair, cell_mass);
     } 
-    std::cout << "PKO DONE" << std::endl;
+    std::cout << "         PKO DONE" << std::endl;
         
     assembler.finalize();
     tc.toc();

@@ -650,8 +650,16 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
 
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     auto h = diameter(msh, cl);
+    
+    auto offset_cells = 0;
+    auto offset_faces = 0;
+    if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) {
+        offset_cells = cbs;
+        offset_faces = num_faces*fbs;
+    }
 
     for (size_t i = 0; i < fcs.size(); i++) {
+
         auto fc = fcs[i];
         cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, loc);
         Matrix<T, Dynamic, Dynamic> oper = Matrix<T, Dynamic, Dynamic>::Zero(fbs, local_dofs);
@@ -659,7 +667,11 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
         Matrix<T, Dynamic, Dynamic> trace = Matrix<T, Dynamic, Dynamic>::Zero(fbs, cbs);
 
         // FACE UNKNOWNS
-        oper.block(0, cbs+i*fbs, fbs, fbs) = -If;
+        if (is_cut(msh,cl)) 
+            oper.block(0, 2*cbs + offset_faces + i*fbs, fbs, fbs) = -If;
+        else 
+            oper.block(0, cbs + i*fbs, fbs, fbs) = -If;
+        
 
         // TRACE OF CELL UNKNOWNS
         auto qps = integrate(msh, fc, 2*facdeg + 1);
@@ -669,15 +681,16 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
             mass  += qp.second * f_phi * f_phi.transpose();
             trace += qp.second * f_phi * c_phi.transpose();
         }
-        oper.block(0, 0, fbs, cbs) = mass.llt().solve(trace);
+        if (is_cut(msh,cl)) 
+            oper.block(0, offset_cells, fbs, cbs) = mass.llt().solve(trace);
+        else 
+            oper.block(0, 0, fbs, cbs) = mass.llt().solve(trace);
 
         // CONSTRUCTION OF STAB BLOCKS
-        if (scaled_Q) {
+        if (scaled_Q)
             data += oper.transpose() * mass * oper * (1.0/h);
-        }
-        else {
+        else 
             data += oper.transpose() * mass * oper;
-        }
     }
 
     return data;
@@ -711,7 +724,7 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
     if (is_cut(msh,cl)) {
         if (parms.kappa_1 == parms.kappa_2) {
             if (loc == element_location::IN_NEGATIVE_SIDE) {
-                T penalty_scale = std::min(parms.kappa_1, parms.kappa_2);
+                T penalty_scale = parms.kappa_1;
                 Matrix<T, Dynamic, Dynamic> penalty = make_hho_cut_interface_penalty(msh, cl, di, 1.0).block(0, 0, cbs, cbs);
                 data.block(0, 0, cbs, cbs)     += penalty_scale * penalty;
                 data.block(0, cbs, cbs, cbs)   -= penalty_scale * penalty;
@@ -762,8 +775,12 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
     Matrix<T, Dynamic, Dynamic> If   = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
 
+    auto offset = 0;
+    if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) 
+        offset = cbs;
+    
     // LOOP OVER DEPENDENT CELLS 
-    size_t offset_extended_dofs = current_dofs;  
+    size_t offset_dp = current_dofs + offset;  
     for (auto &dp_cl : dp_cells) {
 
         auto dp_cell = msh.cells[dp_cl];
@@ -784,25 +801,23 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
                 auto c_phi    = cb.eval_basis(qp.first);
                 auto c_phi_dp = cb_dp.eval_basis(qp.first);
                 auto f_phi = fb.eval_basis(qp.first);
-                // // // // // // // // // data += ... AJOUTER LES CONTRIB ICI (4 contribs à ajouter)
                 if (scaled_Q) {
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / h;
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / h;
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / h;
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / h;
+                    data.block(offset,    offset   , cbs, cbs) += qp.second * c_phi    * c_phi.transpose()    * eta / h;
+                    data.block(offset,    offset_dp, cbs, cbs) -= qp.second * c_phi    * c_phi_dp.transpose() * eta / h;
+                    data.block(offset_dp, offset   , cbs, cbs) -= qp.second * c_phi_dp * c_phi.transpose()    * eta / h;
+                    data.block(offset_dp, offset_dp, cbs, cbs) += qp.second * c_phi_dp * c_phi_dp.transpose() * eta / h;
                 }
                 else {
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
-                    data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
+                    data.block(offset,    offset   , cbs, cbs) += qp.second * c_phi    * c_phi.transpose()    * eta;
+                    data.block(offset,    offset_dp, cbs, cbs) -= qp.second * c_phi    * c_phi_dp.transpose() * eta;
+                    data.block(offset_dp, offset   , cbs, cbs) -= qp.second * c_phi_dp * c_phi.transpose()    * eta;
+                    data.block(offset_dp, offset_dp, cbs, cbs) += qp.second * c_phi_dp * c_phi_dp.transpose() * eta;
                 }
             }
-
         }
 
         // UPDATING OFFSET 
-        offset_extended_dofs += extended_dofs;
+        offset_dp += extended_dofs + offset;
 
     }
 

@@ -37,50 +37,16 @@ public:
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
         // OPERATORS
-        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function, kappa, stab_parms);  
-        auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);                     // s° 
+        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function, kappa, stab_parms);  // G       
+        auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);                          // s° 
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, kappa, eta, stab_parms);   // s^\Gamma
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta, stab_parms);         // s^N
 
         Mat lc = kappa*(gr.second + stab_usual) + stab_cut + stab_ill_dofs; 
-        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun); // A DEBUG
+        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        // ///////////////    RHS
-        // Vect f = Vect::Zero(lc.rows());
-        // // neg part
-        // f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-        //                                   element_location::IN_NEGATIVE_SIDE);
-        // // we use element_location::IN_POSITIVE_SIDE to get rid of the Nitsche term
-        // // (see definition of make_Dirichlet_jump)
-        // f.head(cbs) -= parms.kappa_1 *
-        //     make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-        //                         level_set_function, dir_jump, eta);
-
-        // // pos part
-        // f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-        //                                    element_location::IN_POSITIVE_SIDE);
-        // f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
-        //     make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-        //                         level_set_function, dir_jump, eta);
-        // f.block(cbs, 0, cbs, 1)
-        //     += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-        //                             test_case.neumann_jump);
-
-
-        // // rhs term with GR
-        // auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
-        // vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree() );
-        // Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero( gbs );
-        // auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(),
-        //                                 element_location::IN_NEGATIVE_SIDE);
-        // for (auto& qp : iqps)
-        // {
-        //     const auto g_phi    = gb.eval_basis(qp.first);
-        //     const Matrix<T,2,1> n      = level_set_function.normal(qp.first);
-
-        //     F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
-        // }
-        // f -= F_bis.transpose() * (parms.kappa_1 * gr_n.first );
+        // if (std::get<0>(P_OK) == 13)
+        //     std::cout << "Matrice lc :\n" << lc.format(Eigen::IOFormat(4, 0, ", ", "\n", "[", "]")) << std::endl;
 
         return std::make_pair(lc, f);
     }
