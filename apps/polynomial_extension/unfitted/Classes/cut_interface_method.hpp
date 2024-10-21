@@ -38,10 +38,11 @@ public:
 
         // OPERATORS
         auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function, kappa, stab_parms);  
-        auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);                           // s° + s^\Gamma
-        auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, stab_parms);               // s^N
+        auto stab_usual = make_hho_stabilization(msh, P_OK, hdi, stab_parms);                     // s° 
+        auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, kappa, eta, stab_parms);   // s^\Gamma
+        auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta, stab_parms);         // s^N
 
-        Mat lc = kappa * (gr.second + stab_usual) + stab_ill_dofs; 
+        Mat lc = kappa*(gr.second + stab_usual) + stab_cut + stab_ill_dofs; 
         Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun); // A DEBUG
 
         // ///////////////    RHS
