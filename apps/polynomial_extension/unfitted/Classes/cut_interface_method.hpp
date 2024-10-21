@@ -80,6 +80,32 @@ public:
         return std::make_pair(lc, f);
     }
 
+    // Vect
+    // make_rhs(const Mesh& msh, Tuple P, size_t degree, const Function& f, size_t di = 0) {
+        
+    //     using T = typename Mesh::coordinate_type;
+
+    //     // CELL INFOS & PARAMETERS
+    //     auto cell_index = std::get<0>(P_KO);
+    //     auto cl = msh.cells[cell_index];
+
+
+    //     cell_basis<Mesh,T> cb(msh, cl, degree);
+    //     auto cbs = cb.size();
+        
+    //     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+        
+    //     auto qps = integrate(msh, cl, 2*(degree+di));
+        
+    //     for (auto& qp : qps) {
+    //         auto phi = cb.eval_basis(qp.first);
+    //         ret += qp.second * phi * f(qp.first);
+    //     }
+        
+    //     return ret;
+    // }
+
+
     Vect
     make_contrib_rhs_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
                      const testType &test_case, const hho_degree_info hdi) {
@@ -94,9 +120,9 @@ public:
         ///////////////    RHS
         Vect f = Vect::Zero(cbs*2);
         // neg part
-        // // // f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
-        // // // // pos part
-        // // // f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        // pos part
+        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
 
         return f;
     }
