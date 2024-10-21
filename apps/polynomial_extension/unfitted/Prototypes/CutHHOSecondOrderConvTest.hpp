@@ -136,6 +136,22 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ##################################################
             // ################################################## Static condensation
             // ##################################################
+            
+            
+            // debug Kg
+    for (int i = 0; i < Kg.rows(); ++i) {
+        for (int j = 0; j < Kg.cols(); ++j) {
+            // Vérifie si l'élément est non nul
+            if (Kg.coeff(i, j) != 0) {
+                std::cout << Kg.coeff(i, j) << " ";
+            } else {
+                std::cout << "0 "; // Affiche 0 pour les éléments nuls
+            }
+        }
+        std::cout << std::endl; // Nouvelle ligne après chaque ligne de la matrice
+    }
+
+
             linear_solver<RealType> analysis;
             if (sc_Q) {
               size_t n_dof = Kg.rows();
@@ -191,6 +207,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     error_file.close();
     std::cout << std::endl;
 }
+
 
 
 #endif

@@ -43,11 +43,11 @@ public:
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta, stab_parms);         // s^N
 
         Mat lc = kappa*(gr.second + stab_usual) + stab_cut + stab_ill_dofs; 
-        Mat f  = make_rhs_T(msh, P_OK, hdi, test_case); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        // if (std::get<0>(P_OK) == 13)
-        //     std::cout << "Matrice lc :\n" << lc.format(Eigen::IOFormat(4, 0, ", ", "\n", "[", "]")) << std::endl;
+        lc.setZero(); 
+        Mat f  = make_rhs_pair(msh, P_OK, hdi, test_case); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+        if (std::get<0>(P_OK) == 13)
+            std::cout << "Matrice lc :\n" << lc.format(Eigen::IOFormat(4, 0, ", ", "\n", "[", "]")) << std::endl;
 
         return std::make_pair(lc, f);
     }
@@ -74,16 +74,14 @@ public:
         auto stab = make_hho_stabilization(msh, P_KO, hdi, stab_parms);
 
         Mat lc = kappa * (gr.second + stab);  
-          
-        // AJOUTER SECOND MEMBRE CORRECTEMENT 
-        // Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
-        Mat f  = make_rhs_T(msh, P_KO, hdi, test_case);
+        lc.setZero(); 
+        Mat f  = make_rhs_pair(msh, P_KO, hdi, test_case);
 
         return std::make_pair(lc, f);
     }
 
     Vect
-    make_rhs_T(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
+    make_rhs_pair(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
         
         // CELL INFOS 
         auto cell_index = std::get<0>(P);

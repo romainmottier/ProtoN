@@ -291,12 +291,7 @@ make_rhs(const Mesh& msh, const typename Mesh::cell_type& cl,
     for (auto& qp : qps)
     {
         auto phi = cb.eval_basis(qp.first);
-      //  std::cout<<"Problem here?"<<std::endl;
-     //   std::cout<<"I m aggloext size is "<<agglo_LS_cl.user_data.offset_subcells.size()<<std::endl;
-      //  std::cout<<"I m cl size is "<<cl.user_data.offset_subcells.size()<<std::endl;
-        ret += qp.second * phi * f(qp.first); //ADDED CL HERE
-    
-     //   std::cout<<"Problem here!!!"<<std::endl;
+        ret += qp.second * phi * f(qp.first);
     }
 
     return ret;
