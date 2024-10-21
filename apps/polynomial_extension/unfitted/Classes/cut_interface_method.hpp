@@ -43,7 +43,8 @@ public:
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta, stab_parms);         // s^N
 
         Mat lc = kappa*(gr.second + stab_usual) + stab_cut + stab_ill_dofs; 
-        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        Mat f  = make_rhs_T(msh, P_OK, hdi, test_case); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         // if (std::get<0>(P_OK) == 13)
         //     std::cout << "Matrice lc :\n" << lc.format(Eigen::IOFormat(4, 0, ", ", "\n", "[", "]")) << std::endl;
@@ -75,35 +76,40 @@ public:
         Mat lc = kappa * (gr.second + stab);  
           
         // AJOUTER SECOND MEMBRE CORRECTEMENT 
-        Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+        // Mat f  = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+        Mat f  = make_rhs_T(msh, P_KO, hdi, test_case);
 
         return std::make_pair(lc, f);
     }
 
-    // Vect
-    // make_rhs(const Mesh& msh, Tuple P, size_t degree, const Function& f, size_t di = 0) {
+    Vect
+    make_rhs_T(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
         
-    //     using T = typename Mesh::coordinate_type;
+        // CELL INFOS 
+        auto cell_index = std::get<0>(P);
+        auto loc = std::get<1>(P);
+        auto cl = msh.cells[cell_index];
+        auto celdeg = hdi.cell_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto local_dofs = cbs;
+        if (is_cut(msh,cl)) 
+            local_dofs += cbs;
+    
+        auto parms = test_case.parms;
+        auto level_set_function = test_case.level_set_;
+        auto dir_jump = test_case.dirichlet_jump;
 
-    //     // CELL INFOS & PARAMETERS
-    //     auto cell_index = std::get<0>(P_KO);
-    //     auto cl = msh.cells[cell_index];
-
-
-    //     cell_basis<Mesh,T> cb(msh, cl, degree);
-    //     auto cbs = cb.size();
+        Matrix<T, Dynamic, 1> f = Matrix<T, Dynamic, 1>::Zero(local_dofs);
         
-    //     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
+        if (loc == element_location::IN_NEGATIVE_SIDE)
+            f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        else if (!is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) 
+            f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        else if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) 
+            f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);      
         
-    //     auto qps = integrate(msh, cl, 2*(degree+di));
-        
-    //     for (auto& qp : qps) {
-    //         auto phi = cb.eval_basis(qp.first);
-    //         ret += qp.second * phi * f(qp.first);
-    //     }
-        
-    //     return ret;
-    // }
+        return f;
+    }
 
 
     Vect
