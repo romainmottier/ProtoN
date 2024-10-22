@@ -340,7 +340,7 @@ public:
                auto cell_dofs_p = dofs_p.head(cbs);
                
                // negative side
-               std::cout << "Postprocess of negative side" << std::endl;
+            //    std::cout << "Postprocess of negative side" << std::endl;
                auto qps_n = integrate(msh, cell, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
                for (auto& qp : qps_n)
                {
@@ -362,7 +362,7 @@ public:
                }
                
                // positive side
-               std::cout << "Postprocess of negative side" << std::endl;
+            //    std::cout << "Postprocess of negative side" << std::endl;
                auto qps_p = integrate(msh, cell, 2*hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);
                for (auto& qp : qps_p)
                {

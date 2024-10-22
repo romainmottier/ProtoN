@@ -1459,7 +1459,7 @@ make_agglomeration(Mesh& msh, const Function& level_set_function) {
         agglo_table_neg.at(i) = -1;
         agglo_table_pos.at(i) = -1;
     }
-    std::cout<<"prova="<<std::endl;
+    // std::cout<<"prova="<<std::endl;
     ///////////////////////   LOOK FOR NEIGHBORS  ////////////////
     size_t nb_step1 = 0;
     size_t nb_step2 = 0;

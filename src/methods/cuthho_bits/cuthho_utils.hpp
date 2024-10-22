@@ -118,7 +118,7 @@ make_hho_laplacian(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
     if ( !is_cut(msh, cl) )
         return make_hho_laplacian(msh, cl, di);
 
-    std::cout<<"make_hho_laplacian: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_hho_laplacian: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     auto recdeg = di.reconstruction_degree();
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
@@ -202,7 +202,7 @@ make_hho_laplacian_interface(const cuthho_mesh<T, ET>& msh,
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
 
-    std::cout<<"make_hho_laplacian_interface: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_hho_laplacian_interface: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T>     cb(msh, cl, recdeg);
 
     auto rbs = cell_basis<cuthho_mesh<T, ET>,T>::size(recdeg);
@@ -1489,7 +1489,7 @@ make_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::c
 {
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
-    std::cout<<"make_Nitsche: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_Nitsche: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     auto cbs = cb.size();
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
@@ -1527,7 +1527,7 @@ make_NS_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
 {
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
-    std::cout<<"make_NS_Nitsche: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_NS_Nitsche: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     auto cbs = cb.size();
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
@@ -1634,7 +1634,7 @@ make_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 {
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
-    std::cout<<"make_GR_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_GR_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, degree-1);
     auto gbs = gb.size();
 
@@ -1670,7 +1670,7 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
 
         cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
         auto cbs = cb.size();
-        std::cout<<"make_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+        // std::cout<<"make_rhs: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
         auto hT = diameter(msh, cl);
 
         Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
@@ -1714,7 +1714,7 @@ make_Dirichlet_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-    std::cout<<"make_Dirichlet_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_Dirichlet_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
 
@@ -1752,7 +1752,7 @@ make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-    std::cout<<"make_flux_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_flux_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
 
@@ -2426,7 +2426,7 @@ make_vector_Dirichlet_jump(const cuthho_mesh<T, ET>& msh,
     vector_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-    std::cout<<"make_vector_Dirichlet_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
+    // std::cout<<"make_vector_Dirichlet_jump: Old implementation: normal calculated via level set and not parametric interface."<<std::endl;
     if( location(msh, cl) != element_location::ON_INTERFACE )
         return ret;
 

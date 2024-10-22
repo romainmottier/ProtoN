@@ -676,6 +676,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
         
         hho_degree_info hdi(k+1, k);
         for(size_t l = 0; l <= l_divs; l++){
+        std::cout << bold << cyan << "Running an approximation with l : " << l << reset << std::endl;
+        error_file << "Approximation with l : " << l << std::endl;
             
             mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
             if (dump_debug)
@@ -709,6 +711,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             }
             analysis.factorize();
             
+            std::cout << "JUST AFTER FACORISZATION" << std::endl;
 
             auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
             assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
@@ -754,8 +757,7 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
     auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
     std::vector<std::pair<size_t,size_t>> cell_basis_data = assembler.compute_cell_basis_data(msh);
     size_t cell_ind = 0;
-    for (auto& cell : msh.cells)
-    {
+    for (auto& cell : msh.cells) {
         auto contrib = method.make_contrib(msh, cell, test_case, hdi);
         auto lc = contrib.first;
         auto f = contrib.second;
@@ -772,10 +774,13 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
     
     tc.toc();
     std::cout << bold << yellow << "Matrix assembly: " << tc << " seconds" << reset << std::endl;
-    
+
     Kg = assembler.LHS;
     Mg = assembler.MASS;
+
+
     return cell_basis_data;
+
 }
 
 template<typename Mesh>
