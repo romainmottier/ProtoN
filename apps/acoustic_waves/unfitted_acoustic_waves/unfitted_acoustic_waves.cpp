@@ -1130,7 +1130,7 @@ void CutHHOFirstOrderConvTest(int argc, char **argv);
 int main(int argc, char **argv)
 {
 
-  //    HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
+    //  HeterogeneousFlowerICutHHOSecondOrder(argc, argv);
     //   HeterogeneousFlowerICutHHOFirstOrder(argc, argv);
   //   HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
     
@@ -1138,12 +1138,12 @@ int main(int argc, char **argv)
   //    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
   //    ICutHHOSecondOrder(argc, argv);
-  //    ICutHHOFirstOrder(argc, argv);
+     ICutHHOFirstOrder(argc, argv);
   //    ECutHHOFirstOrder(argc, argv);
   //    ECutHHOFirstOrderCFL(argc, argv);
   //    ECutHHOFirstOrderEigenCFL(argc, argv);
     
-     CutHHOSecondOrderConvTest(argc, argv);
+    //  CutHHOSecondOrderConvTest(argc, argv);
   //    CutHHOFirstOrderConvTest(argc, argv);
     return 0;
 }
