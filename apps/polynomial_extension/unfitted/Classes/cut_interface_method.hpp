@@ -43,12 +43,8 @@ public:
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta, stab_parms);         // s^N
 
         Mat lc = kappa*(gr.second + stab_usual) + stab_cut + stab_ill_dofs; 
-        lc.setZero(); 
         Mat f  = make_rhs_pair(msh, P_OK, hdi, test_case); // A DEBUG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
-        if (std::get<0>(P_OK) == 13)
-            std::cout << "Matrice lc :\n" << lc.format(Eigen::IOFormat(4, 0, ", ", "\n", "[", "]")) << std::endl;
-
         return std::make_pair(lc, f);
     }
     

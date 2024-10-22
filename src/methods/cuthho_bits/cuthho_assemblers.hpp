@@ -506,8 +506,7 @@ void set_dir_func(const Function& f) {
     }
          
     void
-    assemble_bis_extended(const Mesh& msh, Tuple P,
-                 const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs) {
+    assemble_bis_extended(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs) {
 
         // CELL INFOS
         auto cell_index = std::get<0>(P);
@@ -1204,10 +1203,6 @@ public:
         this->LHS = SparseMatrix<T>(system_size, system_size);
         this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size);
         this->MASS = SparseMatrix<T>(system_size, system_size);
-        
-        // std::cout << "LHS.size() = " << this->LHS.size() << std::endl;
-        // std::cout << "RHS.size() = " << this->RHS.size() << std::endl;
-        // std::cout << "MASS.size() = " << this->MASS.size() << std::endl;
 
         classify_cells(msh);
     }
@@ -1458,6 +1453,7 @@ public:
         x_glob.block(cell_SOL_offset+cbs, 0, cbs, 1) = x_pos_proj_dof.block(0, 0, cbs, 1);
     
     }
+
     std::vector<std::pair<size_t,size_t>> compute_cell_basis_data(const Mesh& msh){
         size_t n_cells =  msh.cells.size();
         std::vector<std::pair<size_t,size_t>> cell_basis_data;
@@ -1623,7 +1619,7 @@ auto make_one_field_interface_assembler(const Mesh& msh, Function dirichlet_bf, 
     return one_field_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi);
 }
 
-// POLYNOMIAL EXTENSION ASSEMBLER - ELLIPTIC PROBLEM - MIXED FORMULATION
+// ELLIPTIC PROBLEM - MIXED FORMULATION
 template<typename Mesh, typename Function>
 class two_fields_interface_assembler : public virt_interface_assembler<Mesh, Function>
 {

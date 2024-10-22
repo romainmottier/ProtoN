@@ -450,8 +450,8 @@ public:
            auto cbs = cell_basis.size();
            if (location(msh, cell) == element_location::ON_INTERFACE) {
                
-               auto dofs_n = assembler.take_local_data_extended(msh, cell, x_dof, element_location::IN_NEGATIVE_SIDE);
-               auto dofs_p = assembler.take_local_data_extended(msh, cell, x_dof, element_location::IN_POSITIVE_SIDE);
+               auto dofs_n = assembler.take_local_data(msh, cell, x_dof, element_location::IN_NEGATIVE_SIDE);
+               auto dofs_p = assembler.take_local_data(msh, cell, x_dof, element_location::IN_POSITIVE_SIDE);
 
                auto cell_dofs_n = dofs_n.head(cbs);
                auto cell_dofs_p = dofs_p.head(cbs);

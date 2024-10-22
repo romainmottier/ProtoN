@@ -75,24 +75,25 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
     size_t system_size = assembler.compute_dofs_data(msh, hdi);    
     std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
     // auto dofs_proj = assembler.make_projection_operator(msh, hdi, system_size, sol_fun);
+
+
+    Kg.setIdentity();
     // Loop over POK
     for (auto& pair : Pairs.first) {
-        auto contrib = method.make_contrib_POK(msh, pair, hdi, test_case);
-        auto lc = contrib.first;
-        auto f = contrib.second;
-        auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-        assembler.assemble_extended(msh, pair, lc, f);  
-        assembler.assemble_mass_extended(msh, pair, cell_mass); // A COMMENTER POUR LE PRPBLEME ELLIPTIC
+        // auto contrib = method.make_contrib_POK(msh, pair, hdi, test_case);
+        // auto lc = contrib.first;
+        // auto f = contrib.second;
+        // assembler.assemble_extended(msh, pair, lc, f);  
     } 
     std::cout << "         POK DONE" << std::endl;
     // Loop over PKO
     for (auto& pair : Pairs.second) {
-        auto contrib = method.make_contrib_PKO(msh, pair, hdi, test_case);
-        auto lc = contrib.first;
-        auto f = contrib.second;
-        auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
-        assembler.assemble_extended(msh, pair, lc, f);  
-        assembler.assemble_mass_extended(msh, pair, cell_mass);
+        // auto contrib = method.make_contrib_PKO(msh, pair, hdi, test_case);
+        // auto lc = contrib.first;
+        // auto f = contrib.second;
+        // auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
+        // assembler.assemble_extended(msh, pair, lc, f);  
+        // assembler.assemble_mass_extended(msh, pair, cell_mass);
     } 
     std::cout << "         PKO DONE" << std::endl;
         
@@ -102,7 +103,7 @@ test_operators(Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_c
     
     Kg = assembler.LHS; 
     Mg = assembler.MASS;
-    
+
     return cell_basis_data;
 }
 

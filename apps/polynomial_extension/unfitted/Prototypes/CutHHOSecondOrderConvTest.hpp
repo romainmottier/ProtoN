@@ -137,21 +137,6 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ################################################## Static condensation
             // ##################################################
             
-            
-            // debug Kg
-    for (int i = 0; i < Kg.rows(); ++i) {
-        for (int j = 0; j < Kg.cols(); ++j) {
-            // Vérifie si l'élément est non nul
-            if (Kg.coeff(i, j) != 0) {
-                std::cout << Kg.coeff(i, j) << " ";
-            } else {
-                std::cout << "0 "; // Affiche 0 pour les éléments nuls
-            }
-        }
-        std::cout << std::endl; // Nouvelle ligne après chaque ligne de la matrice
-    }
-
-
             linear_solver<RealType> analysis;
             if (sc_Q) {
               size_t n_dof = Kg.rows();
@@ -162,9 +147,11 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
               size_t n_face_dof = n_dof - n_cell_dof;
               analysis.set_Kg(Kg, n_face_dof);
               analysis.condense_equations_irregular_blocks(cell_basis_data);
+              std::cout << bold << yellow << "         Static condensation done" << std::endl;
             }
             else {
               analysis.set_Kg(Kg);
+              std::cout << bold << yellow << "         No static condensation" << std::endl;
             }
 
             // ##################################################
@@ -177,7 +164,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
               analysis.set_iterative_solver();
             }
             analysis.factorize(); // SEG FAULT HERE
-            
+            std::cout << bold << yellow << "         LHS factorization for solver" << std::endl;
+
             // ##################################################
             // ################################################## Assembly and loop over cells
             // ##################################################
@@ -202,7 +190,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
         std::cout << std::endl;
         }
-        // error_file << std::endl << std::endl;
+        error_file << std::endl << std::endl;
     }
     error_file.close();
     std::cout << std::endl;
