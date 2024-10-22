@@ -37,17 +37,17 @@ class linear_solver
     SparseMatrix<T> m_K;
     Matrix<T, Dynamic, 1> m_F;
     
-    #ifdef HAVE_INTEL_MKL
-        PardisoLU<Eigen::SparseMatrix<T>>  m_analysis;
-    #else
+    // #ifdef HAVE_INTEL_MKL
+    //     PardisoLU<Eigen::SparseMatrix<T>>  m_analysis;
+    // #else
         SparseLU<Eigen::SparseMatrix<T>> m_analysis;
-    #endif
+    // #endif
     
-    #ifdef HAVE_INTEL_MKL
-        PardisoLDLT<Eigen::SparseMatrix<T>>  m_symm_analysis;
-    #else
+    // #ifdef HAVE_INTEL_MKL
+        // PardisoLDLT<Eigen::SparseMatrix<T>>  m_symm_analysis;
+    // #else
         SimplicialLDLT<Eigen::SparseMatrix<T>> m_symm_analysis;
-    #endif
+    // #endif
     
     ConjugateGradient<SparseMatrix<T>> m_analysis_cg;
     BiCGSTAB<SparseMatrix<T>> m_analysis_bi_cg;
