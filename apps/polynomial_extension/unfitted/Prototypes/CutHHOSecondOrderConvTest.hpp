@@ -1,4 +1,3 @@
-
 #ifndef CutHHOSecondOrderConvTest_hpp
 #define CutHHOSecondOrderConvTest_hpp
 
@@ -15,7 +14,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     size_t nt_divs       = 1;          // Time level refinment  -n
     size_t int_refsteps  = 4;          // Interface refinment   -r
     bool dump_debug      = false;      // Debug & Silo files    -d 
-    bool direct_solver_Q = true;
+    bool direct_solver_Q = false;
     bool sc_Q = false;
     
     int ch;
@@ -147,11 +146,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
               size_t n_face_dof = n_dof - n_cell_dof;
               analysis.set_Kg(Kg, n_face_dof);
               analysis.condense_equations_irregular_blocks(cell_basis_data);
-              std::cout << bold << yellow << "         Static condensation done" << std::endl;
             }
             else {
               analysis.set_Kg(Kg);
-              std::cout << bold << yellow << "         No static condensation" << std::endl;
             }
 
             // ##################################################
@@ -186,7 +183,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
               std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
               postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
             }
-            // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_extended(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, error_file);
         std::cout << std::endl;
         }
         error_file << std::endl << std::endl;

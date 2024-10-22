@@ -37,10 +37,6 @@ using namespace Eigen;
 
 #define scaled_stab_Q 0
 
-// ----- common data types ------------------------------
-using RealType = double;
-typedef cuthho_poly_mesh<RealType>  mesh_type;
-
 // Classes interface methods 
 #include "Classes/interface_method.hpp"
 #include "Classes/cut_interface_method.hpp"

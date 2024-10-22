@@ -402,9 +402,7 @@ class linear_solver
             }
             return;
         }
-        std::cout << "decomposition1" <<  std::endl;
         DecomposeK();
-        std::cout << "decomposition2" << std::endl;
         m_is_decomposed_Q = true;
     }
         
