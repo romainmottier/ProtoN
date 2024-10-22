@@ -520,7 +520,7 @@ public:
                     triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
                 else {
 	            int itmp=asm_map[i];
-                    RHS(itmp) -= lhs(i,j)*dirichlet_data(j);
+                    RHS[itmp] -= lhs(i,j)*dirichlet_data(j);
 		}
             }
         }
@@ -531,7 +531,7 @@ public:
                 continue;
 
 	    int itmp = asm_map[i];
-            RHS(itmp) += rhs(i);
+            RHS[itmp] += rhs(i);
         }
     }
          
@@ -567,7 +567,7 @@ public:
             if (!asm_map[i].assemble())
                 continue;
             int itmp   = asm_map[i]; 
-            RHS(itmp) += rhs(i);       
+            RHS[itmp] += rhs(i);       
         }
     }
                   
@@ -586,7 +586,7 @@ public:
             if (!asm_map[i].assemble())
                 continue;
 
-            RHS(int(asm_map[i])) += rhs(i);
+            RHS[int(asm_map[i])] += rhs(i);
         }
     }
 
@@ -1192,10 +1192,6 @@ public:
         this->LHS = SparseMatrix<T>(system_size, system_size);
         this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size);
         this->MASS = SparseMatrix<T>(system_size, system_size);
-        
-        // std::cout << "LHS.size() = " << this->LHS.size() << std::endl;
-        // std::cout << "RHS.size() = " << this->RHS.size() << std::endl;
-        // std::cout << "MASS.size() = " << this->MASS.size() << std::endl;
 
         classify_cells(msh);
     }

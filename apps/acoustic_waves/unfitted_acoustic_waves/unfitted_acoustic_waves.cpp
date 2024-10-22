@@ -1294,7 +1294,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             auto method = make_gradrec_interface_method(msh, 1.0, test_case);
             
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
-            
+            std::cout << "coucou1";
             linear_solver<RealType> analysis;
             if (sc_Q) {
                 size_t n_dof = Kg.rows();
@@ -3107,10 +3107,15 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
     assembler.finalize();
     
     tc.toc();
+    std::cout << "coucoumatrix";
     std::cout << bold << yellow << "Matrix assembly: " << tc << " seconds" << reset << std::endl;
-    
+    std::cout << "coucoumatrix1";
+
     Kg = assembler.LHS;
     Mg = assembler.MASS;
+
+    std::cout << "coucoumatrix2";
+
     return cell_basis_data;
 }
 
