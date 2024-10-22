@@ -123,12 +123,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 output_mesh_info(msh, level_set_function);
             }
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
-            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            auto method = make_call_methods(msh, 1.0, test_case);
             
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             
-            std::cout << "JUST BEFORE STATIC CONDENSATION " << std::endl;
-
             linear_solver<RealType> analysis;
             if (sc_Q) {
                 size_t n_dof = Kg.rows();
@@ -142,8 +140,6 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             }else{
                 analysis.set_Kg(Kg);
             }
-
-            std::cout << "JUST BETWEEN STATIC CONDENSATION AND FACORISZATION" << std::endl;
             
             if (direct_solver_Q) {
                 analysis.set_direct_solver(true);
@@ -152,8 +148,6 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             }
             analysis.factorize();
             
-            std::cout << "JUST AFTER FACORISZATION" << std::endl;
-
             auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
             assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
             for (auto& cl : msh.cells)
