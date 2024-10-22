@@ -163,8 +163,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             else {
               analysis.set_iterative_solver();
             }
-            analysis.factorize(); // SEG FAULT HERE
-            std::cout << bold << yellow << "         LHS factorization for solver" << std::endl;
+            analysis.factorize(); 
 
             // ##################################################
             // ################################################## Assembly and loop over cells
