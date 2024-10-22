@@ -63,8 +63,8 @@ class linear_solver
     void DecomposeK(){
         if (!m_iterative_solver_Q.first) {
             if (m_iterative_solver_Q.second) {
-                m_symm_analysis.analyzePattern(m_K);
-                m_symm_analysis.factorize(m_K);
+                m_symm_analysis.analyzePattern(m_K); 
+                m_symm_analysis.factorize(m_K); /// SEGMENTATION FAULT HERE
             }else{
                 m_analysis.analyzePattern(m_K);
                 m_analysis.factorize(m_K);
@@ -402,7 +402,9 @@ class linear_solver
             }
             return;
         }
+        std::cout << "decomposition1" <<  std::endl;
         DecomposeK();
+        std::cout << "decomposition2" << std::endl;
         m_is_decomposed_Q = true;
     }
         

@@ -322,7 +322,7 @@ public:
        for (auto& cell : msh.cells)
        {
            auto offset_cl = offset(msh,cell);
-           std::cout << "Postprocess of Uncut cells: " << offset_cl << std::endl;
+        //    std::cout << "Postprocess of Uncut cells: " << offset_cl << std::endl;
 
            l2_error_vec[cell_i] = 0.0;
             RealType h_l = diameter(msh, cell);

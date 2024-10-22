@@ -1270,12 +1270,14 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     SparseMatrix<RealType> Kg, Mg;
 
     for(size_t k = 0; k <= degree; k++){
-        std::cout << bold << cyan << "Running an approximation with k : " << k << reset << std::endl;
+        std::cout << bold << cyan << std::endl << std::endl << "Running an approximation with k : " << k << reset << std::endl;
         error_file << "Approximation with k : " << k << std::endl;
         
         hho_degree_info hdi(k+1, k);
         for(size_t l = 0; l <= l_divs; l++){
-            
+        std::cout << bold << cyan << "Running an approximation with l : " << l << reset << std::endl;
+        error_file << "Approximation with l : " << l << std::endl;
+
             mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
             if (dump_debug)
             {
@@ -1287,6 +1289,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             
+            std::cout << "JUST BEFORE STATIC CONDENSATION " << std::endl;
+
             linear_solver<RealType> analysis;
             if (sc_Q) {
                 size_t n_dof = Kg.rows();
@@ -1301,6 +1305,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 analysis.set_Kg(Kg);
             }
 
+            std::cout << "JUST BETWEEN STATIC CONDENSATION AND FACORISZATION" << std::endl;
+
             if (direct_solver_Q) {
                 analysis.set_direct_solver(true);
             }else{
@@ -1308,6 +1314,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             }
             analysis.factorize();
             
+            std::cout << "JUST AFTER FACORISZATION" << std::endl;
+
 
             auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
             assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
@@ -3098,7 +3106,7 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
     assembler.finalize();
     
     tc.toc();
-    std::cout << bold << yellow << "Matrix assembly: " << tc << " seconds" << reset << std::endl;
+    std::cout << bold << yellow << "Matrix assembly: " << tc << " seconds" << reset;
     
     Kg = assembler.LHS;
     Mg = assembler.MASS;
