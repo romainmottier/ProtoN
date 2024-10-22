@@ -1138,12 +1138,12 @@ int main(int argc, char **argv)
   //    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
   //    ICutHHOSecondOrder(argc, argv);
-     ICutHHOFirstOrder(argc, argv);
+    //  ICutHHOFirstOrder(argc, argv);
   //    ECutHHOFirstOrder(argc, argv);
   //    ECutHHOFirstOrderCFL(argc, argv);
   //    ECutHHOFirstOrderEigenCFL(argc, argv);
     
-    //  CutHHOSecondOrderConvTest(argc, argv);
+     CutHHOSecondOrderConvTest(argc, argv);
   //    CutHHOFirstOrderConvTest(argc, argv);
     return 0;
 }
@@ -1315,6 +1315,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 analysis.set_iterative_solver();
             }
             analysis.factorize();
+            std::cout << "coucou" << std::endl;
             
 
             auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
