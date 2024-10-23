@@ -117,8 +117,13 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     // ################################################## Level set function
     // ##################################################
     
-    RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+    // Line level set function 
+    RealType line_y = 0.25; // WORK FOR -l 0 WITH NO TKO | DOESN'T WORK FOR OTHER MESHES 
+    auto level_set_function = line_level_set<RealType>(line_y);
+
+    // // Circle level set function
+    // RealType radius = 1.0/3.0;
+    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
     
     // Flower level set function
     
