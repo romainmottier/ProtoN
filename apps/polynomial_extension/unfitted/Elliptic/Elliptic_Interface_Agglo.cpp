@@ -40,7 +40,7 @@ using namespace Eigen;
 #include "Agglomeration/cutmesh.hpp"
 #include "Agglomeration/methods.hpp"
 #include "Agglomeration/postpro.hpp"
-#include "Agglomeration/test_cases.hpp"
+#include "Common/test_cases.hpp"
 
 #define scaled_stab_Q 0
 
@@ -161,9 +161,13 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 dump_mesh(msh);
                 output_mesh_info(msh, level_set_function);
             }
+
+            // ##################################################
+            // ################################################## Computation of local Stiff matrices & Assembly  
+            // ##################################################
+
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
             auto method = make_call_methods(msh, 1.0, test_case);
-            
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             
             // ##################################################
@@ -188,11 +192,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ################################################## Solver
             // ##################################################
 
-            if (direct_solver_Q) {
+            if (direct_solver_Q) 
                 analysis.set_direct_solver(true);
-            }else{
+            else
                 analysis.set_iterative_solver();
-            }
             analysis.factorize();
             
             // ##################################################

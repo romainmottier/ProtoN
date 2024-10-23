@@ -61,11 +61,6 @@ struct cell_cuthho_info
     
     std::vector<point<T, 2> > Lagrange_nodes_Qk ;
 
-    // Tuple - Pair: T - i - N_i^{-1}(T)
-    std::vector< std::tuple<T, element_location, std::vector<T>> > Pair_OK;
-    std::vector< std::tuple<T, element_location, std::vector<T>> > Pair_KO;
-    std::vector< std::pair<T, element_location> > PairOK;  // PairOK = (T,i) - PairOK.second() =   
-    std::vector< std::pair<T, element_location> > PairKO;  // PairKO = (T,i) - PairOK.second() = N_i^{-1}(T)  
     size_t paired_cell; // DEPENDANT POSITIVE CELLS (POINT THE CURRENT CELL)
     std::set<size_t> dependent_cells_neg; // DEPENDANT POSITIVE CELLS (POINT THE CURRENT CELL)
     std::set<size_t> dependent_cells_pos; // DEPENDANT NEGATIVE CELLS (POINT THE CURRENT CELL)

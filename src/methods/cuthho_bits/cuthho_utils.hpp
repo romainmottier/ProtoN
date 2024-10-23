@@ -529,14 +529,8 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
     auto fcs = faces(msh, cl);
     auto num_faces = fcs.size();
 
-    Matrix<T, Dynamic, Dynamic> data
-        = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs+2*num_faces*fbs, 2*cbs+2*num_faces*fbs);
-    // Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
-
+    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs+2*num_faces*fbs, 2*cbs+2*num_faces*fbs);
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    //auto hT = diameter(msh, cl);
-
 
     const auto stab_n = make_hho_cut_stabilization(msh, cl, di,element_location::IN_NEGATIVE_SIDE);
     const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE);
@@ -545,20 +539,14 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh,
     data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
     data.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * stab_p.block(0, 0, cbs, cbs);
     // cells--faces
-    data.block(0, 2*cbs, cbs, num_faces*fbs)
-        += parms.kappa_1 * stab_n.block(0, cbs, cbs, num_faces*fbs);
-    data.block(cbs, 2*cbs + num_faces*fbs, cbs, num_faces*fbs)
-        += parms.kappa_2 * stab_p.block(0, cbs, cbs, num_faces*fbs);
+    data.block(0, 2*cbs, cbs, num_faces*fbs) += parms.kappa_1 * stab_n.block(0, cbs, cbs, num_faces*fbs);
+    data.block(cbs, 2*cbs + num_faces*fbs, cbs, num_faces*fbs) += parms.kappa_2 * stab_p.block(0, cbs, cbs, num_faces*fbs);
     // faces--cells
-    data.block(2*cbs, 0, num_faces*fbs, cbs)
-        += parms.kappa_1 * stab_n.block(cbs, 0, num_faces*fbs, cbs);
-    data.block(2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs)
-        += parms.kappa_2 * stab_p.block(cbs, 0, num_faces*fbs, cbs);
+    data.block(2*cbs, 0, num_faces*fbs, cbs) += parms.kappa_1 * stab_n.block(cbs, 0, num_faces*fbs, cbs);
+    data.block(2*cbs + num_faces*fbs, cbs, num_faces*fbs, cbs) += parms.kappa_2 * stab_p.block(cbs, 0, num_faces*fbs, cbs);
     // faces--faces
-    data.block(2*cbs, 2*cbs, num_faces*fbs, num_faces*fbs)
-        += parms.kappa_1 * stab_n.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
-    data.block(2*cbs + num_faces*fbs, 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs)
-        += parms.kappa_2 * stab_p.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
+    data.block(2*cbs, 2*cbs, num_faces*fbs, num_faces*fbs) += parms.kappa_1 * stab_n.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
+    data.block(2*cbs + num_faces*fbs, 2*cbs + num_faces*fbs, num_faces*fbs, num_faces*fbs) += parms.kappa_2 * stab_p.block(cbs, cbs, num_faces*fbs, num_faces*fbs);
 
     return data;
 }
@@ -568,7 +556,8 @@ Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
                            const typename cuthho_mesh<T, ET>::cell_type& cl,
                            const hho_degree_info& di, element_location where, bool scaled_Q = true) {
-    if ( !is_cut(msh, cl) )
+    
+    if (!is_cut(msh, cl))
         return make_hho_naive_stabilization(msh, cl, di);
 
     auto celdeg = di.cell_degree();
@@ -626,7 +615,7 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh,
 // STABILIZATION s° 
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, const params<T>& parms = params<T>(),  bool scaled_Q = true) {
+make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, bool scaled_Q = true) {
     
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(PAIRE);
@@ -645,61 +634,32 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
     auto nb_dp_cells = std::get<2>(PAIRE).size();
     auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
 
+    auto cell_offset = 0.0;
+    auto face_offset = cbs;
+    if (is_cut(msh,cl) && loc == element_location::IN_NEGATIVE_SIDE) {
+        cell_offset = 0.0;
+        face_offset = 2*cbs;
+    }
+    else if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) {
+        cell_offset = cbs;
+        face_offset = 2*cbs + num_faces*fbs;
+    }
+
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
-    Matrix<T, Dynamic, Dynamic> If   = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-    auto h = diameter(msh, cl);
-    
-    auto offset_cells = 0;
-    auto offset_faces = 0;
-    if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) {
-        offset_cells = cbs;
-        offset_faces = num_faces*fbs;
-    }
-
-    for (size_t i = 0; i < fcs.size(); i++) {
-
-        auto fc = fcs[i];
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, loc);
-        Matrix<T, Dynamic, Dynamic> oper = Matrix<T, Dynamic, Dynamic>::Zero(fbs, local_dofs);
-        Matrix<T, Dynamic, Dynamic> mass = Matrix<T, Dynamic, Dynamic>::Zero(fbs, fbs);
-        Matrix<T, Dynamic, Dynamic> trace = Matrix<T, Dynamic, Dynamic>::Zero(fbs, cbs);
-
-        // FACE UNKNOWNS
-        if (is_cut(msh,cl)) 
-            oper.block(0, 2*cbs + offset_faces + i*fbs, fbs, fbs) = -If;
-        else 
-            oper.block(0, cbs + i*fbs, fbs, fbs) = -If;
-        
-
-        // TRACE OF CELL UNKNOWNS
-        auto qps = integrate(msh, fc, 2*facdeg + 1);
-        for (auto& qp : qps) {
-            auto c_phi = cb.eval_basis(qp.first);
-            auto f_phi = fb.eval_basis(qp.first);
-            mass  += qp.second * f_phi * f_phi.transpose();
-            trace += qp.second * f_phi * c_phi.transpose();
-        }
-        if (is_cut(msh,cl)) 
-            oper.block(0, offset_cells, fbs, cbs) = mass.llt().solve(trace);
-        else 
-            oper.block(0, 0, fbs, cbs) = mass.llt().solve(trace);
-
-        // CONSTRUCTION OF STAB BLOCKS
-        if (scaled_Q)
-            data += oper.transpose() * mass * oper * (1.0/h);
-        else 
-            data += oper.transpose() * mass * oper;
-    }
+    const auto stab = make_hho_cut_stabilization(msh, cl, di, loc);
+    data.block(cell_offset, cell_offset, cbs,           cbs)           += stab.block(0, 0, cbs, cbs);                         // cells--cells
+    data.block(cell_offset, face_offset, cbs,           num_faces*fbs) += stab.block(0, cbs, cbs, num_faces*fbs);             // cells--faces
+    data.block(face_offset, cell_offset, num_faces*fbs, cbs)           += stab.block(cbs, 0, num_faces*fbs, cbs);             // faces--cells
+    data.block(face_offset, face_offset, num_faces*fbs, num_faces*fbs) += stab.block(cbs, cbs, num_faces*fbs, num_faces*fbs); // faces--faces
 
     return data;
+
 }
 
 // STABILIZATION s^\Gamma
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double kappa, double eta, const params<T>& parms = params<T>(), bool scaled_Q = true) {
+make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double kappa, double eta, double coeff, bool scaled_Q = true) {
     
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(PAIRE);
@@ -722,26 +682,11 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
 
     // INTERFACE TERMS
     if (is_cut(msh,cl)) {
-        if (parms.kappa_1 == parms.kappa_2) {
-            if (loc == element_location::IN_NEGATIVE_SIDE) {
-                T penalty_scale = parms.kappa_1;
-                Matrix<T, Dynamic, Dynamic> penalty = make_hho_cut_interface_penalty(msh, cl, di, 1.0).block(0, 0, cbs, cbs);
-                data.block(0, 0, cbs, cbs)     += penalty_scale * penalty;
-                data.block(0, cbs, cbs, cbs)   -= penalty_scale * penalty;
-                data.block(cbs, 0, cbs, cbs)   -= penalty_scale * penalty;
-                data.block(cbs, cbs, cbs, cbs) += penalty_scale * penalty;         
-            }
-        }
-        else {
-            if (kappa == std::min(parms.kappa_1, parms.kappa_2)) {
-                T penalty_scale = std::min(parms.kappa_1, parms.kappa_2);
-                Matrix<T, Dynamic, Dynamic> penalty = make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, cbs, cbs);
-                data.block(0, 0, cbs, cbs)     += penalty_scale * penalty;
-                data.block(0, cbs, cbs, cbs)   -= penalty_scale * penalty;
-                data.block(cbs, 0, cbs, cbs)   -= penalty_scale * penalty;
-                data.block(cbs, cbs, cbs, cbs) += penalty_scale * penalty; 
-            }       
-        }
+        Matrix<T, Dynamic, Dynamic> penalty = make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, cbs, cbs);
+        data.block(0, 0, cbs, cbs)     += coeff * penalty;
+        data.block(0, cbs, cbs, cbs)   -= coeff * penalty;
+        data.block(cbs, 0, cbs, cbs)   -= coeff * penalty;
+        data.block(cbs, cbs, cbs, cbs) += coeff * penalty; 
     }
 
     return data;
@@ -1227,9 +1172,8 @@ template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,
              Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>  >
 make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,
-                            std::vector<double>>& P_OK, const hho_degree_info& di, 
-                            const Function& level_set_function, double kappa, 
-                            const params<T>& parms = params<T>()) {
+                                  std::vector<double>>& P_OK, const hho_degree_info& di, 
+                                  const Function& level_set_function, double coeff) {
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
@@ -1285,7 +1229,7 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
             const vector_type f_phi      = fb.eval_basis(qp.first);
             const auto        g_phi      = gb.eval_basis(qp.first);
             const vector_type qp_g_phi_n = qp.second*g_phi*n;
-            rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n*f_phi.transpose();
+            rhs_tmp.block(0, cbs + i*fbs, gbs, fbs) += qp_g_phi_n*f_phi.transpose();
             rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n*c_phi.transpose();
         }
     }
@@ -1307,18 +1251,9 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     }
     
     // INTERFACE TERM CURRENT CELL
-    if (is_cut(msh,cl)) {
-        if (parms.kappa_1 == parms.kappa_2) {
-            if (loc == element_location::IN_NEGATIVE_SIDE) {
-                gr_rhs.block(0, 0, gbs, 2*cbs) += make_hho_gradrec_vector_interface_term(msh, cl, cl, di, level_set_function);  
-            }
-        }
-        else {
-            if (kappa == std::min(parms.kappa_1, parms.kappa_2)) {
-                gr_rhs.block(0, 0, gbs, 2*cbs) += make_hho_gradrec_vector_interface_term(msh, cl, cl, di, level_set_function);  
-            }
-        }
-    }
+    if (is_cut(msh,cl)) 
+        gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * make_hho_gradrec_vector_interface_term(msh, cl, cl, di, level_set_function); 
+
     
     // LOOP OVER DEPENDENT CELLS 
     size_t offset_extended_dofs = current_dofs;  
@@ -1368,18 +1303,7 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
         }
 
         // INTERFACE TERMS OF THE EXTENDED DOFS
-        if (is_cut(msh,cl)) {
-            if (parms.kappa_1 == parms.kappa_2) {
-                if (loc == element_location::IN_NEGATIVE_SIDE) {
-                    gr_rhs.block(0, offset_extended_dofs, gbs, 2*cbs) += make_hho_gradrec_vector_interface_term(msh, cl, dp_cell, di, level_set_function); 
-                }
-            }
-            else {
-                if (kappa == std::min(parms.kappa_1, parms.kappa_2)) {
-                    gr_rhs.block(0, offset_extended_dofs, gbs, 2*cbs) += make_hho_gradrec_vector_interface_term(msh, cl, dp_cell, di, level_set_function); 
-                }
-            }
-        }
+        gr_rhs.block(0, offset_extended_dofs, gbs, 2*cbs) += coeff * make_hho_gradrec_vector_interface_term(msh, cl, dp_cell, di, level_set_function); 
 
         // UPDATING THE OFFSET OF DOFS OF THE EXTENDED CELLS
         offset_extended_dofs += extended_dofs;
@@ -1421,8 +1345,8 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     auto local_dofs = 2*uncut_dofs; 
     
     matrix_type rhs_tmp = matrix_type::Zero(gbs, uncut_dofs);
-    matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
-    matrix_type gr_rhs = matrix_type::Zero(gbs, local_dofs);
+    matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
+    matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
 
     // CELLS CONTRIBUTION
     if (celdeg > 0) {

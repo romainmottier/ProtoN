@@ -2700,32 +2700,22 @@ make_polynomial_extension(Mesh& msh, const Function& level_set_function) {
         }
     }
 
-    // FILLING THE STRUCTURE paired_cells / dependent_cells_neg / dependent_cells_pos / paire(T,i)
+    // FILLING THE STRUCTURES paired_cells / dependent_cells_neg / dependent_cells_pos / paire(T,i)
     for (auto &cl : msh.cells) {
         auto offset_cl = offset(msh,cl);
         if (cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) {
-            // std::cout << "Cell: " << offset_cl << std::endl;
-            if (table_neg.at(offset_cl) != -1) {
+            if (table_neg.at(offset_cl) != -1) 
                 cl.user_data.paired_cell = table_neg.at(offset_cl);
-            }
-            if (table_pos.at(offset_cl) != -1) {
+            if (table_pos.at(offset_cl) != -1) 
                 cl.user_data.paired_cell = table_pos.at(offset_cl);
-            }    
-            // std::cout << "Paired cell: " << cl.user_data.paired_cell;
-            // std::cout << std::endl << std::endl;
             auto& good_cl = msh.cells[cl.user_data.paired_cell];
             good_cl.user_data.dependent_cells_neg.insert(offset_cl);
         }
         else if (cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) {
-            // std::cout << "Cell: " << offset_cl << std::endl;
-            if (table_neg.at(offset_cl) != -1) {
+            if (table_neg.at(offset_cl) != -1) 
                 cl.user_data.paired_cell = table_neg.at(offset_cl);
-            }
-            if (table_pos.at(offset_cl) != -1) {
+            if (table_pos.at(offset_cl) != -1) 
                 cl.user_data.paired_cell = table_pos.at(offset_cl);
-            }    
-            // std::cout << "Paired cell: " << cl.user_data.paired_cell;
-            // std::cout << std::endl << std::endl;
             auto& good_cl = msh.cells[cl.user_data.paired_cell];
             good_cl.user_data.dependent_cells_pos.insert(offset_cl);
         }

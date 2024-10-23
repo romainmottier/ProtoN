@@ -565,9 +565,8 @@ void set_dir_func(const Function& f) {
     }
 
     void
-    assemble_bis_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
-                 const Matrix<T, Dynamic, Dynamic>& mass)
-    {
+    assemble_bis_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, Dynamic>& mass) {
+        
         if( !(location(msh, cl) == loc_zone
               || location(msh, cl) == element_location::ON_INTERFACE
               || loc_zone == element_location::ON_INTERFACE ) )
@@ -578,49 +577,19 @@ void set_dir_func(const Function& f) {
         assert( asm_map.size() == mass.rows() && asm_map.size() == mass.cols() );
 
         // MASS
-        for (size_t i = 0; i < mass.rows(); i++)
-        {
+        for (size_t i = 0; i < mass.rows(); i++) {
+
             if (!asm_map[i].assemble())
                 continue;
 
-            for (size_t j = 0; j < mass.cols(); j++)
-            {
+            for (size_t j = 0; j < mass.cols(); j++) {
                 if ( asm_map[j].assemble() )
                     triplets_mass.push_back( Triplet<T>(asm_map[i], asm_map[j], mass(i,j)) );
             }
+
         }
+
     }
-
-    void
-    assemble_bis_mass_extended(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& mass) {
-
-        // CELL INFOS
-        auto cell_index = std::get<0>(P);
-        auto cl = msh.cells[cell_index];
-
-        if( !(location(msh, cl) == loc_zone
-              || location(msh, cl) == element_location::ON_INTERFACE
-              || loc_zone == element_location::ON_INTERFACE ) )
-            return;
-
-        auto asm_map = init_asm_map_extended(msh, P);
-        auto dirichlet_data = get_dirichlet_data_extended(msh, P);
-        assert( asm_map.size() == mass.rows() && asm_map.size() == mass.cols() );
-
-        // MASS
-        for (size_t i = 0; i < mass.rows(); i++)
-        {
-            if (!asm_map[i].assemble())
-                continue;
-
-            for (size_t j = 0; j < mass.cols(); j++)
-            {
-                if ( asm_map[j].assemble() )
-                    triplets_mass.push_back( Triplet<T>(asm_map[i], asm_map[j], mass(i,j)) );
-            }
-        }
-    }
-
 
     Matrix<T, Dynamic, 1>
     get_solF(const Mesh& msh, const typename Mesh::cell_type& cl,
@@ -1232,13 +1201,6 @@ public:
              const Matrix<T, Dynamic, Dynamic>& mass)
     {
         this->assemble_bis_mass(msh, cl, mass);
-    }
-
-    void
-    assemble_mass_extended(const Mesh& msh, Tuple P,
-             const Matrix<T, Dynamic, Dynamic>& mass)
-    {
-        this->assemble_bis_mass_extended(msh, P, mass);
     }
 
     void classify_cells(const Mesh& msh){

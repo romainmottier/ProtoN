@@ -26,18 +26,15 @@ public:
 
         // GR
         T factor = 0.0;
-        if (1.0/(parms.kappa_1) < 1.0/(parms.kappa_2)) {
+        if (1.0/(parms.kappa_1) < 1.0/(parms.kappa_2))
             factor = 1.0;
-        }
-        auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_NEGATIVE_SIDE, 1.0-factor);
-        auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_POSITIVE_SIDE, factor);
+        auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0-factor);
+        auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_POSITIVE_SIDE, factor);
 
         // stab
         auto stab_parms = test_case.parms;
-        stab_parms.kappa_1 = 1.0/(parms.kappa_1); // rho_1 = kappa_1
-        stab_parms.kappa_2 = 1.0/(parms.kappa_2); // rho_2 = kappa_2
+        stab_parms.kappa_1 = 1.0/(parms.kappa_1); 
+        stab_parms.kappa_2 = 1.0/(parms.kappa_2); 
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, stab_parms);
         
         T penalty_scale = std::min(1.0/(parms.kappa_1), 1.0/(parms.kappa_2));
@@ -54,9 +51,7 @@ public:
         // neg part
         f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
                                           element_location::IN_NEGATIVE_SIDE);
-        f.head(cbs) -= parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
+        f.head(cbs) -= parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
 
         // pos part
         f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
