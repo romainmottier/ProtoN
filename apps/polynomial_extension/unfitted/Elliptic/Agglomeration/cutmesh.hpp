@@ -25,7 +25,7 @@ mesh_type SquareCutMesh(level_set<RealType> & level_set_function, size_t l_divs,
     tc.tic();
     mesh_type msh(mip);
     tc.toc();
-    std::cout << bold << yellow << "Mesh generation: " << tc << " seconds" << reset << std::endl;
+    std::cout << bold << yellow << "         Mesh generation: " << tc << " seconds" << reset << std::endl;
 
     CutMesh(msh,level_set_function,int_refsteps, true);
     return msh;
@@ -49,7 +49,7 @@ void CutMesh(mesh_type & msh, level_set<RealType> & level_set_function, size_t i
     }
     
     tc.toc();
-    std::cout << bold << yellow << "cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
+    std::cout << bold << yellow << "         cutHHO-specific mesh preprocessing: " << tc << " seconds" << reset << std::endl;
 }
 
 

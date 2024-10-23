@@ -52,25 +52,15 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     argc -= optind;
     argv += optind;
 
-    std::cout << std::endl << "   ";
-    std::cout << bold << red << "CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE " << reset;
-    std::cout << std::endl << std::endl << "   ";
-    std::cout << bold << red << "SIMULATION PARAMETERS : " << reset;
-    std::cout << bold << cyan << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Space refinement level     -l : " << l_divs << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Time refinement level      -n : " << nt_divs << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Interface refinement level -r : " << int_refsteps << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Debug & Silo files         -d : " << dump_debug << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Direct solver              -s : " << direct_solver_Q << std::endl;
-    std::cout << "      ";
-    std::cout << bold << "Static condensation        -c : " << sc_Q << reset << std::endl << std::endl;
+    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE ";
+    std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
+    std::cout << "      " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
+    std::cout << "      " << "Space refinement level     -l : " << l_divs << std::endl;
+    std::cout << "      " << "Time refinement level      -n : " << nt_divs << std::endl;
+    std::cout << "      " << "Interface refinement level -r : " << int_refsteps << std::endl;
+    std::cout << "      " << "Static condensation        -c : " << sc_Q << std::endl;
+    std::cout << "      " << "Direct solver              -s : " << direct_solver_Q << std::endl;
+    std::cout << "      " << "Debug & Silo files         -f : " << dump_debug << std::endl << std::endl;
 
   // ##################################################
   // ################################################## Level set function
@@ -103,8 +93,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
 
     for(size_t k = degree; k <= degree; k++){
 
-        std::cout << std::endl; 
-        std::cout << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
+        std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
         error_file << std::endl << "Polynomial degree k : " << k << std::endl;
         
         // Mixed order discretization
@@ -121,6 +110,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ##################################################
             // ################################################## Mesh generation 
             // ##################################################
+
             mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
             if (dump_debug) {
                 dump_mesh(msh);
@@ -154,6 +144,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ##################################################
             // ################################################## Solver
             // ##################################################
+
             if (direct_solver_Q) {
               analysis.set_direct_solver(true);
             }
@@ -165,6 +156,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ##################################################
             // ################################################## Assembly and loop over cells
             // ##################################################
+            
             auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
             assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
             // Loop over cells 
