@@ -117,11 +117,11 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     // ################################################## Level set function
     // ##################################################
     
-    // Line level set function 
+    // LINE LEVEL SET FUNCTION 
     // RealType line_y = 0.25; // WORK FOR -l 0 WITH NO TKO | DOESN'T WORK FOR OTHER MESHES 
     // auto level_set_function = line_level_set<RealType>(line_y);
 
-    // Circle level set - LEVEL SET OUTSIDE THE DOMAIN: OK
+    // CIRCLE LEVEL SET - LEVEL SET OUTSIDE THE DOMAIN: OK
     RealType radius = 1.0/3.0; // FOR -l 0 and -l 1 ONLY TKO CELLS  
     auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
     
@@ -207,7 +207,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ##################################################
 
             auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
-            assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+            assembler.RHS.setZero(); // Assuming null dirichlet data on boundary.
             for (auto& cl : msh.cells) {
                 auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
                 assembler.assemble_rhs(msh, cl, f);
