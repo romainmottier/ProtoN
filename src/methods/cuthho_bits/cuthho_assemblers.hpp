@@ -1074,8 +1074,8 @@ class interface_assembler : public virt_interface_assembler<Mesh, Function>
 public:
 
     interface_assembler(const Mesh& msh, const Function& dirichlet_bf, hho_degree_info& hdi)
-        : virt_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi)
-    {
+        : virt_interface_assembler<Mesh, Function>(msh, dirichlet_bf, hdi) {
+
         auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();
 
@@ -1088,31 +1088,27 @@ public:
 
         this->LHS = SparseMatrix<T>( system_size, system_size );
         this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size );
+        
     }
 
     void
     assemble(const Mesh& msh, const typename Mesh::cell_type& cl,
-             const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs)
-    {
+             const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs) {
         this->assemble_bis(msh, cl, lhs, rhs);
     }
 
 
     Matrix<T, Dynamic, 1>
-    take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl,
-                    const Matrix<T, Dynamic, 1>& solution,
-                    element_location where)
-    {
+    take_local_data(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, 1>& solution, element_location where) {
         auto celdeg = this->di.cell_degree();
         auto facdeg = this->di.face_degree();
 
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
         auto fbs = face_basis<Mesh,T>::size(facdeg);
 
-        auto cell_offset        = offset(msh, cl);
+        auto cell_offset = offset(msh, cl);
         size_t cell_SOL_offset;
-        if ( location(msh, cl) == element_location::ON_INTERFACE )
-        {
+        if ( location(msh, cl) == element_location::ON_INTERFACE ) {
             if (where == element_location::IN_NEGATIVE_SIDE)
                 cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
             else if (where == element_location::IN_POSITIVE_SIDE)
@@ -1121,9 +1117,7 @@ public:
                 throw std::invalid_argument("Invalid location");
         }
         else
-        {
             cell_SOL_offset = this->cell_table.at(cell_offset) * cbs;
-        }
 
         auto fcs = faces(msh, cl);
         auto num_faces = fcs.size();

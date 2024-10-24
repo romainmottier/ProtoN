@@ -659,7 +659,7 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
 // STABILIZATION s^\Gamma
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double kappa, double eta, double coeff, bool scaled_Q = true) {
+make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, double coeff, bool scaled_Q = true) {
     
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(PAIRE);
@@ -682,11 +682,11 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
 
     // INTERFACE TERMS
     if (is_cut(msh,cl)) {
-        Matrix<T, Dynamic, Dynamic> penalty = make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, cbs, cbs);
-        data.block(0, 0, cbs, cbs)     += coeff * penalty;
-        data.block(0, cbs, cbs, cbs)   -= coeff * penalty;
-        data.block(cbs, 0, cbs, cbs)   -= coeff * penalty;
-        data.block(cbs, cbs, cbs, cbs) += coeff * penalty; 
+        Matrix<T, Dynamic, Dynamic> penalty = coeff * make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, cbs, cbs);
+        data.block(0,   0,   cbs, cbs) += penalty;
+        data.block(0,   cbs, cbs, cbs) -= penalty;
+        data.block(cbs, 0,   cbs, cbs) -= penalty;
+        data.block(cbs, cbs, cbs, cbs) += penalty; 
     }
 
     return data;

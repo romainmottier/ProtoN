@@ -16,7 +16,7 @@ public:
 
     std::pair<Mat, Vect>
     make_contrib_POK(const Mesh& msh, Tuple P_OK, const testType &test_case, const hho_degree_info hdi) {
-
+        
         // CELL INFOS 
         auto cell_index = std::get<0>(P_OK);
         auto loc = std::get<1>(P_OK);
@@ -56,16 +56,20 @@ public:
         auto celdeg = hdi.cell_degree();
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
         Vect f = Vect::Zero(lc.rows());
-        if (loc == element_location::IN_NEGATIVE_SIDE) {
-            f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
-            f.head(cbs) -= ((1.0/stab_parms.kappa_1)) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
+        if (is_cut(msh,cl)) {
+            if (loc == element_location::IN_NEGATIVE_SIDE) {
+                f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+                f.head(cbs) -= ((1.0/stab_parms.kappa_1)) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
+            }
+            if (loc == element_location::IN_POSITIVE_SIDE) {
+                f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+                f.block(cbs, 0, cbs, 1) += (1.0/stab_parms.kappa_1) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
+                f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
+            }
         }
-        if (loc == element_location::IN_POSITIVE_SIDE) {
-            f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
-            f.block(cbs, 0, cbs, 1) += (1.0/stab_parms.kappa_1) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
-            f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
-        }
-        
+        else 
+            f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+
         return std::make_pair(lc, f);
     }
 
@@ -158,9 +162,20 @@ public:
         T kappa;
         auto stab_parms = test_case.parms;
         if (std::get<1>(P_KO) == element_location::IN_NEGATIVE_SIDE)
-            kappa = 1.0/stab_parms.kappa_1;
+            kappa = 1.0/test_case.parms.kappa_1;
         else 
-            kappa = 1.0/stab_parms.kappa_2;  
+            kappa = 1.0/test_case.parms.kappa_2;  
+        stab_parms.kappa_1 = 1.0/(test_case.parms.kappa_1); 
+        stab_parms.kappa_2 = 1.0/(test_case.parms.kappa_2); 
+        auto coeff = 0.0;
+        if (stab_parms.kappa_1 < stab_parms.kappa_2) {
+            if (loc == element_location::IN_POSITIVE_SIDE)
+                coeff = 1.0;
+        }
+        else {
+            if (loc == element_location::IN_NEGATIVE_SIDE)
+                coeff = 1.0;
+        }
 
         // LEVEL SET FUNCTION
         auto level_set_function = test_case.level_set_;
@@ -169,7 +184,9 @@ public:
         // HHO OPERATORS
         auto gr = make_hho_gradrec_vector_PKO(msh, P_KO, hdi, level_set_function);
         auto stab = make_hho_stabilization(msh, P_KO, hdi);
-        Mat lc = kappa * (gr.second + stab);  
+        auto stab_cut = make_hho_stabilization_penalty_term(msh, P_KO, hdi, eta, coeff); // s^\Gamma
+
+        Mat lc = kappa * (gr.second + stab + stab_cut);  
         
         // RHS
         auto celdeg = hdi.cell_degree();
