@@ -1207,7 +1207,7 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
 
     if (!is_cut(msh,cl)) {
-    //     gr_rhs.block(0, 0, gbs, cbs+num_faces*fbs) += make_hho_gradrec_vector_contrib(msh, cl, di);
+        gr_rhs.block(0, 0, gbs, cbs+num_faces*fbs) += make_hho_gradrec_vector_contrib(msh, cl, di);
     }
     else {
         // CELLS CONTRIBUTION
