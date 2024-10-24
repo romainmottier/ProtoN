@@ -106,10 +106,8 @@ public:
     Mat
     make_contrib_cut_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType &test_case)
     {
-        Mat mass_neg = make_mass_matrix(msh, cl,
-                                        hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-        Mat mass_pos = make_mass_matrix(msh, cl,
-                                        hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
+        Mat mass_neg = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+        Mat mass_pos = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
         mass_neg *= (1.0 / (test_case.parms.c_1 * test_case.parms.c_1 * test_case.parms.kappa_1));
         mass_pos *= (1.0 / (test_case.parms.c_2 * test_case.parms.c_2 * test_case.parms.kappa_2));
 

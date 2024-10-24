@@ -696,7 +696,7 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, 
-                                      const hho_degree_info& di, double eta, const params<T>& parms = params<T>(),  bool scaled_Q = true) {
+                                      const hho_degree_info& di, double eta, bool scaled_Q = true) {
 
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(PAIRE);
@@ -1001,11 +1001,9 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh,
     matrix_type        gr_rhs = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
 
     const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
-    for (auto& qp : qps)
-    {
+    for (auto& qp : qps) {
         const auto c_dphi = cb.eval_gradients(qp.first);
         const auto g_phi  = gb.eval_basis(qp.first);
-
         gr_lhs.block(0, 0, gbs, gbs) += qp.second * g_phi * g_phi.transpose();
         rhs_tmp.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
     }
@@ -1192,9 +1190,11 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
+    // EXTENSION INFOS
     auto fcs = faces(msh, cl);
     auto ns  = normals(msh, cl);
-    auto num_faces = fcs.size();
+    auto num_faces = faces(msh, cl).size();
     auto uncut_dofs = cbs + num_faces*fbs;
     auto current_dofs = cbs + num_faces*fbs;
     if (is_cut(msh,cl)) 
@@ -1202,40 +1202,42 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     auto extended_dofs = 2*(cbs + num_faces*fbs);
     auto dp_cells = std::get<2>(P_OK);
     auto local_dofs = current_dofs + dp_cells.size()*extended_dofs; 
-    
     matrix_type rhs_tmp = matrix_type::Zero(gbs, uncut_dofs);
-    matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
-    matrix_type gr_rhs = matrix_type::Zero(gbs, local_dofs);
+    matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
+    matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
 
-    // CELLS CONTRIBUTION
-    if (celdeg > 0) {
-        const auto qps = integrate(msh, cl, celdeg-1 + facdeg, loc);
-        for (auto& qp : qps) {
-            const auto c_dphi = cb.eval_gradients(qp.first);
-            const auto g_phi  = gb.eval_basis(qp.first);
-            gr_lhs.block(0, 0, gbs, gbs)  += qp.second*g_phi*g_phi.transpose();  
-            rhs_tmp.block(0, 0, gbs, cbs) += qp.second*g_phi*c_dphi.transpose(); 
-        }
+    if (!is_cut(msh,cl)) {
+    //     gr_rhs.block(0, 0, gbs, cbs+num_faces*fbs) += make_hho_gradrec_vector_contrib(msh, cl, di);
     }
-
-    // FACES CONTRIBUTION
-    for (size_t i = 0; i < fcs.size(); i++) {
-        const auto fc = fcs[i];
-        const auto n  = ns[i];
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, loc);
-        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), loc);
-        for (auto& qp : qps_f) {
-            const vector_type c_phi      = cb.eval_basis(qp.first);
-            const vector_type f_phi      = fb.eval_basis(qp.first);
-            const auto        g_phi      = gb.eval_basis(qp.first);
-            const vector_type qp_g_phi_n = qp.second*g_phi*n;
-            rhs_tmp.block(0, cbs + i*fbs, gbs, fbs) += qp_g_phi_n*f_phi.transpose();
-            rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n*c_phi.transpose();
+    else {
+        // CELLS CONTRIBUTION
+        if (celdeg > 0) {
+            const auto qps = integrate(msh, cl, celdeg-1 + facdeg, loc);
+            for (auto& qp : qps) {
+                const auto c_dphi = cb.eval_gradients(qp.first);
+                const auto g_phi  = gb.eval_basis(qp.first);
+                gr_lhs.block(0, 0, gbs, gbs)  += qp.second*g_phi*g_phi.transpose();  
+                rhs_tmp.block(0, 0, gbs, cbs) += qp.second*g_phi*c_dphi.transpose(); 
+            }
         }
-    }
-
-    // ADDING CONTRIBUTIONS OF CURRENT CELL  
-    if (is_cut(msh,cl)) {
+        
+        // FACES CONTRIBUTION
+        for (size_t i = 0; i < fcs.size(); i++) {
+            const auto fc = fcs[i];
+            const auto n  = ns[i];
+            cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, loc);
+            const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), loc);
+            for (auto& qp : qps_f) {
+                const vector_type c_phi      = cb.eval_basis(qp.first);
+                const vector_type f_phi      = fb.eval_basis(qp.first);
+                const auto        g_phi      = gb.eval_basis(qp.first);
+                const vector_type qp_g_phi_n = qp.second*g_phi*n;
+                rhs_tmp.block(0, cbs + i*fbs, gbs, fbs) += qp_g_phi_n*f_phi.transpose();
+                rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n*c_phi.transpose();
+            }
+        }
+        
+        // ADDING CONTRIBUTIONS OF CURRENT CELL  
         if (loc == element_location::IN_NEGATIVE_SIDE) {
             gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
             gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
@@ -1244,17 +1246,13 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
             gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
             gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
         }
-    }
-    else {
-        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, cbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-    
-    // INTERFACE TERM CURRENT CELL
-    if (is_cut(msh,cl)) 
-        gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * make_hho_gradrec_vector_interface_term(msh, cl, cl, di, level_set_function); 
+        
+        // INTERFACE TERM CURRENT CELL
+        if (is_cut(msh,cl)) 
+            gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * make_hho_gradrec_vector_interface_term(msh, cl, cl, di, level_set_function); 
 
-    
+    }
+
     // LOOP OVER DEPENDENT CELLS 
     size_t offset_extended_dofs = current_dofs;  
     for (auto &dp_cl : dp_cells) {
@@ -1315,6 +1313,7 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     return std::make_pair(oper, data);
 
 }
+
 
 template<typename T, size_t ET, typename Function>
 std::pair<   Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,

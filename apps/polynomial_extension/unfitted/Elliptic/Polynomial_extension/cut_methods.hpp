@@ -25,19 +25,16 @@ public:
         // MATERIAL PROPERTIES
         T kappa;
         if (loc == element_location::IN_NEGATIVE_SIDE)
-            kappa = 1.0/test_case.parms.kappa_1;
+            kappa = test_case.parms.kappa_1;
         else
-            kappa = 1.0/test_case.parms.kappa_2;
-        auto stab_parms = test_case.parms;
-        stab_parms.kappa_1 = 1.0/(test_case.parms.kappa_1); 
-        stab_parms.kappa_2 = 1.0/(test_case.parms.kappa_2); 
+            kappa = test_case.parms.kappa_2;
         auto coeff = 0.0;
-        if (stab_parms.kappa_1 < stab_parms.kappa_2) {
-            if (loc == element_location::IN_POSITIVE_SIDE)
+        if (test_case.parms.kappa_1 < test_case.parms.kappa_2) {
+            if (loc == element_location::IN_NEGATIVE_SIDE)
                 coeff = 1.0;
         }
         else {
-            if (loc == element_location::IN_NEGATIVE_SIDE)
+            if (loc == element_location::IN_POSITIVE_SIDE)
                 coeff = 1.0;
         }
 
@@ -49,26 +46,26 @@ public:
         auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function, coeff);       // G       
         auto stab_usual = make_hho_stabilization(msh, P_OK, hdi);                               // s° 
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, kappa, eta, coeff); // s^\Gamma
-        auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta, stab_parms);  // s^N
+        auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta);              // s^N
         Mat lc = kappa*(gr.second + stab_usual + stab_cut) + stab_ill_dofs; 
 
         // RHS
         auto celdeg = hdi.cell_degree();
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
         Vect f = Vect::Zero(lc.rows());
-        if (is_cut(msh,cl)) {
-            if (loc == element_location::IN_NEGATIVE_SIDE) {
-                f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
-                f.head(cbs) -= ((1.0/stab_parms.kappa_1)) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
-            }
-            if (loc == element_location::IN_POSITIVE_SIDE) {
-                f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
-                f.block(cbs, 0, cbs, 1) += (1.0/stab_parms.kappa_1) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
-                f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
-            }
-        }
-        else 
-            f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
+        // if (is_cut(msh,cl)) {
+        //     if (loc == element_location::IN_NEGATIVE_SIDE) {
+        //         f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        //         f.head(cbs) -= ((1.0/stab_parms.kappa_1)) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
+        //     }
+        //     if (loc == element_location::IN_POSITIVE_SIDE) {
+        //         f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        //         f.block(cbs, 0, cbs, 1) += (1.0/stab_parms.kappa_1) * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,level_set_function, dir_jump, eta);
+        //         f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
+        //     }
+        // }
+        // else 
+        //     f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
 
         return std::make_pair(lc, f);
     }
@@ -244,32 +241,6 @@ public:
         Mat mass = Mat::Zero(n_data, n_data);
         mass.block(0, 0, n_data_neg, n_data_neg) = mass_neg;
         mass.block(n_data_neg, n_data_neg, n_data_pos, n_data_pos) = mass_pos;
-
-        return mass;
-    }
-
-    Mat
-    make_contrib_cut_mass(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
-        
-        // CELL INFOS & PARAMETERS
-        auto cell_index = std::get<0>(P);
-        auto loc = std::get<1>(P);
-        auto cl = msh.cells[cell_index];
-
-        Mat mass_neg = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-        Mat mass_pos = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
-        mass_neg *= (1.0 / (test_case.parms.c_1 * test_case.parms.c_1 * test_case.parms.kappa_1));
-        mass_pos *= (1.0 / (test_case.parms.c_2 * test_case.parms.c_2 * test_case.parms.kappa_2));
-
-        size_t n_data_neg = mass_neg.rows();
-        size_t n_data_pos = mass_pos.rows();
-        size_t n_data = n_data_neg + n_data_pos;
-
-        Mat mass = Mat::Zero(n_data, n_data);
-        if (loc == element_location::IN_NEGATIVE_SIDE)
-            mass.block(0, 0, n_data_neg, n_data_neg) = mass_neg;
-        if (loc == element_location::IN_POSITIVE_SIDE)
-            mass.block(n_data_neg, n_data_neg, n_data_pos, n_data_pos) = mass_pos;
 
         return mass;
     }

@@ -122,7 +122,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     // auto level_set_function = line_level_set<RealType>(line_y);
 
     // CIRCLE LEVEL SET - LEVEL SET OUTSIDE THE DOMAIN: OK
-    RealType radius = 1.0/3.0; // FOR -l 0 and -l 1 ONLY TKO CELLS  
+    RealType radius = 3.0; //1.0/3.0; // FOR -l 0 and -l 1 ONLY TKO CELLS  
+    // RealType radius = 1.0/3.0; // FOR -l 0 and -l 1 ONLY TKO CELLS  
     auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
     
     // Flower level set function

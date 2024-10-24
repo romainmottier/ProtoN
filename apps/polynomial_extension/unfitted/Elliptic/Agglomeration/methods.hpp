@@ -30,7 +30,6 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
     tc.tic();
     auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
     std::vector<std::pair<size_t,size_t>> cell_basis_data = assembler.compute_cell_basis_data(msh);
-    size_t cell_ind = 0;
     for (auto& cell : msh.cells) {
         auto contrib = method.make_contrib(msh, cell, test_case, hdi);
         auto lc = contrib.first;
@@ -41,7 +40,6 @@ create_kg_and_mg_cuthho_interface(const Mesh& msh, hho_degree_info & hdi, meth &
         mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
         assembler.assemble(msh, cell, lc, f);
         assembler.assemble_mass(msh, cell, mass);
-        cell_ind++;
     }
     assembler.finalize();
     

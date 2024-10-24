@@ -37,7 +37,7 @@ assembly_poly_extension(const Mesh& msh, hho_degree_info & hdi, meth &method, te
         auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
         auto lc = contrib.first;
         auto f = contrib.second;
-        auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);      
+        auto cell_mass = method.make_contrib_mass(msh, cl, test_case, hdi);      
         size_t n_dof = assembler.n_dof(msh, cl);
         Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof, n_dof);
         mass.block(0,0,cell_mass.rows(), cell_mass.cols()) = cell_mass;
@@ -49,12 +49,7 @@ assembly_poly_extension(const Mesh& msh, hho_degree_info & hdi, meth &method, te
         auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
         auto lc = contrib.first;
         auto f = contrib.second;
-        auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);      
-        size_t n_dof = assembler.n_dof(msh, cl);
-        Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof, n_dof);
-        mass.block(0,0,cell_mass.rows(), cell_mass.cols()) = cell_mass;
         assembler.assemble_extended(msh, pair, lc, f);  
-        assembler.assemble_mass(msh, cl, mass);
     } 
     assembler.finalize();
     
@@ -101,8 +96,11 @@ public:
     }
 
     Mat
-    make_contrib_mass(const Mesh& msh, Tuple P, const testType &test_case, const hho_degree_info hdi) {
-        return cut_method<T, ET, testType>::make_contrib_cut_mass(msh, P, hdi, test_case);
+    make_contrib_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const testType &test_case, const hho_degree_info hdi) {
+        if( location(msh, cl) != element_location::ON_INTERFACE )
+            return uncut_method<T, ET, testType>::make_contrib_uncut_mass(msh, cl, hdi, test_case);
+        else 
+            return cut_method<T, ET, testType>::make_contrib_cut_mass(msh, cl, hdi, test_case);
     }
 
 };

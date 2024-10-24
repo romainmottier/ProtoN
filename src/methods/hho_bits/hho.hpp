@@ -376,6 +376,62 @@ make_hho_gradrec_vector(const Mesh& msh, const typename Mesh::cell_type& cl, con
 }
 
 template<typename Mesh>
+Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>
+make_hho_gradrec_vector_contrib(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di) {
+    
+    using T = typename Mesh::coordinate_type;
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+    typedef Matrix<T, Dynamic, 1>       vector_type;
+
+    const auto celdeg  = di.cell_degree();
+    const auto facdeg  = di.face_degree();
+    const auto graddeg = di.grad_degree();
+
+    cell_basis<Mesh,T>        cb(msh, cl, celdeg);
+    vector_cell_basis<Mesh,T> gb(msh, cl, graddeg);
+
+    auto cbs = cell_basis<Mesh,T>::size(celdeg);
+    auto fbs = face_basis<Mesh,T>::size(facdeg);
+    auto gbs = vector_cell_basis<Mesh,T>::size(graddeg);
+
+    const auto num_faces = faces(msh, cl).size();
+
+    matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
+    matrix_type gr_rhs = matrix_type::Zero(gbs, cbs + num_faces * fbs);
+
+    if(celdeg > 0) {
+        const auto qps = integrate(msh, cl, celdeg - 1 + facdeg);
+        for (auto& qp : qps) {
+            const auto c_dphi = cb.eval_gradients(qp.first);
+            const auto g_phi  = gb.eval_basis(qp.first);
+            gr_lhs.block(0, 0, gbs, gbs) += qp.second * g_phi * g_phi.transpose();
+            gr_rhs.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
+        }
+    }
+
+    const auto fcs = faces(msh, cl);
+    const auto ns = normals(msh, cl);
+    for (size_t i = 0; i < fcs.size(); i++) {
+        const auto fc = fcs[i];
+        const auto n  = ns[i];
+        face_basis<Mesh,T> fb(msh, fc, facdeg);
+        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg));
+        for (auto& qp : qps_f)
+        {
+            const vector_type c_phi      = cb.eval_basis(qp.first);
+            const vector_type f_phi      = fb.eval_basis(qp.first);
+            const auto        g_phi      = gb.eval_basis(qp.first);
+            const vector_type qp_g_phi_n = qp.second * g_phi * n;
+
+            gr_rhs.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
+            gr_rhs.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
+        }
+    }
+
+    return gr_rhs;
+}
+
+template<typename Mesh>
 std::pair<   Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>,
              Matrix<typename Mesh::coordinate_type, Dynamic, Dynamic>  >
 make_hho_gradrec_mixed_vector(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info& di)
