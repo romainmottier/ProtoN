@@ -408,8 +408,8 @@ public:
            cell_i++;
        }
        
-       scalar_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
-       flux_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
+       scalar_l2_error = std::accumulate(l2_error_vec.begin(), l2_error_vec.end(),0.0);
+       flux_l2_error = std::accumulate(flux_l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
        tc.toc();
        
        std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;

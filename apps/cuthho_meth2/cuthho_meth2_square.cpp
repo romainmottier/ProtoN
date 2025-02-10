@@ -1622,7 +1622,7 @@ void convergence_test(void)
             mip.Nx = N;
             mip.Ny = N;
             cuthho_poly_mesh<T> msh(mip);
-            size_t int_refsteps = 1;
+            size_t int_refsteps = 10;
             T radius = 1.0/3.0;
             auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 

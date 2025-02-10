@@ -1135,7 +1135,7 @@ int main(int argc, char **argv)
 //    HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
     
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
-    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
+    // HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
 //    ICutHHOSecondOrder(argc, argv);
 //    ICutHHOFirstOrder(argc, argv);
@@ -1143,7 +1143,7 @@ int main(int argc, char **argv)
 //    ECutHHOFirstOrderCFL(argc, argv);
 //    ECutHHOFirstOrderEigenCFL(argc, argv);
     
-//    CutHHOSecondOrderConvTest(argc, argv);
+   CutHHOSecondOrderConvTest(argc, argv);
 //    CutHHOFirstOrderConvTest(argc, argv);
     return 0;
 }
@@ -1219,7 +1219,7 @@ void CutMesh(mesh_type & msh, level_set<RealType> & level_set_function, size_t i
 
 void CutHHOSecondOrderConvTest(int argc, char **argv){
     
-    bool direct_solver_Q = true;
+    bool direct_solver_Q = false;
     bool sc_Q = true;
     size_t degree           = 0;
     size_t l_divs          = 0;
@@ -1272,8 +1272,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     std::ofstream error_file("steady_state_one_field_error.txt");
     
     RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
-    
+    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 4, 0.04);
+ 
     timecounter tc;
     SparseMatrix<RealType> Kg, Mg;
 
@@ -1285,11 +1286,11 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
         for(size_t l = 0; l <= l_divs; l++){
             
             mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
-            if (dump_debug)
-            {
-                dump_mesh(msh);
-                output_mesh_info(msh, level_set_function);
-            }
+            // if (dump_debug)
+            // {
+            //     dump_mesh(msh);
+            //     output_mesh_info(msh, level_set_function);
+            // }
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
             auto method = make_gradrec_interface_method(msh, 1.0, test_case);
             
@@ -1330,7 +1331,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             if (dump_debug)
             {
                 std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
-                postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+                // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
             }
             postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
         }
