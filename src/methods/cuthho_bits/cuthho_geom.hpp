@@ -26,50 +26,43 @@
 
 template<typename T, size_t ET>
 bool
-is_cut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl)
-{
+is_cut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl) {
     assert(cl.user_data.location != element_location::UNDEF);
     return cl.user_data.location == element_location::ON_INTERFACE;
 }
 
 template<typename T, size_t ET>
 bool
-is_cut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc)
-{
+is_cut(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc) {
     assert(fc.user_data.location != element_location::UNDEF);
     return fc.user_data.location == element_location::ON_INTERFACE;
 }
 
 template<typename T, size_t ET>
 element_location
-location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl)
-{
+location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl) {
     assert(cl.user_data.location != element_location::UNDEF);
     return cl.user_data.location;
 }
 
 template<typename T, size_t ET>
 element_location
-location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc)
-{
+location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc) {
     assert(fc.user_data.location != element_location::UNDEF);
     return fc.user_data.location;
 }
 
 template<typename T, size_t ET>
 element_location
-location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::node_type& n)
-{
+location(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::node_type& n) {
     assert(n.user_data.location != element_location::UNDEF);
     return n.user_data.location;
 }
 
-
 template<typename T, typename Function>
 point<T, 2>
-find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& level_set_function,
-                   const T& threshold)
-{
+find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& level_set_function, const T& threshold) {
+
     /* !!! We assume that the level set function *has* a zero crossing
      * between p0 and p1 !!! */
     auto pa = p0;
@@ -90,14 +83,12 @@ find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& l
         auto lb = level_set_function(pb);
         auto lm = level_set_function(pm);
 
-        if ( (lb >= 0 && lm >= 0) || (lb < 0 && lm < 0) )
-        {   /* intersection is between pa and pm */
+        if ( (lb >= 0 && lm >= 0) || (lb < 0 && lm < 0) ) {   /* intersection is between pa and pm */
             pm_prev = pm;
             pb = pm;
             pm = (pa+pb)/2.0;
         }
-        else
-        {   /* intersection is between pm and pb */
+        else {   /* intersection is between pm and pb */
             pm_prev = pm;
             pa = pm;
             pm = (pa+pb)/2.0;
@@ -117,10 +108,8 @@ find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& l
 
 template<typename T, size_t ET, typename Function>
 void
-detect_node_position(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
-    for (auto& n : msh.nodes)
-    {
+detect_node_position(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
+    for (auto& n : msh.nodes) {
         auto pt = points(msh, n);
         if ( level_set_function(pt) < 0 )
             n.user_data.location = element_location::IN_NEGATIVE_SIDE;
@@ -131,21 +120,18 @@ detect_node_position(cuthho_mesh<T, ET>& msh, const Function& level_set_function
 
 template<typename T, size_t ET, typename Function>
 void
-detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
-    for (auto& fc : msh.faces)
-    {
+detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
+
+    for (auto& fc : msh.faces) {
         auto pts = points(msh, fc);
         auto l0 = level_set_function(pts[0]);
         auto l1 = level_set_function(pts[1]);
-        if (l0 >= 0 && l1 >= 0)
-        {
+        if (l0 >= 0 && l1 >= 0) {
             fc.user_data.location = element_location::IN_POSITIVE_SIDE;
             continue;
         }
 
-        if (l0 < 0 && l1 < 0)
-        {
+        if (l0 < 0 && l1 < 0) {
             fc.user_data.location = element_location::IN_NEGATIVE_SIDE;
             continue;
         }
@@ -153,7 +139,6 @@ detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         auto threshold = diameter(msh, fc) / 1e20;
         auto pm = find_zero_crossing(pts[0], pts[1], level_set_function, threshold);
 
-        /* If node 0 is in the negative region, mark it as node inside, otherwise mark node 1 */
         fc.user_data.node_inside = ( l0 < 0 ) ? 0 : 1;
         fc.user_data.location = element_location::ON_INTERFACE;
         fc.user_data.intersection_point = pm;
@@ -162,20 +147,19 @@ detect_cut_faces(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 
 template<typename T, size_t ET, typename Function>
 void
-detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
+detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
+
     typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
     size_t cell_i = 0;
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
+
         auto fcs = faces(msh, cl);
         std::array< std::pair<size_t, point_type>, 2 >  cut_faces;
 
         size_t k = 0;
-        for (size_t i = 0; i < fcs.size(); i++)
-        {
+        for (size_t i = 0; i < fcs.size(); i++) {
             bool face_is_cut_Q = is_cut(msh, fcs[i]);
             if ( face_is_cut_Q )
                 cut_faces.at(k++) = std::make_pair(i, fcs[i].user_data.intersection_point);
@@ -185,8 +169,7 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
          * unconditionally true? It should...fortunately this isn't avionics
          * software */
 
-        if (k == 0)
-        {
+        if (k == 0) {
             auto is_positive = [&](const point_type& pt) -> bool {
                 return level_set_function(pt) > 0;
             };
@@ -198,8 +181,7 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
                 cl.user_data.location = element_location::IN_NEGATIVE_SIDE;
         }
 
-        if (k == 2)
-        {
+        if (k == 2) {
             cl.user_data.location = element_location::ON_INTERFACE;
             auto p0 = cut_faces[0].second;
             auto p1 = cut_faces[1].second;
@@ -207,13 +189,11 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             auto pt_t = point<T,2>(-pt.y(), pt.x());
             auto pn = p0 + pt_t;
 
-            if ( level_set_function(pn) >= 0 )
-            {
+            if ( level_set_function(pn) >= 0 ) {
                 cl.user_data.p0 = p1;
                 cl.user_data.p1 = p0;
             }
-            else
-            {
+            else {
                 cl.user_data.p0 = p0;
                 cl.user_data.p1 = p1;
             }
@@ -228,8 +208,6 @@ detect_cut_cells(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         cell_i++;
     }
 }
-
-//#define USE_OLD_DISPLACEMENT
 
 #ifdef USE_OLD_DISPLACEMENT
 template<typename T, size_t ET, typename Function>
@@ -315,17 +293,15 @@ move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 
 template<typename T, size_t ET, typename Function>
 void
-move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
+move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
+
     typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
     T closeness_thresh = 0.4;
 
-    for (auto& fc : msh.faces)
-    {
-        if ( location(msh, fc) == element_location::ON_INTERFACE )
-        {
+    for (auto& fc : msh.faces) {
+        if ( location(msh, fc) == element_location::ON_INTERFACE ) {
             auto nds = nodes(msh, fc);
             auto pts = points(msh, fc);
             auto bar = (pts[1] + pts[0])/2.0;
@@ -356,16 +332,14 @@ move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
             msh.points.at( nd.ptid ) = msh.points.at( nd.ptid ) + nd.user_data.displacement;
 
 
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
         auto nds = nodes(msh, cl);
         for (auto& n : nds)
             if (n.user_data.displaced)
                 cl.user_data.distorted = true;
     }
 
-    for (auto& cl : msh.cells) /* Check we didn't generate concave cells */
-    {
+    for (auto& cl : msh.cells) {
         if (!cl.user_data.distorted)
             continue;
 
@@ -374,17 +348,14 @@ move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
         if (pts.size() < 4)
             continue;
 
-        for (size_t i = 0; i < pts.size(); i++)
-        {
+        for (size_t i = 0; i < pts.size(); i++) {
             auto pa = pts[i];
             auto pb = pts[(i+1)%pts.size()];
             auto pc = pts[(i+2)%pts.size()];
             auto v1 = (pb - pa);
             auto v2 = (pc - pb);
             auto cross = v1.x() * v2.y() - v2.x() * v1.y();
-
-            if ( cross < 0 )
-            {
+            if (cross < 0) {
                 std::cout << red << "[ !WARNING! ] A concave polygon was generated (cell " << offset(msh, cl) << ")." << nocolor << std::endl;
                 throw std::logic_error("concave poly");
             }
@@ -396,10 +367,8 @@ move_nodes(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
 
 template<typename T, size_t ET>
 std::array< typename cuthho_mesh<T, ET>::point_type, 2 >
-points(const cuthho_mesh<T, ET>& msh,
-       const typename cuthho_mesh<T, ET>::face_type& fc,
-       const element_location& where)
-{
+points(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc, const element_location& where) {
+
     if ( location(msh, fc) != where && location(msh, fc) != element_location::ON_INTERFACE )
         throw std::invalid_argument("This face has no points where requested");
 
@@ -420,33 +389,13 @@ points(const cuthho_mesh<T, ET>& msh,
 
 template<typename T>
 auto
-barycenter(const std::vector< point<T, 2> >& pts)
-{
-    /*
-    point<T, 2> ret;
-
-    T den = 0.0;
-
-    for (size_t i = 2; i < pts.size(); i++)
-    {
-        auto pprev  = pts[i-1]-pts[0];
-        auto pcur   = pts[i]-pts[0];
-        auto d      = det(pprev, pcur) / 2.0;
-        ret         = ret + (pprev + pcur) * d;
-        den         += d;
-    }
-
-    return pts[0] + ret/(den*3);
-    */
+barycenter(const std::vector< point<T, 2> >& pts) {
     return barycenter(pts.begin(), pts.end());
 }
 
 template<typename T, size_t ET>
 auto
-barycenter(const cuthho_mesh<T, ET>& msh,
-           const typename cuthho_mesh<T, ET>::cell_type& cl,
-           element_location where)
-{
+barycenter(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where) {
     if ( !is_cut(msh, cl) )
         return barycenter(msh, cl);
 
@@ -458,9 +407,8 @@ barycenter(const cuthho_mesh<T, ET>& msh,
 
 template<typename T, size_t ET, typename Function>
 void
-refine_interface(cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type& cl,
-                 const Function& level_set_function, size_t min, size_t max)
-{
+refine_interface(cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, size_t min, size_t max) {
+    
     if ( (max-min) < 2 )
         return;
 
@@ -481,13 +429,11 @@ refine_interface(cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type
 
     point_type ip;
 
-    if ( !((lm >= 0 && ls1 >= 0) || (lm < 0 && ls1 < 0)) )
-    {
+    if ( !((lm >= 0 && ls1 >= 0) || (lm < 0 && ls1 < 0)) ) {
         auto threshold = diameter(msh, cl) / 1e20;
         ip = find_zero_crossing(pm, ps1, level_set_function, threshold);
     }
-    else if ( !((lm >= 0 && ls2 >= 0) || (lm < 0 && ls2 < 0)) )
-    {
+    else if ( !((lm >= 0 && ls2 >= 0) || (lm < 0 && ls2 < 0)) ) {
         auto threshold = diameter(msh, cl) / 1e20;
         ip = find_zero_crossing(pm, ps2, level_set_function, threshold);
     }
@@ -502,32 +448,29 @@ refine_interface(cuthho_mesh<T, ET>& msh, typename cuthho_mesh<T, ET>::cell_type
 
 template<typename T, size_t ET, typename Function>
 void
-refine_interface(cuthho_mesh<T, ET>& msh, const Function& level_set_function, size_t levels)
-{
+refine_interface(cuthho_mesh<T, ET>& msh, const Function& level_set_function, size_t levels) {
+
     if (levels == 0)
         return;
 
     size_t interface_points = iexp_pow(2, levels);
 
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
         if ( !is_cut(msh, cl) )
             continue;
 
         cl.user_data.interface.resize(interface_points+1);
         cl.user_data.interface.at(0)                = cl.user_data.p0;
         cl.user_data.interface.at(interface_points) = cl.user_data.p1;
-
         refine_interface(msh, cl, level_set_function, 0, interface_points);
+
     }
 }
 
 template<typename T, size_t ET>
 std::vector< typename cuthho_mesh<T, ET>::point_type >
-collect_triangulation_points(const cuthho_mesh<T, ET>& msh,
-                             const typename cuthho_mesh<T, ET>::cell_type& cl,
-                             const element_location& where)
-{
+collect_triangulation_points(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const element_location& where) {
+
     typedef typename cuthho_mesh<T, ET>::point_type     point_type;
     typedef typename cuthho_mesh<T, ET>::node_type      node_type;
 
@@ -554,16 +497,14 @@ collect_triangulation_points(const cuthho_mesh<T, ET>& msh,
     bool case3 = location(msh, ns.front()) != where && location(msh, ns.back()) != where;
     //bool case4 = location(msh, ns.front()) == where && location(msh, ns.back()) == where;
 
-    if ( case1 || case2 || case3 )
-    {
+    if ( case1 || case2 || case3 ) {
         for (size_t i = 0; i < ns.size(); i++)
             if ( location(msh, ns[i]) == where )
                 ret.push_back( node2pt(ns[i]) );
 
         insert_interface();
     }
-    else // case4, the only possible remaining
-    {
+    else  {
         size_t i = 0;
         while ( i < ns.size() && location(msh, ns.at(i)) == where )
             ret.push_back( node2pt(ns.at(i++)) );
@@ -577,10 +518,9 @@ collect_triangulation_points(const cuthho_mesh<T, ET>& msh,
     return ret;
 }
 
-
 template<typename T>
-struct temp_tri
-{
+struct temp_tri {
+
     std::array< point<T,2>, 3 > pts;
 
     T area() const {
@@ -594,8 +534,7 @@ struct temp_tri
 
 template<typename T>
 std::ostream&
-operator<<(std::ostream& os, const temp_tri<T>& t)
-{
+operator<<(std::ostream& os, const temp_tri<T>& t) {
     os << "line([" << t.pts[0].x() << "," << t.pts[1].x() << "],[" << t.pts[0].y() << "," << t.pts[1].y() << "]);" << std::endl;
     os << "line([" << t.pts[1].x() << "," << t.pts[2].x() << "],[" << t.pts[1].y() << "," << t.pts[2].y() << "]);" << std::endl;
     os << "line([" << t.pts[2].x() << "," << t.pts[0].x() << "],[" << t.pts[2].y() << "," << t.pts[0].y() << "]);" << std::endl;
@@ -605,9 +544,8 @@ operator<<(std::ostream& os, const temp_tri<T>& t)
 
 template<typename T, size_t ET>
 typename cuthho_mesh<T, ET>::point_type
-tesselation_center(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-                    element_location where)
-{
+tesselation_center(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where) {
+
     auto fcs = faces(msh, cl);
     auto pts = points(msh, cl);
     auto nds = nodes(msh, cl);
@@ -620,14 +558,12 @@ tesselation_center(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 
     // if two consecutive faces are cut
     // return either the common node or the opposite node
-    for (size_t i = 0; i < fcs.size(); i++)
-    {
+    for (size_t i = 0; i < fcs.size(); i++) {
         auto f1 = i;
         auto f2 = (i+1) % fcs.size();
         auto n = (i+1) % fcs.size();
 
-        if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
-        {
+        if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) ) {
             if ( location(msh, nds[n]) == where )
                 return pts[n];
             else
@@ -637,14 +573,11 @@ tesselation_center(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 
     // if two opposite faces are cut
     // return the center of one of the other faces
-    for (size_t i = 0; i < 2; i++)
-    {
+    for (size_t i = 0; i < 2; i++) {
         auto f1 = i;
         auto f2 = i+2;
         auto n = i+1;
-
-        if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) )
-        {
+        if ( is_cut(msh, fcs[f1]) && is_cut(msh, fcs[f2]) ) {
             if( location(msh, nds[n]) == where )
                 return 0.5*(pts[n] + pts[n+1]);
             else
@@ -658,9 +591,8 @@ tesselation_center(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 
 template<typename T, size_t ET>
 std::vector<temp_tri<T>>
-triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-            element_location where)
-{
+triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where) {
+
     assert( is_cut(msh, cl) );
 
     auto tp = collect_triangulation_points(msh, cl, where);
@@ -669,13 +601,11 @@ triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 
     std::vector<temp_tri<T>> tris;
 
-    for (size_t i = 0; i < tp.size(); i++)
-    {
+    for (size_t i = 0; i < tp.size(); i++) {
         temp_tri<T> t;
         t.pts[0] = bar;
         t.pts[1] = tp[i];
         t.pts[2] = tp[(i+1)%tp.size()];
-
         tris.push_back(t);
     }
 
@@ -684,16 +614,14 @@ triangulate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::ce
 
 template<typename T, size_t ET>
 T
-measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-        const element_location& where)
-{
+measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const element_location& where) {
+
     if ( !is_cut(msh, cl) ) /* Element is not cut, use std. integration */
         return measure(msh, cl);
 
     T totmeas = 0.0;
     auto qpsi = integrate(msh, cl, 0, where);
-    for (auto& qp : qpsi)
-    {
+    for (auto& qp : qpsi) {
         totmeas += qp.second;
     }
 
@@ -702,9 +630,8 @@ measure(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_t
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-               size_t degree, const element_location& where)
-{
+make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where) {
+
     std::vector< std::pair<point<T,2>, T> > ret;
 
     if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
@@ -714,8 +641,7 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
         return integrate(msh, cl, degree);
 
     auto tris = triangulate(msh, cl, where);
-    for (auto& tri : tris)
-    {
+    for (auto& tri : tris) {
         auto qpts = triangle_quadrature(tri.pts[0], tri.pts[1], tri.pts[2], degree);
         ret.insert(ret.end(), qpts.begin(), qpts.end());
     }
@@ -723,12 +649,10 @@ make_integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
     return ret;
 }
 
-
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-               size_t degree, const element_location& where)
-{
+make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where) {
+
     std::vector< std::pair<point<T,2>, T> > ret;
 
     if ( location(msh, cl) != where && location(msh, cl) != element_location::ON_INTERFACE )
@@ -738,8 +662,7 @@ make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho
         return integrate(msh, cl, degree);
 
     auto tris = triangulate(msh, cl, where);
-    for (auto& tri : tris)
-    {
+    for (auto& tri : tris) {
         auto qpts = triangle_quadrature(tri.pts[0], tri.pts[1], tri.pts[2], degree);
         ret.insert(ret.end(), qpts.begin(), qpts.end());
     }
@@ -747,12 +670,10 @@ make_integrate_with_mapping(const cuthho_mesh<T, ET>& msh, const typename cuthho
     return ret;
 }
 
-
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-          size_t degree, const element_location& where)
-{
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location& where) {
+
     if( cl.user_data.integration_n.size() != 0 && where == element_location::IN_NEGATIVE_SIDE)
         return cl.user_data.integration_n;
 
@@ -762,14 +683,10 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell
     return make_integrate(msh, cl, degree, where);
 }
 
-
-
-
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc,
-          size_t degree, const element_location& where)
-{
+integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc, size_t degree, const element_location& where) {
+
     std::vector< std::pair<point<T,2>, T> > ret;
 
     if ( location(msh, fc) != where && location(msh, fc) != element_location::ON_INTERFACE )
@@ -785,8 +702,7 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face
 
     auto qps = edge_quadrature<T>(degree);
 
-    for (auto itor = qps.begin(); itor != qps.end(); itor++)
-    {
+    for (auto itor = qps.begin(); itor != qps.end(); itor++) {
         auto qp = *itor;
         //auto p = qp.first.x() * scale + pts[0];
         auto t = qp.first.x();
@@ -801,9 +717,8 @@ integrate(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face
 
 template<typename T, size_t ET>
 std::vector< std::pair<point<T,2>, T> >
-integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-                    size_t degree, element_location where)
-{
+integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
+
     assert( is_cut(msh, cl) );
 
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
@@ -822,22 +737,20 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
 
     auto qps = edge_quadrature<T>(degree);
 
-    for (size_t i = 1; i < cl.user_data.interface.size(); i++)
-    {
+    for (size_t i = 1; i < cl.user_data.interface.size(); i++) {
+
         auto p0 = cl.user_data.interface.at(i-1);
         auto p1 = cl.user_data.interface.at(i);
 
         auto scale = p1 - p0;
         auto meas = scale.to_vector().norm();
 
-        for (auto itor = qps.begin(); itor != qps.end(); itor++)
-        {
+        for (auto itor = qps.begin(); itor != qps.end(); itor++) {
             auto qp = *itor;
             //auto p = qp.first.x() * scale + p0;
             auto t = qp.first.x();
             auto p = 0.5*(1-t)*p0 + 0.5*(1+t)*p1;
             auto w = int_sign * qp.second * meas * 0.5;
-
             ret.push_back( std::make_pair(p, w) );
         }
     }
@@ -845,12 +758,10 @@ integrate_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     return ret;
 }
 
-
 template<typename T, typename Function>
 std::vector< typename cuthho_quad_mesh<T>::point_type >
-make_test_points(const cuthho_quad_mesh<T>& msh, const typename cuthho_quad_mesh<T>::cell_type& cl,
-                 const Function& level_set_function, element_location where)
-{
+make_test_points(const cuthho_quad_mesh<T>& msh, const typename cuthho_quad_mesh<T>::cell_type& cl, const Function& level_set_function, element_location where) {
+
     const size_t N = 10;
 
     auto trans = make_reference_transform(msh, cl);
@@ -862,16 +773,12 @@ make_test_points(const cuthho_quad_mesh<T>& msh, const typename cuthho_quad_mesh
     auto min = -1.0;
     auto h = 2.0/N;
 
-    for (size_t j = 0; j < N+1; j++)
-    {
-        for(size_t i = 0; i < N+1; i++)
-        {
+    for (size_t j = 0; j < N+1; j++) {
+        for(size_t i = 0; i < N+1; i++) {
             auto p_xi = min + i*h;
             auto p_eta = min + j*h;
             typename cuthho_quad_mesh<T>::point_type pt(p_xi, p_eta);
-
             auto phys_pt = trans.ref_to_phys(pt);
-
             if ( level_set_function(phys_pt) < 0 && where == element_location::IN_NEGATIVE_SIDE)
               ret.push_back( phys_pt );
             else if ( level_set_function(phys_pt) > 0 && where == element_location::IN_POSITIVE_SIDE)
@@ -882,17 +789,46 @@ make_test_points(const cuthho_quad_mesh<T>& msh, const typename cuthho_quad_mesh
     return ret;
 }
 
+// NE FONCTIONNE PAS EN AGGLO SI PAS DE MODIFICATION DE MERGE_CELL
+template<typename T, size_t ET>
+std::vector<Matrix<T,2,1>> get_discrete_normal(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
 
+    assert(is_cut(msh, cl));
+    
+    typedef typename cuthho_mesh<T, ET>::point_type point_type;
+    std::vector<Matrix<T,2,1>> ret;
+    
+    auto pa = cl.user_data.interface.at(0);
+    auto pb = cl.user_data.interface.at(1);
+    auto bar = barycenter(msh, cl, where);
+    auto va = (pa - bar).to_vector();
+    auto vb_temp = pb - pa;
+    auto vb = point_type({vb_temp.y(), -vb_temp.x()}).to_vector();
+    auto int_sign = va.dot(vb) < 0 ? -1.0 : +1.0;
+    auto qps = edge_quadrature<T>(degree);
+    for (size_t i = 1; i < cl.user_data.interface.size(); i++) {
+        auto p0 = cl.user_data.interface.at(i-1); 
+        auto p1 = cl.user_data.interface.at(i);
+        auto scale = p1 - p0;
+        Matrix<T,2,1> ni;
+        auto meas = scale.to_vector().norm();
+        ni(0) =  scale[1] / meas;
+        ni(1) = -scale[0] / meas;
+        // std::cout << meas << std::endl << std::endl; 
+        for (auto itor = qps.begin(); itor != qps.end(); itor++) 
+            ret.push_back(ni);
+    }
 
+    return ret;
+
+}
 
 template<typename T, size_t ET>
-void dump_mesh(const cuthho_mesh<T, ET>& msh)
-{
+void dump_mesh(const cuthho_mesh<T, ET>& msh) {
     std::ofstream ofs("mesh_dump.m");
     size_t i = 0;
     ofs << "hold on;" << std::endl;
-    for (auto& fc : msh.faces)
-    {
+    for (auto& fc : msh.faces) {
         auto pts = points(msh, fc);
         if (fc.is_boundary)
             ofs << "line([" << pts[0].x() << ", " << pts[1].x() << "], [" << pts[0].y() << ", " << pts[1].y() << "], 'Color', 'r');" << std::endl;
@@ -908,20 +844,17 @@ void dump_mesh(const cuthho_mesh<T, ET>& msh)
     }
 
     i = 0;
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
         auto bar = barycenter(msh, cl);
         ofs << "text(" << bar.x() << ", " << bar.y() << ", '" << i << "');" << std::endl;
 
-        if ( is_cut(msh, cl) )
-        {
+        if ( is_cut(msh, cl) ) {
             auto p0 = cl.user_data.p0;
             auto p1 = cl.user_data.p1;
             auto q = p1 - p0;
             ofs << "quiver(" << p0.x() << ", " << p0.y() << ", " << q.x() << ", " << q.y() << ", 0)" << std::endl;
 
-            for (size_t i = 1; i < cl.user_data.interface.size(); i++)
-            {
+            for (size_t i = 1; i < cl.user_data.interface.size(); i++) {
                 auto s = cl.user_data.interface.at(i-1);
                 auto l = cl.user_data.interface.at(i) - s;
                 ofs << "quiver(" << s.x() << ", " << s.y() << ", " << l.x() << ", " << l.y() << ", 0)" << std::endl;
@@ -947,275 +880,284 @@ void dump_mesh(const cuthho_mesh<T, ET>& msh)
     ofs.close();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////                                            ////////////////////////////
+////////////////////               CUT BASIS                    ////////////////////////////
+////////////////////                                            ////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
 
-#if 0
+////////////////////////  CELL CUT BASIS  ///////////////////////////
+template<typename Mesh, typename VT>
+class cut_cell_basis {
 
-template<typename T, typename ET>
-class assembler<cuthho_mesh<T, ET>>
-{
-    std::vector<size_t>                 cell_compress_table, face_compress_table;
-    std::vector<size_t>                 cell_expand_table, face_expand_table;
-
-    hho_degree_info                     di;
-
-    std::vector< Triplet<T> >           triplets;
-
-    size_t num_all_cells, num_asm_cells, num_notasm_cells;
-    size_t num_all_faces, num_asm_faces, num_notasm_faces;
-
-    class assembly_index
-    {
-        size_t  idx;
-        bool    assem;
-
-    public:
-        assembly_index(size_t i, bool as)
-            : idx(i), assem(as)
-        {}
-
-        operator size_t() const
-        {
-            if (!assem)
-                throw std::logic_error("Invalid assembly_index");
-
-            return idx;
-        }
-
-        bool assemble() const
-        {
-            return assem;
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const assembly_index& as)
-        {
-            os << "(" << as.idx << "," << as.assem << ")";
-            return os;
-        }
-    };
-
-    bool cell_needs_assembly(const cuthho_mesh<T, ET>& msh,
-                             const typename cuthho_mesh<T, ET>::cell_type& cl)
-    {
-        return location(msh, cl) == element_location::IN_NEGATIVE_SIDE ||
-               location(msh, cl) == element_location::ON_INTERFACE;
-    }
-
-    bool face_needs_assembly(const cuthho_mesh<T, ET>& msh,
-                             const typename cuthho_mesh<T, ET>::face_type& fc)
-    {
-        return location(msh, fc) == element_location::IN_NEGATIVE_SIDE ||
-               location(msh, fc) == element_location::ON_INTERFACE;
-    }
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+    point_type          cell_bar;
+    coordinate_type     cell_h, cell_hx, cell_hy;
+    size_t              basis_degree, basis_size;
 
 public:
 
-    SparseMatrix<T>         LHS;
-    Matrix<T, Dynamic, 1>   RHS;
+    cut_cell_basis(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree, element_location where) {
 
-    assembler(const cuthho_mesh<T, ET>& msh, hho_degree_info hdi)
-        : di(hdi)
-    {
-        auto fna = [&](const typename cuthho_mesh<T, ET>::face_type& fc) -> bool {
-            return face_needs_assembly(msh, fc);
-        };
-
-        num_all_faces = msh.faces.size();
-        num_asm_faces = std::count_if(msh.faces.begin(), msh.faces.end(), fna);
-        num_notasm_faces = num_all_faces - num_asm_faces;
-
-        auto cna = [&](const typename cuthho_mesh<T, ET>::cell_type& cl) -> bool {
-            return cell_needs_assembly(msh, cl);
+        auto loc = location(msh, cl);
+        if(!is_cut(msh, cl)) {
+            cell_bar     = barycenter(msh, cl);
+            cell_h       = diameter(msh, cl);
+            cell_hx      = cell_h;
+            cell_hy      = cell_h;
+            basis_degree = degree;
+            basis_size   = (basis_degree+2)*(basis_degree+1)/2;
         }
-        ;
-        num_all_cells = msh.cells.size();
-        num_asm_cells = std::count_if(msh.cells.begin(), msh.cells.end(), cna);
-        num_notasm_cells = num_all_cells - num_asm_cells;
-
-        cell_compress_table.resize( num_all_cells );
-        cell_expand_table.resize( num_asm_cells );
-        face_compress_table.resize( num_all_faces );
-        face_expand_table.resize( num_asm_faces );
-
-        size_t compressed_offset = 0;
-        for (size_t i = 0; i < num_all_cells; i++)
-        {
-            auto cl = msh.cells[i];
-            if ( cell_needs_assembly(msh, cl) )
-            {
-                cell_compress_table.at(i) = compressed_offset;
-                cell_expand_table.at(compressed_offset) = i;
-                compressed_offset++;
-            }
+        else {
+            cell_bar     = barycenter(msh, cl, where);
+            cell_h       = diameter(msh, cl, where);
+            // cell_hx      = cell_h;
+            // cell_hy      = cell_h;
+            cell_hx      = compute_hx_hy(msh, cl, where).first; 
+            cell_hy      = compute_hx_hy(msh, cl, where).second; 
+            // BASIS INFOS
+            basis_degree = degree;
+            basis_size   = (basis_degree+2)*(basis_degree+1)/2;
         }
-
-        compressed_offset = 0;
-        for (size_t i = 0; i < num_all_faces; i++)
-        {
-            auto fc = msh.faces[i];
-            if ( face_needs_assembly(msh, fc) )
-            {
-                face_compress_table.at(i) = compressed_offset;
-                face_expand_table.at(compressed_offset) = i;
-                compressed_offset++;
-            }
-        }
-
-        auto celdeg = di.cell_degree();
-        auto facdeg = di.face_degree();
-
-        auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-        auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-        auto system_size = cbs * num_asm_cells + fbs * num_asm_faces;
-
-        LHS = SparseMatrix<T>( system_size, system_size );
-        RHS = Matrix<T, Dynamic, 1>::Zero( system_size );
     }
 
-    void dump_tables() const
-    {
-        std::cout << "Compress table: " << std::endl;
-        for (size_t i = 0; i < cell_compress_table.size(); i++)
-            std::cout << i << " -> " << cell_compress_table.at(i) << std::endl;
-    }
+    Matrix<VT, Dynamic, 1> eval_basis(const point_type& pt) {
 
-    template<typename Function>
-    void
-    assemble(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-             const Matrix<T, Dynamic, Dynamic>& lhs, const Matrix<T, Dynamic, 1>& rhs,
-             const Function& dirichlet_bf)
-    {
-        if ( !cell_needs_assembly(msh, cl) )
-            return;
+        Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
 
-        auto celdeg = di.cell_degree();
-        auto facdeg = di.face_degree();
+        auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_hx);
+        auto by = (pt.y() - cell_bar.y()) / (0.5*cell_hy);
 
-        auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-        auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+#ifdef POWER_CACHE
+        if ( power_cache.size() != (basis_degree+1)*2 )
+          power_cache.resize( (basis_degree+1)*2);
 
-        std::vector<assembly_index> asm_map;
-        asm_map.reserve(cbs + 4*fbs);
-
-        auto cell_offset        = offset(msh, cl);
-        auto cell_LHS_offset    = cell_compress_table.at(cell_offset) * cbs;
-
-        for (size_t i = 0; i < cbs; i++)
-            asm_map.push_back( assembly_index(cell_LHS_offset+i, true) );
-
-        auto fcs = faces(msh, cl);
-        for (size_t face_i = 0; face_i < 4; face_i++)
+        power_cache[0] = 1.0;
+        power_cache[1] = 1.0;
+        for (size_t i = 1; i <= basis_degree; i++)
         {
-            auto fc = fcs[face_i];
-            auto face_offset = offset(msh, fc);
-            auto face_LHS_offset = cbs * num_asm_cells + face_compress_table.at(face_offset)*fbs;
-
-            bool asm_face = face_needs_assembly(msh, fc);
-
-            for (size_t i = 0; i < fbs; i++)
-                asm_map.push_back( assembly_index(face_LHS_offset+i, asm_face) );
+            power_cache[2*i]    = iexp_pow(bx, i);
+            power_cache[2*i+1]  = iexp_pow(by, i);
         }
-
-        assert( asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols() );
-
-        for (size_t i = 0; i < lhs.rows(); i++)
-        {
-            if (!asm_map[i].assemble())
-                continue;
-
-            for (size_t j = 0; j < lhs.cols(); j++)
-                if ( asm_map[j].assemble() )
-                    triplets.push_back( Triplet<T>(asm_map[i], asm_map[j], lhs(i,j)) );
-        }
-
-        RHS.block(cell_LHS_offset, 0, cbs, 1) += rhs.block(0, 0, cbs, 1);
-    } // assemble()
-
-    template<typename Function>
-    Matrix<T, Dynamic, 1>
-    take_local_data(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl,
-    const Matrix<T, Dynamic, 1>& solution, const Function& dirichlet_bf)
-    {
-        auto celdeg = di.cell_degree();
-        auto facdeg = di.face_degree();
-
-        auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-        auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-        if ( !cell_needs_assembly(msh, cl) )
-        {
-            Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs + 4*fbs);
-            return ret;
-        }
-
-        auto cell_offset        = offset(msh, cl);
-        auto cell_SOL_offset    = cell_compress_table.at(cell_offset) * cbs;
-
-        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs + 4*fbs);
-        ret.block(0, 0, cbs, 1) = solution.block(cell_SOL_offset, 0, cbs, 1);
-
-        auto fcs = faces(msh, cl);
-        for (size_t face_i = 0; face_i < 4; face_i++)
-        {
-            auto fc = fcs[face_i];
-
-            if ( face_needs_assembly(msh, fc) )
-            {
-                auto face_offset = offset(msh, fc);
-                auto face_SOL_offset = cbs * num_asm_cells + face_compress_table.at(face_offset)*fbs;
-                ret.block(cbs+face_i*fbs, 0, fbs, 1) = solution.block(face_SOL_offset, 0, fbs, 1);
-            }
-        }
-
-        return ret;
-    }
-
-    Matrix<T, Dynamic, 1>
-    expand_solution(const cuthho_mesh<T, ET>& msh,
-                    const Matrix<T, Dynamic, 1>& solution)
-    {
-        auto celdeg = di.cell_degree();
-        auto facdeg = di.face_degree();
-
-        auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-        auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-
-        auto solsize = msh.cells.size() * cbs + msh.faces.size() * fbs;
-
-        Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(solsize);
-
-        for (size_t i = 0; i < num_asm_cells; i++)
-        {
-            auto exp_index = cell_expand_table.at(i);
-            ret.block(exp_index*cbs, 0, cbs, 1) = solution.block(i*cbs, 0, cbs, 1);
-        }
-
-        return ret;
-    }
-
-    void finalize(void)
-    {
-        LHS.setFromTriplets( triplets.begin(), triplets.end() );
-        triplets.clear();
-    }
-};
-
-
-template<typename T, typename ET>
-auto make_assembler(const cuthho_mesh<T, ET>& msh, hho_degree_info hdi)
-{
-    return assembler<cuthho_mesh<T, ET>>(msh, hdi);
-}
-
 #endif
 
+        size_t pos = 0;
+        for (size_t k = 0; k <= basis_degree; k++) {
+            for (size_t i = 0; i <= k; i++) {
+                auto pow_x = k-i;
+                auto pow_y = i;
 
-//////////////////////////  CUT BASIS  ///////////////////////////
+#ifdef POWER_CACHE
+                auto bv = power_cache[2*pow_x] * power_cache[2*pow_y+1];
+#else
+                auto bv = iexp_pow(bx, pow_x) * iexp_pow(by, pow_y);
+#endif
+                ret(pos++) = bv;
+            }
+        }
 
+        assert(pos == basis_size);
+
+        return ret;
+        
+    }
+
+    Matrix<VT, Dynamic, 2>
+    eval_gradients(const point_type& pt) {
+
+        Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size, 2);
+        auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_hx);
+        auto by = (pt.y() - cell_bar.y()) / (0.5*cell_hy);
+        auto ihx = 2.0/cell_hx;
+        auto ihy = 2.0/cell_hy;
+
+#ifdef POWER_CACHE
+        if ( power_cache.size() != (basis_degree+1)*2 )
+          power_cache.resize( (basis_degree+1)*2);
+
+        power_cache[0] = 1.0;
+        power_cache[1] = 1.0;
+        for (size_t i = 1; i <= basis_degree; i++) {
+            power_cache[2*i]    = iexp_pow(bx, i);
+            power_cache[2*i+1]  = iexp_pow(by, i);
+        }
+#endif
+
+        size_t pos = 0;
+        for (size_t k = 0; k <= basis_degree; k++) {
+            for (size_t i = 0; i <= k; i++) {
+                auto pow_x = k-i;
+                auto pow_y = i;
+
+#ifdef POWER_CACHE
+                auto px = power_cache[2*pow_x];
+                auto py = power_cache[2*pow_y+1];
+                auto dx = (pow_x == 0) ? 0 : pow_x*ihx*power_cache[2*(pow_x-1)];
+                auto dy = (pow_y == 0) ? 0 : pow_y*ihy*power_cache[2*(pow_y-1)+1];
+#else
+                auto px = iexp_pow(bx, pow_x);
+                auto py = iexp_pow(by, pow_y);
+                auto dx = (pow_x == 0) ? 0 : pow_x*ihx*iexp_pow(bx, pow_x-1);
+                auto dy = (pow_y == 0) ? 0 : pow_y*ihy*iexp_pow(by, pow_y-1);
+#endif
+                ret(pos,0) = dx*py;
+                ret(pos,1) = px*dy;
+                pos++;
+            }
+        }
+        assert(pos == basis_size);
+
+        return ret;
+    }
+
+    size_t size() const {
+        return basis_size;
+    }
+
+    size_t degree() const {
+        return basis_degree;
+    }
+    
+    static size_t size(size_t degree) {
+        return (degree+2)*(degree+1)/2;
+    }
+
+};
 
 template<typename Mesh, typename VT>
-class cut_face_basis
-{
+class cut_vector_cell_basis {
+
+    typedef typename Mesh::coordinate_type  coordinate_type;
+    typedef typename Mesh::point_type       point_type;
+    typedef Matrix<VT, 2, 2>                gradient_type;
+    typedef Matrix<VT, Dynamic, 2>          function_type;
+
+    point_type          cell_bar;
+    size_t              basis_degree, basis_size;
+
+    cut_cell_basis<Mesh,VT> scalar_basis;
+    
+#ifdef POWER_CACHE
+    std::vector<coordinate_type>  power_cache;
+#endif
+
+public:
+
+    cut_vector_cell_basis(const Mesh& msh, const typename Mesh::cell_type& cl, size_t degree, element_location where) : scalar_basis(msh, cl, degree, where) {
+
+        auto loc = location(msh, cl);
+        if( loc != where && loc != element_location::ON_INTERFACE) {
+            basis_degree = degree;
+            basis_size   = 2*(basis_degree+2)*(basis_degree+1)/2;
+        }
+        else {
+            basis_degree = degree;
+            basis_size   = 2*(basis_degree+2)*(basis_degree+1)/2;
+        }
+
+    }
+
+    Matrix<VT, Dynamic, 2>
+    eval_basis(const point_type& pt) {
+
+        Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size, 2);
+        
+        const auto phi = scalar_basis.eval_basis(pt);
+
+        for(size_t i = 0; i < scalar_basis.size(); i++) {
+            ret(2 * i, 0)     = phi(i);
+            ret(2 * i + 1, 1) = phi(i);
+        }
+        
+        assert(2 * scalar_basis.size() == basis_size);
+
+        return ret;
+    }
+
+    std::vector<gradient_type>
+    eval_gradients(const point_type& pt) {
+
+        std::vector<gradient_type> ret;
+        ret.reserve(basis_size);
+        const function_type dphi = scalar_basis.eval_gradients(pt);
+
+        for (size_t i = 0; i < scalar_basis.size(); i++) {
+
+            const Matrix<VT, 1, 2> dphi_i = dphi.row(i);
+            gradient_type g;
+            g = gradient_type::Zero();
+            g.row(0) = dphi_i;
+            ret.push_back(g);
+
+            g = gradient_type::Zero();
+            g.row(1) = dphi_i;
+            ret.push_back(g);
+        
+        }
+        
+        assert(ret.size() == basis_size);
+
+        return ret;
+    }
+
+    size_t size() const {
+        return basis_size;
+    }
+
+    size_t degree() const {
+        return basis_degree;
+    }
+
+    static size_t size(size_t degree) {
+        return 2*(degree+2)*(degree+1)/2;
+    }
+
+};
+
+template<typename T, size_t ET>
+auto diameter(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where) {
+
+    if (!is_cut(msh, cl))
+        return diameter(msh, cl);
+
+    auto tp = collect_triangulation_points(msh, cl, where);
+
+    auto diam = 0.0;
+    for (size_t i = 0; i < tp.size(); i++) {
+        for (size_t j = i+1; j < tp.size(); j++) {
+            diam = std::max(diam, (tp[i]-tp[j]).to_vector().norm() );
+        }
+    }
+
+    return diam;
+}
+
+template<typename T, size_t ET>
+auto compute_hx_hy(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where) {
+    
+    if (!is_cut(msh, cl))
+        return std::make_pair(diameter(msh, cl),diameter(msh, cl));
+
+    auto tp = collect_triangulation_points(msh, cl, where);
+
+    T min_x = tp[0].x(), max_x = tp[0].x();
+    T min_y = tp[0].y(), max_y = tp[0].y();
+
+    for (const auto& p : tp) {
+        min_x = std::min(min_x, p.x());
+        max_x = std::max(max_x, p.x());
+        min_y = std::min(min_y, p.y());
+        max_y = std::max(max_y, p.y());
+    }
+
+    return std::make_pair(max_x - min_x, max_y - min_y);
+}
+
+//////////////////////////  FACE CUT BASIS  ///////////////////////////
+template<typename Mesh, typename VT>
+class cut_face_basis {
+
     typedef typename Mesh::coordinate_type  coordinate_type;
     typedef typename Mesh::point_type       point_type;
 
@@ -1225,93 +1167,72 @@ class cut_face_basis
     size_t              basis_degree, basis_size;
 
 public:
-    cut_face_basis(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree,
-                   element_location where)
-    {
+    cut_face_basis(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree, element_location where) {
+
         auto loc = location(msh,fc);
-        if( loc != where && loc != element_location::ON_INTERFACE)
-        {
+        if( loc != where && loc != element_location::ON_INTERFACE) {
             face_bar        = barycenter(msh, fc);
             face_h          = diameter(msh, fc);
             basis_degree    = degree;
             basis_size      = degree+1;
-
             auto pts = points(msh, fc);
             base = face_bar - pts[0];
         }
-        else
-        {
+        else {
             face_bar        = barycenter(msh, fc, where);
             face_h          = diameter(msh, fc, where);
             basis_degree    = degree;
             basis_size      = degree+1;
-
             auto pts = points(msh, fc, where);
             base = face_bar - pts[0];
         }
     }
     Matrix<VT, Dynamic, 1>
-    eval_basis(const point_type& pt)
-    {
+    eval_basis(const point_type& pt) {
         Matrix<VT, Dynamic, 1> ret = Matrix<VT, Dynamic, 1>::Zero(basis_size);
-
         auto v = base.to_vector();
         auto t = (pt - face_bar).to_vector();
         auto dot = v.dot(t);
         auto ep = 4.0*dot/(face_h*face_h);
-
         coordinate_type coeff = sqrt(face_h / 2.0);
-
         ret(0) = sqrt(1.0 / 2.0) / coeff;
         if( basis_degree == 0)
             return ret;
-
         ret(1) = ep * sqrt(3.0 / 2.0) / coeff;
         if( basis_degree == 1)
             return ret;
-
         ret(2) = (3*ep*ep - 1) * sqrt(5.0/8.0) / coeff;
         if( basis_degree == 2)
             return ret;
-
         ret(3) = (5*ep*ep*ep - 3*ep) * sqrt(7.0 / 8.0) / coeff;
         if( basis_degree == 3)
             return ret;
-
         throw std::logic_error("bases : we shouldn't be here");
     }
 
-    size_t size() const
-    {
+    size_t size() const {
         return basis_size;
     }
 
-    size_t degree() const
-    {
+    size_t degree() const {
         return basis_degree;
     }
 
-    static size_t size(size_t degree)
-    {
+    static size_t size(size_t degree) {
         return degree+1;
     }
 };
 
-/////////////////////////////////////////
-
 template<typename Mesh, typename VT>
-class cut_vector_face_basis
-{
+class cut_vector_face_basis {
+
     typedef typename Mesh::coordinate_type  coordinate_type;
     typedef typename Mesh::point_type       point_type;
-
     point_type          face_bar;
     point_type          base;
     coordinate_type     face_h;
     size_t              basis_degree, basis_size;
-
-
-    cut_face_basis<Mesh,VT>          scalar_basis;
+    cut_face_basis<Mesh,VT> scalar_basis;
 
 public:
     cut_vector_face_basis(const Mesh& msh, const typename Mesh::face_type& fc, size_t degree,
@@ -1375,7 +1296,6 @@ public:
     }
 };
 
-
 ////////////////////////////////////////////////
 
 template<typename T, size_t ET>
@@ -1411,3 +1331,4 @@ diameter(const cuthho_mesh<T, ET>& msh,
     T ret = vect.norm();
     return ret;
 }
+

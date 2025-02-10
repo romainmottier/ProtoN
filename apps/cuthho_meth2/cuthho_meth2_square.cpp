@@ -304,8 +304,6 @@ void test_projection(const Mesh& msh, const Function& level_set_function, size_t
 }
 
 
-
-
 void tests_stabilization()
 {
     using T = double;
@@ -852,12 +850,11 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
 }
 
 
-
 //////////////////////////////  INTERFACE METHODS  ///////////////////////////
 
 template<typename T, size_t ET, typename testType>
-class interface_method
-{
+class interface_method {
+
     using Mat  = Matrix<T, Dynamic, Dynamic>;
     using Vect = Matrix<T, Dynamic, 1>;
     using Mesh = cuthho_mesh<T, ET>;
@@ -866,16 +863,14 @@ protected:
     interface_method(){}
 
     virtual std::pair<Mat, Vect>
-    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                     const testType test_case, const hho_degree_info hdi)
-    {
+    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl, const testType test_case, const hho_degree_info hdi) {
     }
 
 public:
+
     std::pair<Mat, Vect>
-    make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                       const hho_degree_info hdi, const testType test_case)
-    {
+    make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType test_case) {
+
         T kappa;
         if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
             kappa = test_case.parms.kappa_1;
@@ -891,9 +886,7 @@ public:
 
 
     std::pair<Mat, Vect>
-    make_contrib(const Mesh& msh, const typename Mesh::cell_type& cl,
-                 const testType test_case, const hho_degree_info hdi)
-    {
+    make_contrib(const Mesh& msh, const typename Mesh::cell_type& cl, const testType test_case, const hho_degree_info hdi) {
         if( location(msh, cl) != element_location::ON_INTERFACE )
             return make_contrib_uncut(msh, cl, hdi, test_case);
         else // on interface
@@ -905,8 +898,8 @@ public:
 
 
 template<typename T, size_t ET, typename testType>
-class Nitsche_interface_method : public interface_method<T, ET, testType>
-{
+class Nitsche_interface_method : public interface_method<T, ET, testType> {
+
     using Mat = Matrix<T, Dynamic, Dynamic>;
     using Vect = Matrix<T, Dynamic, 1>;
     using Mesh = cuthho_mesh<T, ET>;
@@ -956,20 +949,13 @@ public:
         ////////    RHS
         Vect f = Vect::Zero(lc.rows());
         // neg part
-        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                          element_location::IN_NEGATIVE_SIDE);
-        f.head(cbs) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE,
-                                level_set_function, dir_jump, eta);
-        f.head(cbs) += make_flux_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE,
-                                      test_case.neumann_jump);
+        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        f.head(cbs) += parms.kappa_1*make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE, level_set_function, dir_jump, eta);
+        f.head(cbs) += make_flux_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE, test_case.neumann_jump);
 
         // pos part
-        f.block(cbs, 0, cbs, 1) = make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                           element_location::IN_POSITIVE_SIDE);
-        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
+        f.block(cbs, 0, cbs, 1) = make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1) += parms.kappa_1*make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
 
         return std::make_pair(lc, f);
     }
@@ -1111,14 +1097,11 @@ public:
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
         // GR
-        auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_NEGATIVE_SIDE, 1.0);
-        auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_POSITIVE_SIDE, 0.0);
+        auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
+        auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_POSITIVE_SIDE, 0.0);
 
         // stab
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
-
         Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
         stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
@@ -1134,32 +1117,22 @@ public:
                                           element_location::IN_NEGATIVE_SIDE);
         // we use element_location::IN_POSITIVE_SIDE to get rid of the Nitsche term
         // (see definition of make_Dirichlet_jump)
-        f.head(cbs) -= parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
+        f.head(cbs) -= parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
 
         // pos part
-        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                           element_location::IN_POSITIVE_SIDE);
-        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
-        f.block(cbs, 0, cbs, 1)
-            += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                    test_case.neumann_jump);
+        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1) += parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
+        f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
 
 
         // rhs term with GR
         auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
         vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree() );
         Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero( gbs );
-        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(),
-                                        element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : iqps)
-        {
-            const auto g_phi    = gb.eval_basis(qp.first);
-            const Matrix<T,2,1> n      = level_set_function.normal(qp.first);
-
+        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+        for (auto& qp : iqps) {
+            const auto g_phi = gb.eval_basis(qp.first);
+            const Matrix<T,2,1> n = level_set_function.normal(qp.first);
             F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
         }
         f -= F_bis.transpose() * (parms.kappa_1 * gr_n.first );
@@ -1289,7 +1262,6 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
     using RealType = typename Mesh::coordinate_type;
 
     auto level_set_function = test_case.level_set_;
-
     auto rhs_fun = test_case.rhs_fun;
     auto sol_fun = test_case.sol_fun;
     auto sol_grad = test_case.sol_grad;
@@ -1572,12 +1544,13 @@ void convergence_test(void)
     std::vector<size_t> mesh_sizes, pol_orders;
 
     // meshes
-    mesh_sizes.push_back(8);
-    mesh_sizes.push_back(16);
-    mesh_sizes.push_back(32);
-    mesh_sizes.push_back(64);
-    mesh_sizes.push_back(128);
-    // mesh_sizes.push_back(256);
+    mesh_sizes.push_back(10);
+    mesh_sizes.push_back(20);
+    mesh_sizes.push_back(40);
+    mesh_sizes.push_back(80);
+    mesh_sizes.push_back(160);
+    mesh_sizes.push_back(320);
+    mesh_sizes.push_back(640);
 
     // polynomial orders
     pol_orders.push_back(0);
@@ -1588,10 +1561,10 @@ void convergence_test(void)
 
     // export to files ...
     std::vector<std::string> files;
-    files.push_back("./output/test_k0.txt");
-    files.push_back("./output/test_k1.txt");
-    files.push_back("./output/test_k2.txt");
-    files.push_back("./output/test_k3.txt");
+    files.push_back("../output/test_k0.txt");
+    files.push_back("../output/test_k1.txt");
+    files.push_back("../output/test_k2.txt");
+    files.push_back("../output/test_k3.txt");
 
     for (std::vector<size_t>::iterator it = pol_orders.begin(); it != pol_orders.end(); it++)
     {
@@ -1612,26 +1585,24 @@ void convergence_test(void)
         T previous_H1 = 0.0;
         T previous_L2 = 0.0;
         T previous_h = 0.0;
-        for (std::vector<size_t>::iterator it_msh = mesh_sizes.begin();
-             it_msh != mesh_sizes.end(); it_msh++)
-        {
-            size_t N = *it_msh;
+        for (std::vector<size_t>::iterator it_msh = mesh_sizes.begin(); it_msh != mesh_sizes.end(); it_msh++) {
 
-            // init mesh (with agglomeration)
+            size_t N = *it_msh;
             mesh_init_params<T> mip;
             mip.Nx = N;
             mip.Ny = N;
             cuthho_poly_mesh<T> msh(mip);
-            size_t int_refsteps = 1;
+            size_t int_refsteps = 10;
             T radius = 1.0/3.0;
             auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 
             // auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
+            auto level_set_function = flower_level_set<T>(radius, 0.5, 0.5, 8, 0.03);
             // auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
             // auto level_set_function = square_level_set<T>(1.05, -0.05, -0.05, 1.05);
             // auto level_set_function = square_level_set<T>(1.0, -0.0, -0.0, 1.0);
             // auto level_set_function = square_level_set<T>(0.76, 0.24, 0.24, 0.76);
-            auto level_set_function = square_level_set<T>(0.751, 0.249, 0.249, 0.751);
+            // auto level_set_function = square_level_set<T>(0.751, 0.249, 0.249, 0.751);
             detect_node_position(msh, level_set_function);
             detect_cut_faces(msh, level_set_function);
             if(1)  // AGGLOMERATION
@@ -1655,7 +1626,7 @@ void convergence_test(void)
             // auto TI = run_cuthho_interface(msh, level_set_function, k, 3);
 
             // auto TI = run_cuthho_interface(msh, level_set_function, k, 3, test_case);
-            if(0) // sin(\pi x) * sin(\pi y)
+            if(1) // sin(\pi x) * sin(\pi y)
             {
                 auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
                 auto meth3 = make_gradrec_interface_method(msh, 1.0, test_case);
@@ -1688,7 +1659,7 @@ void convergence_test(void)
                 // TI = run_cuthho_interface(msh, k, meth3, test_case);
                 TI = run_cuthho_fictdom(msh, k, test_case);
             }
-            if(1) // jumps sin_sin -> exp_cos
+            if(0) // jumps sin_sin -> exp_cos
             {
                 auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function);
                 auto meth3 = make_gradrec_interface_method(msh, 1.0, test_case);
@@ -1779,7 +1750,7 @@ void convergence_test(void)
 }
 
 //////////////////////////     MAIN        ////////////////////////////
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     convergence_test();
@@ -1789,7 +1760,7 @@ int main(int argc, char **argv)
 }
 #endif
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;

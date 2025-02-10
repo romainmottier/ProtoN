@@ -1135,9 +1135,9 @@ int main(int argc, char **argv)
 //    HeterogeneousFlowerECutHHOFirstOrder(argc, argv);
     
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
-    HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
+    // HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
-//    ICutHHOSecondOrder(argc, argv);
+   ICutHHOSecondOrder(argc, argv);
 //    ICutHHOFirstOrder(argc, argv);
 //    ECutHHOFirstOrder(argc, argv);
 //    ECutHHOFirstOrderCFL(argc, argv);
@@ -1272,8 +1272,12 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     std::ofstream error_file("steady_state_one_field_error.txt");
     
     RealType radius = 1.0/3.0;
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
-    
+    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 4, 0.04);
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.015);
+    // ../unfitted_acoustic_waves -k 2 -l 7 -r 10 -d 1 
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);
+
     timecounter tc;
     SparseMatrix<RealType> Kg, Mg;
 
@@ -1330,8 +1334,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             if (dump_debug)
             {
                 std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
-                postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+                // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
             }
+            std::string error_file_txt = "steady_state_one_field_error.txt";
+            postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
             postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
         }
         error_file << std::endl << std::endl;

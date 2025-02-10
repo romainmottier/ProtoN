@@ -305,6 +305,91 @@ public:
         std::cout << bold << cyan << "Silo file rendered in : " << tc << " seconds" << reset << std::endl;
     }
     
+    static void write_conv_sol(const std::string& txtFilename) {
+
+        if (txtFilename.size() < 4 || txtFilename.substr(txtFilename.size() - 4) != ".txt") {
+            std::cerr << "Erreur : Le fichier d'entrée n'a pas une extension .txt valide." << std::endl;
+            return;
+        }
+        
+        std::string pyFilename = txtFilename.substr(0, txtFilename.size() - 4) + ".py";
+        
+        std::ofstream pyFile(pyFilename);
+        if (!pyFile.is_open()) {
+            std::cerr << "Erreur : Impossible de créer le fichier Python." << std::endl;
+            return;
+        }
+        
+      pyFile << "import matplotlib.pyplot as plt\n";
+      pyFile << "import numpy as np\n";
+      pyFile << "import sys\n\n";
+      
+      pyFile << "error_type = \"L2\"\n";
+      pyFile << "if len(sys.argv) > 1:\n";
+      pyFile << "    if sys.argv[1] in [\"L2\", \"H1\"]:\n";
+      pyFile << "        error_type = sys.argv[1]\n";
+      pyFile << "    else:\n";
+      pyFile << "        print(\"Argument invalide. Utilisez 'L2' ou 'H1'.\")\n";
+      pyFile << "        sys.exit(1)\n\n";
+      
+      pyFile << "filename = \"" << txtFilename << "\"\n";
+      pyFile << "with open(filename, \"r\") as file:\n";
+      pyFile << "    lines = file.readlines()\n\n";
+      
+      pyFile << "results_L2 = {}\n";
+      pyFile << "results_H1 = {}\n";
+      pyFile << "h_values = {}\n\n";
+      
+      pyFile << "current_degree = None\n";
+      pyFile << "for line in lines:\n";
+      pyFile << "    line = line.strip()\n";
+      pyFile << "    if line.startswith(\"Polynomial degree k :\"):\n";
+      pyFile << "        current_degree = int(line.split(\":\")[1].strip())\n";
+      pyFile << "        if current_degree not in results_L2:\n";
+      pyFile << "            results_L2[current_degree] = []\n";
+      pyFile << "            results_H1[current_degree] = []\n";
+      pyFile << "            h_values[current_degree] = []\n";
+      pyFile << "    elif line.startswith(\"Characteristic h size =\"):\n";
+      pyFile << "        h = float(line.split(\"=\")[1].strip())\n";
+      pyFile << "        h_values[current_degree].append(h)\n";
+      pyFile << "    elif line.startswith(\"L2-norm error =\"):\n";
+      pyFile << "        L2_error = float(line.split(\"=\")[1].strip())\n";
+      pyFile << "        results_L2[current_degree].append(L2_error)\n";
+      pyFile << "    elif line.startswith(\"H1-norm error =\"):\n";
+      pyFile << "        H1_error = float(line.split(\"=\")[1].strip())\n";
+      pyFile << "        results_H1[current_degree].append(H1_error)\n\n";
+      
+      pyFile << "plt.figure(figsize=(10, 6))\n\n";
+      
+      pyFile << "if error_type == \"L2\":\n";
+      pyFile << "    results = results_L2\n";
+      pyFile << "    ylabel = \"L2-norm Error\"\n";
+      pyFile << "    title = \"L2-norm Error vs h\"\n";
+      pyFile << "elif error_type == \"H1\":\n";
+      pyFile << "    results = results_H1\n";
+      pyFile << "    ylabel = \"H1-norm Error\"\n";
+      pyFile << "    title = \"H1-norm Error vs h\"\n\n";
+      
+      pyFile << "for degree in sorted(results.keys()):\n";
+      pyFile << "    h_values_np = np.array(h_values[degree])\n";
+      pyFile << "    results_np = np.array(results[degree])\n";
+      pyFile << "    log_h = np.log(h_values_np)\n";
+      pyFile << "    log_error = np.log(results_np)\n";
+      pyFile << "    slope, _ = np.polyfit(log_h, log_error, 1)\n";
+      pyFile << "    plt.loglog(h_values_np, results_np, marker='o', label=f\"k={degree} {ylabel} (rate={slope:.2f})\")\n\n";
+      
+      pyFile << "plt.xlabel(\"h\", fontsize=12)\n";
+      pyFile << "plt.ylabel(ylabel, fontsize=12)\n";
+      pyFile << "plt.title(title, fontsize=14)\n";
+      pyFile << "plt.legend()\n";
+      pyFile << "plt.grid(which=\"both\", linestyle=\"--\", linewidth=0.5)\n";
+      pyFile << "plt.tight_layout()\n\n";
+      
+      pyFile << "plt.show()\n";
+      pyFile.close();
+      
+    }
+    
     /// Compute L2 and H1 errors for one field approximation
     static void compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
 
@@ -408,8 +493,8 @@ public:
            cell_i++;
        }
        
-       scalar_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
-       flux_l2_error = std::accumulate(l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
+       scalar_l2_error = std::accumulate(l2_error_vec.begin(), l2_error_vec.end(),0.0);
+       flux_l2_error = std::accumulate(flux_l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
        tc.toc();
        
        std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;

@@ -21,29 +21,35 @@
  */
 
 template<typename T, typename Function, typename Mesh>
-class test_case
-{
-   public:
-    Function level_set_;
-    std::function<T(const typename Mesh::point_type&)> sol_fun;
-    std::function<T(const typename Mesh::point_type&)> rhs_fun;
-    std::function<T(const typename Mesh::point_type&)> bcs_fun;
+class test_case {
 
-    test_case(){}
+   public:
+   
+       Function level_set_;
+       std::function<T(const typename Mesh::point_type&)> sol_fun;
+       std::function<T(const typename Mesh::point_type&)> rhs_fun;
+       std::function<T(const typename Mesh::point_type&)> bcs_fun;
+       
+       test_case(){}
     
-    test_case(Function level_set__,
-              std::function<T(const typename Mesh::point_type&)> sol_fun_,
-              std::function<T(const typename Mesh::point_type&)> rhs_fun_,
-              std::function<T(const typename Mesh::point_type&)> bcs_fun_)
-        : level_set_(level_set__), sol_fun(sol_fun_), rhs_fun(rhs_fun_), bcs_fun(bcs_fun_)
-        {}
+       test_case(Function level_set__,
+       std::function<T(const typename Mesh::point_type&)> sol_fun_,
+       std::function<T(const typename Mesh::point_type&)> rhs_fun_,
+       std::function<T(const typename Mesh::point_type&)> bcs_fun_)
+       : level_set_(level_set__), sol_fun(sol_fun_), rhs_fun(rhs_fun_), bcs_fun(bcs_fun_)
+       {}
+
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////                                            ////////////////////////////
+////////////////////               LAPLACIAN TEST CASES         ////////////////////////////
+////////////////////                                            ////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
 
-/////////////////////////////  TESTS CASES FOR LAPLACIAN  ////////////////////////////
 template<typename T>
-struct params
-{
+struct params {
+
     T kappa_1, kappa_2;
     T c_1, c_2;
 
@@ -52,447 +58,660 @@ struct params
         c_1 = 1.0;
         c_2 = 1.0;
     }
+
 };
 
-
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian: public test_case<T, Function, Mesh>
-{
-   public:
+class test_case_laplacian: public test_case<T, Function, Mesh> {
+
+    public:
     std::function<Eigen::Matrix<T, 1, 2>(const typename Mesh::point_type&)> sol_grad;
     std::function<T(const typename Mesh::point_type&)> dirichlet_jump;
     std::function<T(const typename Mesh::point_type&)> neumann_jump;
-
+    
     struct params<T> parms;
-
+    
     test_case_laplacian(){}
     
     test_case_laplacian(Function level_set__, params<T> parms_,
-                        std::function<T(const typename Mesh::point_type&)> sol_fun_,
-                        std::function<T(const typename Mesh::point_type&)> rhs_fun_,
-                        std::function<T(const typename Mesh::point_type&)> bcs_fun_,
-                        std::function<Eigen::Matrix<T, 1, 2>
-                        (const typename Mesh::point_type&)> sol_grad_,
-                        std::function<T(const typename Mesh::point_type&)> dirichlet_jump_,
-                        std::function<T(const typename Mesh::point_type&)> neumann_jump_)
+    std::function<T(const typename Mesh::point_type&)> sol_fun_,
+    std::function<T(const typename Mesh::point_type&)> rhs_fun_,
+    std::function<T(const typename Mesh::point_type&)> bcs_fun_,
+    std::function<Eigen::Matrix<T, 1, 2>
+    (const typename Mesh::point_type&)> sol_grad_,
+    std::function<T(const typename Mesh::point_type&)> dirichlet_jump_,
+    std::function<T(const typename Mesh::point_type&)> neumann_jump_)
     : test_case<T, Function, Mesh>(level_set__, sol_fun_, rhs_fun_, bcs_fun_),
-        parms(parms_), sol_grad(sol_grad_), dirichlet_jump(dirichlet_jump_),
-        neumann_jump(neumann_jump_)
-        {}
+    parms(parms_), sol_grad(sol_grad_), dirichlet_jump(dirichlet_jump_),
+    neumann_jump(neumann_jump_)
+    {}
+
 };
 
-///// test_case_laplacian_sin_sin
-// exact solution : sin(\pi x) * sin(\pi y) in the whole domain
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: sin(\pi x)*sin(\pi y) in the whole domain with \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_sin_sin: public test_case_laplacian<T, Function, Mesh>
-{
-   public:
-    test_case_laplacian_sin_sin(Function level_set__)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [](const typename Mesh::point_type& pt) -> T { // sol
+class test_case_laplacian_sin_sin: public test_case_laplacian<T, Function, Mesh> {
+
+    public:
+
+    test_case_laplacian_sin_sin(Function level_set__) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+        // SOLUTION     
+        [](const typename Mesh::point_type& pt) -> T { 
             return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [](const typename Mesh::point_type& pt) -> T { // rhs
+        // RHS
+        [](const typename Mesh::point_type& pt) -> T { 
              return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [&](const typename Mesh::point_type& pt) -> T { // bcs
+        // BOUNDARY CONDITIONS
+        [&](const typename Mesh::point_type& pt) -> T { 
              return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-             ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
+        // GRADIENT
+        [](const typename Mesh::point_type& pt) -> auto { 
+            Matrix<T, 1, 2> ret;
+            ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+            return ret;},
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {return 0.0;},
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {return 0.0;})
         {}
+
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_laplacian_sin_sin(const Mesh& msh, Function level_set_function)
-{
+auto make_test_case_laplacian_sin_sin(const Mesh& msh, Function level_set_function) {
     return test_case_laplacian_sin_sin<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
-
-///// test_case_laplacian_sin_sin_bis
-// exact solution : 1 + sin(\pi x) * sin(\pi y) in the whole domain
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: 1+sin(\pi x)*sin(\pi y) in the whole domain with \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_sin_sin_bis: public test_case_laplacian<T, Function, Mesh>
-{
-   public:
-    test_case_laplacian_sin_sin_bis(Function level_set__)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [](const typename Mesh::point_type& pt) -> T { // sol
-            //return 1 + pt.x() + pt.y() + std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+class test_case_laplacian_sin_sin_bis: public test_case_laplacian<T, Function, Mesh> {
+
+    public:
+
+    test_case_laplacian_sin_sin_bis(Function level_set__) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+        // SOLUTION
+        [](const typename Mesh::point_type& pt) -> T { 
             return 1 + std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [](const typename Mesh::point_type& pt) -> T { // rhs
-             return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [](const typename Mesh::point_type& pt) -> T { // bcs
-             // return 1 + pt.x() + pt.y() + std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-             return 1 + std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             // ret(0) = 1 + M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-             // ret(1) = 1 + M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-             ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-             ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
+        // RHS
+        [](const typename Mesh::point_type& pt) -> T { // rhs
+            return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+        // BOUNDARY CONDITION
+        [](const typename Mesh::point_type& pt) -> T { // bcs
+            return 1 + std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+        // GRADIENT 
+        [](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 1, 2> ret;
+            ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+            return ret;},
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
         {}
+
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_laplacian_sin_sin_bis(const Mesh& msh, Function level_set_function)
-{
+auto make_test_case_laplacian_sin_sin_bis(const Mesh& msh, Function level_set_function) {
     return test_case_laplacian_sin_sin_bis<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
-
-///// test_case_laplacian_sin_sin_gen
-// exact solution : sin(\pi (x-a)/(b-a)) * sin(\pi (y-c)/(d-c)) in the whole domain
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: sin(\pi (x-a)/(b-a))*sin(\pi (y-c)/(d-c)) in the whole domain with \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_sin_sin_gen: public test_case_laplacian<T, Function, Mesh>
-{
-   public:
-    test_case_laplacian_sin_sin_gen(Function level_set__, T a, T b, T c, T d)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [a,b,c,d](const typename Mesh::point_type& pt) -> T { // sol
+class test_case_laplacian_sin_sin_gen: public test_case_laplacian<T, Function, Mesh> {
+
+    public:
+
+    test_case_laplacian_sin_sin_gen(Function level_set__, T a, T b, T c, T d) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+
+        // SOLUTION
+        [a,b,c,d](const typename Mesh::point_type& pt) -> T { // sol
             return std::sin(M_PI*(pt.x()-a)/(b-a)) * std::sin(M_PI*(pt.y()-c)/(d-c));},
-         [a,b,c,d](const typename Mesh::point_type& pt) -> T { // rhs
-             return ( 1.0/((b-a)*(b-a))+1.0/((d-c)*(d-c)) )* M_PI * M_PI
-                 * std::sin(M_PI*(pt.x()-a)/(b-a)) * std::sin(M_PI*(pt.y()-c)/(d-c));},
-         [a,b,c,d](const typename Mesh::point_type& pt) -> T { // bcs
-             return std::sin(M_PI*(pt.x()-a)/(b-a)) * std::sin(M_PI*(pt.y()-c)/(d-c));},
-         [a,b,c,d](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             ret(0) = (M_PI/(b-a))
-                 * std::cos(M_PI*(pt.x()-a)/(b-a)) * std::sin(M_PI*(pt.y()-c)/(d-c));
-             ret(1) = (M_PI/(d-c))
-                 * std::sin(M_PI*(pt.x()-a)/(b-a)) * std::cos(M_PI*(pt.y()-c)/(d-c));
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;}),
+        // RHS
+        [a,b,c,d](const typename Mesh::point_type& pt) -> T { // rhs
+            return ( 1.0/((b-a)*(b-a))+1.0/((d-c)*(d-c)) )* M_PI * M_PI * std::sin(M_PI*(pt.x()-a)/(b-a)) * std::sin(M_PI*(pt.y()-c)/(d-c));},
+        // BOUNDARY CONDITIONS
+        [a,b,c,d](const typename Mesh::point_type& pt) -> T { // bcs
+            return std::sin(M_PI*(pt.x()-a)/(b-a)) * std::sin(M_PI*(pt.y()-c)/(d-c));},
+        // GRADIENT
+        [a,b,c,d](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 1, 2> ret;
+            ret(0) = (M_PI/(b-a))*std::cos(M_PI*(pt.x()-a)/(b-a))*std::sin(M_PI*(pt.y()-c)/(d-c));
+            ret(1) = (M_PI/(d-c))*std::sin(M_PI*(pt.x()-a)/(b-a))*std::cos(M_PI*(pt.y()-c)/(d-c));
+            return ret;
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;}),
         a_(a), b_(b), c_(c), d_(d)
         {}
-    T a_, b_, c_, d_;
+        T a_, b_, c_, d_;
+
 };
 
 template<typename Mesh, typename Function, typename T>
-auto make_test_case_laplacian_sin_sin_gen(const Mesh& msh, Function level_set_function,
-                                          T a, T b, T c, T d)
-{
+auto make_test_case_laplacian_sin_sin_gen(const Mesh& msh, Function level_set_function, T a, T b, T c, T d) {
     return test_case_laplacian_sin_sin_gen<T, Function, Mesh>(level_set_function, a, b, c, d);
 }
 
-
-
-///// test_case_laplacian_exp_cos
-// exact solution : exp(x) * cos(y) in the whole domain
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: exp(x)*cos(y) in the whole domain with \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_exp_cos: public test_case_laplacian<T, Function, Mesh>
-{
-   public:
-    test_case_laplacian_exp_cos(Function level_set__)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [](const typename Mesh::point_type& pt) -> T { /* sol */
-            return exp(pt.x()) * std::cos(pt.y());},
-         [](const typename Mesh::point_type& pt) -> T { /* rhs */ return 0.0;},
-         [&](const typename Mesh::point_type& pt) -> T { // bcs
-             return exp(pt.x()) * std::cos(pt.y());},
-         [](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;             
-             ret(0) = exp(pt.x()) * std::cos(pt.y());
-             ret(1) = - exp(pt.x()) * std::sin(pt.y());
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
+class test_case_laplacian_exp_cos: public test_case_laplacian<T, Function, Mesh> {
+
+    public:
+
+    test_case_laplacian_exp_cos(Function level_set__) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+        // SOLUTION 
+        [](const typename Mesh::point_type& pt) -> T { 
+            return exp(pt.x()) * std::cos(pt.y());
+        },
+        // RHS
+        [](const typename Mesh::point_type& pt) -> T { 
+            return 0.0;
+        },
+        // BOUNDARY CONDITIONS
+        [&](const typename Mesh::point_type& pt) -> T {
+             return exp(pt.x()) * std::cos(pt.y());
+        },
+        // GRADIENT
+        [](const typename Mesh::point_type& pt) -> auto { 
+            Matrix<T, 1, 2> ret;             
+            ret(0) = exp(pt.x()) * std::cos(pt.y());
+            ret(1) = - exp(pt.x()) * std::sin(pt.y());
+            return ret;
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {
+            return 0.0;
+        },
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {
+            return 0.0;
+        })
         {}
+
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_laplacian_exp_cos(const Mesh& msh, Function level_set_function)
-{
+auto make_test_case_laplacian_exp_cos(const Mesh& msh, Function level_set_function) {
     return test_case_laplacian_exp_cos<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
-///// test_case_laplacian_jumps_1
-// exact solution : sin(\pi x) sin(\pi y)  in \Omega_1
-//                  exp(x) * cos(y)        in \Omega_2
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: sin(\pi x)*sin(\pi y) in \Omega_1 & exp(x)*cos(y) in \Omega_2 & \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_jumps_1: public test_case_laplacian<T, Function, Mesh>
-{
-   public:
-    test_case_laplacian_jumps_1(Function level_set__)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [level_set__](const typename Mesh::point_type& pt) -> T { /* sol */
+class test_case_laplacian_jumps_1: public test_case_laplacian<T, Function, Mesh> {
+
+    public:
+    
+    test_case_laplacian_jumps_1(Function level_set__) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+         
+        // SOLUTION
+        [level_set__](const typename Mesh::point_type& pt) -> T { 
+            if (level_set__(pt) < 0)
+                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            else 
+                return exp(pt.x()) * std::cos(pt.y());
+        },
+        // RHS 
+        [level_set__](const typename Mesh::point_type& pt) -> T { /* rhs */
+            if(level_set__(pt) < 0)
+                return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            else 
+                return 0.0;
+        },
+        // BOUNDARY CONDITIONS 
+        [level_set__](const typename Mesh::point_type& pt) -> T { // bcs
             if(level_set__(pt) < 0)
                 return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-            else return exp(pt.x()) * std::cos(pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> T { /* rhs */
-             if(level_set__(pt) < 0)
-                return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-            else return 0.0;},
-         [level_set__](const typename Mesh::point_type& pt) -> T { // bcs
-             if(level_set__(pt) < 0)
-                 return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-             else return exp(pt.x()) * std::cos(pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             if(level_set__(pt) < 0)
-             {
-                 ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-                 ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-                 return ret;
-             }
-             else {
-                 ret(0) = exp(pt.x()) * std::cos(pt.y());
-                 ret(1) = - exp(pt.x()) * std::sin(pt.y());
-                 return ret;}},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */
-             return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - exp(pt.x()) * std::cos(pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> T {/* Neu */
-             Matrix<T, 1, 2> normal = level_set__.normal(pt);
-             return (M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - exp(pt.x()) * std::cos(pt.y())) * normal(0) + ( M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y()) + exp(pt.x()) * std::sin(pt.y()) ) * normal(1);})
+            else 
+                return exp(pt.x()) * std::cos(pt.y());},
+        // GRADIENT
+        [level_set__](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 1, 2> ret;
+            if(level_set__(pt) < 0) {
+                ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+                ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+                return ret;
+            }
+            else {
+                ret(0) = exp(pt.x()) * std::cos(pt.y());
+                ret(1) = - exp(pt.x()) * std::sin(pt.y());
+                return ret;
+            }
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */
+            return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - exp(pt.x()) * std::cos(pt.y());},
+        // NEUMANN JUMPS 
+        [level_set__](const typename Mesh::point_type& pt) -> T {/* Neu */
+            Matrix<T, 1, 2> normal = level_set__.normal(pt);
+            return (M_PI*std::cos(M_PI*pt.x())*std::sin(M_PI*pt.y())-exp(pt.x())*std::cos(pt.y()))*normal(0)+(M_PI*std::sin(M_PI*pt.x())*std::cos(M_PI*pt.y())+exp(pt.x())*std::sin(pt.y()))*normal(1);})
         {}
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_laplacian_jumps_1(const Mesh& msh, Function level_set_function)
-{
+auto make_test_case_laplacian_jumps_1(const Mesh& msh, Function level_set_function) {
     return test_case_laplacian_jumps_1<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
-
-///// test_case_laplacian_jumps_2
-// exact solution : exp(x) * cos(y)        in \Omega_1
-//                  sin(\pi x) sin(\pi y)  in \Omega_2
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: exp(x)*cos(y) in \Omega_1 & sin(\pi x)*sin(\pi y) in \Omega_2 & \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_jumps_2: public test_case_laplacian<T, Function, Mesh>
-{
+class test_case_laplacian_jumps_2: public test_case_laplacian<T, Function, Mesh> {
+
    public:
-    test_case_laplacian_jumps_2(Function level_set__)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [level_set__](const typename Mesh::point_type& pt) -> T { /* sol */
-            if(level_set__(pt) > 0)
-                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-            else return exp(pt.x()) * std::cos(pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> T { /* rhs */
-             if(level_set__(pt) > 0)
-                return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-            else return 0.0;},
-         [level_set__](const typename Mesh::point_type& pt) -> T { // bcs
-             if(level_set__(pt) > 0)
-                 return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-             else return exp(pt.x()) * std::cos(pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             if(level_set__(pt) > 0)
-             {
-                 ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-                 ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-                 return ret;
-             }
-             else {
-                 ret(0) = exp(pt.x()) * std::cos(pt.y());
-                 ret(1) = - exp(pt.x()) * std::sin(pt.y());
-                 return ret;}},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */
-             return - std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + exp(pt.x()) * std::cos(pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> T {/* Neu */
-             Matrix<T, 1, 2> normal = level_set__.normal(pt);
-             return -(M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - exp(pt.x()) * std::cos(pt.y())) * normal(0) - ( M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y()) + exp(pt.x()) * std::sin(pt.y()) ) * normal(1);})
+    
+    test_case_laplacian_jumps_2(Function level_set__) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+   
+    // SOLUTION
+    [level_set__](const typename Mesh::point_type& pt) -> T { 
+        if(level_set__(pt) > 0)
+            return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        else 
+            return exp(pt.x()) * std::cos(pt.y());
+    },
+    // RHS
+    [level_set__](const typename Mesh::point_type& pt) -> T { 
+        if(level_set__(pt) > 0)
+            return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        else 
+            return 0.0;
+    },
+    // BOUNDARY CONDITIONS
+    [level_set__](const typename Mesh::point_type& pt) -> T { 
+    if(level_set__(pt) > 0)
+        return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+    else 
+        return exp(pt.x()) * std::cos(pt.y());
+    },
+    // GRADIENT   
+    [level_set__](const typename Mesh::point_type& pt) -> auto { 
+        Matrix<T, 1, 2> ret;
+        if(level_set__(pt) > 0) {
+            ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+            ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+            return ret;
+        }
+        else {
+            ret(0) = exp(pt.x()) * std::cos(pt.y());
+            ret(1) = - exp(pt.x()) * std::sin(pt.y());
+            return ret;
+        }
+    },
+    // DIRICHLET JUMP
+    [](const typename Mesh::point_type& pt) -> T {
+        return - std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + exp(pt.x()) * std::cos(pt.y());},
+    // NEUMANN JUMP
+    [level_set__](const typename Mesh::point_type& pt) -> T {
+        Matrix<T, 1, 2> normal = level_set__.normal(pt);
+        return -(M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - exp(pt.x()) * std::cos(pt.y())) * normal(0) - ( M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y()) + exp(pt.x()) * std::sin(pt.y()) ) * normal(1);})
         {}
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_laplacian_jumps_2(const Mesh& msh, Function level_set_function)
-{
+auto make_test_case_laplacian_jumps_2(const Mesh& msh, Function level_set_function) {
     return test_case_laplacian_jumps_2<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
-
-///// test_case_laplacian_jumps_3
-// exact solution : sin(\pi x) sin(\pi y)               in \Omega_1
-//                  sin(\pi x) sin(\pi y) + 2 + x^3 * y^3   in \Omega_2
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: sin(\pi x) sin(\pi y) in \Omega_1 & sin(\pi x)*sin(\pi y)+2+x^3*y^3 in \Omega_2 & \kappa_1 = \kappa_2 = 1
 template<typename T, typename Function, typename Mesh>
-class test_case_laplacian_jumps_3: public test_case_laplacian<T, Function, Mesh>
-{
-   public:
-    test_case_laplacian_jumps_3(Function level_set__)
-        : test_case_laplacian<T, Function, Mesh>
-        (level_set__, params<T>(),
-         [level_set__](const typename Mesh::point_type& pt) -> T { /* sol */
+class test_case_laplacian_jumps_3: public test_case_laplacian<T, Function, Mesh> {
+
+    public:
+    
+    test_case_laplacian_jumps_3(Function level_set__) : test_case_laplacian<T, Function, Mesh> (level_set__, params<T>(),
+        
+        // SOLUTION
+        [level_set__](const typename Mesh::point_type& pt) -> T { 
             if(level_set__(pt) > 0)
-                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y())
-                    + 2. + pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
-            else return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> T { /* rhs */
-             if(level_set__(pt) > 0)
-                 return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - 6 * pt.x() * pt.y() * (pt.x() * pt.x() + pt.y() * pt.y() );
-            else return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> T { // bcs
-             if(level_set__(pt) > 0)
-                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 2.
-                    + pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
-            else return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
-         [level_set__](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             if(level_set__(pt) > 0)
-             {
-                 ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 3*pt.x()*pt.x()*pt.y()*pt.y()*pt.y();
-                 ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y()) + 3*pt.x()*pt.x()*pt.x()*pt.y()*pt.y();
-                 return ret;
-             }
-             else {
-                 ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
-                 ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
-                 return ret;}},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */
-             return - 2. - pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();},
-         [level_set__](const typename Mesh::point_type& pt) -> T {/* Neu */
-             Matrix<T, 1, 2> normal = level_set__.normal(pt);
-             return -3 * pt.x() * pt.x() * pt.y() * pt.y() * (pt.y() * normal(0) + pt.x() * normal(1));})
+                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 2. + pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
+            else 
+                return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        },
+        // RHS
+        [level_set__](const typename Mesh::point_type& pt) -> T { 
+            if (level_set__(pt) > 0)
+                return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) - 6 * pt.x() * pt.y() * (pt.x() * pt.x() + pt.y() * pt.y() );
+            else 
+                return 2.0 * M_PI * M_PI * std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+        },
+        // BOUNDARY CONDITIONS
+        [level_set__](const typename Mesh::point_type& pt) -> T { // bcs
+        if (level_set__(pt) > 0)
+            return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 2. + pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
+        else 
+            return std::sin(M_PI*pt.x()) * std::sin(M_PI*pt.y());},
+        // GRADIENT
+        [level_set__](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 1, 2> ret;
+            if(level_set__(pt) > 0) {
+                ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y()) + 3*pt.x()*pt.x()*pt.y()*pt.y()*pt.y();
+                ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y()) + 3*pt.x()*pt.x()*pt.x()*pt.y()*pt.y();
+                return ret;
+            }
+            else {
+                ret(0) = M_PI * std::cos(M_PI*pt.x()) * std::sin(M_PI*pt.y());
+                ret(1) = M_PI * std::sin(M_PI*pt.x()) * std::cos(M_PI*pt.y());
+                return ret;
+            }
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */
+            return - 2. - pt.x() * pt.x() * pt.x() * pt.y() * pt.y() * pt.y();
+        },
+        // NEUMANN JUMP 
+        [level_set__](const typename Mesh::point_type& pt) -> T {/* Neu */
+            Matrix<T, 1, 2> normal = level_set__.normal(pt);
+            return -3 * pt.x() * pt.x() * pt.y() * pt.y() * (pt.y() * normal(0) + pt.x() * normal(1));
+        })
         {}
 };
 
 template<typename Mesh, typename Function>
-auto make_test_case_laplacian_jumps_3(const Mesh& msh, Function level_set_function)
-{
+auto make_test_case_laplacian_jumps_3(const Mesh& msh, Function level_set_function) {
     return test_case_laplacian_jumps_3<typename Mesh::coordinate_type, Function, Mesh>(level_set_function);
 }
 
-////////////////////  TESTS CASES FOR CIRCLES   ////////////////////////////
-
-///// test_case_laplacian_contrast_2
-// !! available for circle_level_set only !!
-// circle : radius = R, center = (a,b)
-// exact solution : r^2 / \kappa_1 in \Omega_1
-//                  (r^2 - R^2) / \kappa_2 + R^2 / \kappa_1 in \Omega_2
-// \kappa_1 and \kappa_2 : parameters to choose (in parms_)
+// EXACT SOLUTION: r^2 / \kappa_1 in \Omega_1 & (r^2 - R^2) / \kappa_2 + R^2 / \kappa_1 in \Omega_2
 template<typename T, typename Mesh>
-class test_case_laplacian_contrast_2: public test_case_laplacian<T, circle_level_set<T>, Mesh>
-{
-   public:
-    test_case_laplacian_contrast_2(T R, T a, T b, params<T> parms_)
-        : test_case_laplacian<T, circle_level_set<T>, Mesh>
-        (circle_level_set<T>(R, a, b), parms_,
-         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { /* sol */
+class test_case_laplacian_contrast_2: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+
+    public:
+
+    test_case_laplacian_contrast_2(T R, T a, T b, params<T> parms_) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), parms_,
+    
+        // SOLUTION
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { /* sol */
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-            if(r2 < R*R) {return r2 / parms_.kappa_1;}
-            else {return (r2 - R*R) / parms_.kappa_2
-                    + R*R / parms_.kappa_1;} },
-         [](const typename Mesh::point_type& pt) -> T { /* rhs */ return -4.0;},
-         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { // bcs
+            if(r2 < R*R) 
+                return r2 / parms_.kappa_1;
+            else 
+                return (r2 - R*R) / parms_.kappa_2 + R*R / parms_.kappa_1;
+        },
+        // RHS
+        [](const typename Mesh::point_type& pt) -> T { 
+            return -4.0;
+        },
+        // BOUNDARY CONDITIONS
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { // bcs
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-            if (r2 < R*R) {return r2 / parms_.kappa_1;}
-            else {return (r2 - R*R) / parms_.kappa_2
-                    + R*R / parms_.kappa_1;} },
-         [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { // grad    
-             Matrix<T, 1, 2> ret;
-             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-             if (r2 < R*R)
-             {
-                 ret(0) = 2 * ( pt.x() - a ) / parms_.kappa_1 ;
-                 ret(1) = 2 * ( pt.y() - b ) / parms_.kappa_1 ;
-             }
-             else
-             {
-                 ret(0) = 2 * ( pt.x() - a ) / parms_.kappa_2 ;
-                 ret(1) = 2 * ( pt.y() - b ) / parms_.kappa_2 ;
-             }
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
+            if (r2 < R*R) 
+                return r2 / parms_.kappa_1;
+            else 
+                return (r2 - R*R) / parms_.kappa_2 + R*R / parms_.kappa_1; 
+        },
+        // GRADIENT 
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { // grad    
+            Matrix<T, 1, 2> ret;
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if (r2 < R*R) {
+                ret(0) = 2 * ( pt.x() - a ) / parms_.kappa_1 ;
+                ret(1) = 2 * ( pt.y() - b ) / parms_.kappa_1 ;
+            }
+            else {
+                ret(0) = 2 * ( pt.x() - a ) / parms_.kappa_2 ;
+                ret(1) = 2 * ( pt.y() - b ) / parms_.kappa_2 ;
+            }
+            return ret;
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
         {}
+
 };
 
-
 template<typename Mesh>
-auto make_test_case_laplacian_contrast_2(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms)
-{
+auto make_test_case_laplacian_contrast_2(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms) {
     return test_case_laplacian_contrast_2<typename Mesh::coordinate_type, Mesh>(LS.radius, LS.alpha, LS.beta, parms);
 }
 
-///// test_case_laplacian_contrast_6
-// !! available for circle_level_set only !!
-// circle : radius = R, center = (a,b)
-// exact solution : r^6 / \kappa_1 in \Omega_1
-//                  (r^6 - R^6) / \kappa_2 + R^6 / \kappa_1 in \Omega_2
-// \kappa_1 and \kappa_2 : parameters to choose (in parms_)
+// EXACT SOLUTION: r^6 / \kappa_1 in \Omega_1 & (r^6 - R^6) / \kappa_2 + R^6 / \kappa_1 in \Omega_2 
 template<typename T, typename Mesh>
-class test_case_laplacian_contrast_6: public test_case_laplacian<T, circle_level_set<T>, Mesh>
-{
-   public:
-    test_case_laplacian_contrast_6(T R, T a, T b, params<T> parms_)
-        : test_case_laplacian<T, circle_level_set<T>, Mesh>
-        (circle_level_set<T>(R, a, b), parms_,
-         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { /* sol */
+class test_case_laplacian_contrast_6: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+
+    public:
+
+    test_case_laplacian_contrast_6(T R, T a, T b, params<T> parms_) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), parms_,
+
+        // SOLUTION
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { /* sol */
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-            if(r2 < R*R) {return r2*r2*r2 / parms_.kappa_1;}
-            else {return (r2*r2*r2) / parms_.kappa_2
-                    + (R*R*R*R*R*R) * (1.0 / parms_.kappa_1 - 1.0 / parms_.kappa_2);} },
-         [a, b](const typename Mesh::point_type& pt) -> T { /* rhs */
-             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-             return -36.0 * r2 * r2;},
-         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { // bcs
+            if (r2 < R*R) 
+                return r2*r2*r2 / parms_.kappa_1;
+            else 
+                return (r2*r2*r2) / parms_.kappa_2 + (R*R*R*R*R*R) * (1.0 / parms_.kappa_1 - 1.0 / parms_.kappa_2); 
+        },
+        // RHS
+        [a, b](const typename Mesh::point_type& pt) -> T { /* rhs */
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-            if(r2 < R*R) {return r2*r2*r2 / parms_.kappa_1;}
-            else {return (r2*r2*r2) / parms_.kappa_2
-                    + (R*R*R*R*R*R) * (1.0 / parms_.kappa_1 - 1.0 / parms_.kappa_2);} },
-         [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { // grad    
-             Matrix<T, 1, 2> ret;
-             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-             if (r2 < R*R)
-             {
-                 ret(0) = 6 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_1 ;
-                 ret(1) = 6 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_1 ;
-             }
-             else
-             {
-                 ret(0) = 6 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_2 ;
-                 ret(1) = 6 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_2 ;
-             }
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
+            return -36.0 * r2 * r2;
+        },
+        // BOUNDARY CONDITIONS
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { // bcs
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if (r2 < R*R) 
+                return r2*r2*r2 / parms_.kappa_1;
+            else 
+                return (r2*r2*r2) / parms_.kappa_2 + (R*R*R*R*R*R) * (1.0 / parms_.kappa_1 - 1.0 / parms_.kappa_2); 
+        },
+        // GRADIENT
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { 
+            Matrix<T, 1, 2> ret;
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if (r2 < R*R) {
+                ret(0) = 6 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_1 ;
+                ret(1) = 6 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_1 ;
+            }
+            else {
+                ret(0) = 6 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_2 ;
+                ret(1) = 6 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_2 ;
+            }
+            return ret;
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
         {}
+
 };
 
-
 template<typename Mesh>
-auto make_test_case_laplacian_contrast_6(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms)
-{
+auto make_test_case_laplacian_contrast_6(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms) {
     return test_case_laplacian_contrast_6<typename Mesh::coordinate_type, Mesh>(LS.radius, LS.alpha, LS.beta, parms);
 }
 
-
-
-///// test_case_laplacian_circle_hom
-// !! available for circle_level_set only !!
-// circle : radius = R, center = (a,b)
-// exact solution : (R - r) * r^n in the whole domain
-// coded here for n = 6
-// \kappa_1 = \kappa_2 = 1
+// EXACT SOLUTION: r^6 / \kappa_1 in \Omega_1 & (r^8 - R^8) / \kappa_2 + R^6 / \kappa_1 in \Omega_2
 template<typename T, typename Mesh>
-class test_case_laplacian_circle_hom: public test_case_laplacian<T, circle_level_set<T>, Mesh>
-{
-   public:
-    test_case_laplacian_circle_hom(T R, T a, T b)
-        : test_case_laplacian<T, circle_level_set<T>, Mesh>
-        (circle_level_set<T>(R, a, b), params<T>(),
-         [R, a, b](const typename Mesh::point_type& pt) -> T { /* sol */
+class test_case_laplacian_contrast_jump_gN: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+   
+    public:
+
+    test_case_laplacian_contrast_jump_gN(T R, T a, T b, params<T> parms_) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), parms_,
+        // SOLUTION
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if (r2 < R*R) 
+                return r2*r2*r2 / parms_.kappa_1;
+            else 
+                return (r2*r2*r2*r2 - R*R*R*R*R*R*R*R)/parms_.kappa_2 + (R*R*R*R*R*R)/parms_.kappa_1; 
+        },
+        // RHS
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if (r2 < R*R) 
+                return -36*r2*r2;
+            else 
+                return -64*r2*r2*r2; 
+        },
+        // BOUNDARY CONDITIONS
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            return (r2*r2*r2*r2 - R*R*R*R*R*R*R*R)/parms_.kappa_2 + (R*R*R*R*R*R)/parms_.kappa_1;
+        },
+        // GRAD
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { 
+            Matrix<T, 1, 2> ret;
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if (r2 < R*R) {
+                ret(0) = 6 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_1 ;
+                ret(1) = 6 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_1 ;
+            }
+            else {
+                ret(0) = 8 * r2 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_2 ;
+                ret(1) = 8 * r2 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_2 ;
+            }
+            return ret;
+        },
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {
+            return 0.0;
+        },
+        // NEUMANN JUMP
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+            return (6*R*R*R*R*R - 8*R*R*R*R*R*R*R);
+        }
+    )
+    {}
+};
+
+template<typename Mesh>
+auto make_test_case_laplacian_contrast_jump_gN(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms) {
+    return test_case_laplacian_contrast_jump_gN<typename Mesh::coordinate_type, Mesh>(LS.radius, LS.alpha, LS.beta, parms);
+}
+
+// EXACT SOLUTION: r^6/\kappa_1 in \Omega_1 & r^6/\kappa_2 in \Omega_2
+template<typename T, typename Mesh>
+class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+   
+    public:
+
+    test_case_laplacian_contrast_jump_gD(T R, T a, T b, params<T> parms_) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), parms_,
+        // SOLUTION
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            T r = std::sqrt(r2);
+            if (r2 < R*R) 
+                return r2*r2*r2/parms_.kappa_1;
+            else 
+                return r2*r2*r2/parms_.kappa_2; 
+        },
+        // RHS
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            T r = std::sqrt(r2);
+            if (r2 < R*R) 
+                return -36*r2*r2;
+            else 
+                return -36*r2*r2; 
+        },
+        // BOUNDARY CONDITIONS
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            return r2*r2*r2/parms_.kappa_2; 
+        },
+        // GRAD
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { 
+            Matrix<T, 1, 2> ret;
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            T r = std::sqrt(r2);
+            if (r2 < R*R) {
+                ret(0) = (6*r2*r2)*(pt.x()-a) / parms_.kappa_1 ;
+                ret(1) = (6*r2*r2)*(pt.y()-b) / parms_.kappa_1 ;
+            }
+            else {
+                ret(0) = (6*r2*r2)*(pt.x()-a)/parms_.kappa_2 ;
+                ret(1) = (6*r2*r2)*(pt.y()-b)/parms_.kappa_2 ;
+            }
+            return ret;
+        },
+        // DIRICHLET JUMP
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+            return R*R*R*R*R*R*(1/parms_.kappa_1 - 1/parms_.kappa_2);
+        },
+        // NEUMANN JUMP
+        [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+            return 0.0;
+        }
+    )
+    {}
+};
+
+// template<typename T, typename Mesh>
+// class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+   
+//     public:
+
+//     test_case_laplacian_contrast_jump_gD(T R, T a, T b, params<T> parms_) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), parms_,
+//         // SOLUTION
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             T r = std::sqrt(r2);
+//             if (r2 < R*R) 
+//                 return 0.0;
+//             else 
+//                 return 1.0; 
+//         },
+//         // RHS
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             T r = std::sqrt(r2);
+//             if (r2 < R*R) 
+//                 return 0.0;
+//             else 
+//                 return 0.0; 
+//         },
+//         // BOUNDARY CONDITIONS
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             return 1.0; 
+//         },
+//         // GRAD
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { 
+//             Matrix<T, 1, 2> ret;
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             T r = std::sqrt(r2);
+//             if (r2 < R*R) {
+//                 ret(0) = 0.0;
+//                 ret(1) = 0.0;
+//             }
+//             else {
+//                 ret(0) = 0.0;
+//                 ret(1) = 0.0;
+//             }
+//             return ret;
+//         },
+//         // DIRICHLET JUMP
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+//             return 1.0;
+//         },
+//         // NEUMANN JUMP
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+//             return 0.0;
+//         }
+//     )
+//     {}
+// };
+
+template<typename Mesh>
+auto make_test_case_laplacian_contrast_jump_gD(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms) {
+    return test_case_laplacian_contrast_jump_gD<typename Mesh::coordinate_type, Mesh>(LS.radius, LS.alpha, LS.beta, parms);
+}
+
+// EXACT SOLUTION: (R - r) * r^6 in the whole domain & \kappa_1 = \kappa_2 = 1
+template<typename T, typename Mesh>
+class test_case_laplacian_circle_hom: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+
+    public:
+
+    test_case_laplacian_circle_hom(T R, T a, T b) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), params<T>(),
+        
+        // SOLUTION
+        [R, a, b](const typename Mesh::point_type& pt) -> T { /* sol */
             T x1 = pt.x() - a;
             T x2 = x1 * x1;
             T y1 = pt.y() - b;
@@ -500,83 +719,86 @@ class test_case_laplacian_circle_hom: public test_case_laplacian<T, circle_level
             T r2 = x2 + y2;
             T r1 = std::sqrt(r2);
             return (R - r1) * r2 * r2 * r2;},
-         [R, a, b](const typename Mesh::point_type& pt) -> T { /* rhs */
-             T x1 = pt.x() - a;
-             T x2 = x1 * x1;
-             T y1 = pt.y() - b;
-             T y2 = y1 * y1;
-             T r2 = x2 + y2;
-             T r1 = std::sqrt(r2);
-             return (2 * 6 + 1) * r2 * r2 * r1 - 6*6 * (R-r1) * r2 * r2;},
-         [R, a, b](const typename Mesh::point_type& pt) -> T { // bcs
-             T x1 = pt.x() - a;
-             T x2 = x1 * x1;
-             T y1 = pt.y() - b;
-             T y2 = y1 * y1;
-             T r2 = x2 + y2;
-             T r1 = std::sqrt(r2);
-             return (R - r1) * r2 * r2 * r2;},
-         [R, a, b](const typename Mesh::point_type& pt) -> auto { // grad
-             Matrix<T, 1, 2> ret;
-             T x1 = pt.x() - a;
-             T x2 = x1 * x1;
-             T y1 = pt.y() - b;
-             T y2 = y1 * y1;
-             T r2 = x2 + y2;
-             T r1 = std::sqrt(r2);
-             T B = 6 * (R - r1) * r2 * r2 - r2 * r2 * r1;
-             ret(0) = B * x1;
-             ret(1) = B * y1;
-             return ret;},
-         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
+        // RHS 
+        [R, a, b](const typename Mesh::point_type& pt) -> T { /* rhs */
+            T x1 = pt.x() - a;
+            T x2 = x1 * x1;
+            T y1 = pt.y() - b;
+            T y2 = y1 * y1;
+            T r2 = x2 + y2;
+            T r1 = std::sqrt(r2);
+            return (2 * 6 + 1) * r2 * r2 * r1 - 6*6 * (R-r1) * r2 * r2;},
+        // BOUNDARY CONDITIONS  
+        [R, a, b](const typename Mesh::point_type& pt) -> T { // bcs
+            T x1 = pt.x() - a;
+            T x2 = x1 * x1;
+            T y1 = pt.y() - b;
+            T y2 = y1 * y1;
+            T r2 = x2 + y2;
+            T r1 = std::sqrt(r2);
+            return (R - r1) * r2 * r2 * r2;},
+        // GRADIENT  
+        [R, a, b](const typename Mesh::point_type& pt) -> auto { // grad
+            Matrix<T, 1, 2> ret;
+            T x1 = pt.x() - a;
+            T x2 = x1 * x1;
+            T y1 = pt.y() - b;
+            T y2 = y1 * y1;
+            T r2 = x2 + y2;
+            T r1 = std::sqrt(r2);
+            T B = 6 * (R - r1) * r2 * r2 - r2 * r2 * r1;
+            ret(0) = B * x1;
+            ret(1) = B * y1;
+            return ret;},
+        // DIRICHLET JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
+        // NEUMANN JUMP
+        [](const typename Mesh::point_type& pt) -> T {/* Neu */ return 0.0;})
         {}
+
 };
 
-
 template<typename Mesh>
-auto make_test_case_laplacian_circle_hom(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS)
-{
+auto make_test_case_laplacian_circle_hom(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS) {
     return test_case_laplacian_circle_hom<typename Mesh::coordinate_type, Mesh>(LS.radius, LS.alpha, LS.beta);
 }
 
-
-/******************************************************************************************/
-/*******************                                               ************************/
-/*******************                 STOKES  PROBLEM               ************************/
-/*******************                                               ************************/
-/******************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////                                            ////////////////////////////
+////////////////////               STOKES TEST CASES            ////////////////////////////
+////////////////////                                            ////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, typename Function, typename Mesh>
-class test_case_stokes
-{
-   public:
-    Function level_set_;
-    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel;
-    std::function<T(const typename Mesh::point_type&)> sol_p;
-    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun;
-    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel;
-    std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad;
-    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump;
-    std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> neumann_jump;
+class test_case_stokes {
 
-    struct params<T> parms;
+    public:
 
-    test_case_stokes(){}
+        Function level_set_;
+        std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel;
+        std::function<T(const typename Mesh::point_type&)> sol_p;
+        std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun;
+        std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel;
+        std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad;
+        std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump;
+        std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> neumann_jump;
+        
+        struct params<T> parms;
+    
+        test_case_stokes(){}
 
-    test_case_stokes
-    (Function level_set__, params<T> parms_,
-     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel_,
-     std::function<T(const typename Mesh::point_type&)> sol_p_,
-     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun_,
-     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel_,
-     std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad_,
-     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump_,
-     std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> neumann_jump_)
-    : level_set_(level_set__), sol_vel(sol_vel_), sol_p(sol_p_), rhs_fun(rhs_fun_),
-      bcs_vel(bcs_vel_), parms(parms_), vel_grad(vel_grad_), dirichlet_jump(dirichlet_jump_),
-      neumann_jump(neumann_jump_)
-        {}
+        test_case_stokes (Function level_set__, params<T> parms_,
+                          std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> sol_vel_,
+                          std::function<T(const typename Mesh::point_type&)> sol_p_,
+                          std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> rhs_fun_,
+                          std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> bcs_vel_,
+                          std::function<Eigen::Matrix<T, 2, 2>(const typename Mesh::point_type&)> vel_grad_,
+                          std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> dirichlet_jump_,
+                          std::function<Eigen::Matrix<T, 2, 1>(const typename Mesh::point_type&)> neumann_jump_)
+                          : level_set_(level_set__), sol_vel(sol_vel_), sol_p(sol_p_), rhs_fun(rhs_fun_),
+                          bcs_vel(bcs_vel_), parms(parms_), vel_grad(vel_grad_), dirichlet_jump(dirichlet_jump_),
+                          neumann_jump(neumann_jump_)
+                          {}
 };
 
 
