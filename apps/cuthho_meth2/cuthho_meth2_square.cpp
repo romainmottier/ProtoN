@@ -1588,10 +1588,10 @@ void convergence_test(void)
 
     // export to files ...
     std::vector<std::string> files;
-    files.push_back("./output/test_k0.txt");
-    files.push_back("./output/test_k1.txt");
-    files.push_back("./output/test_k2.txt");
-    files.push_back("./output/test_k3.txt");
+    files.push_back("../output/test_k0.txt");
+    files.push_back("../output/test_k1.txt");
+    files.push_back("../output/test_k2.txt");
+    files.push_back("../output/test_k3.txt");
 
     for (std::vector<size_t>::iterator it = pol_orders.begin(); it != pol_orders.end(); it++)
     {
@@ -1626,12 +1626,12 @@ void convergence_test(void)
             T radius = 1.0/3.0;
             auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 
-            // auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
+            auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
             // auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
             // auto level_set_function = square_level_set<T>(1.05, -0.05, -0.05, 1.05);
             // auto level_set_function = square_level_set<T>(1.0, -0.0, -0.0, 1.0);
             // auto level_set_function = square_level_set<T>(0.76, 0.24, 0.24, 0.76);
-            auto level_set_function = square_level_set<T>(0.751, 0.249, 0.249, 0.751);
+            // auto level_set_function = square_level_set<T>(0.751, 0.249, 0.249, 0.751);
             detect_node_position(msh, level_set_function);
             detect_cut_faces(msh, level_set_function);
             if(1)  // AGGLOMERATION
@@ -1779,7 +1779,7 @@ void convergence_test(void)
 }
 
 //////////////////////////     MAIN        ////////////////////////////
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
     convergence_test();
@@ -1789,7 +1789,7 @@ int main(int argc, char **argv)
 }
 #endif
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
     using RealType = double;
