@@ -1,0 +1,89 @@
+include(FindPackageHandleStandardArgs)
+
+set(MKL_HINTS /usr /opt/intel /opt/intel/mkl /opt/intel/oneapi/mkl /opt/intel/oneapi)
+
+find_path(MKL_INCLUDE_DIRS
+    NAMES mkl.h
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES mkl mkl/include include)
+
+if (MKL_INCLUDE_DIRS)
+    message(STATUS "MKL: found include at ${MKL_INCLUDE_DIRS}")
+endif()
+
+###########################################################
+## iomp5
+find_library(MKL_iomp5_LIBRARY
+    NAMES iomp5
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin)
+
+if (MKL_iomp5_LIBRARY)
+    message(STATUS "MKL: found iomp5 at ${MKL_iomp5_LIBRARY}")
+    list(APPEND MKL_LIBRARIES ${MKL_iomp5_LIBRARY})
+endif()
+
+###########################################################
+## mkl_core 
+find_library(MKL_mkl_core_LIBRARY
+    NAMES   mkl_core
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+
+if (MKL_mkl_core_LIBRARY)
+    message(STATUS "MKL: found mkl_core at ${MKL_mkl_core_LIBRARY}")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_core_LIBRARY})
+endif()
+
+###########################################################
+## mkl_intel_lp64 
+find_library(MKL_mkl_intel_lp64_LIBRARY
+    NAMES   mkl_intel_lp64
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+
+if (MKL_mkl_intel_lp64_LIBRARY)
+    message(STATUS "MKL: found mkl_intel_lp64 at ${MKL_mkl_intel_lp64_LIBRARY}")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_intel_lp64_LIBRARY})
+endif()
+
+###########################################################
+## mkl_intel_thread 
+find_library(MKL_mkl_intel_thread_LIBRARY
+    NAMES   mkl_intel_thread
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+
+if (MKL_mkl_intel_thread_LIBRARY)
+    message(STATUS "MKL: found mkl_intel_thread at ${MKL_mkl_intel_thread_LIBRARY}")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_intel_thread_LIBRARY})
+endif()
+
+###########################################################
+## mkl_runtime 
+if (APPLE)
+    find_library(MKL_runtime_LIBRARY
+        NAMES   mkl_intel
+        HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+        PATH_SUFFIXES lib lib/intel64 lib/intel64_lin mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+else ()
+    find_library(MKL_runtime_LIBRARY
+        NAMES   mkl_rt
+        HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+        PATH_SUFFIXES lib lib/intel64 lib/intel64_lin mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+endif ()
+
+if (MKL_runtime_LIBRARY)
+    message(STATUS "MKL: found mkl_runtime at ${MKL_runtime_LIBRARY}")
+    list(APPEND MKL_LIBRARIES ${MKL_runtime_LIBRARY})
+endif()
+
+###########################################################
+## Vérification et ajout de dépendances essentielles
+if (MKL_LIBRARIES)
+    list(APPEND MKL_LIBRARIES -lpthread -lm -ldl)
+    message(STATUS "MKL: linking with ${MKL_LIBRARIES}")
+endif()
+
+find_package_handle_standard_args(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS)
+

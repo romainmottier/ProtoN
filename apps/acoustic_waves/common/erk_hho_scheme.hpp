@@ -26,11 +26,9 @@ class erk_hho_scheme
     SparseMatrix<T> m_Sff_inv;
     Matrix<T, Dynamic, 1> m_Fc;
 
-    #ifdef HAVE_INTEL_MKL
-        PardisoLDLT<Eigen::SparseMatrix<T>>  m_analysis_f;
-    #else
-        SimplicialLDLT<SparseMatrix<T>> m_analysis_f;
-    #endif
+
+    SimplicialLDLT<SparseMatrix<T>> m_analysis_f;
+
     
     ConjugateGradient<SparseMatrix<T>> m_analysis_cg;
     
@@ -75,16 +73,9 @@ class erk_hho_scheme
         m_sff_is_block_diagonal_Q = false;
     }
     
-
-    #ifdef HAVE_INTEL_MKL
-        PardisoLDLT<Eigen::SparseMatrix<T>> & FacesAnalysis(){
-            return m_analysis_f;
-        }
-    #else
-        SimplicialLDLT<SparseMatrix<T>> & FacesAnalysis(){
-            return m_analysis_f;
-        }
-    #endif
+    SimplicialLDLT<SparseMatrix<T>> & FacesAnalysis(){
+        return m_analysis_f;
+    }
     
     SparseMatrix<T> & Mc(){
         return m_Mc;
