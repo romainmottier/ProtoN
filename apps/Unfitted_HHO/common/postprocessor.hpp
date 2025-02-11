@@ -1007,81 +1007,113 @@ public:
     // }
 
     /// Compute L2 and H1 errors for one field approximation
-    static void compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout) {
+    static void compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+
        timecounter tc;
        tc.tic();
+
        using RealType = double;
+
        RealType scalar_l2_error = 0.0;
        RealType flux_l2_error = 0.0;
        size_t cell_i = 0;
        RealType h = 10.0;
        std::vector<RealType> l2_error_vec(msh.cells.size());
        std::vector<RealType> flux_l2_error_vec(msh.cells.size());
-       for (auto& cell : msh.cells) {
+       for (auto& cell : msh.cells)
+       {
            l2_error_vec[cell_i] = 0.0;
             RealType h_l = diameter(msh, cell);
-           if (h_l < h) 
+           if (h_l < h) {
                h = h_l;
+           }
+           
            cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
            auto cbs = cell_basis.size();
-           if (location(msh, cell) == element_location::ON_INTERFACE) { 
+           if ( location(msh, cell) == element_location::ON_INTERFACE )
+           {
+               
                auto dofs_n = assembler.take_local_data(msh, cell, x_dof, element_location::IN_NEGATIVE_SIDE);
                auto dofs_p = assembler.take_local_data(msh, cell, x_dof, element_location::IN_POSITIVE_SIDE);
+
                auto cell_dofs_n = dofs_n.head(cbs);
                auto cell_dofs_p = dofs_p.head(cbs);
+               
+               // negative side
                auto qps_n = integrate(msh, cell, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-               for (auto& qp : qps_n) {
+               for (auto& qp : qps_n)
+               {
                    /* Compute H1-error */
                    auto t_dphi = cell_basis.eval_gradients( qp.first );
                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+
                    for (size_t i = 1; i < cbs; i++ )
                        grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
-                   flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);                   
-                   /* Compute L2-error */
+
+                   flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                   
+
                    auto t_phi = cell_basis.eval_basis( qp.first );
                    auto v = cell_dofs_n.dot(t_phi);
+                   
+                   /* Compute L2-error */
                    l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
                }
+               
+               // positive side
                auto qps_p = integrate(msh, cell, 2*hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);
-               for (auto& qp : qps_p) {
+               for (auto& qp : qps_p)
+               {
                    /* Compute H1-error */
                    auto t_dphi = cell_basis.eval_gradients( qp.first );
                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+
                    for (size_t i = 1; i < cbs; i++ )
-                       grad += cell_dofs_p(i) * t_dphi.block(i, 0, 1, 2);
+                       grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
+
                    flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+
                    auto t_phi = cell_basis.eval_basis( qp.first );
-                   auto v = cell_dofs_p.dot(t_phi);
+                   auto v = cell_dofs_n.dot(t_phi);
+                   
                    /* Compute L2-error */
                    l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
-               }                   
-           }
-           else {
+               }
+
+           }else{
+               
                auto dofs = assembler.take_local_data(msh, cell, x_dof);
-               auto cell_dofs = dofs.head(cbs);
+                auto cell_dofs = dofs.head(cbs);
+
                // uncut case
                auto qps = integrate(msh, cell, 2*hho_di.cell_degree());
-               for (auto& qp : qps) {
+               for (auto& qp : qps)
+               {
                    /* Compute H1-error */
                    auto t_dphi = cell_basis.eval_gradients( qp.first );
                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+
                    for (size_t i = 1; i < cbs; i++ )
                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+
                    flux_l2_error_vec[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                   /* Compute L2-error */
+
                    auto t_phi = cell_basis.eval_basis( qp.first );
                    auto v = cell_dofs.dot(t_phi);
+                   
+                   /* Compute L2-error */
                    l2_error_vec[cell_i] += qp.second * (scal_fun(qp.first) - v) * (scal_fun(qp.first) - v);
+                   
                }
            }
            cell_i++;
        }
        
        scalar_l2_error = std::accumulate(l2_error_vec.begin(), l2_error_vec.end(),0.0);
-       flux_l2_error   = std::accumulate(flux_l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
+       flux_l2_error = std::accumulate(flux_l2_error_vec.begin(), flux_l2_error_vec.end(),0.0);
        tc.toc();
        
-       std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
+       std::cout << bold << cyan << "Error completed: " << tc << " seconds" << reset << std::endl;
        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
        error_file << "L2-norm error = " << std::setprecision(16) << std::sqrt(scalar_l2_error) << std::endl;
        error_file << "H1-norm error = " << std::setprecision(16) << std::sqrt(flux_l2_error) << std::endl;
@@ -1089,7 +1121,7 @@ public:
        error_file.flush();
        
     }
-
+    
     // static void compute_errors_one_field_centered(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
 
     //    timecounter tc;

@@ -199,21 +199,22 @@ public:
     }
 
     Vect
-    make_contrib_rhs_cut(const Mesh& msh, const typename Mesh::cell_type& cl, const testType &test_case, const hho_degree_info hdi)
-    {
+    make_contrib_rhs_cut(const Mesh& msh, const typename Mesh::cell_type& cl, const testType &test_case, const hho_degree_info hdi) {
+        
         auto parms = test_case.parms;
         auto level_set_function = test_case.level_set_;
         auto dir_jump = test_case.dirichlet_jump;
 
         auto celdeg = hdi.cell_degree();
-        auto cbs = cell_basis<Mesh, T>::size(celdeg);
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
-        // RHS
-        Vect f = Vect::Zero(cbs * 2);
-        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);   // Neg part
-        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE); // Pos part
+        ///////////////    RHS
+        Vect f = Vect::Zero(cbs*2);
+        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
 
         return f;
+        
     }
 
     Vect

@@ -1219,7 +1219,7 @@ void CutMesh(mesh_type & msh, level_set<RealType> & level_set_function, size_t i
 
 void CutHHOSecondOrderConvTest(int argc, char **argv){
     
-    bool direct_solver_Q = false;
+    bool direct_solver_Q = true;
     bool sc_Q = true;
     size_t degree           = 0;
     size_t l_divs          = 0;
@@ -1273,12 +1273,15 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     
     RealType radius = 1.0/3.0;
     // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
-    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 4, 0.04);
- 
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 4, 0.04);
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.015);
+    // ../unfitted_acoustic_waves -k 2 -l 7 -r 10 -d 1 
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);
+
     timecounter tc;
     SparseMatrix<RealType> Kg, Mg;
 
-    for(size_t k = 0; k <= degree; k++){
+    for(size_t k = degree; k <= degree; k++){
         std::cout << bold << cyan << "Running an approximation with k : " << k << reset << std::endl;
         error_file << "Approximation with k : " << k << std::endl;
         
@@ -1286,11 +1289,11 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
         for(size_t l = 0; l <= l_divs; l++){
             
             mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
-            // if (dump_debug)
-            // {
-            //     dump_mesh(msh);
-            //     output_mesh_info(msh, level_set_function);
-            // }
+            if (dump_debug)
+            {
+                dump_mesh(msh);
+                output_mesh_info(msh, level_set_function);
+            }
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
             auto method = make_gradrec_interface_method(msh, 1.0, test_case);
             

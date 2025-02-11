@@ -49,6 +49,6 @@ if (BUILD_ACOUSTICS)
 endif()
 
 option(BUILD_POLY_EXT "Build polynomial extension applications" ON)
-if (BUILD_POLYEXP)
+if (BUILD_POLY_EXT)
     add_subdirectory(Unfitted_HHO)
 endif()

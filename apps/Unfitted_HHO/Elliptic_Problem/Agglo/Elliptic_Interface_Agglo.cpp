@@ -6,7 +6,7 @@ cmake ../Proton
 (verification that clang is used)
 ///////////////////// RUN
 source /opt/intel/oneapi/setvars.sh intel64
-../../../Elliptic_Interface_Agglo -k 0 -l 3 -n 0 -r 0 -c 0 -s 1 -f 1
+../Elliptic_Interface_Agglo -k 2 -l 7 -r 10 -c 1 -s 1 -f 1 
 */
 
 #include <iostream>
@@ -49,9 +49,10 @@ using namespace Eigen;
 
 // Agglomeration routines
 #include "cutmesh.hpp"
-#include "methods.hpp"
+// #include "methods.hpp"
 #include "postpro.hpp"
 #include "test_cases.hpp"
+#include "omar_structure/methods.hpp"
 
 #define scaled_stab_Q 0
 
@@ -60,13 +61,146 @@ using RealType = double;
 typedef cuthho_poly_mesh<RealType>  mesh_type;
 
 void CutHHOSecondOrderConvTest(int argc, char **argv);
+void CutHHOSecondOrderConvTest_NOT_WORKING(int argc, char **argv);
 
 int main(int argc, char **argv) {
-    CutHHOSecondOrderConvTest(argc, argv);
+    // CutHHOSecondOrderConvTest(argc, argv);
+    CutHHOSecondOrderConvTest_NOT_WORKING(argc, argv);
     return 0;
 }
 
 void CutHHOSecondOrderConvTest(int argc, char **argv){
+    
+    // ##################################################
+    // ################################################## Simulation paramaters 
+    // ##################################################
+    
+    size_t degree        = 1;          // Face degree           -k
+    size_t l_divs        = 2;          // Space level refinment -l
+    size_t nt_divs       = 1;          // Time level refinment  -n
+    size_t int_refsteps  = 4;          // Interface refinment   -r
+    bool dump_debug      = false;      // Debug & Silo files    -d 
+    bool direct_solver_Q = true;
+    bool sc_Q = true;
+
+    int ch;
+    while ( (ch = getopt(argc, argv, "k:l:n:r:c:s:f:")) != -1 ) {
+        switch(ch) {
+            case 'k':
+                degree = atoi(optarg);
+            break;
+            case 'l':
+                l_divs = atoi(optarg);
+            break;
+            case 'n':
+                nt_divs = atoi(optarg);
+            break;
+            case 'r':
+                int_refsteps = atoi(optarg);
+            break;
+            case 'c':
+                sc_Q = atoi(optarg);
+            break;
+            case 's':
+                direct_solver_Q = atoi(optarg);
+            break;
+            case 'f':
+                dump_debug = atoi(optarg);
+            break;
+            case '?':
+            default:
+                std::cout << "wrong arguments" << std::endl;
+            exit(1);
+        }
+    }
+
+    argc -= optind;
+    argv += optind;
+
+    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - AGGLOMERATION";
+    std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
+    std::cout << "      " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
+    std::cout << "      " << "Space refinement level     -l : " << l_divs << std::endl;
+    std::cout << "      " << "Time refinement level      -n : " << nt_divs << std::endl;
+    std::cout << "      " << "Interface refinement level -r : " << int_refsteps << std::endl;
+    std::cout << "      " << "Static condensation        -c : " << sc_Q << std::endl;
+    std::cout << "      " << "Direct solver              -s : " << direct_solver_Q << std::endl;
+    std::cout << "      " << "Debug & Silo files         -f : " << dump_debug << std::endl << std::endl;
+
+    std::ofstream error_file("steady_state_one_field_error.txt");
+    
+    RealType radius = 1.0/3.0;
+    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 4, 0.04);
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.015);
+    // ../unfitted_acoustic_waves -k 2 -l 7 -r 10 -d 1 
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);
+
+    timecounter tc;
+    SparseMatrix<RealType> Kg, Mg;
+
+    for(size_t k = degree; k <= degree; k++){
+        std::cout << bold << cyan << "Running an approximation with k : " << k << reset << std::endl;
+        error_file << "Approximation with k : " << k << std::endl;
+        
+        hho_degree_info hdi(k+1, k);
+        for(size_t l = 0; l <= l_divs; l++){
+            
+            mesh_type msh = SquareCutMesh(level_set_function,l,int_refsteps);
+            if (dump_debug)
+            {
+                dump_mesh(msh);
+                output_mesh_info(msh, level_set_function);
+            }
+            auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
+            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
+            
+            linear_solver<RealType> analysis;
+            if (sc_Q) {
+                size_t n_dof = Kg.rows();
+                size_t n_cell_dof = 0;
+                for (auto &chunk : cell_basis_data) {
+                    n_cell_dof += chunk.second;
+                }
+                size_t n_face_dof = n_dof - n_cell_dof;
+                analysis.set_Kg(Kg, n_face_dof);
+                analysis.condense_equations_irregular_blocks(cell_basis_data);
+            }else{
+                analysis.set_Kg(Kg);
+            }
+
+            if (direct_solver_Q) {
+                analysis.set_direct_solver(true);
+            }else{
+                analysis.set_iterative_solver();
+            }
+            analysis.factorize();
+            
+
+            auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
+            assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+            for (auto& cl : msh.cells)
+            {
+                auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
+                assembler.assemble_rhs(msh, cl, f);
+            }
+            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            x_dof = analysis.solve(assembler.RHS);
+            error_file << "Number of equations : " << analysis.n_equations() << std::endl;
+            if (dump_debug)
+            {
+                std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
+                // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
+            }
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
+        }
+        error_file << std::endl << std::endl;
+    }
+    error_file.close();
+}
+
+void CutHHOSecondOrderConvTest_NOT_WORKING(int argc, char **argv){
     
     // ##################################################
     // ################################################## Simulation paramaters 
@@ -140,7 +274,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
 
     // FLOWER LEVEL SET 
     RealType radius = 1.0/3.0; // FOR -l 0 and -l 1 ONLY TKO CELLS  
-    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 12, 0.015);
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 12, 0.015);
+    // ../Elliptic_Interface_Agglo -k 2 -l 7 -r 10 -c 1 -s 1 -f 1
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);
 
     // // Circle level set function
     // RealType radius = 1.0/3.0;
@@ -194,7 +330,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
             // ##################################################
 
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
-            auto method = make_call_methods(msh, 1.0, test_case);
+            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             
             // ##################################################
@@ -253,7 +389,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 std::string error_file_txt = "solution_error_file_centered.txt";
                 postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
             }
-            // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
 
             // Debug Gradient
             // assembler.project_over_cells(msh, hdi, x_dof, test_case.sol_fun);
@@ -269,4 +405,3 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     error_file.close();
 
 }
-
