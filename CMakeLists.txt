@@ -20,6 +20,7 @@ set(CMAKE_CXX_FLAGS_RELEASEASSERT "-O3 -mavx -g -fpermissive")
 
 find_package(MKL)
 if (MKL_FOUND)
+        #target_link_libraries(${PROJECT_NAME} PRIVATE tbb::tbb_static)	
 	include_directories(${MKL_INCLUDE_DIRS})
 	set(LINK_LIBS ${LINK_LIBS} ${MKL_LIBRARIES})
 	set(HAVE_INTEL_MKL TRUE)
