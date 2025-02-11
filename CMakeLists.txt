@@ -12,9 +12,11 @@ set (CMAKE_MODULE_PATH
 
 include(safeguards)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-std=c++14 -g -fpermissive")
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++14 -O3 -mavx -g -fpermissive")
-set(CMAKE_CXX_FLAGS_RELEASEASSERT "-std=c++14 -O3 -mavx -g -fpermissive")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fpermissive")
+set(CMAKE_CXX_FLAGS_DEBUGSANITIZED "-g -fpermissive -fsanitize=address")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mavx -DNDEBUG -fpermissive")
+set(CMAKE_CXX_FLAGS_RELEASEASSERT "-O3 -mavx -g -fpermissive")
+
 
 find_package(MKL)
 if (MKL_FOUND)
@@ -43,6 +45,13 @@ if (LUA_FOUND)
     set(LINK_LIBS ${LINK_LIBS} ${LUA_LIBRARIES})
 endif()
 
+find_package(TBB)
+if (TBB_FOUND)
+  #target_link_libraries(my_project PRIVATE tbb::tbb_static)
+  include_directories(${TBB_INCLUDE_DIRS})
+  set(LINK_LIBS ${LINK_LIBS} ${TBB_LIBRARIES})
+  set(HAVE_INTEL_TBB TRUE)
+endif()
 
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
