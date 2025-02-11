@@ -1,269 +1,118 @@
 #
-#[=======================================================================[.rst:
-FindMKL
--------
-
-The following conventions are used:
-
-intel / INTEL  - Bindings for everything except GNU Fortran
-gf / GF        - GNU Fortran bindings
-seq / SEQ      - sequential MKL
-omp / OMP      - threaded MKL with OpenMP back end
-tbb / TBB      - threaded MKL with TBB back end
-32bit / 32BIT  - MKL 32 bit integer interface (used most often)
-64bit / 64BIT  - MKL 64 bit integer interface
-mpich / MPICH  - MPICH / IntelMPI BLACS back end
-ompi / OMPI    - OpenMPI BLACS back end
-st / ST        - static libraries
-dyn / DYN      - dynamic libraries
-
-The module attempts to define a target for each MKL configuration. The
-configuration will not be available if there are missing library files or a
-missing dependency.
-
-MKL Link line advisor:
-  https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor
-
-Note: Mixing GCC and Intel OpenMP backends is a bad idea.
-
-Search variables
-^^^^^^^^^^^^^^^^
-
-``MKLROOT``
-  Environment variable set to MKL's root directory
-
-``MKL_ROOT``
-  CMake variable set to MKL's root directory
-
-Example usage
-^^^^^^^^^^^^^
-
-To Find MKL:
-
-  find_package(MKL REQUIRED)
-
-To check if target is available:
-
-  if (TARGET mkl::scalapack_mpich_intel_32bit_omp_dyn)
-    ...
-  endif()
-
-To link to an available target (see list below):
-
-  target_link_libraries(... mkl::scalapack_mpich_intel_32bit_omp_dyn)
-
-Note: dependencies are handled for you (MPI, OpenMP, ...)
-
-Imported targets
-^^^^^^^^^^^^^^^^
-
-MKL (BLAS, LAPACK, FFT) tarets:
-
-  mkl::mkl_[gf|intel]_[32bit|64bit]_[seq|omp|tbb]_[st|dyn] e.g.
-
-  mkl::mkl_intel_32bit_omp_dyn
-
-BLACS targets:
-
-  mkl::blacs_[mpich|ompi]_[gf|intel]_[32bit|64bit]_[seq|omp|tbb]_[st|dyn] e.g.
-
-  mkl::blacs_intel_mpich_32bit_seq_st
-
-ScaLAPACK targets:
-
-  mkl::scalapack_[mpich|ompi]_[gf|intel]_[32bit|64bit]_[seq|omp|tbb]_[st|dyn] e.g.
-
-  mkl::scalapack_intel_mpich_64bit_omp_dyn
-
-Result variables
-^^^^^^^^^^^^^^^^
-
-MKL_FOUND
-
-Not supported
-^^^^^^^^^^^^^
-
-- F95 interfaces
-
-#]=======================================================================]
-
-cmake_minimum_required(VERSION 3.12)
-
-# Modules
+# This source file is part of EMT, the ElectroMagneticTool.
 #
+# Copyright (C) 2013-2015, Matteo Cicuttin - matteo.cicuttin@uniud.it
+# Department of Electrical Engineering, University of Udine
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of the University of Udine nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR(s) ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE AUTHOR(s) BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
 include(FindPackageHandleStandardArgs)
 
-if(NOT (CMAKE_C_COMPILER_LOADED OR
-        CMAKE_CXX_COMPILER_LOADED OR
-        CMAKE_Fortran_COMPILER_LOADED))
-    message(FATAL_ERROR "FindMKL requires Fortran, C, or C++ to be enabled.")
+set(MKL_HINTS /usr /opt/intel /opt/intel/mkl /opt/intel/oneapi/mkl /opt/intel/oneapi)
+
+find_path(MKL_INCLUDE_DIRS
+    NAMES mkl.h
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES mkl mkl/include include)
+
+if (MKL_INCLUDE_DIRS)
+    message(STATUS "MKL: found include")
 endif()
 
-# Dependencies
-#
-find_package(Threads)
-find_package(MPI COMPONENTS CXX)
-find_package(OpenMP COMPONENTS CXX)
+###########################################################
+## iomp5
+find_library(MKL_iomp5_LIBRARY
+    NAMES iomp5
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin)
 
-# If MKL_ROOT is not set, set it via the env variable MKLROOT.
-#
-if(NOT DEFINED MKL_ROOT)
-    set(MKL_ROOT $ENV{MKLROOT} CACHE PATH "MKL's root directory.")
+if (MKL_iomp5_LIBRARY)
+    message(STATUS "MKL: found iomp5")
+    list(APPEND MKL_LIBRARIES ${MKL_iomp5_LIBRARY})
 endif()
 
-# Determine MKL's library folder
-#
-set(_mkl_libpath_suffix "lib/intel64")
-if(CMAKE_SIZEOF_VOID_P EQUAL 4) # 32 bit
-    set(_mkl_libpath_suffix "lib/ia32")
+###########################################################
+## mkl_core 
+find_library(MKL_mkl_core_LIBRARY
+    NAMES   mkl_core
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                  mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+
+if (MKL_mkl_core_LIBRARY)
+    message(STATUS "MKL: found mkl_core")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_core_LIBRARY})
 endif()
 
-if(WIN32)
-    string(APPEND _mkl_libpath_suffix "_win")
-    set(_mkl_libname_prefix "")
-    set(_mkl_shared_lib "_dll.lib")
-    set(_mkl_static_lib ".lib")
-elseif(APPLE)
-    string(APPEND _mkl_libpath_suffix "_mac")
-    set(_mkl_libname_prefix "lib")
-    set(_mkl_shared_lib ".dylib")
-    set(_mkl_static_lib ".a")
-else() # LINUX
-    string(APPEND _mkl_libpath_suffix "_lin")
-    set(_mkl_libname_prefix "lib")
-    set(_mkl_shared_lib ".so")
-    set(_mkl_static_lib ".a")
-endif()
-set(_mkl_search_paths "${MKL_ROOT}"
-                      "${MKL_ROOT}/lib"
-                      "${MKL_ROOT}/mkl/lib"
-                      "${MKL_ROOT}/compiler/lib")
+###########################################################
+## mkl_intel_lp64 
+find_library(MKL_mkl_intel_lp64_LIBRARY
+    NAMES   mkl_intel_lp64
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                  mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
 
-# Functions: finds both static and shared MKL libraries
-#
-function(__mkl_find_library _varname _libname)
-    find_library(${_varname}_DYN
-          NAMES ${_mkl_libname_prefix}${_libname}${_mkl_shared_lib}
-          HINTS ${_mkl_search_paths}
-          PATH_SUFFIXES ${_mkl_libpath_suffix})
-    mark_as_advanced(${_varname}_DYN)
-    find_library(${_varname}_ST
-          NAMES ${_mkl_libname_prefix}${_libname}${_mkl_static_lib}
-          HINTS ${_mkl_search_paths}
-          PATH_SUFFIXES ${_mkl_libpath_suffix})
-    mark_as_advanced(${_varname}_ST)
-endfunction()
-
-# Find MKL headers
-#
-find_path(MKL_INCLUDE_DIR mkl.h
-    HINTS ${MKL_ROOT}/include
-          ${MKL_ROOT}/mkl/include)
-mark_as_advanced(MKL_INCLUDE_DIR)
-
-# Group flags for static libraries on Linux (GNU, PGI, ICC -> same linker)
-#
-if(UNIX AND NOT APPLE)
-    set(_mkl_linker_pre_flags_ST "-Wl,--start-group")
-    set(_mkl_linker_post_flags_ST "-Wl,--end-group")
+if (MKL_mkl_intel_lp64_LIBRARY)
+    message(STATUS "MKL: found mkl_intel_lp64")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_intel_lp64_LIBRARY})
 endif()
 
-# Core MKL
-#
-__mkl_find_library(MKL_CORE_LIB mkl_core)
+###########################################################
+## mkl_intel_thread 
+find_library(MKL_mkl_intel_thread_LIBRARY
+    NAMES   mkl_intel_thread
+    HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+    PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                  mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
 
-# Interface
-#
-__mkl_find_library(MKL_INTERFACE_INTEL_32BIT_LIB mkl_intel_lp64)
-__mkl_find_library(MKL_INTERFACE_INTEL_64BIT_LIB mkl_intel_ilp64)
-if(NOT APPLE AND CMAKE_Fortran_COMPILER_LOADED
-             AND CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-    __mkl_find_library(MKL_INTERFACE_GF_32BIT_LIB mkl_gf_lp64)
-    __mkl_find_library(MKL_INTERFACE_GF_64BIT_LIB mkl_gf_ilp64)
+if (MKL_mkl_intel_thread_LIBRARY)
+    message(STATUS "MKL: found mkl_intel_thread")
+    list(APPEND MKL_LIBRARIES ${MKL_mkl_intel_thread_LIBRARY})
 endif()
 
-# Threading
-#
-__mkl_find_library(MKL_SEQ_LIB mkl_sequential)
-if(NOT APPLE AND (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
-                  CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-                  CMAKE_Fortran_COMPILER_ID STREQUAL "GNU"))
-    __mkl_find_library(MKL_OMP_LIB mkl_gnu_thread)
-else()
-    __mkl_find_library(MKL_OMP_LIB mkl_intel_thread)
-endif()
-__mkl_find_library(MKL_TBB_LIB mkl_tbb_thread)
+###########################################################
+## mkl_runtime 
+if (APPLE)
+    find_library(MKL_runtime_LIBRARY
+        NAMES   mkl_intel
+        HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+        PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                      mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+else ()
+    find_library(MKL_runtime_LIBRARY
+        NAMES   mkl_rt
+        HINTS ENV MKL_ROOT ${MKL_ROOT} ${MKL_HINTS}
+        PATH_SUFFIXES lib lib/intel64 lib/intel64_lin
+                      mkl/lib mkl/lib/intel64 mkl/lib/intel64_lin)
+endif ()
 
-# BLACS
-#
-if(APPLE)
-    __mkl_find_library(MKL_BLACS_MPICH_32BIT_LIB mkl_blacs_mpich_lp64)
-    __mkl_find_library(MKL_BLACS_MPICH_64BIT_LIB mkl_blacs_mpich_ilp64)
-else()
-    __mkl_find_library(MKL_BLACS_MPICH_32BIT_LIB mkl_blacs_intelmpi_lp64)
-    __mkl_find_library(MKL_BLACS_MPICH_64BIT_LIB mkl_blacs_intelmpi_ilp64)
-endif()
-__mkl_find_library(MKL_BLACS_OMPI_32BIT_LIB mkl_blacs_openmpi_lp64)
-__mkl_find_library(MKL_BLACS_OMPI_64BIT_LIB mkl_blacs_openmpi_ilp64)
-
-# ScaLAPACK
-#
-__mkl_find_library(MKL_SCALAPACK_32BIT_LIB mkl_scalapack_lp64)
-__mkl_find_library(MKL_SCALAPACK_64BIT_LIB mkl_scalapack_ilp64)
-
-# Core Pardiso
-#
-__mkl_find_library(MKL_PARDISO_LIB mkl_pardiso)
-
-# Check if core libs were found
-#
-find_package_handle_standard_args(MKL REQUIRED_VARS MKL_INCLUDE_DIR
-                                                    Threads_FOUND)
-
-# Sequential has no threading dependency. There is currently no TBB module
-# shipped with CMake. The dependency is not accounted for.
-#
-set(_mkl_dep_found_SEQ TRUE)
-set(_mkl_dep_found_TBB TRUE)
-if (TARGET OpenMP::OpenMP_CXX)
-  set(_mkl_dep_OMP OpenMP::OpenMP_CXX)
-  set(_mkl_dep_found_OMP TRUE)
+if (MKL_runtime_LIBRARY)
+    message(STATUS "MKL: found mkl_runtime")
+    list(APPEND MKL_LIBRARIES ${MKL_runtime_LIBRARY})
 endif()
 
-# Define all blas, blacs, scalapack, and pardiso
-#
-foreach(_libtype "ST" "DYN")
-    set(_mkl_core_lib ${MKL_CORE_LIB_${_libtype}})
-    foreach(_bits "32BIT" "64BIT")
-        set(_mkl_scalapack_lib ${MKL_SCALAPACK_${_bits}_LIB_${_libtype}})
-        foreach(_iface "INTEL" "GF")
-            set(_mkl_interface_lib ${MKL_INTERFACE_${_iface}_${_bits}_LIB_${_libtype}})
-            foreach(_threading "SEQ" "OMP" "TBB")
-                set(_mkl_threading_lib ${MKL_${_threading}_LIB_${_libtype}})
+find_package_handle_standard_args(MKL DEFAULT_MSG MKL_LIBRARIES MKL_INCLUDE_DIRS)
 
-                string(TOLOWER "${_iface}_${_bits}_${_threading}_${_libtype}" _tgt_config)
-                set(_mkl_tgt mkl::mkl_${_tgt_config})
-
-                if(MKL_FOUND
-                   AND _mkl_interface_lib
-                   AND _mkl_threading_lib
-                   AND _mkl_core_lib
-                   AND _mkl_dep_found_${_threading}
-                   AND NOT TARGET ${_mkl_tgt})
-                    set(_mkl_libs "${_mkl_linker_pre_flags_${_threading}}"
-                                  "${_mkl_interface_lib}"
-                                  "${_mkl_threading_lib}"
-                                  "${_mkl_core_lib}"
-                                  "${_mkl_scalapack_lib}"
-                                  "${_mkl_pardiso_lib}"
-                                  "${_mkl_linker_post_flags_${_threading}}")
-                    add_library(${_mkl_tgt} INTERFACE IMPORTED)
-                    set_target_properties(${_mkl_tgt} PROPERTIES
-                      INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
-                      INTERFACE_LINK_LIBRARIES "${_mkl_libs}")
-                endif()
-            endforeach()
-        endforeach()
-    endforeach()
-endforeach()
 
