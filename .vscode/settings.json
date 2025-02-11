@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        ".inc": ".f90",
+        "iomanip": "cpp",
+        "iostream": "cpp"
+    }
+}
