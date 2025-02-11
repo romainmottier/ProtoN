@@ -49,10 +49,9 @@ using namespace Eigen;
 
 // Agglomeration routines
 #include "cutmesh.hpp"
-// #include "methods.hpp"
+#include "methods.hpp"
 #include "postpro.hpp"
 #include "test_cases.hpp"
-#include "omar_structure/methods.hpp"
 
 #define scaled_stab_Q 0
 
@@ -153,7 +152,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 output_mesh_info(msh, level_set_function);
             }
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
-            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            auto method = make_call_methods(msh, 1.0, test_case);
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             
             linear_solver<RealType> analysis;
@@ -200,6 +199,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     error_file.close();
 }
 
+#include "omar_structure/methods.hpp"
 void CutHHOSecondOrderConvTest_NOT_WORKING(int argc, char **argv){
     
     // ##################################################
@@ -298,7 +298,7 @@ void CutHHOSecondOrderConvTest_NOT_WORKING(int argc, char **argv){
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 0; k <= degree; k++){
+    for(size_t k = degree; k <= degree; k++){
 
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
         error_file << std::endl << "Polynomial degree k : " << k << std::endl;
@@ -330,7 +330,7 @@ void CutHHOSecondOrderConvTest_NOT_WORKING(int argc, char **argv){
             // ##################################################
 
             auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
-            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            auto method = make_call_methods(msh, 1.0, test_case);
             std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
             
             // ##################################################
