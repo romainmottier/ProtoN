@@ -5,7 +5,6 @@ if ( WIN32 )
     message(FATAL_ERROR "Sorry, Windows is not supported.")
 endif()
 
-# Additional modules path for cmake
 set (CMAKE_MODULE_PATH
      ${CMAKE_MODULE_PATH}
      ${CMAKE_CURRENT_SOURCE_DIR}/cmake)

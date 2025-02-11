@@ -12,10 +12,6 @@
 #include "config.h"
 #include "core/solvers"
 
-#ifdef HAVE_INTEL_MKL
-#include <Eigen/PardisoSupport>
-#endif
-
 #ifdef HAVE_INTEL_TBB
 #include <tbb/parallel_for.h>
 #endif
@@ -37,17 +33,8 @@ class linear_solver
     SparseMatrix<T> m_K;
     Matrix<T, Dynamic, 1> m_F;
     
-    #ifdef HAVE_INTEL_MKL
-        PardisoLU<Eigen::SparseMatrix<T>>  m_analysis;
-    #else
-        SparseLU<Eigen::SparseMatrix<T>> m_analysis;
-    #endif
-    
-    #ifdef HAVE_INTEL_MKL
-        PardisoLDLT<Eigen::SparseMatrix<T>>  m_symm_analysis;
-    #else
-        SimplicialLDLT<Eigen::SparseMatrix<T>> m_symm_analysis;
-    #endif
+    SparseLU<Eigen::SparseMatrix<T>> m_analysis;
+    SimplicialLDLT<Eigen::SparseMatrix<T>> m_symm_analysis;
     
     ConjugateGradient<SparseMatrix<T>> m_analysis_cg;
     BiCGSTAB<SparseMatrix<T>> m_analysis_bi_cg;
