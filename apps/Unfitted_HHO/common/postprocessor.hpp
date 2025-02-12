@@ -277,6 +277,8 @@ public:
         std::vector<RealType> vec = {h, H1_error, L2_error};
         tc.toc();
 
+        std::cout << bold << yellow << "            H1-Error: " << H1_error << reset << std::endl;
+        std::cout << bold << yellow << "            L2-Error: " << L2_error << reset << std::endl;
         std::cout << bold << yellow << "            Error completed: " << tc << " seconds" << reset << std::endl;
 
         return vec;
