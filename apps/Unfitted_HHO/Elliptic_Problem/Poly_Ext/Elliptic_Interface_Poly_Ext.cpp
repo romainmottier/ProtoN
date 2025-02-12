@@ -54,6 +54,7 @@ using namespace Eigen;
 
 // ----- common data types ------------------------------
 using RealType = double;
+using VecTuple = std::vector<std::tuple<double,element_location,std::vector<double>>>;
 typedef cuthho_poly_mesh<RealType>  mesh_type;
 
 void CutHHOSecondOrderConvTest(int argc, char **argv);
@@ -78,7 +79,6 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     size_t l_divs        = 2;          // Space level refinment -l
     size_t nt_divs       = 1;          // Time level refinment  -n
     size_t int_refsteps  = 4;          // Interface refinment   -r
-    size_t level_set_arg = 3;
     bool dump_debug      = false;      // Debug & Silo files    -d 
     bool direct_solver_Q = true;
     bool sc_Q = true;
@@ -117,7 +117,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     argc -= optind;
     argv += optind;
 
-    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - AGGLOMERATION - GUILLAUME BIS";
+    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
     std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     std::cout << "   " << "Space refinement level     -l : " << l_divs << std::endl;
@@ -179,10 +179,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ##################################################
 
             mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
-            if (dump_debug) {
-                dump_mesh(msh);
+            if (dump_debug) 
                 output_mesh_info(msh, level_set_function);
-            }
 
             // ##################################################
             // ################################################## Computation of local Stiff matrices  
@@ -198,12 +196,24 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             auto bcs_fun = test_case.bcs_fun;
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
-            for (auto& cl : msh.cells) {
-                auto contrib = method.make_contrib(msh, cl, test_case, hdi);
-                auto lc = contrib.first;
-                auto f = contrib.second;
-                assembler.assemble(msh, cl, lc, f);
-            }
+            std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
+            // // Loop on POK subcells 
+            // for (auto& pair : Pairs.first) { 
+            //     auto cl = msh.cells[std::get<0>(pair)];
+            //     auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
+            //     auto lc = contrib.first;
+            //     auto f = contrib.second;
+            //     assembler.assemble_extended(msh, pair, lc, f);  
+            // } 
+            
+            // // Loop on PKO subcells 
+            // for (auto& pair : Pairs.second) { 
+            //     auto cl = msh.cells[std::get<0>(pair)];
+            //     auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
+            //     auto lc = contrib.first;
+            //     auto f = contrib.second;
+            //     assembler.assemble_extended(msh, pair, lc, f);  
+            // } 
             assembler.finalize();
             Kg = assembler.LHS;
 
@@ -211,40 +221,40 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ################################################## Solver  
             // ##################################################
 
-            linear_solver<RealType> analysis;
-            analysis.set_Kg(Kg);
-            if (direct_solver_Q) 
-                analysis.set_direct_solver(true);
-            else
-                analysis.set_iterative_solver();
-            analysis.factorize();
+            // linear_solver<RealType> analysis;
+            // analysis.set_Kg(Kg);
+            // if (direct_solver_Q) 
+            //     analysis.set_direct_solver(true);
+            // else
+            //     analysis.set_iterative_solver();
+            // analysis.factorize();
 
-            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-            x_dof = analysis.solve(assembler.RHS);
+            // Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            // x_dof = analysis.solve(assembler.RHS);
 
             // ##################################################
             // ################################################## Postprocess  
             // ##################################################
 
-            auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
-            previous_h  = errors[0]; 
-            previous_H1 = errors[1];
-            previous_L2 = errors[2];
+            // auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+            // previous_h  = errors[0]; 
+            // previous_H1 = errors[1];
+            // previous_L2 = errors[2];
 
-            tcl.toc();
-            std::cout << bold << yellow << "            Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
+            // tcl.toc();
+            // std::cout << bold << yellow << "            Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
 
         }
     
-        error_file << std::endl << std::endl;
-        tck.toc();
-        std::cout << bold << yellow << "            Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
+        // error_file << std::endl << std::endl;
+        // tck.toc();
+        // std::cout << bold << yellow << "            Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
 
     }
     
-    error_file.close();
-    tc.toc();
-    std::cout << bold << yellow << "            Run completed: " << tc << " seconds" << reset << std::endl;
+    // error_file.close();
+    // tc.toc();
+    // std::cout << bold << yellow << "            Run completed: " << tc << " seconds" << reset << std::endl;
 
 }
 
