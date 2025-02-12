@@ -168,7 +168,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         T previous_H1 = 0.0;
         T previous_L2 = 0.0;
         T previous_h = 0.0;
-        for(size_t l = 2; l <= l_divs; l++){
+        for(size_t l = 0; l <= l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -197,23 +197,22 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
-            // // Loop on POK subcells 
-            // for (auto& pair : Pairs.first) { 
-            //     auto cl = msh.cells[std::get<0>(pair)];
-            //     auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
+            // Loop on POK subcells 
+            for (auto& pair : Pairs.first) { 
+                auto cl = msh.cells[std::get<0>(pair)];
+                auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
             //     auto lc = contrib.first;
             //     auto f = contrib.second;
             //     assembler.assemble_extended(msh, pair, lc, f);  
-            // } 
-            
-            // // Loop on PKO subcells 
-            // for (auto& pair : Pairs.second) { 
-            //     auto cl = msh.cells[std::get<0>(pair)];
+            } 
+            // Loop on PKO subcells 
+            for (auto& pair : Pairs.second) { 
+                auto cl = msh.cells[std::get<0>(pair)];
             //     auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
             //     auto lc = contrib.first;
             //     auto f = contrib.second;
             //     assembler.assemble_extended(msh, pair, lc, f);  
-            // } 
+            } 
             assembler.finalize();
             Kg = assembler.LHS;
 
