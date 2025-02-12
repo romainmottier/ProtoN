@@ -9,6 +9,105 @@ class postprocessor {
     
 public:
 
+    // Compute L2 and H1 errors for one field approximation
+    static std::vector<double> compute_error_elliptic_second_order(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
+
+       timecounter tc;
+       tc.tic();
+
+       using RealType = double;
+
+       RealType H1_error = 0.0;
+       RealType L2_error = 0.0;
+       size_t   cell_i   = 0;
+       RealType h = 10;
+       for (auto& cl : msh.cells) {
+           
+           // Diameter
+           RealType h_l = diameter(msh, cl);
+           if (h_l < h) 
+               h = h_l;
+                    
+            // Bases & dofs info 
+            cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hho_di.cell_degree());
+            auto cbs = cb.size();
+            auto fcs = faces(msh, cl);
+            auto num_faces = fcs.size();
+            auto fbs = face_basis<cuthho_poly_mesh<RealType>,RealType>::size(hho_di.face_degree());
+            Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
+            Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
+            
+            // UNCUT CELLS 
+            if (!is_cut(msh, cl)) {
+                locdata = assembler.take_local_data(msh, cl, x_dof, element_location::IN_POSITIVE_SIDE);
+                cell_dofs = locdata.head(cbs);
+                auto qps = integrate(msh, cl, 2*hho_di.cell_degree());
+                for (auto& qp : qps) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+            // CUT CELLS
+            else {
+                locdata_n = assembler.take_local_data(msh, cl, x_dof, element_location::IN_NEGATIVE_SIDE);
+                locdata_p = assembler.take_local_data(msh, cl, x_dof, element_location::IN_POSITIVE_SIDE);
+                cell_dofs_n = locdata_n.head(cbs);
+                cell_dofs_p = locdata_p.head(cbs);
+                auto qps_n = integrate(msh, cl, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+                for (auto& qp : qps_n) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs_n.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }            
+                auto qps_p = integrate(msh, cl, 2*hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);
+                for (auto& qp : qps_p) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs_p(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs_p.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+        }
+        H1_error = std::sqrt(H1_error);
+        L2_error = std::sqrt(L2_error);
+        RealType orderH = log(previous_H1 / H1_error) / log(previous_h / h);
+        RealType orderL = log(previous_L2 / L2_error) / log(previous_h / h);
+        error_file << "Characteristic h size = " << h << std::endl;
+        error_file << "L2-norm error = " << L2_error << std::endl;
+        error_file << "H1-norm error = " << H1_error << std::endl;
+        error_file << "order L2 = " << orderL << std::endl;
+        error_file << "order H1 = " << orderH << std::endl << std::endl;
+        std::vector<RealType> vec = {h, H1_error, L2_error};
+        tc.toc();
+
+        std::cout << bold << yellow << "            Error completed: " << tc << " seconds" << reset << std::endl;
+
+        return vec;
+
+    }
+    
+
     static void write_silo_conditioning(std::string silo_file_name, Mesh & msh, 
     hho_degree_info & hho_di, Matrix<double, Dynamic, 1> & conditioning,
     one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
@@ -1939,62 +2038,74 @@ public:
             return;
         }
         
-        pyFile << "import matplotlib.pyplot as plt\n";
-        pyFile << "import numpy as np\n\n";
-        
-        pyFile << "filename = \"" << txtFilename << "\"\n";
-        pyFile << "with open(filename, \"r\") as file:\n";
-        pyFile << "    lines = file.readlines()\n\n";
-        
-        pyFile << "results_L2 = {}\n";
-        // pyFile << "results_H1 = {}\n";
-        pyFile << "h_values = {}\n\n";
-        
-        pyFile << "current_degree = None\n";
-        pyFile << "for line in lines:\n";
-        pyFile << "    line = line.strip()\n";
-        pyFile << "    if line.startswith(\"Polynomial degree k :\"):\n";
-        pyFile << "        current_degree = int(line.split(\":\")[1].strip())\n";
-        pyFile << "        if current_degree not in results_L2:\n";
-        pyFile << "            results_L2[current_degree] = []\n";
-        // pyFile << "            results_H1[current_degree] = []\n";
-        pyFile << "            h_values[current_degree] = []\n";
-        pyFile << "    elif line.startswith(\"Characteristic h size =\"):\n";
-        pyFile << "        h = float(line.split(\"=\")[1].strip())\n";
-        pyFile << "        h_values[current_degree].append(h)\n";
-        pyFile << "    elif line.startswith(\"L2-norm error =\"):\n";
-        pyFile << "        L2_error = float(line.split(\"=\")[1].strip())\n";
-        pyFile << "        results_L2[current_degree].append(L2_error)\n";
-        pyFile << "    elif line.startswith(\"H1-norm error =\"):\n";
-        pyFile << "        H1_error = float(line.split(\"=\")[1].strip())\n";
-        // pyFile << "        results_H1[current_degree].append(H1_error)\n\n";
-        
-        pyFile << "plt.figure(figsize=(10, 6))\n\n";
-        
-        pyFile << "for degree in sorted(results_L2.keys()):\n";
-        pyFile << "    h_values_np = np.array(h_values[degree])\n";
-        pyFile << "    results_L2_np = np.array(results_L2[degree])\n";
-        // pyFile << "    results_H1_np = np.array(results_H1[degree])\n\n";
-        
-        pyFile << "    log_h = np.log(h_values_np)\n";
-        pyFile << "    log_L2_error = np.log(results_L2_np)\n";
-        // pyFile << "    log_H1_error = np.log(results_H1_np)\n\n";
-        
-        pyFile << "    slope_L2, _ = np.polyfit(log_h, log_L2_error, 1)\n";
-        // pyFile << "    slope_H1, _ = np.polyfit(log_h, log_H1_error, 1)\n\n";
-        
-        pyFile << "    plt.loglog(h_values_np, results_L2_np, marker='o', label=f\"k={degree} L2-norm (rate={slope_L2:.2f})\")\n";
-        // pyFile << "    plt.loglog(h_values_np, results_H1_np, marker='s', label=f\"k={degree} H1-norm (rate={slope_H1:.2f})\")\n\n";
-        
-        pyFile << "plt.xlabel(\"h\", fontsize=12)\n";
-        pyFile << "plt.ylabel(\"Error\", fontsize=12)\n";
-        pyFile << "plt.legend()\n";
-        pyFile << "plt.grid(which=\"both\", linestyle=\"--\", linewidth=0.5)\n";
-        pyFile << "plt.tight_layout()\n\n";
-        
-        pyFile << "plt.show()\n";
-        
-        pyFile.close();
+      pyFile << "import matplotlib.pyplot as plt\n";
+      pyFile << "import numpy as np\n";
+      pyFile << "import sys\n\n";
+      
+      pyFile << "error_type = \"L2\"\n";
+      pyFile << "if len(sys.argv) > 1:\n";
+      pyFile << "    if sys.argv[1] in [\"L2\", \"H1\"]:\n";
+      pyFile << "        error_type = sys.argv[1]\n";
+      pyFile << "    else:\n";
+      pyFile << "        print(\"Argument invalide. Utilisez 'L2' ou 'H1'.\")\n";
+      pyFile << "        sys.exit(1)\n\n";
+      
+      pyFile << "filename = \"" << txtFilename << "\"\n";
+      pyFile << "with open(filename, \"r\") as file:\n";
+      pyFile << "    lines = file.readlines()\n\n";
+      
+      pyFile << "results_L2 = {}\n";
+      pyFile << "results_H1 = {}\n";
+      pyFile << "h_values = {}\n\n";
+      
+      pyFile << "current_degree = None\n";
+      pyFile << "for line in lines:\n";
+      pyFile << "    line = line.strip()\n";
+      pyFile << "    if line.startswith(\"Polynomial degree k :\"):\n";
+      pyFile << "        current_degree = int(line.split(\":\")[1].strip())\n";
+      pyFile << "        if current_degree not in results_L2:\n";
+      pyFile << "            results_L2[current_degree] = []\n";
+      pyFile << "            results_H1[current_degree] = []\n";
+      pyFile << "            h_values[current_degree] = []\n";
+      pyFile << "    elif line.startswith(\"Characteristic h size =\"):\n";
+      pyFile << "        h = float(line.split(\"=\")[1].strip())\n";
+      pyFile << "        h_values[current_degree].append(h)\n";
+      pyFile << "    elif line.startswith(\"L2-norm error =\"):\n";
+      pyFile << "        L2_error = float(line.split(\"=\")[1].strip())\n";
+      pyFile << "        results_L2[current_degree].append(L2_error)\n";
+      pyFile << "    elif line.startswith(\"H1-norm error =\"):\n";
+      pyFile << "        H1_error = float(line.split(\"=\")[1].strip())\n";
+      pyFile << "        results_H1[current_degree].append(H1_error)\n\n";
+      
+      pyFile << "plt.figure(figsize=(10, 6))\n\n";
+      
+      pyFile << "if error_type == \"L2\":\n";
+      pyFile << "    results = results_L2\n";
+      pyFile << "    ylabel = \"L2-norm Error\"\n";
+      pyFile << "    title = \"L2-norm Error vs h\"\n";
+      pyFile << "elif error_type == \"H1\":\n";
+      pyFile << "    results = results_H1\n";
+      pyFile << "    ylabel = \"H1-norm Error\"\n";
+      pyFile << "    title = \"H1-norm Error vs h\"\n\n";
+      
+      pyFile << "for degree in sorted(results.keys()):\n";
+      pyFile << "    h_values_np = np.array(h_values[degree])\n";
+      pyFile << "    results_np = np.array(results[degree])\n";
+      pyFile << "    log_h = np.log(h_values_np)\n";
+      pyFile << "    log_error = np.log(results_np)\n";
+      pyFile << "    slope, _ = np.polyfit(log_h, log_error, 1)\n";
+      pyFile << "    plt.loglog(h_values_np, results_np, marker='o', label=f\"k={degree} {ylabel} (rate={slope:.2f})\")\n\n";
+      
+      pyFile << "plt.xlabel(\"h\", fontsize=12)\n";
+      pyFile << "plt.ylabel(ylabel, fontsize=12)\n";
+      pyFile << "plt.title(title, fontsize=14)\n";
+      pyFile << "plt.legend()\n";
+      pyFile << "plt.grid(which=\"both\", linestyle=\"--\", linewidth=0.5)\n";
+      pyFile << "plt.tight_layout()\n\n";
+      
+      pyFile << "plt.show()\n";
+      pyFile.close();
+      
     }
     
 };

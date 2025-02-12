@@ -1281,7 +1281,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
     timecounter tc;
     SparseMatrix<RealType> Kg, Mg;
 
-    for(size_t k = degree; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++){
         std::cout << bold << cyan << "Running an approximation with k : " << k << reset << std::endl;
         error_file << "Approximation with k : " << k << std::endl;
         
@@ -1336,6 +1336,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv){
                 std::string silo_file_name = "cut_steady_scalar_k_" + std::to_string(k) + "_";
                 // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_one_field(silo_file_name, l, msh, hdi, assembler, x_dof, test_case.sol_fun, false);
             }
+            std::string error_file_txt = "steady_state_one_field_error.txt";
+            postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
             postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
         }
         error_file << std::endl << std::endl;

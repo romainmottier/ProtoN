@@ -227,9 +227,9 @@ template<typename T, size_t ET>
 void
 make_neighbors_info_cartesian(cuthho_mesh<T, ET>& msh)
 {
-    std::cout << "WARNING : make_neighbors_info_cartesian "
-              << "works for cartesian meshes only !!"
-              << std::endl;
+    // std::cout << "WARNING : make_neighbors_info_cartesian "
+    //           << "works for cartesian meshes only !!"
+    //           << std::endl;
 
     size_t N = sqrt(msh.cells.size());
 

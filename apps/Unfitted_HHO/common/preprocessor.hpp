@@ -110,20 +110,20 @@ public:
         exit(1);
     }
 
-    static simulation_data process_args(int argc, char** argv)
-    {
+    static simulation_data process_args(int argc, char** argv) {
+
         const char* const short_opts = "k:l:s:r:n:c:f:e:";
         const option long_opts[] = {
-                {"degree", required_argument, nullptr, 'k'},
-                {"xref", required_argument, nullptr, 'l'},
-                {"stab", required_argument, nullptr, 's'},
-                {"scal", required_argument, nullptr, 'r'},
-                {"tref", required_argument, nullptr, 'n'},
-                {"c", optional_argument, nullptr, 'c'},
-                {"file", optional_argument, nullptr, 'f'},
-                {"energy", optional_argument, nullptr, 'e'},
-                {"help", no_argument, nullptr, 'h'},
-                {nullptr, no_argument, nullptr, 0}
+            {"degree", required_argument, nullptr, 'k'},
+            {"xref", required_argument, nullptr, 'l'},
+            {"stab", required_argument, nullptr, 's'},
+            {"scal", required_argument, nullptr, 'r'},
+            {"tref", required_argument, nullptr, 'n'},
+            {"c", optional_argument, nullptr, 'c'},
+            {"file", optional_argument, nullptr, 'f'},
+            {"energy", optional_argument, nullptr, 'e'},
+            {"help", no_argument, nullptr, 'h'},
+            {nullptr, no_argument, nullptr, 0}
         };
 
         size_t k_degree = 0;
@@ -134,7 +134,8 @@ public:
         bool sc_Q = false;
         bool silo_files_Q = false;
         bool report_energy_Q = false;
-        
+        size_t level_set_arg = 3;
+
         while (true)
         {
             const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
@@ -170,6 +171,10 @@ public:
                     
             case 'f':
                 silo_files_Q = std::stoi(optarg);
+                break;
+            
+            case 'v':
+                level_set_arg = std::stoi(optarg);
                 break;
 
             case 'e':

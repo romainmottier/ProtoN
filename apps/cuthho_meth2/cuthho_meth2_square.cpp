@@ -1289,7 +1289,6 @@ run_cuthho_interface(const Mesh& msh, size_t degree, meth method, testType test_
     using RealType = typename Mesh::coordinate_type;
 
     auto level_set_function = test_case.level_set_;
-
     auto rhs_fun = test_case.rhs_fun;
     auto sol_fun = test_case.sol_fun;
     auto sol_grad = test_case.sol_grad;
@@ -1572,12 +1571,13 @@ void convergence_test(void)
     std::vector<size_t> mesh_sizes, pol_orders;
 
     // meshes
-    mesh_sizes.push_back(8);
-    mesh_sizes.push_back(16);
-    mesh_sizes.push_back(32);
-    mesh_sizes.push_back(64);
-    mesh_sizes.push_back(128);
-    // mesh_sizes.push_back(256);
+    mesh_sizes.push_back(10);
+    mesh_sizes.push_back(20);
+    mesh_sizes.push_back(40);
+    mesh_sizes.push_back(80);
+    mesh_sizes.push_back(160);
+    mesh_sizes.push_back(320);
+    mesh_sizes.push_back(640);
 
     // polynomial orders
     pol_orders.push_back(0);
@@ -1612,12 +1612,9 @@ void convergence_test(void)
         T previous_H1 = 0.0;
         T previous_L2 = 0.0;
         T previous_h = 0.0;
-        for (std::vector<size_t>::iterator it_msh = mesh_sizes.begin();
-             it_msh != mesh_sizes.end(); it_msh++)
-        {
-            size_t N = *it_msh;
+        for (std::vector<size_t>::iterator it_msh = mesh_sizes.begin(); it_msh != mesh_sizes.end(); it_msh++) {
 
-            // init mesh (with agglomeration)
+            size_t N = *it_msh;
             mesh_init_params<T> mip;
             mip.Nx = N;
             mip.Ny = N;
@@ -1626,7 +1623,8 @@ void convergence_test(void)
             T radius = 1.0/3.0;
             auto circle_level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
 
-            auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
+            // auto level_set_function = flower_level_set<T>(0.31, 0.5, 0.5, 4, 0.04);
+            auto level_set_function = flower_level_set<T>(radius, 0.5, 0.5, 8, 0.03);
             // auto level_set_function = circle_level_set<T>(radius, 0.5, 0.5);
             // auto level_set_function = square_level_set<T>(1.05, -0.05, -0.05, 1.05);
             // auto level_set_function = square_level_set<T>(1.0, -0.0, -0.0, 1.0);
@@ -1655,7 +1653,7 @@ void convergence_test(void)
             // auto TI = run_cuthho_interface(msh, level_set_function, k, 3);
 
             // auto TI = run_cuthho_interface(msh, level_set_function, k, 3, test_case);
-            if(0) // sin(\pi x) * sin(\pi y)
+            if(1) // sin(\pi x) * sin(\pi y)
             {
                 auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
                 auto meth3 = make_gradrec_interface_method(msh, 1.0, test_case);
@@ -1688,7 +1686,7 @@ void convergence_test(void)
                 // TI = run_cuthho_interface(msh, k, meth3, test_case);
                 TI = run_cuthho_fictdom(msh, k, test_case);
             }
-            if(1) // jumps sin_sin -> exp_cos
+            if(0) // jumps sin_sin -> exp_cos
             {
                 auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function);
                 auto meth3 = make_gradrec_interface_method(msh, 1.0, test_case);
