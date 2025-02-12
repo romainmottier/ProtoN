@@ -38,6 +38,7 @@ using namespace Eigen;
 #include "methods/cuthho"
 
 // Common routines
+#include "../../common/preprocessor.hpp"
 #include "../../common/postprocessor.hpp"
 #include "../../common/newmark_hho_scheme.hpp"
 #include "../../common/dirk_hho_scheme.hpp"
@@ -47,8 +48,10 @@ using namespace Eigen;
 #include "../../common/analytical_functions.hpp"
 
 // Agglomeration routines
-#include "operators.hpp"
 #include "cutmesh.hpp"
+#include "methods.hpp"
+#include "postpro.hpp"
+#include "test_cases.hpp"
 
 #define scaled_stab_Q 0
 
@@ -63,13 +66,8 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void CutHHOSecondOrderConvTest (int argc, char **argv) {
+void CutHHOSecondOrderConvTest (int argc, char **argv){
     
-    timecounter tc, tck, tcl;
-    tc.tic();
-
-    using T = double;
-
     // ##################################################
     // ################################################## Simulation paramaters 
     // ##################################################
@@ -81,10 +79,10 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     size_t level_set_arg = 3;
     bool dump_debug      = false;      // Debug & Silo files    -d 
     bool direct_solver_Q = true;
-    bool sc_Q = false;
+    bool sc_Q = true;
 
     int ch;
-    while ( (ch = getopt(argc, argv, "k:l:n:r:c:s:f:")) != -1 ) {
+    while ( (ch = getopt(argc, argv, "k:l:n:r:c:s:v:f:")) != -1 ) {
         switch(ch) {
             case 'k':
                 degree = atoi(optarg);
@@ -103,6 +101,9 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 break;
             case 's':
                 direct_solver_Q = atoi(optarg);
+                break;
+            case 'v':
+                level_set_arg = atoi(optarg);
                 break;
             case 'f':
                 dump_debug = atoi(optarg);
@@ -126,6 +127,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     std::cout << "   " << "Static condensation        -c : " << sc_Q << std::endl;
     std::cout << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
     std::cout << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
+    std::cout << "   " << "Level set                  -v : " << level_set_arg;
 
     // ##################################################
     // ################################################## Level set function
@@ -142,19 +144,17 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     // ################################################## Space discretization
     // ##################################################
     
+    timecounter tc;
     SparseMatrix<RealType> Kg, Mg;
 
-    std::string error_file_txt = "solution_error_file_centered.txt";
-    std::ofstream error_file(error_file_txt);
-    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
+    std::ofstream error_file("solution_error_file_centered.txt");
 
     // ##################################################
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 0; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++) {
 
-        tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
         error_file << std::endl << "Polynomial degree k : " << k << std::endl;
         
@@ -165,12 +165,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         // ################################################## Loop over level of space refinement 
         // ##################################################
 
-        T previous_H1 = 0.0;
-        T previous_L2 = 0.0;
-        T previous_h = 0.0;
         for(size_t l = 2; l <= l_divs; l++){
 
-            tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
             error_file << "Space refinment level -l : " << l << std::endl;
         
@@ -178,73 +174,85 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ################################################## Mesh generation 
             // ##################################################
 
-            mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
+            mesh_type msh = SquareCutMesh(level_set_function, l, int_refsteps);
             if (dump_debug) {
                 dump_mesh(msh);
                 output_mesh_info(msh, level_set_function);
             }
 
             // ##################################################
-            // ################################################## Computation of local Stiff matrices  
+            // ################################################## Computation of local Stiff matrices & Assembly  
             // ##################################################
 
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
-            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-
+            auto test_case = make_test_case_laplacian_conv(msh, level_set_function);
+            auto method = make_call_methods(msh, 1.0, test_case);
+            std::vector<std::pair<size_t,size_t>> cell_basis_data = create_kg_and_mg_cuthho_interface(msh, hdi, method, test_case, Kg, Mg);
+            
             // ##################################################
-            // ################################################## Assembly  
-            // ##################################################
-
-            auto bcs_fun = test_case.bcs_fun;
-            hho_degree_info hdi(k+1, k);
-            auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
-            for (auto& cl : msh.cells) {
-                auto contrib = method.make_contrib(msh, cl, test_case, hdi);
-                auto lc = contrib.first;
-                auto f = contrib.second;
-                assembler.assemble(msh, cl, lc, f);
-            }
-            assembler.finalize();
-            Kg = assembler.LHS;
-
-            // ##################################################
-            // ################################################## Solver  
+            // ################################################## Static condensation
             // ##################################################
 
             linear_solver<RealType> analysis;
-            analysis.set_Kg(Kg);
+            if (sc_Q) {
+                size_t n_dof = Kg.rows();
+                size_t n_cell_dof = 0;
+                for (auto &chunk : cell_basis_data) 
+                    n_cell_dof += chunk.second;
+                size_t n_face_dof = n_dof - n_cell_dof;
+                analysis.set_Kg(Kg, n_face_dof);
+                analysis.condense_equations_irregular_blocks(cell_basis_data);
+            }
+            else
+                analysis.set_Kg(Kg);
+            
+            // ##################################################
+            // ################################################## Solver
+            // ##################################################
+
             if (direct_solver_Q) 
                 analysis.set_direct_solver(true);
             else
                 analysis.set_iterative_solver();
             analysis.factorize();
+            
+            // ##################################################
+            // ################################################## RHS assembly 
+            // ##################################################
+
+            auto assembler = make_one_field_interface_assembler(msh, test_case.bcs_fun, hdi);
+            assembler.RHS.setZero(); // assuming null dirichlet data on boundary.
+            for (auto& cl : msh.cells) {
+                auto f = method.make_contrib_rhs(msh, cl, test_case, hdi);
+                assembler.assemble_rhs(msh, cl, f);
+            }
+
+            // ##################################################
+            // ################################################## Solving
+            // ##################################################
 
             Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
             x_dof = analysis.solve(assembler.RHS);
 
             // ##################################################
-            // ################################################## Postprocess  
+            // ################################################## Postprocess
             // ##################################################
 
-            auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
-            previous_h  = errors[0]; 
-            previous_H1 = errors[1];
-            previous_L2 = errors[2];
+            error_file << "Number of equations : " << analysis.n_equations() << std::endl;
+            std::string error_file_txt = "solution_error_file_centered.txt";
+            postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
+            postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad,error_file);
 
-            tcl.toc();
-            std::cout << bold << yellow << "            Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
+            // Debug Gradient
+            // assembler.project_over_cells(msh, hdi, x_dof, test_case.sol_fun);
+            // auto grad = test_gradient(msh, hdi, method, test_case, x_dof);
+            // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_grad("debug_grad", l, msh, hdi, method, grad, test_case, assembler, test_case.sol_fun, test_case.sol_grad, false);
 
         }
-    
-        error_file << std::endl << std::endl;
-        tck.toc();
-        std::cout << bold << yellow << "            Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
 
+        error_file << std::endl << std::endl;
+    
     }
     
     error_file.close();
-    tc.toc();
-    std::cout << bold << yellow << "            Run completed: " << tc << " seconds" << reset << std::endl;
 
 }
-
