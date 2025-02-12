@@ -181,7 +181,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
             if (dump_debug) {
                 dump_mesh(msh);
-                output_mesh_info(msh, level_set_function);
+                output_mesh_info(msh, level_set_function); 
             }
 
             // ##################################################
