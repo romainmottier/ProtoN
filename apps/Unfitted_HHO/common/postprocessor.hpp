@@ -15,7 +15,8 @@ public:
     /////////////////////////////////////////////////////////////////////////////
 
     /// Find the cells associated to the requested point
-    static std::set<size_t> find_cells(typename Mesh::point_type & pt, Mesh & msh, bool verbose_Q = false){
+    static std::set<size_t> 
+    find_cells(typename Mesh::point_type & pt, Mesh & msh, bool verbose_Q = false){
         
         using RealType = double;
         auto norm =  [](const typename Mesh::point_type& a, const typename Mesh::point_type& b ) -> RealType {
@@ -75,7 +76,8 @@ public:
     }
     
     /// Pick the cell that contains the requested point
-    static size_t pick_cell(typename Mesh::point_type & pt, Mesh & msh, std::set<size_t> & cell_indexes, bool verbose_Q = false){
+    static size_t 
+    pick_cell(typename Mesh::point_type & pt, Mesh & msh, std::set<size_t> & cell_indexes, bool verbose_Q = false){
         
         using RealType = double;
         
@@ -151,9 +153,8 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     
-    static void write_silo_conditioning(std::string silo_file_name, Mesh & msh, 
-    hho_degree_info & hho_di, Matrix<double, Dynamic, 1> & conditioning,
-    one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
+    static void 
+    write_silo_conditioning(std::string silo_file_name, Mesh & msh, hho_degree_info & hho_di, Matrix<double, Dynamic, 1> & conditioning, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
 
         using RealType = double;
         timecounter tc;
@@ -186,7 +187,8 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     
-    static std::vector<double> compute_error_elliptic_second_order(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
+    static std::vector<double> 
+    compute_error_elliptic_second_order(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
 
        timecounter tc;
        tc.tic();
@@ -277,16 +279,17 @@ public:
         std::vector<RealType> vec = {h, H1_error, L2_error};
         tc.toc();
 
-        std::cout << bold << yellow << "            H1-Error: " << H1_error << reset << std::endl;
-        std::cout << bold << yellow << "            L2-Error: " << L2_error << reset << std::endl;
-        std::cout << bold << yellow << "            Error completed: " << tc << " seconds" << reset << std::endl;
+        std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
+        std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
+        std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
 
         return vec;
 
     }
 
     /// Compute L2 and H1 errors for one field approximation
-    static void compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+    static void 
+    compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
 
        timecounter tc;
        tc.tic();
@@ -402,7 +405,8 @@ public:
     }
     
     /// Compute L2 and H1 errors for two fields approximation
-    static void compute_errors_two_fields(Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+    static void 
+    compute_errors_two_fields(Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
 
         timecounter tc;
         tc.tic();
@@ -521,13 +525,166 @@ public:
         error_file.flush();
         
     }
+    
+    #if (!centering_bases)
+    static void 
+    compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+
+        timecounter tc;
+        tc.tic();
+
+        using RealType = double;
+        
+        RealType grad_l2_error = 0.0;
+        size_t cell_i = 0;
+        RealType h = 10.0;
+        std::vector<RealType> l2_error_grad(msh.cells.size());
+        
+        auto cell_table = assembler.get_cell_table();
+        for (auto& cl : msh.cells ) {
+            
+            // CELL INFOS
+            l2_error_grad[cell_i] = 0.0;
+            RealType h_l = diameter(msh, cl);
+            if (h_l < h)
+                h = h_l;
+
+            vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree());
+            auto grad_dofs_size = vector_cell_basis.size();
+            auto offset_cl = cell_table.at(offset(msh, cl));
+           
+            if (!is_cut(msh, cl)) {
+                auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                auto qps = integrate(msh, cl, 2*hho_di.grad_degree());
+                for (auto& qp : qps) {
+                    auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                    auto grad = grad_dofs.transpose() * vec_t_phi;
+                    l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                }
+            }
+            else {
+                {   // NEGATIVE SIDE
+                    auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                    for (auto& qp : qps) {
+                        auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+                {   // POSITIVE SIDE
+                    auto cell_GRAD_offset = offset_cl*grad_dofs_size + grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                    for (auto& qp : qps) {
+                        auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+            }
+            cell_i++;
+        }
+        
+        grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
+        tc.toc();
+       
+        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
+        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+        error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
+        error_file << std::endl;
+        error_file.flush();
+       
+    }
+    #else
+    static void 
+    compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+
+        timecounter tc;
+        tc.tic();
+
+        using RealType = double;
+        
+        RealType grad_l2_error = 0.0;
+        size_t cell_i = 0;
+        RealType h = 10.0;
+        std::vector<RealType> l2_error_grad(msh.cells.size());
+                    
+        auto cell_table = assembler.get_cell_table();
+        for (auto& cl : msh.cells ) {
+
+            // CELL INFOS
+            RealType h_l = diameter(msh, cl);
+            if (h_l < h) 
+                h = h_l;
+
+            l2_error_grad[cell_i] = 0.0;
+            auto offset_cl = cell_table.at(offset(msh, cl));
+            if (!is_cut(msh, cl)) {
+                cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), location(msh, cl));
+                auto grad_dofs_size = cut_vector_cell_basis.size();
+                auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                auto qps = integrate(msh, cl, 2*hho_di.grad_degree());
+                for (auto& qp : qps) {
+                    // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                    auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
+                    auto grad = grad_dofs.transpose() * vec_t_phi;
+                    l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                }
+            }
+            else {
+                {   // NEGATIVE SIDE                 
+                    cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                    auto grad_dofs_size = cut_vector_cell_basis.size();
+                    auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                    for (auto& qp : qps) {
+                        // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+                {   // POSITIVE SIDE
+                    cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                    auto grad_dofs_size = cut_vector_cell_basis.size();
+                    auto cell_GRAD_offset = offset_cl*grad_dofs_size + grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                    for (auto& qp : qps) {
+                        // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+            }
+            cell_i++;
+        }
+        
+        grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
+        tc.toc();
+       
+        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
+        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+        error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
+        error_file << std::endl;
+        error_file.flush();
+       
+    }
+    #endif 
 
     // WRITE SCRIPT PYTHON CV TESTS
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
 
-    static void write_conv_sol(const std::string& txtFilename) {
+    static void 
+    write_conv_sol(const std::string& txtFilename) {
 
         if (txtFilename.size() < 4 || txtFilename.substr(txtFilename.size() - 4) != ".txt") {
             std::cerr << "Erreur : Le fichier d'entrée n'a pas une extension .txt valide." << std::endl;
@@ -612,7 +769,8 @@ public:
       
     }
 
-    static void write_conv_grad(const std::string& txtFilename) {
+    static void 
+    write_conv_grad(const std::string& txtFilename) {
 
         if (txtFilename.size() < 4 || txtFilename.substr(txtFilename.size() - 4) != ".txt") {
             std::cerr << "Erreur : Le fichier d'entrée n'a pas une extension .txt valide." << std::endl;
@@ -675,7 +833,8 @@ public:
         pyFile.close();
     }
 
-    static void write_conv_grad_grad(const std::string& txtFilename) {
+    static void 
+    write_conv_grad_grad(const std::string& txtFilename) {
         
     if (txtFilename.size() < 4 || txtFilename.substr(txtFilename.size() - 4) != ".txt") {
         std::cerr << "Erreur : Le fichier d'entrée n'a pas une extension .txt valide." << std::endl;
@@ -748,7 +907,8 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     
-    static void write_silo_one_field(std::string silo_file_name, size_t it, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, bool cell_centered_Q = false) {
+    static void 
+    write_silo_one_field(std::string silo_file_name, size_t it, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, bool cell_centered_Q = false) {
 
         timecounter tc;
         tc.tic();
@@ -824,8 +984,8 @@ public:
         std::cout << bold << yellow << "         Solution silo file rendered in : " << tc << " seconds" << reset << std::endl;
     }
     
-    static void write_silo_two_fields(std::string silo_file_name, size_t it, Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,
-    std::function<double(const typename Mesh::point_type& )> scal_fun, bool cell_centered_Q = false) {
+    static void 
+    write_silo_two_fields(std::string silo_file_name, size_t it, Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::function<double(const typename Mesh::point_type& )> scal_fun, bool cell_centered_Q = false) {
 
         timecounter tc;
         tc.tic();
@@ -896,13 +1056,230 @@ public:
         std::cout << bold << yellow << "         Silo file rendered in : " << tc << " seconds" << reset << std::endl;
     }
         
+    #if (!centering_bases)
+    template<typename testType>
+    static void write_silo_poly_ext(std::string silo_file_name, size_t it, Mesh & msh, 
+    hho_degree_info & hho_di, Matrix<double, Dynamic, 1> &x_dof, testType &test_case,
+    interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
+
+        using RealType = double;
+        timecounter tc;
+        tc.tic();
+
+        auto dim = 2;
+        auto num_points = msh.nodes.size();
+        auto msh_nodes = msh.nodes;
+        
+        std::vector<RealType> exact_u, approx_u;
+        std::vector<RealType> exact_Gx, exact_Gy;
+        std::vector<RealType> approx_Gx, approx_Gy;
+        
+        exact_u.reserve(num_points);
+        approx_u.reserve(num_points);
+        exact_Gx.reserve(num_points);
+        exact_Gy.reserve(num_points);
+        approx_Gx.reserve(num_points);
+        approx_Gy.reserve(num_points);
+
+        auto scal_fun = test_case.sol_fun;
+        auto flux_fun = test_case.sol_grad;
+
+        auto cell_table = assembler.get_cell_table();
+        for (auto& node : msh_nodes) {
+
+            // Coords of the node
+            auto pt = msh.points.at(node.ptid); 
+            
+            // Exact functions
+            exact_u.push_back( scal_fun(pt) );
+            exact_Gx.push_back( flux_fun(pt)(0) );
+            exact_Gy.push_back( flux_fun(pt)(1) );
+            
+            RealType uh = 0.0;
+            RealType Gx = 0.0;
+            RealType Gy = 0.0;
+            auto cells = find_cells(pt, msh);
+            auto size_cells = cells.size();
+            for (auto& cell : cells ) {
+                auto cl = msh.cells[cell];
+                cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cl, hho_di.cell_degree());
+                vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree());
+                auto local_dofs = cell_basis.size();
+                auto grad_dofs_size = vector_cell_basis.size();
+                auto offset_cl = cell_table.at(offset(msh, cl));
+                if (!is_cut(msh, cl)) {
+                    // Solution evaluation
+                    Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh, cl, x_dof, location(msh, cl));
+                    auto t_phi = cell_basis.eval_basis(pt);
+                    auto dt_phi = cell_basis.eval_gradients(pt);
+                    uh += scalar_cell_dof.dot(t_phi);
+                    Gx += scalar_cell_dof.dot(dt_phi.col(0));
+                    Gy += scalar_cell_dof.dot(dt_phi.col(1));
+                }
+                else {
+                    if (location(msh, node) == element_location::IN_NEGATIVE_SIDE) {
+                        // Solution evaluation
+                        Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh, cl, x_dof, element_location::IN_NEGATIVE_SIDE);
+                        auto t_phi = cell_basis.eval_basis(pt);
+                        auto dt_phi = cell_basis.eval_gradients(pt);
+                        uh += scalar_cell_dof.dot(t_phi);
+                        Gx += scalar_cell_dof.dot(dt_phi.col(0));
+                        Gy += scalar_cell_dof.dot(dt_phi.col(1));
+                    }
+                    else if (location(msh, node) == element_location::IN_POSITIVE_SIDE) {
+                        // Solution evaluation
+                        Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh, cl, x_dof, element_location::IN_POSITIVE_SIDE);
+                        auto t_phi = cell_basis.eval_basis(pt);
+                        auto dt_phi = cell_basis.eval_gradients(pt);
+                        uh += scalar_cell_dof.dot(t_phi);
+                        Gx += scalar_cell_dof.dot(dt_phi.col(0));
+                        Gy += scalar_cell_dof.dot(dt_phi.col(1));
+                    }
+                }
+            }
+            uh /= size_cells;
+            Gx /= size_cells;
+            Gy /= size_cells;   
+            approx_u.push_back(uh);
+            approx_Gx.push_back(Gx);
+            approx_Gy.push_back(Gy);
+        }
+        
+        silo_database silo;
+        silo_file_name += ".silo";
+        silo.create(silo_file_name.c_str());
+        silo.add_mesh(msh, "mesh");
+        silo.add_variable("mesh", "1_v",   exact_u.data(),   exact_u.size(),  nodal_variable_t);
+        silo.add_variable("mesh", "2_vh",  approx_u.data(),  approx_u.size(), nodal_variable_t);
+        silo.add_variable("mesh", "3_Gx",  exact_Gx.data(),  exact_Gx.size(), nodal_variable_t);
+        silo.add_variable("mesh", "4_Gy",  exact_Gy.data(),  exact_Gy.size(), nodal_variable_t);
+        silo.add_variable("mesh", "5_Gxh", approx_Gx.data(), exact_Gx.size(), nodal_variable_t);
+        silo.add_variable("mesh", "6_Gyh", approx_Gy.data(), exact_Gy.size(), nodal_variable_t);
+        silo.close();
+        tc.toc();
+        std::cout << bold << yellow << "         Silo file - SOLUTION - rendered in : " << tc << " seconds" << reset << std::endl;
+    }
+    #else
+    template<typename testType>
+    static void write_silo_poly_ext(std::string silo_file_name, size_t it, Mesh & msh, 
+    hho_degree_info & hho_di, Matrix<double, Dynamic, 1> &x_dof, testType &test_case,
+    interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
+
+        using RealType = double;
+        timecounter tc;
+        tc.tic();
+
+        auto dim = 2;
+        auto num_points = msh.nodes.size();
+        auto msh_nodes = msh.nodes;
+        
+        std::vector<RealType> exact_u, approx_u;
+        std::vector<RealType> exact_Gx, exact_Gy;
+        std::vector<RealType> approx_Gx, approx_Gy;
+        std::vector<RealType> Rec_Gx, Rec_Gy;
+        
+        exact_u.reserve(num_points);
+        approx_u.reserve(num_points);
+        exact_Gx.reserve(num_points);
+        exact_Gy.reserve(num_points);
+        approx_Gx.reserve(num_points);
+        approx_Gy.reserve(num_points);
+
+        auto scal_fun = test_case.sol_fun;
+        auto flux_fun = test_case.sol_grad;
+        auto cell_table = assembler.get_cell_table();
+        for (auto& node : msh_nodes) {
+
+            // Coords of the node
+            auto pt = msh.points.at(node.ptid); 
+            
+            // Exact functions
+            exact_u.push_back( scal_fun(pt) );
+            exact_Gx.push_back( flux_fun(pt)(0) );
+            exact_Gy.push_back( flux_fun(pt)(1) );
+            
+            RealType uh = 0.0;
+            RealType Gx = 0.0;
+            RealType Gy = 0.0;
+            auto cells = find_cells(pt, msh);
+            auto size_cells = cells.size();
+            for (auto& cell : cells ) {
+                auto cl = msh.cells[cell];
+                auto offset_cl = cell_table.at(offset(msh, cl));
+                if (!is_cut(msh, cl)) {
+                    cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cl, hho_di.cell_degree());
+                    vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree());
+                    auto local_dofs = cell_basis.size();
+                    auto grad_dofs_size = vector_cell_basis.size();
+                    // Solution evaluation
+                    Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh, cl, x_dof, location(msh, cl));
+                    auto t_phi = cell_basis.eval_basis(pt);
+                    auto dt_phi = cell_basis.eval_gradients(pt);
+                    uh += scalar_cell_dof.dot(t_phi);
+                    Gx += scalar_cell_dof.dot(dt_phi.col(0));
+                    Gy += scalar_cell_dof.dot(dt_phi.col(1));
+                }
+                else {
+                    if (location(msh, node) == element_location::IN_NEGATIVE_SIDE) {
+                        cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cl, hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+                        cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                        auto local_dofs = cell_basis.size();
+                        auto grad_dofs_size = vector_cell_basis.size();
+                        // Solution evaluation
+                        Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh, cl, x_dof, element_location::IN_NEGATIVE_SIDE);
+                        auto t_phi = cell_basis.eval_basis(pt);
+                        auto dt_phi = cell_basis.eval_gradients(pt);
+                        uh += scalar_cell_dof.dot(t_phi);
+                        Gx += scalar_cell_dof.dot(dt_phi.col(0));
+                        Gy += scalar_cell_dof.dot(dt_phi.col(1));
+                    }
+                    else if (location(msh, node) == element_location::IN_POSITIVE_SIDE) {
+                        cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cl, hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);
+                        cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                        auto local_dofs = cell_basis.size();
+                        auto grad_dofs_size = vector_cell_basis.size();
+                        // Solution evaluation
+                        Matrix<RealType, Dynamic, 1> scalar_cell_dof = assembler.gather_cell_dof(msh, cl, x_dof, element_location::IN_POSITIVE_SIDE);
+                        auto t_phi = cell_basis.eval_basis(pt);
+                        auto dt_phi = cell_basis.eval_gradients(pt);
+                        uh += scalar_cell_dof.dot(t_phi);
+                        Gx += scalar_cell_dof.dot(dt_phi.col(0));
+                        Gy += scalar_cell_dof.dot(dt_phi.col(1));
+                    }
+                }
+            }
+            uh /= size_cells;
+            Gx /= size_cells;
+            Gy /= size_cells;   
+            approx_u.push_back(uh);
+            approx_Gx.push_back(Gx);
+            approx_Gy.push_back(Gy);
+        }
+        
+        silo_database silo;
+        silo_file_name += ".silo";
+        silo.create(silo_file_name.c_str());
+        silo.add_mesh(msh, "mesh");
+        silo.add_variable("mesh", "1_v",   exact_u.data(),   exact_u.size(),  nodal_variable_t);
+        silo.add_variable("mesh", "2_vh",  approx_u.data(),  approx_u.size(), nodal_variable_t);
+        silo.add_variable("mesh", "3_Gx",  exact_Gx.data(),  exact_Gx.size(), nodal_variable_t);
+        silo.add_variable("mesh", "4_Gy",  exact_Gy.data(),  exact_Gy.size(), nodal_variable_t);
+        silo.add_variable("mesh", "5_Gxh", approx_Gx.data(), exact_Gx.size(), nodal_variable_t);
+        silo.add_variable("mesh", "6_Gyh", approx_Gy.data(), exact_Gy.size(), nodal_variable_t);
+        silo.close();
+        tc.toc();
+        std::cout << bold << yellow << "         Silo file - SOLUTION CENTERED - rendered in : " << tc << " seconds" << reset << std::endl;
+    }
+    #endif 
+
     // RECORD SENSORS ACOUSTIC WAVES 
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
 
     /// Record data at provided point for one field approximation
-    static void record_data_acoustic_one_field(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
+    static void 
+    record_data_acoustic_one_field(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
 
         timecounter tc;
         tc.tic();
@@ -978,7 +1355,8 @@ public:
     }
     
     /// Record data at provided point for two fields approximation
-    static void record_data_acoustic_two_fields(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
+    static void 
+    record_data_acoustic_two_fields(size_t it, std::pair<typename Mesh::point_type,size_t> & pt_cell_index, Mesh & msh, hho_degree_info & hho_di, two_fields_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::ostream & seismogram_file = std::cout){
 
         timecounter tc;
         tc.tic();

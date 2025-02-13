@@ -1778,43 +1778,61 @@ make_pair_KO_pair_OK(Mesh& msh) {
     // modify_dependent_cells(PairOK, PairKO, 0, 2, element_location::IN_NEGATIVE_SIDE);
     // modify_dependent_cells(PairOK, PairKO, 0, 3, element_location::IN_NEGATIVE_SIDE);
 
-    // Debug 
-    std::cout << bold << yellow << "         Pairing structure: " << reset << std::endl;
-    std::cout << bold << magenta << "            Paires OK:   " << reset << std::endl;
-    for (auto& pair : PairOK) {
-        if (std::get<1>(pair) == element_location::IN_NEGATIVE_SIDE) {
-            if (!std::get<2>(pair).empty()) {
-                std::cout << "                        (" << std::get<0>(pair) << ", " << "NEGATIVE SIDE";
-                for (auto& dp_cl : std::get<2>(pair)) 
-                    std::cout << ", " << dp_cl;
-                std::cout << ")" << std::endl;                
-            }
+    // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // Debug 
+    // std::cout << bold << yellow << "         Pairing structure: " << reset << std::endl;
+    // std::cout << bold << magenta << "            Paires OK:   " << reset << std::endl;
+    // for (auto& pair : PairOK) {
+    //     if (std::get<1>(pair) == element_location::IN_NEGATIVE_SIDE) {
+    //         if (!std::get<2>(pair).empty()) {
+    //             std::cout << "                        (" << std::get<0>(pair) << ", " << "NEGATIVE SIDE";
+    //             for (auto& dp_cl : std::get<2>(pair)) 
+    //                 std::cout << ", " << dp_cl;
+    //             std::cout << ")" << std::endl;                
+    //         }
 
-        }
-        if (std::get<1>(pair) == element_location::IN_POSITIVE_SIDE) {
-            if (!std::get<2>(pair).empty()) {
-                std::cout << "                        (" << std::get<0>(pair) << ", " << "POSITIVE SIDE";
-                for (auto& dp_cl : std::get<2>(pair)) 
-                    std::cout << ", " << dp_cl;
-                std::cout << ")" << std::endl;
-            }
-        }   
-    }
-    std::cout << bold << magenta << "            Paires KO:   " << reset << std::endl;
-    for (auto& pair : PairKO) {
-        if (std::get<1>(pair) == element_location::IN_NEGATIVE_SIDE) {
-                std::cout << "                        (" << std::get<0>(pair) << ", " << "NEGATIVE SIDE";
-            for (auto& dp_cl : std::get<2>(pair)) 
-                std::cout << ", " << dp_cl;
-            std::cout << ")" << std::endl;
-        }
-        if (std::get<1>(pair) == element_location::IN_POSITIVE_SIDE) {
-                std::cout << "                        (" << std::get<0>(pair) << ", " << "POSITIVE SIDE";
-            for (auto& dp_cl : std::get<2>(pair)) 
-                std::cout << ", " << dp_cl;
-            std::cout << ")" << std::endl;
-        }   
-    }
+    //     }
+    //     if (std::get<1>(pair) == element_location::IN_POSITIVE_SIDE) {
+    //         if (!std::get<2>(pair).empty()) {
+    //             std::cout << "                        (" << std::get<0>(pair) << ", " << "POSITIVE SIDE";
+    //             for (auto& dp_cl : std::get<2>(pair)) 
+    //                 std::cout << ", " << dp_cl;
+    //             std::cout << ")" << std::endl;
+    //         }
+    //     }   
+    // }
+    // std::cout << bold << magenta << "            Paires KO:   " << reset << std::endl;
+    // for (auto& pair : PairKO) {
+    //     if (std::get<1>(pair) == element_location::IN_NEGATIVE_SIDE) {
+    //             std::cout << "                        (" << std::get<0>(pair) << ", " << "NEGATIVE SIDE";
+    //         for (auto& dp_cl : std::get<2>(pair)) 
+    //             std::cout << ", " << dp_cl;
+    //         std::cout << ")" << std::endl;
+    //     }
+    //     if (std::get<1>(pair) == element_location::IN_POSITIVE_SIDE) {
+    //             std::cout << "                        (" << std::get<0>(pair) << ", " << "POSITIVE SIDE";
+    //         for (auto& dp_cl : std::get<2>(pair)) 
+    //             std::cout << ", " << dp_cl;
+    //         std::cout << ")" << std::endl;
+    //     }   
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     // for (auto &cl : msh.cells) {
