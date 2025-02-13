@@ -343,7 +343,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     SparseMatrix<RealType> Kg, Mg;
 
     // POSTPRO HHO SOLUTION
-    std::string error_file_txt = "solution_error_file_centered.txt";
+    std::string error_file_txt = "solution_error_file.txt";
     std::ofstream error_file(error_file_txt);
     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
 
@@ -372,6 +372,10 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
         error_file << std::endl << "Polynomial degree k : " << k << std::endl;
         grad_proj_error_file << std::endl << "Polynomial degree k : " << k << std::endl;
+        stab_proj_error_file << "Polynomial degree k : " << k << std::endl;
+        stab_proj_usual_error_file << "Polynomial degree k : " << k << std::endl;
+        stab_proj_cut_error_file << "Polynomial degree k : " << k << std::endl;
+        stab_proj_ill_dofs_error_file << "Polynomial degree k : " << k << std::endl;
                             
         // Mixed order discretization
         hho_degree_info hdi(k+1, k);
@@ -390,6 +394,10 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
             error_file << "Space refinment level -l : " << l << std::endl;
             grad_proj_error_file << "Space refinment level -l : " << l << std::endl;
+            stab_proj_error_file << "Space refinment level -l : " << l << std::endl;
+            stab_proj_usual_error_file << "Space refinment level -l : " << l << std::endl;
+            stab_proj_cut_error_file << "Space refinment level -l : " << l << std::endl;
+            stab_proj_ill_dofs_error_file << "Space refinment level -l : " << l << std::endl;
 
             // ##################################################
             // ################################################## Mesh generation 
@@ -423,8 +431,13 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                     auto grad_dofs_proj = test_gradient_on_proj(msh, hdi, method, test_case);
                     postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_one_field(msh, hdi, assembler, grad_dofs_proj, test_case.sol_grad, grad_proj_error_file);         
                 }
-                if (STAB) 
+                if (STAB) {
                     test_stab_on_proj(msh, hdi, method, test_case, stab_proj_error_file, stab_proj_usual_error_file, stab_proj_cut_error_file, stab_proj_ill_dofs_error_file);
+                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_error_file_txt);
+                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_usual_file_txt);
+                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_cut_file_txt);
+                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
+                }
             }
             if (RUN_HHO) {
                 std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);

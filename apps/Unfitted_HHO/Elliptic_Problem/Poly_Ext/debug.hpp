@@ -188,23 +188,19 @@ void test_stab_on_proj(const Mesh& msh, hho_degree_info & hdi, meth &method, tes
     } 
     assembler.finalize();
     tc.toc();
-    stab_file << "Characteristic h size = " << std::setprecision(64) << h << std::endl;
-    stab_file << "L2-norm grad error = " << std::setprecision(64) << std::sqrt(stab_error) << std::endl;
-    stab_usual_file << "Characteristic h size = " << std::setprecision(64) << h << std::endl;
-    stab_usual_file << "L2-norm grad error = " << std::setprecision(64) << std::sqrt(stab_usual_error) << std::endl;
-    stab_cut_file << "Characteristic h size = " << std::setprecision(64) << h << std::endl;
-    stab_cut_file << "L2-norm grad error = " << std::setprecision(64) << std::sqrt(stab_cut_error) << std::endl;
-    stab_ill_dofs_file << "Characteristic h size = " << std::setprecision(64) << h << std::endl;
-    stab_ill_dofs_file << "L2-norm grad error = " << std::setprecision(64) << std::sqrt(stab_illdofs_error) << std::endl;
 
-    std::string stab_error_file_txt = "stab_proj_error_file_centered.txt";
-    std::string stab_usual_error_file_txt = "stab_proj_usual_file_centered.txt";
-    std::string stab_cut_error_file_txt = "stab_proj_cut_file_centered.txt";
-    std::string stab_illdofs_error_file_txt = "stab_proj_ill_dofs_file_centered.txt";
-    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_error_file_txt);
-    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_usual_error_file_txt);
-    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_cut_error_file_txt);
-    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_illdofs_error_file_txt);
+    stab_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+    stab_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(stab_error) << std::endl;
+    stab_file << std::endl;
+    stab_usual_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+    stab_usual_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(stab_usual_error) << std::endl;
+    stab_usual_file << std::endl;
+    stab_cut_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+    stab_cut_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(stab_cut_error) << std::endl;
+    stab_cut_file << std::endl;
+    stab_ill_dofs_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+    stab_ill_dofs_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(stab_illdofs_error) << std::endl;
+    stab_ill_dofs_file << std::endl;
 
     std::cout << bold << yellow << "         Test Stab: " << tc << " seconds" << reset << std::endl;
 
