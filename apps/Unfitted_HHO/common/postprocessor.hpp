@@ -336,42 +336,42 @@ public:
             }
             // CUT CELLS
             else {
-                // // DISCRETIZATION INFOS NEGATIVE SIDE
-                // cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> neg_cell_basis(msh, cl, hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-                // auto cbs = neg_cell_basis.size();
-                // auto locdata_n = assembler.take_local_data(msh, cl, x_dof, element_location::IN_NEGATIVE_SIDE);
-                // auto cell_dofs_n = locdata_n.head(cbs);
-                // auto qps_n = integrate(msh, cl, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-                // for (auto& qp : qps_n) {
-                //     /* Compute H1-error */
-                //     auto t_dphi = neg_cell_basis.eval_gradients( qp.first );
-                //     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-                //     for (size_t i = 1; i < cbs; i++ )
-                //         grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
-                //     H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
-                //     auto t_phi = neg_cell_basis.eval_basis( qp.first );
-                //     auto v = cell_dofs_n.dot(t_phi);
-                //     /* Compute L2-error */
-                //     L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
-                // }  
-                // // DISCRETIZATION INFOS POSITIVE SIDE
-                // cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> pos_cell_basis(msh, cl, hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);           
-                // cbs = pos_cell_basis.size();
-                // auto locdata_p = assembler.take_local_data(msh, cl, x_dof, element_location::IN_POSITIVE_SIDE);
-                // auto cell_dofs_p = locdata_p.head(cbs);
-                // auto qps_p = integrate(msh, cl, 2*hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);
-                // for (auto& qp : qps_p) {
-                //     /* Compute H1-error */
-                //     auto t_dphi = pos_cell_basis.eval_gradients( qp.first );
-                //     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-                //     for (size_t i = 1; i < cbs; i++ )
-                //         grad += cell_dofs_p(i) * t_dphi.block(i, 0, 1, 2);
-                //     H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
-                //     auto t_phi = pos_cell_basis.eval_basis( qp.first );
-                //     auto v = cell_dofs_p.dot(t_phi);
-                //     /* Compute L2-error */
-                //     L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
-                // }
+                // DISCRETIZATION INFOS NEGATIVE SIDE
+                cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> neg_cell_basis(msh, cl, hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+                auto cbs = neg_cell_basis.size();
+                auto locdata_n = assembler.take_local_data(msh, cl, x_dof, element_location::IN_NEGATIVE_SIDE);
+                auto cell_dofs_n = locdata_n.head(cbs);
+                auto qps_n = integrate(msh, cl, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);
+                for (auto& qp : qps_n) {
+                    /* Compute H1-error */
+                    auto t_dphi = neg_cell_basis.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs_n(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = neg_cell_basis.eval_basis( qp.first );
+                    auto v = cell_dofs_n.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }  
+                // DISCRETIZATION INFOS POSITIVE SIDE
+                cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> pos_cell_basis(msh, cl, hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);           
+                cbs = pos_cell_basis.size();
+                auto locdata_p = assembler.take_local_data(msh, cl, x_dof, element_location::IN_POSITIVE_SIDE);
+                auto cell_dofs_p = locdata_p.head(cbs);
+                auto qps_p = integrate(msh, cl, 2*hho_di.cell_degree(), element_location::IN_POSITIVE_SIDE);
+                for (auto& qp : qps_p) {
+                    /* Compute H1-error */
+                    auto t_dphi = pos_cell_basis.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs_p(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = pos_cell_basis.eval_basis( qp.first );
+                    auto v = cell_dofs_p.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
             }
        }
        H1_error = std::sqrt(H1_error);

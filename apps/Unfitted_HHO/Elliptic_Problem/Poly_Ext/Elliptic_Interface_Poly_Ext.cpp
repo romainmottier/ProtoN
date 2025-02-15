@@ -316,9 +316,9 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     argv += optind;
 
     std::ofstream sim_infos("simulation_infos.txt");
-    sim_infos << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
+    sim_infos << std::endl << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
     std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
-    sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
+    sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << std::endl;
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
     sim_infos << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
@@ -523,7 +523,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     stab_proj_cut_error_file.close();
     stab_proj_ill_dofs_error_file.close();
     tc.toc();
-    std::cout << bold << yellow << "            Run completed: " << tc << " seconds" << reset << std::endl;
+    std::cout << bold << red << "      Run completed: " << tc << " seconds" << reset << std::endl;
 
 }
 
