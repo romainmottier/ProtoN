@@ -146,7 +146,7 @@ public:
         auto celdeg = hdi.cell_degree();
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
         size_t offset = 0.0;
-        if (loc == element_location::IN_POSITIVE_SIDE)
+        if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
             offset = cbs;
         f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, loc);
 

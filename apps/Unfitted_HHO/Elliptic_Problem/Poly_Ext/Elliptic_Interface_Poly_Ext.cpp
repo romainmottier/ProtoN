@@ -315,23 +315,24 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     argc -= optind;
     argv += optind;
 
-    std::ofstream error_file("simulation_infos.txt");
+    std::ofstream sim_infos("simulation_infos.txt");
+    sim_infos << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
     std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
-    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
+    sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
-    std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
+    sim_infos << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
-    std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
+    sim_infos << "   " << "Space refinement level     -l : " << l_divs << std::endl;
     std::cout << "   " << "Space refinement level     -l : " << l_divs << std::endl;
-    std::cout << "   " << "Space refinement level     -l : " << l_divs << std::endl;
+    sim_infos << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
     std::cout << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
-    std::cout << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
+    sim_infos << "   " << "Interface refinement level -r : " << int_refsteps << std::endl;
     std::cout << "   " << "Interface refinement level -r : " << int_refsteps << std::endl;
-    std::cout << "   " << "Interface refinement level -r : " << int_refsteps << std::endl;
+    sim_infos << "   " << "Static condensation        -c : " << sc_Q << std::endl;
     std::cout << "   " << "Static condensation        -c : " << sc_Q << std::endl;
-    std::cout << "   " << "Static condensation        -c : " << sc_Q << std::endl;
+    sim_infos << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
     std::cout << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
-    std::cout << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
+    sim_infos << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
     std::cout << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
 
     // ##################################################
@@ -397,7 +398,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
         T previous_L2 = 0.0;
         T previous_h = 0.0;
 
-        for(size_t l = 0; l <= l_divs; l++){
+        for(size_t l = 2; l <= l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -431,7 +432,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = true;
+            bool DEBUG_OPERATORS = false;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
                 bool GRAD = true;
@@ -511,7 +512,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
         stab_proj_cut_error_file << std::endl << std::endl;
         stab_proj_ill_dofs_error_file << std::endl << std::endl;
         tck.toc();
-        std::cout << bold << yellow << "            Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
+        std::cout << bold << cyan << "      Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
 
     }
     
