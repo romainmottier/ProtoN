@@ -432,7 +432,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = false;
+            bool DEBUG_OPERATORS = true;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
                 bool GRAD = true;
@@ -460,7 +460,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                     assembler.assemble_ext(msh, pair, lc, f);  
                 } 
                 // Loop on PKO subcells 
-                for (auto& pair : Pairs.second) { 
+                for (auto& pair : Pairs.second) {  
                     auto cl = msh.cells[std::get<0>(pair)];
                     auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
                     auto lc = contrib.first;

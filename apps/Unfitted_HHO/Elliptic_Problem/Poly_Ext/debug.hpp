@@ -148,6 +148,8 @@ void test_stab_on_proj(const Mesh& msh, hho_degree_info & hdi, meth &method, tes
         stab_usual_error += dofs.transpose() * stab_usual * dofs;
         stab_cut_error += dofs.transpose() * stab_cut * dofs;
         stab_illdofs_error += dofs.transpose() * stab_ill_dofs * dofs;
+        
+        // tirer au clair pourquoi certaine contributions de l'erreur est negative
     } 
     
     // Loop on PKO subcells 

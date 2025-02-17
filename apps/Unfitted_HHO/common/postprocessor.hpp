@@ -409,7 +409,6 @@ public:
         
         RealType H1_error = 0.0;
         RealType L2_error = 0.0;
-        size_t   cell_i   = 0;
         RealType h = 10;
         
         for (auto& p_ok : POK) {
@@ -418,17 +417,22 @@ public:
             auto cell_index = std::get<0>(p_ok);
             auto loc = std::get<1>(p_ok);
             auto cl = msh.cells[cell_index];
+            
+            // DIAMETER
+            RealType h_l = diameter(msh, cl);
+            if (h_l < h) 
+                h = h_l;
 
             // BASES & DOFS INFOS  
-            cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hho_di.cell_degree(), loc);
+            cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hho_di.cell_degree());
             auto cbs = cb.size();
             Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
             Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
-
+            
             // COMPUTE ERROR OF (ONE SIDE) 
             locdata = assembler.take_local_data(msh, cl, x_dof, loc);
             cell_dofs = locdata.head(cbs);
-
+            
             // UNCUT CELLS 
             if (!is_cut(msh, cl)) {
                 auto qps = integrate(msh, cl, 2*hho_di.cell_degree());
@@ -447,8 +451,8 @@ public:
             }
             // CUT CELLS
             else {
-                auto qps_n = integrate(msh, cl, 2*hho_di.cell_degree(), loc);
-                for (auto& qp : qps_n) {
+                auto qps = integrate(msh, cl, 2*hho_di.cell_degree(), loc);
+                for (auto& qp : qps) {
                     /* Compute H1-error */
                     auto t_dphi = cb.eval_gradients( qp.first );
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
@@ -465,38 +469,44 @@ public:
             for (auto& dp_cl : std::get<2>(p_ok)) {
                 // CELL INFOS 
                 auto dp_cell = msh.cells[dp_cl];
-                auto qps_n = integrate(msh, dp_cell, 2*hho_di.cell_degree(), loc);
-                for (auto& qp : qps_n) {
+                auto locdata = assembler.take_local_data(msh, dp_cell, x_dof, loc);
+                auto cell_dofs = locdata.head(cbs);
+                // COMPUTE ERRORS
+                auto qps = integrate(msh, dp_cell, 2*hho_di.cell_degree(), loc);
+                for (auto& qp : qps) {
                     /* Compute H1-error */
                     auto t_dphi = cb.eval_gradients( qp.first );
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    // H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    // L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
-       }
-       H1_error = std::sqrt(H1_error);
-       L2_error = std::sqrt(L2_error);
-       RealType orderH = log(previous_H1 / H1_error) / log(previous_h / h);
-       RealType orderL = log(previous_L2 / L2_error) / log(previous_h / h);
-       error_file << "Characteristic h size = " << h << std::endl;
-       error_file << "L2-norm error = " << L2_error << std::endl;
-       error_file << "H1-norm error = " << H1_error << std::endl;
-       error_file << "order L2 = " << orderL << std::endl;
-       error_file << "order H1 = " << orderH << std::endl << std::endl;
-       std::vector<RealType> vec = {h, H1_error, L2_error};
-       tc.toc();
+        }
+        H1_error = std::sqrt(H1_error);
+        L2_error = std::sqrt(L2_error);
+        RealType orderH = log(previous_H1 / H1_error) / log(previous_h / h);
+        RealType orderL = log(previous_L2 / L2_error) / log(previous_h / h);
+        error_file << "Characteristic h size = " << h << std::endl;
+        error_file << "L2-norm error = " << L2_error << std::endl;
+        error_file << "H1-norm error = " << H1_error << std::endl;
+        error_file << "order L2 = " << orderL << std::endl;
+        error_file << "order H1 = " << orderH << std::endl << std::endl;
+        std::vector<RealType> vec = {h, H1_error, L2_error};
+        tc.toc();
 
-       std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
-       std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
-       std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
+        std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
+        std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
+        std::cout << bold << yellow << "         order H1: " << orderH << reset << std::endl;
+        std::cout << bold << yellow << "         order L2: " << orderL << reset << std::endl;
+        std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
        
        return vec;
+
     }
     #else
     static std::vector<double> 
@@ -569,22 +579,21 @@ public:
             for (auto& dp_cl : std::get<2>(p_ok)) {
                 // CELL INFOS 
                 auto dp_cell = msh.cells[dp_cl];
-                auto locdata_dp = assembler.take_local_data(msh, dp_cell, x_dof, loc);
-                auto cell_dofs_dp = locdata_dp.head(cbs);
-                cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb_dp(msh, dp_cell, hho_di.cell_degree(), loc);
+                auto locdata = assembler.take_local_data(msh, dp_cell, x_dof, loc);
+                auto cell_dofs = locdata.head(cbs);
                 // COMPUTE ERRORS
                 auto qps = integrate(msh, dp_cell, 2*hho_di.cell_degree(), loc);
                 for (auto& qp : qps) {
                     /* Compute H1-error */
-                    auto t_dphi = cb_dp.eval_gradients( qp.first );
+                    auto t_dphi = cb.eval_gradients( qp.first );
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
-                        grad += cell_dofs_dp(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
-                    auto t_phi = cb_dp.eval_basis( qp.first );
-                    auto v = cell_dofs_dp.dot(t_phi);
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    // H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    // L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
         }
