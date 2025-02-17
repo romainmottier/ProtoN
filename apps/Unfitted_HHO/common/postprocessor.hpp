@@ -568,18 +568,18 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    // H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    // L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // DEPENDENT CELLS 
             for (auto& dp_cl : std::get<2>(p_ok)) {
                 // CELL INFOS 
                 auto dp_cell = msh.cells[dp_cl];
-                auto locdata = assembler.take_local_data(msh, dp_cell, x_dof, loc);
+                auto locdata = assembler.take_local_data(msh, cl, x_dof, loc);
                 auto cell_dofs = locdata.head(cbs);
                 // COMPUTE ERRORS
                 auto qps = integrate(msh, dp_cell, 2*hho_di.cell_degree(), loc);
@@ -589,11 +589,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    // H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    // L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
         }
@@ -772,6 +772,25 @@ public:
     }
     #endif 
 
+    /// Compute L2 and H1 errors for one field approximation
+    static void compute_errors_grad_grad(Mesh & msh, hho_degree_info & hho_di, double grad_grad_dofs, std::ostream & error_file = std::cout){
+
+        using RealType = double;
+
+        RealType h = 10.0;
+        for (auto& cell : msh.cells) {
+            RealType h_l = diameter(msh, cell);
+            if (h_l < h) 
+                h = h_l;
+        }
+
+        auto error = std::abs(grad_grad_dofs - M_PI*M_PI/2.0);
+        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+        error_file << "L2-norm error = " << std::setprecision(16) << error << std::endl;
+        error_file << std::endl;
+       
+    }
+    
     /// Compute L2 and H1 errors for one field approximation
     static void 
     compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){

@@ -372,11 +372,17 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     std::ofstream stab_proj_cut_error_file(stab_proj_cut_file_txt);
     std::ofstream stab_proj_ill_dofs_error_file(stab_proj_ill_dofs_file_txt);
 
+
+    // POSTPRO GRAD.GRAD
+    std::string grad_grad_proj_error_file_txt = "grad_grad_proj_error_file.txt";
+    std::ofstream grad_grad_proj_error_file(grad_grad_proj_error_file_txt);
+    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(grad_grad_proj_error_file_txt);
+
     // ##################################################
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 1; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -435,8 +441,8 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
             bool DEBUG_OPERATORS = false;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
-                bool GRAD = true;
-                bool STAB = true;
+                bool GRAD = false;
+                bool STAB = false;
                 bool GRAD_GRAD = true;
                 if (GRAD) {
                     auto grad_dofs_proj = test_gradient_on_proj(msh, hdi, method, test_case);
@@ -450,11 +456,11 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
                 }
                 if (GRAD_GRAD) {
-                    auto grad_grad = test_grad_grad(msh, hdi, method, test_case);
-                    // auto grad_grad_dofs = x_dof.transpose() * grad_grad * x_dof;
-                    // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_grad(msh, hdi, grad_grad_dofs, grad_grad_dofs_error_file_centered);   
-                    // std::string grad_grad_error_file_txt = "grad_grad_dofs_error_file_centered.txt";
-                    // postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad_grad(grad_grad_error_file_txt);      
+                        Matrix<RealType, Dynamic, 1> proj_sol = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+                        assembler.project_over_cells_and_faces(msh, hdi, proj_sol, test_case.sol_fun);
+                        auto grad_grad = test_grad_grad(msh, hdi, method, test_case);
+                        auto grad_grad_dofs = proj_sol.transpose() * grad_grad * proj_sol;
+                        postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_grad(msh, hdi, grad_grad_dofs, grad_grad_proj_error_file);   
                 }
             }
             if (RUN_HHO) {

@@ -240,7 +240,7 @@ SparseMatrix<typename Mesh::coordinate_type> test_grad_grad(const Mesh& msh, hho
     timecounter tc;
     tc.tic();
 
-    auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
+    auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
     std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
     SparseMatrix<RealType> grad;
 
@@ -285,7 +285,7 @@ SparseMatrix<typename Mesh::coordinate_type> test_grad_grad(const Mesh& msh, hho
     } 
     assembler.finalize();
     tc.toc();
-    std::cout << bold << yellow << "         Test Gradient: " << tc << " seconds" << reset << std::endl;
+    std::cout << bold << yellow << "         Test GRAD.GRAD: " << tc << " seconds" << reset << std::endl;
     
     return assembler.GLOBAL_GRAD_GRAD;
 
