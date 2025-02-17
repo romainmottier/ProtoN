@@ -150,33 +150,33 @@ public:
             offset = cbs;
         f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, loc);
 
-        // JUMP TERMS 
-        if (is_cut(msh, cl)) {
-            if (loc == element_location::IN_NEGATIVE_SIDE) {
-                f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
-                f.head(cbs) -= stab_parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
-            }
-            if (loc == element_location::IN_POSITIVE_SIDE) {
-                f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
-                f.block(cbs, 0, cbs, 1) += stab_parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
-                f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
-            }
-        }
-        #if(!centering_bases)
-        auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
-        vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree());
-        #else
-        auto gbs = cut_vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
-        cut_vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree(), loc);
-        #endif
-        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero( gbs );
-        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : iqps) {
-            const auto g_phi = gb.eval_basis(qp.first);
-            const Matrix<T,2,1> n = level_set_function.normal(qp.first);
-            F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
-        }
-        f -= coeff * F_bis.transpose() * (stab_parms.kappa_1 * gr.first );
+        // // JUMP TERMS 
+        // if (is_cut(msh, cl)) {
+        //     if (loc == element_location::IN_NEGATIVE_SIDE) {
+        //         f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        //         f.head(cbs) -= stab_parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
+        //     }
+        //     if (loc == element_location::IN_POSITIVE_SIDE) {
+        //         f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        //         f.block(cbs, 0, cbs, 1) += stab_parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
+        //         f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
+        //     }
+        // }
+        // #if(!centering_bases)
+        // auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
+        // vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree());
+        // #else
+        // auto gbs = cut_vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
+        // cut_vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree(), loc);
+        // #endif
+        // Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero( gbs );
+        // auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+        // for (auto& qp : iqps) {
+        //     const auto g_phi = gb.eval_basis(qp.first);
+        //     const Matrix<T,2,1> n = level_set_function.normal(qp.first);
+        //     F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
+        // }
+        // f -= coeff * F_bis.transpose() * (stab_parms.kappa_1 * gr.first );
 
         return std::make_pair(lc, f);
 
