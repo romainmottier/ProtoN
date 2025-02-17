@@ -376,7 +376,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 0; k <= degree; k++){
+    for(size_t k = 1; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -398,7 +398,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
         T previous_L2 = 0.0;
         T previous_h = 0.0;
 
-        for(size_t l = 1; l <= l_divs; l++){
+        for(size_t l = 0; l <= l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -432,11 +432,12 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = true;
+            bool DEBUG_OPERATORS = false;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
                 bool GRAD = true;
                 bool STAB = true;
+                bool GRAD_GRAD = true;
                 if (GRAD) {
                     auto grad_dofs_proj = test_gradient_on_proj(msh, hdi, method, test_case);
                     postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_one_field(msh, hdi, assembler, grad_dofs_proj, test_case.sol_grad, grad_proj_error_file);         
@@ -448,9 +449,16 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_cut_file_txt);
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
                 }
+                if (GRAD_GRAD) {
+                    auto grad_grad = test_grad_grad(msh, hdi, method, test_case);
+                    // auto grad_grad_dofs = x_dof.transpose() * grad_grad * x_dof;
+                    // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_grad(msh, hdi, grad_grad_dofs, grad_grad_dofs_error_file_centered);   
+                    // std::string grad_grad_error_file_txt = "grad_grad_dofs_error_file_centered.txt";
+                    // postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad_grad(grad_grad_error_file_txt);      
+                }
             }
             if (RUN_HHO) {
-                std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
+                std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
                 // Loop on POK subcells 
                 for (auto& pair : Pairs.first) { 
                     auto cl = msh.cells[std::get<0>(pair)];
@@ -489,8 +497,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                 // ################################################## Postprocess  
                 // ##################################################
                 
-                // auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
-                auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_polynomial_extension(msh, Pairs.first, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+                auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
                 previous_h  = errors[0]; 
                 previous_H1 = errors[1];
                 previous_L2 = errors[2];

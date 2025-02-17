@@ -217,3 +217,76 @@ auto cond(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& A) {
     auto lmin = svd.singularValues()(svd.singularValues().size()-1);
     return lmax/lmin; 
 }
+
+template<typename Mesh, typename testType, typename meth>
+SparseMatrix<typename Mesh::coordinate_type>  test_grad_grad(const Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case);
+
+template<typename Mesh, typename testType, typename meth>
+SparseMatrix<typename Mesh::coordinate_type> test_grad_grad(const Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case){
+    
+    using RealType = typename Mesh::coordinate_type;
+    using VecTuple = std::vector<std::tuple<double,element_location,std::vector<double>>>;
+    using T = typename Mesh::coordinate_type;
+
+    auto level_set_function = test_case.level_set_;
+    auto rhs_fun = test_case.rhs_fun;
+    auto sol_fun = test_case.sol_fun;   
+    auto sol_grad = test_case.sol_grad;
+    auto bcs_fun = test_case.bcs_fun;
+    auto dirichlet_jump = test_case.dirichlet_jump;
+    auto neumann_jump = test_case.neumann_jump;
+    struct params<RealType> parms = test_case.parms;
+    
+    timecounter tc;
+    tc.tic();
+
+    auto assembler = make_one_field_interface_assembler(msh, bcs_fun, hdi);
+    std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
+    SparseMatrix<RealType> grad;
+
+    // Loop on POK subcells 
+    for (auto& P_OK : Pairs.first) { 
+        // CELL INFOS 
+        auto cell_index = std::get<0>(P_OK);
+        auto loc = std::get<1>(P_OK);
+        auto cl = msh.cells[cell_index];
+        // MATERIAL PROPERTIES
+        double kappa;
+        if (loc == element_location::IN_NEGATIVE_SIDE)
+            kappa = 1.0/test_case.parms.kappa_1;
+        else
+            kappa = 1.0/test_case.parms.kappa_2;
+        auto stab_parms = test_case.parms;
+        stab_parms.kappa_1 = 1.0/(test_case.parms.kappa_1); 
+        stab_parms.kappa_2 = 1.0/(test_case.parms.kappa_2); 
+        auto coeff = 0.0;
+        if (stab_parms.kappa_1 < stab_parms.kappa_2) {
+            if (loc == element_location::IN_POSITIVE_SIDE)
+                coeff = 1.0;
+        }
+        else {
+            if (loc == element_location::IN_NEGATIVE_SIDE)
+                coeff = 1.0;
+        }
+        // GRADIENT 
+        auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, level_set_function, coeff);
+        assembler.assemble_grad_grad_bis_extended(msh, P_OK, gr.second);  
+    } 
+    
+    // Loop on PKO subcells 
+    for (auto& P_KO : Pairs.second) { 
+        // CELL INFOS 
+        auto cell_index = std::get<0>(P_KO);
+        auto loc = std::get<1>(P_KO);
+        auto cl = msh.cells[cell_index];
+        // GRADIENT
+        auto gr = make_hho_gradrec_vector_PKO(msh, P_KO, hdi, level_set_function);
+        assembler.assemble_grad_grad_bis_extended(msh, P_KO, gr.second); 
+    } 
+    assembler.finalize();
+    tc.toc();
+    std::cout << bold << yellow << "         Test Gradient: " << tc << " seconds" << reset << std::endl;
+    
+    return assembler.GLOBAL_GRAD_GRAD;
+
+}

@@ -400,18 +400,18 @@ public:
 
     #if (!centering_bases)
     static std::vector<double> 
-    compute_error_elliptic_second_order_polynomial_extension(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
+    compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
 
-        timecounter tc;
-        tc.tic();
-        
-        using RealType = double;
-        
-        RealType H1_error = 0.0;
-        RealType L2_error = 0.0;
-        RealType h = 10;
-        
-        for (auto& p_ok : POK) {
+       timecounter tc;
+       tc.tic();
+
+       using RealType = double;
+
+       RealType H1_error = 0.0;
+       RealType L2_error = 0.0;
+       size_t   cell_i   = 0;
+       RealType h = 10;
+       for (auto& p_ok : POK) {
             
             // CELL INFOS 
             auto cell_index = std::get<0>(p_ok);
@@ -510,7 +510,7 @@ public:
     }
     #else
     static std::vector<double> 
-    compute_error_elliptic_second_order_polynomial_extension(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
+    compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
 
         timecounter tc;
         tc.tic();
@@ -568,11 +568,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    // H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    // L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // DEPENDENT CELLS 
