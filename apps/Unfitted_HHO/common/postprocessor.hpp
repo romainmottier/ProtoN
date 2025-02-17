@@ -9,6 +9,9 @@ class postprocessor {
     
 public:
 
+    using Tuple = std::tuple<double,element_location,std::vector<double>>;
+    using VecTuple = std::vector<std::tuple<double,element_location,std::vector<double>>>;
+
     // PICK CELLS & FIND CELLS   
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
@@ -395,6 +398,371 @@ public:
     }
     #endif
 
+    #if (!centering_bases)
+    static std::vector<double> 
+    compute_error_elliptic_second_order_polynomial_extension(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
+
+        timecounter tc;
+        tc.tic();
+        
+        using RealType = double;
+        
+        RealType H1_error = 0.0;
+        RealType L2_error = 0.0;
+        size_t   cell_i   = 0;
+        RealType h = 10;
+        
+        for (auto& p_ok : POK) {
+            
+            // CELL INFOS 
+            auto cell_index = std::get<0>(p_ok);
+            auto loc = std::get<1>(p_ok);
+            auto cl = msh.cells[cell_index];
+
+            // BASES & DOFS INFOS  
+            cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hho_di.cell_degree(), loc);
+            auto cbs = cb.size();
+            Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
+            Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
+
+            // COMPUTE ERROR OF (ONE SIDE) 
+            locdata = assembler.take_local_data(msh, cl, x_dof, loc);
+            cell_dofs = locdata.head(cbs);
+
+            // UNCUT CELLS 
+            if (!is_cut(msh, cl)) {
+                auto qps = integrate(msh, cl, 2*hho_di.cell_degree());
+                for (auto& qp : qps) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+            // CUT CELLS
+            else {
+                auto qps_n = integrate(msh, cl, 2*hho_di.cell_degree(), loc);
+                for (auto& qp : qps_n) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+            // DEPENDENT CELLS 
+            for (auto& dp_cl : std::get<2>(p_ok)) {
+                // CELL INFOS 
+                auto dp_cell = msh.cells[dp_cl];
+                auto qps_n = integrate(msh, dp_cell, 2*hho_di.cell_degree(), loc);
+                for (auto& qp : qps_n) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+       }
+       H1_error = std::sqrt(H1_error);
+       L2_error = std::sqrt(L2_error);
+       RealType orderH = log(previous_H1 / H1_error) / log(previous_h / h);
+       RealType orderL = log(previous_L2 / L2_error) / log(previous_h / h);
+       error_file << "Characteristic h size = " << h << std::endl;
+       error_file << "L2-norm error = " << L2_error << std::endl;
+       error_file << "H1-norm error = " << H1_error << std::endl;
+       error_file << "order L2 = " << orderL << std::endl;
+       error_file << "order H1 = " << orderH << std::endl << std::endl;
+       std::vector<RealType> vec = {h, H1_error, L2_error};
+       tc.toc();
+
+       std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
+       std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
+       std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
+       
+       return vec;
+    }
+    #else
+    static std::vector<double> 
+    compute_error_elliptic_second_order_polynomial_extension(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
+
+        timecounter tc;
+        tc.tic();
+        
+        using RealType = double;
+        
+        RealType H1_error = 0.0;
+        RealType L2_error = 0.0;
+        RealType h = 10;
+        
+        for (auto& p_ok : POK) {
+            
+            // CELL INFOS 
+            auto cell_index = std::get<0>(p_ok);
+            auto loc = std::get<1>(p_ok);
+            auto cl = msh.cells[cell_index];
+            
+            // DIAMETER
+            RealType h_l = diameter(msh, cl);
+            if (h_l < h) 
+                h = h_l;
+
+            // BASES & DOFS INFOS  
+            cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb(msh, cl, hho_di.cell_degree(), loc);
+            auto cbs = cb.size();
+            Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
+            Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
+            
+            // COMPUTE ERROR OF (ONE SIDE) 
+            locdata = assembler.take_local_data(msh, cl, x_dof, loc);
+            cell_dofs = locdata.head(cbs);
+            
+            // UNCUT CELLS 
+            if (!is_cut(msh, cl)) {
+                auto qps = integrate(msh, cl, 2*hho_di.cell_degree());
+                for (auto& qp : qps) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+            // CUT CELLS
+            else {
+                auto qps = integrate(msh, cl, 2*hho_di.cell_degree(), loc);
+                for (auto& qp : qps) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb.eval_basis( qp.first );
+                    auto v = cell_dofs.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+            // DEPENDENT CELLS 
+            for (auto& dp_cl : std::get<2>(p_ok)) {
+                // CELL INFOS 
+                auto dp_cell = msh.cells[dp_cl];
+                auto locdata_dp = assembler.take_local_data(msh, dp_cell, x_dof, loc);
+                auto cell_dofs_dp = locdata_dp.head(cbs);
+                cut_cell_basis<cuthho_poly_mesh<RealType>, RealType> cb_dp(msh, dp_cell, hho_di.cell_degree(), loc);
+                // COMPUTE ERRORS
+                auto qps = integrate(msh, dp_cell, 2*hho_di.cell_degree(), loc);
+                for (auto& qp : qps) {
+                    /* Compute H1-error */
+                    auto t_dphi = cb_dp.eval_gradients( qp.first );
+                    Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
+                    for (size_t i = 1; i < cbs; i++ )
+                        grad += cell_dofs_dp(i) * t_dphi.block(i, 0, 1, 2);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    auto t_phi = cb_dp.eval_basis( qp.first );
+                    auto v = cell_dofs_dp.dot(t_phi);
+                    /* Compute L2-error */
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                }
+            }
+        }
+        H1_error = std::sqrt(H1_error);
+        L2_error = std::sqrt(L2_error);
+        RealType orderH = log(previous_H1 / H1_error) / log(previous_h / h);
+        RealType orderL = log(previous_L2 / L2_error) / log(previous_h / h);
+        error_file << "Characteristic h size = " << h << std::endl;
+        error_file << "L2-norm error = " << L2_error << std::endl;
+        error_file << "H1-norm error = " << H1_error << std::endl;
+        error_file << "order L2 = " << orderL << std::endl;
+        error_file << "order H1 = " << orderH << std::endl << std::endl;
+        std::vector<RealType> vec = {h, H1_error, L2_error};
+        tc.toc();
+
+        std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
+        std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
+        std::cout << bold << yellow << "         order H1: " << orderH << reset << std::endl;
+        std::cout << bold << yellow << "         order L2: " << orderL << reset << std::endl;
+        std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
+       
+       return vec;
+
+    }
+    #endif
+
+    #if (!centering_bases)
+    static void 
+    compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+
+        timecounter tc;
+        tc.tic();
+
+        using RealType = double;
+        
+        RealType grad_l2_error = 0.0;
+        size_t cell_i = 0;
+        RealType h = 10.0;
+        std::vector<RealType> l2_error_grad(msh.cells.size());
+        
+        auto cell_table = assembler.get_cell_table();
+        for (auto& cl : msh.cells ) {
+            
+            // CELL INFOS
+            l2_error_grad[cell_i] = 0.0;
+            RealType h_l = diameter(msh, cl);
+            if (h_l < h)
+                h = h_l;
+
+            vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree());
+            auto grad_dofs_size = vector_cell_basis.size();
+            auto offset_cl = cell_table.at(offset(msh, cl));
+           
+            if (!is_cut(msh, cl)) {
+                auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                auto qps = integrate(msh, cl, 2*hho_di.grad_degree());
+                for (auto& qp : qps) {
+                    auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                    auto grad = grad_dofs.transpose() * vec_t_phi;
+                    l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                }
+            }
+            else {
+                {   // NEGATIVE SIDE
+                    auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                    for (auto& qp : qps) {
+                        auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+                {   // POSITIVE SIDE
+                    auto cell_GRAD_offset = offset_cl*grad_dofs_size + grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                    for (auto& qp : qps) {
+                        auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+            }
+            cell_i++;
+        }
+        
+        grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
+        tc.toc();
+       
+        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
+        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+        error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
+        error_file << std::endl;
+        error_file.flush();
+       
+    }
+    #else
+    static void 
+    compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
+
+        timecounter tc;
+        tc.tic();
+
+        using RealType = double;
+        
+        RealType grad_l2_error = 0.0;
+        size_t cell_i = 0;
+        RealType h = 10.0;
+        std::vector<RealType> l2_error_grad(msh.cells.size());
+                    
+        auto cell_table = assembler.get_cell_table();
+        for (auto& cl : msh.cells ) {
+
+            // CELL INFOS
+            RealType h_l = diameter(msh, cl);
+            if (h_l < h) 
+                h = h_l;
+
+            l2_error_grad[cell_i] = 0.0;
+            auto offset_cl = cell_table.at(offset(msh, cl));
+            if (!is_cut(msh, cl)) {
+                cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), location(msh, cl));
+                auto grad_dofs_size = cut_vector_cell_basis.size();
+                auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                auto qps = integrate(msh, cl, 2*hho_di.grad_degree());
+                for (auto& qp : qps) {
+                    // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                    auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
+                    auto grad = grad_dofs.transpose() * vec_t_phi;
+                    l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                }
+            }
+            else {
+                {   // NEGATIVE SIDE                 
+                    cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                    auto grad_dofs_size = cut_vector_cell_basis.size();
+                    auto cell_GRAD_offset = offset_cl * grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+                    for (auto& qp : qps) {
+                        // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+                {   // POSITIVE SIDE
+                    cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                    auto grad_dofs_size = cut_vector_cell_basis.size();
+                    auto cell_GRAD_offset = offset_cl*grad_dofs_size + grad_dofs_size;
+                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
+                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
+                    for (auto& qp : qps) {
+                        // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
+                        auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
+                        auto grad = grad_dofs.transpose() * vec_t_phi;
+                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
+                    }
+                }
+            }
+            cell_i++;
+        }
+        
+        grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
+        tc.toc();
+       
+        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
+        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+        error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
+        error_file << std::endl;
+        error_file.flush();
+       
+    }
+    #endif 
+
     /// Compute L2 and H1 errors for one field approximation
     static void 
     compute_errors_one_field(Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
@@ -633,158 +1001,6 @@ public:
         error_file.flush();
         
     }
-    
-    #if (!centering_bases)
-    static void 
-    compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
-
-        timecounter tc;
-        tc.tic();
-
-        using RealType = double;
-        
-        RealType grad_l2_error = 0.0;
-        size_t cell_i = 0;
-        RealType h = 10.0;
-        std::vector<RealType> l2_error_grad(msh.cells.size());
-        
-        auto cell_table = assembler.get_cell_table();
-        for (auto& cl : msh.cells ) {
-            
-            // CELL INFOS
-            l2_error_grad[cell_i] = 0.0;
-            RealType h_l = diameter(msh, cl);
-            if (h_l < h)
-                h = h_l;
-
-            vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> vector_cell_basis(msh, cl, hho_di.grad_degree());
-            auto grad_dofs_size = vector_cell_basis.size();
-            auto offset_cl = cell_table.at(offset(msh, cl));
-           
-            if (!is_cut(msh, cl)) {
-                auto cell_GRAD_offset = offset_cl * grad_dofs_size;
-                Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
-                auto qps = integrate(msh, cl, 2*hho_di.grad_degree());
-                for (auto& qp : qps) {
-                    auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
-                    auto grad = grad_dofs.transpose() * vec_t_phi;
-                    l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                }
-            }
-            else {
-                {   // NEGATIVE SIDE
-                    auto cell_GRAD_offset = offset_cl * grad_dofs_size;
-                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
-                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-                    for (auto& qp : qps) {
-                        auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
-                        auto grad = grad_dofs.transpose() * vec_t_phi;
-                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                    }
-                }
-                {   // POSITIVE SIDE
-                    auto cell_GRAD_offset = offset_cl*grad_dofs_size + grad_dofs_size;
-                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
-                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
-                    for (auto& qp : qps) {
-                        auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
-                        auto grad = grad_dofs.transpose() * vec_t_phi;
-                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                    }
-                }
-            }
-            cell_i++;
-        }
-        
-        grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
-        tc.toc();
-       
-        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
-        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
-        error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
-        error_file << std::endl;
-        error_file.flush();
-       
-    }
-    #else
-    static void 
-    compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
-
-        timecounter tc;
-        tc.tic();
-
-        using RealType = double;
-        
-        RealType grad_l2_error = 0.0;
-        size_t cell_i = 0;
-        RealType h = 10.0;
-        std::vector<RealType> l2_error_grad(msh.cells.size());
-                    
-        auto cell_table = assembler.get_cell_table();
-        for (auto& cl : msh.cells ) {
-
-            // CELL INFOS
-            RealType h_l = diameter(msh, cl);
-            if (h_l < h) 
-                h = h_l;
-
-            l2_error_grad[cell_i] = 0.0;
-            auto offset_cl = cell_table.at(offset(msh, cl));
-            if (!is_cut(msh, cl)) {
-                cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), location(msh, cl));
-                auto grad_dofs_size = cut_vector_cell_basis.size();
-                auto cell_GRAD_offset = offset_cl * grad_dofs_size;
-                Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
-                auto qps = integrate(msh, cl, 2*hho_di.grad_degree());
-                for (auto& qp : qps) {
-                    // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
-                    auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
-                    auto grad = grad_dofs.transpose() * vec_t_phi;
-                    l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                }
-            }
-            else {
-                {   // NEGATIVE SIDE                 
-                    cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-                    auto grad_dofs_size = cut_vector_cell_basis.size();
-                    auto cell_GRAD_offset = offset_cl * grad_dofs_size;
-                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
-                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-                    for (auto& qp : qps) {
-                        // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
-                        auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
-                        auto grad = grad_dofs.transpose() * vec_t_phi;
-                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                    }
-                }
-                {   // POSITIVE SIDE
-                    cut_vector_cell_basis<cuthho_poly_mesh<RealType>, RealType> cut_vector_cell_basis(msh, cl, hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
-                    auto grad_dofs_size = cut_vector_cell_basis.size();
-                    auto cell_GRAD_offset = offset_cl*grad_dofs_size + grad_dofs_size;
-                    Eigen::VectorXd grad_dofs = grad_dof.block(cell_GRAD_offset, 0, grad_dofs_size, 1);
-                    auto qps = integrate(msh, cl, 2*hho_di.grad_degree(), element_location::IN_POSITIVE_SIDE);
-                    for (auto& qp : qps) {
-                        // auto vec_t_phi = vector_cell_basis.eval_basis(qp.first);
-                        auto vec_t_phi = cut_vector_cell_basis.eval_basis(qp.first);
-                        auto grad = grad_dofs.transpose() * vec_t_phi;
-                        l2_error_grad[cell_i] += qp.second * (flux_fun(qp.first) - grad).dot(flux_fun(qp.first) - grad);
-                    }
-                }
-            }
-            cell_i++;
-        }
-        
-        grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
-        tc.toc();
-       
-        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
-        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
-        error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
-        error_file << std::endl;
-        error_file.flush();
-       
-    }
-    #endif 
 
     // WRITE SCRIPT PYTHON CV TESTS
     /////////////////////////////////////////////////////////////////////////////

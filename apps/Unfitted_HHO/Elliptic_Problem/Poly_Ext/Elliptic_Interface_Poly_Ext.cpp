@@ -343,8 +343,8 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     RealType radius = 1.0/3.0;  
     // auto level_set_function = line_level_set<RealType>(line_y);
     // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
+    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
 
     // ##################################################
     // ################################################## Space discretization
@@ -398,7 +398,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
         T previous_L2 = 0.0;
         T previous_h = 0.0;
 
-        for(size_t l = 2; l <= l_divs; l++){
+        for(size_t l = 1; l <= l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -489,7 +489,8 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                 // ################################################## Postprocess  
                 // ##################################################
                 
-                auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+                // auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+                auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_polynomial_extension(msh, Pairs.first, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
                 previous_h  = errors[0]; 
                 previous_H1 = errors[1];
                 previous_L2 = errors[2];
@@ -523,7 +524,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     stab_proj_cut_error_file.close();
     stab_proj_ill_dofs_error_file.close();
     tc.toc();
-    std::cout << bold << red << "      Run completed: " << tc << " seconds" << reset << std::endl;
+    std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl;
 
 }
 
