@@ -576,7 +576,8 @@ public:
         }
     }
 
-    void assemble_grad_grad_bis_extended(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& lhs) {
+    void 
+    assemble_grad_grad_bis_extended(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& lhs) {
 
         // CELL INFOS
         auto cell_index = std::get<0>(P);
@@ -651,7 +652,7 @@ public:
         return solF;
 
     }
-
+         
     void 
     finalize(void) {
         LHS.setFromTriplets( triplets.begin(), triplets.end() );
@@ -917,7 +918,8 @@ public:
         this->loc_cbs = cbs;
         auto system_size = cbs * this->num_cells + fbs * this->num_other_faces;
         this->LHS = SparseMatrix<T>( system_size, system_size );
-        this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size );
+        this->RHS = Matrix<T, Dynamic, 1>::Zero( system_size );        
+        this->MASS = SparseMatrix<T>(system_size, system_size);
         // DEBUG
         this->loc_gbs = gbs;
         this->GRAD = Matrix<T, Dynamic, 1>::Zero(this->num_cells * gbs);
@@ -1111,6 +1113,19 @@ public:
 
     }
     
+    void
+    assemble_mass(const Mesh& msh, const typename Mesh::cell_type& cl, 
+                  const Matrix<T, Dynamic, Dynamic>& mass) {
+        
+        this->assemble_bis_mass(msh, cl, mass);
+    
+    }
+
+    void
+    assemble_rhs(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, 1>& rhs) {
+        this->assemble_rhs_bis(msh, cl, rhs);
+    }
+
 };
             
 template<typename Mesh, typename Function>

@@ -723,10 +723,7 @@ public:
     }
     
     // Write a silo file for one field approximation
-    static void write_silo_one_field(std::string silo_file_name, size_t it, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,
-    std::function<double(const typename Mesh::point_type& )> scal_fun, 
-    std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, 
-    bool cell_centered_Q = false) {
+    static void write_silo_one_field(std::string silo_file_name, size_t it, Mesh & msh, hho_degree_info & hho_di, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, std::function<double(const typename Mesh::point_type& )> scal_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, bool cell_centered_Q = false) {
 
         timecounter tc;
         tc.tic();

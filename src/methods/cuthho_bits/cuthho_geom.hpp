@@ -115,8 +115,7 @@ find_zero_crossing(const point<T,2>& p0, const point<T,2>& p1, const Function& l
 
 template<typename T, size_t ET, typename Function>
 void
-detect_node_position(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
+detect_node_position(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
     for (auto& n : msh.nodes)
     {
         auto pt = points(msh, n);

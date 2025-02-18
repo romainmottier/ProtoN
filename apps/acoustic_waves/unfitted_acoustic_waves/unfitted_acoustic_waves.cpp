@@ -1137,13 +1137,13 @@ int main(int argc, char **argv)
 //    HeterogeneousGar6moreICutHHOSecondOrder(argc, argv);
     // HeterogeneousGar6moreICutHHOFirstOrder(argc, argv);
     
-//    ICutHHOSecondOrder(argc, argv);
+   ICutHHOSecondOrder(argc, argv);
 //    ICutHHOFirstOrder(argc, argv);
 //    ECutHHOFirstOrder(argc, argv);
 //    ECutHHOFirstOrderCFL(argc, argv);
 //    ECutHHOFirstOrderEigenCFL(argc, argv);
     
-   CutHHOSecondOrderConvTest(argc, argv);
+//    CutHHOSecondOrderConvTest(argc, argv);
 //    CutHHOFirstOrderConvTest(argc, argv);
     return 0;
 }
