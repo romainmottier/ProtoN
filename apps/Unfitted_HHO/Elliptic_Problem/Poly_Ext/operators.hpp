@@ -151,7 +151,7 @@ public:
         f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, loc);
 
         // // JUMP TERMS 
-        // if (is_cut(msh, cl)) {
+        if (is_cut(msh, cl)) {
         //     if (loc == element_location::IN_NEGATIVE_SIDE) {
         //         f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
         //         f.head(cbs) -= stab_parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
@@ -161,7 +161,7 @@ public:
         //         f.block(cbs, 0, cbs, 1) += stab_parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
         //         f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
         //     }
-        // }
+        }
         // #if(!centering_bases)
         // auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
         // vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree());

@@ -343,8 +343,8 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     RealType radius = 1.0/3.0;  
     // auto level_set_function = line_level_set<RealType>(line_y);
     // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
+    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
 
     // ##################################################
     // ################################################## Space discretization
@@ -404,7 +404,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
         T previous_L2 = 0.0;
         T previous_h = 0.0;
 
-        for(size_t l = 0; l <= l_divs; l++){
+        for(size_t l = 2; l <= l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
