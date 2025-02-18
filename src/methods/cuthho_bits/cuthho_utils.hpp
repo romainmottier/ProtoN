@@ -21,7 +21,7 @@
  */
 
 #pragma once
-#define centering_bases 1
+#define centering_bases
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////                                            ////////////////////////////
@@ -34,7 +34,7 @@
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
 make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
@@ -528,7 +528,7 @@ make_hho_gradrec_mixed_vector_interface(const cuthho_mesh<T, ET>& msh, const typ
 
 ////////////////////////////////////////////////// POLYNOMIAL EXTENSION
 // WELL CUT SIDES 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
 make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P_OK, const hho_degree_info& di, const Function& level_set_function, double coeff) {
@@ -662,7 +662,7 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
 #endif
 
 // BAD CUT SIDES 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
 make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& P_KO, const hho_degree_info& di, const Function& level_set_function) {
@@ -825,7 +825,7 @@ make_hho_gradrec_vector_contribution(const Mesh& msh, const typename Mesh::cell_
 }
 
 // CUT CONTRIBUTION - LOCAL UNKNOWNS 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET, typename Function>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> 
 make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) { 
@@ -979,7 +979,7 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
 #endif
 
 // CUT CONTRIBUTION - EXTENDED UNKNOWNS 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET, typename Function>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> 
 make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const typename cuthho_mesh<T, ET>::cell_type& dp_cell, const Function& level_set_function, const hho_degree_info& di, element_location loc, T coeff) {
@@ -1124,7 +1124,7 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, element_location where, bool scaled_Q = true) {
@@ -1227,7 +1227,7 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_
 }
 #endif
 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, const T eta, bool scaled_Q = true) {
@@ -1331,7 +1331,7 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh, const typename c
 
 ////////////////////////////////////////////////// POLYNOMIAL EXTENSION
 // STABILIZATION s° 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, bool scaled_Q = true) {
@@ -1419,7 +1419,7 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
 }
 #endif 
 // STABILIZATION s^\Gamma
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, double coeff, bool scaled_Q = true) {
@@ -1488,7 +1488,7 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
 }
 #endif 
 // STABILIZATION s^N
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, bool scaled_Q = true) {
@@ -1707,7 +1707,7 @@ make_NS_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const F1& f, const element_location where) {
@@ -1905,7 +1905,7 @@ make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#if(!centering_bases)
+#ifndef centering_bases
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
 project_function(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, hho_degree_info hdi, element_location where, const Function& f) {

@@ -187,7 +187,7 @@ template<typename Mesh, typename testType, typename meth>
 void
 newmark_step_cuthho_interface(size_t it, double  t, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis) {
     using RealType = typename Mesh::coordinate_type;
-    bool write_silo_Q = true;
+    bool write_silo_Q = false;
     auto level_set_function = test_case.level_set_;
 
     auto rhs_fun = test_case.rhs_fun;
@@ -250,7 +250,7 @@ newmark_step_cuthho_interface(size_t it, double  t, typename Mesh::coordinate_ty
     #endif
 
     tc.toc();
-    std::cout << bold << yellow << "RHS assembly: " << tc << " seconds" << reset << std::endl;
+    // std::cout << bold << yellow << "RHS assembly: " << tc << " seconds" << reset << std::endl;
     
     // Compute intermediate state for scalar and rate
     u_dof_n = u_dof_n + dt*v_dof_n + 0.5*dt*dt*(1-2.0*beta)*a_dof_n;
@@ -261,7 +261,7 @@ newmark_step_cuthho_interface(size_t it, double  t, typename Mesh::coordinate_ty
     tc.tic();
     a_dof_n = analysis.solve(assembler.RHS); // new acceleration
     tc.toc();
-    std::cout << bold << yellow << "Linear solver: " << tc << " seconds" << reset << std::endl;
+    // std::cout << bold << yellow << "Linear solver: " << tc << " seconds" << reset << std::endl;
 
     // update scalar and rate
     u_dof_n += beta*dt*dt*a_dof_n;
@@ -272,8 +272,6 @@ newmark_step_cuthho_interface(size_t it, double  t, typename Mesh::coordinate_ty
         postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, false);
     }
     
-    postprocessor<Mesh>::compute_errors_one_field_bis(msh, hdi, assembler, u_dof_n, sol_fun, sol_grad);
-
 }
 
 int main(int argc, char **argv) {
@@ -326,7 +324,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 break;
             case '?':
             default:
-                std::cout << "wrong arguments" << std::endl;
+                // std::cout << "wrong arguments" << std::endl;
             exit(1);
         }
     }
@@ -483,21 +481,20 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     
             // Projecting initial scalar, velocity and acceleration
             Matrix<RealType, Dynamic, 1> u_dof_n, v_dof_n, a_dof_n;
-            for(size_t it = 1; it <= nt; it++){ // for each time step
-                // Manufactured solution
-                std::cout << std::endl;
-                std::cout << "Time step number: " <<  it << std::endl;
+            for(size_t it = 1; it <= nt; it++) { 
                 RealType t = dt*it+ti;
+                std::cout << "Time step number" << it << " : " << t << "seconds" << std::endl; 
                 auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
                 auto method = make_gradrec_interface_method(msh, 1.0, test_case);
                 newmark_step_cuthho_interface(it, t, dt, beta, gamma, msh, hdi, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis);
+                if (it == nt) {
+                    postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_bis(msh, hdi, assembler, u_dof_n, test_case.sol_fun, test_case.sol_grad, error_file);
+                    std::cout << "Number of equations : " << analysis.n_equations() << std::endl;
+                    std::cout << "Number of steps : " <<  nt << std::endl;
+                    std::cout << "Time step size : " <<  dt << std::endl;
+                }
             }
-            std::cout << "Number of equations : " << analysis.n_equations() << std::endl;
-            std::cout << "Number of steps : " <<  nt << std::endl;
-            std::cout << "Time step size : " <<  dt << std::endl;
         }
-
-    }
-    
+    }  
 }
 
