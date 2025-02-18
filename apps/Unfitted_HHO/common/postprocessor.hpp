@@ -806,13 +806,13 @@ public:
        RealType h = 10.0;
        std::vector<RealType> l2_error_vec(msh.cells.size());
        std::vector<RealType> flux_l2_error_vec(msh.cells.size());
-       for (auto& cell : msh.cells)
-       {
+       for (auto& cell : msh.cells) {
+
            l2_error_vec[cell_i] = 0.0;
             RealType h_l = diameter(msh, cell);
-           if (h_l < h) {
+           if (h_l < h) 
                h = h_l;
-           }
+        
            
            cell_basis<cuthho_poly_mesh<RealType>, RealType> cell_basis(msh, cell, hho_di.cell_degree());
            auto cbs = cell_basis.size();
@@ -904,6 +904,9 @@ public:
        error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
        error_file << "L2-norm error = " << std::setprecision(16) << std::sqrt(scalar_l2_error) << std::endl;
        error_file << "H1-norm error = " << std::setprecision(16) << std::sqrt(flux_l2_error) << std::endl;
+       std::cout << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
+       std::cout << "L2-norm error = " << std::setprecision(16) << std::sqrt(scalar_l2_error) << std::endl;
+       std::cout << "H1-norm error = " << std::setprecision(16) << std::sqrt(flux_l2_error) << std::endl;
     //    error_file << std::endl;
        error_file.flush();
        

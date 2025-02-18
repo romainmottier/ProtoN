@@ -384,7 +384,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         T previous_L2 = 0.0;
         T previous_h = 0.0;
 
-        for(size_t l = l_divs; l <= l_divs; l++){
+        for(size_t l = 0; l <= l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -432,7 +432,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 auto cl = msh.cells[std::get<0>(pair)];
                 auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
                 auto lc = contrib.first;
-                auto f = contrib.second;
+                auto f = contrib.second*0.0;
                 assembler.assemble_ext(msh, pair, lc, f);  
             } 
             // Loop on PKO subcells 
@@ -440,7 +440,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 auto cl = msh.cells[std::get<0>(pair)];
                 auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
                 auto lc = contrib.first;
-                auto f = contrib.second;
+                auto f = contrib.second*0.0;
                 assembler.assemble_ext(msh, pair, lc, f);  
             } 
             assembler.finalize();
@@ -483,12 +483,18 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             Matrix<RealType, Dynamic, 1> u_dof_n, v_dof_n, a_dof_n;
             for(size_t it = 1; it <= nt; it++) { 
                 RealType t = dt*it+ti;
-                std::cout << "Time step number" << it << " : " << t << "seconds" << std::endl; 
+                int mod = static_cast<int>(std::round(nt / 15.0)); // Number of silo files 
+                if ((it == 1) || (it == std::round(nt/3)) || (it == std::round(nt/2)) || (it == std::round(3*nt/2)) || (it == nt)) 
+                    std::cout << "Time step number" << it << " : " << t << "seconds" << std::endl; 
                 auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
                 auto method = make_gradrec_interface_method(msh, 1.0, test_case);
                 newmark_step_cuthho_interface(it, t, dt, beta, gamma, msh, hdi, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis);
-                if (it == nt) {
-                    postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_bis(msh, hdi, assembler, u_dof_n, test_case.sol_fun, test_case.sol_grad, error_file);
+                if (it == nt) {     
+                    auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, u_dof_n, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+                    previous_h  = errors[0]; 
+                    previous_H1 = errors[1];
+                    previous_L2 = errors[2];  
+                    // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_bis(msh, hdi, assembler, u_dof_n, test_case.sol_fun, test_case.sol_grad, error_file);
                     std::cout << "Number of equations : " << analysis.n_equations() << std::endl;
                     std::cout << "Number of steps : " <<  nt << std::endl;
                     std::cout << "Time step size : " <<  dt << std::endl;
