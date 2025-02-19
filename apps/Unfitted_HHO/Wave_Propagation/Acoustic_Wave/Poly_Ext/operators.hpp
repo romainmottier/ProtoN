@@ -35,9 +35,7 @@ public:
     }
 
     Mat
-    make_contrib_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
-                 const testType &test_case, const hho_degree_info hdi)
-    {
+    make_contrib_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const testType &test_case, const hho_degree_info hdi) {
         if( location(msh, cl) != element_location::ON_INTERFACE )
             return make_contrib_uncut_mass(msh, cl, hdi, test_case);
         else // on interface
@@ -45,8 +43,7 @@ public:
     }
 
     Mat
-    make_contrib_uncut_mass(const Mesh& msh, const typename Mesh::cell_type& cl,
-                       const hho_degree_info hdi, const testType &test_case)
+    make_contrib_uncut_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType &test_case)
     {
         T c;
         if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
@@ -90,9 +87,7 @@ public:
     }
     
     Vect
-    make_contrib_rhs_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                       const hho_degree_info hdi, const testType &test_case)
-    {
+    make_contrib_rhs_uncut(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType &test_case) {
         Mat f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
         return f;
     }
@@ -112,8 +107,7 @@ public:
         ///////////////    RHS
         Vect f = Vect::Zero(cbs*2);
         // neg part
-        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                          element_location::IN_NEGATIVE_SIDE);
+        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
 //        // we use element_location::IN_POSITIVE_SIDE to get rid of the Nitsche term
 //        // (see definition of make_Dirichlet_jump)
 //        f.head(cbs) -= parms.kappa_1 *
@@ -121,8 +115,7 @@ public:
 //                                level_set_function, dir_jump, eta);
 
         // pos part
-        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                           element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
 //        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
 //            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
 //                                level_set_function, dir_jump, eta);
