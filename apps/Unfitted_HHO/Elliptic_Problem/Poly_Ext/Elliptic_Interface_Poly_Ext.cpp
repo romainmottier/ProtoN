@@ -456,11 +456,11 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
                 }
                 if (GRAD_GRAD) {
-                        Matrix<RealType, Dynamic, 1> proj_sol = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-                        assembler.project_over_cells_and_faces(msh, hdi, proj_sol, test_case.sol_fun);
-                        auto grad_grad = test_grad_grad(msh, hdi, method, test_case);
-                        auto grad_grad_dofs = proj_sol.transpose() * grad_grad * proj_sol;
-                        postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_grad(msh, hdi, grad_grad_dofs, grad_grad_proj_error_file);   
+                    Matrix<RealType, Dynamic, 1> proj_sol = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+                    assembler.project_over_cells_and_faces(msh, hdi, proj_sol, test_case.sol_fun);
+                    auto grad_grad = test_grad_grad(msh, hdi, method, test_case);
+                    auto grad_grad_dofs = proj_sol.transpose() * grad_grad * proj_sol;
+                    postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_grad(msh, hdi, grad_grad_dofs, grad_grad_proj_error_file);   
                 }
             }
             if (RUN_HHO) {
