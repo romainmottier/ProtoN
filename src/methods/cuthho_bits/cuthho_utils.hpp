@@ -1976,8 +1976,8 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     const auto facdeg  = hdi.face_degree();
     const auto graddeg = hdi.grad_degree();
     
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb_loc(msh, cl, celdeg, loc);
-    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, loc);
+    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, loc);
+    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
@@ -2009,7 +2009,7 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     // JUMP TERMS LOCAL CELL
     if (is_cut(msh, cl)) {
         if (loc == element_location::IN_NEGATIVE_SIDE) {
-            // JUMP TERMS OF THE CURRENT CELL
+            // JUMP TERMS OF THE CURRENT CELL 
             f.head(cbs) -= make_Dirichlet_jump_ext(msh, P, hdi, element_location::IN_NEGATIVE_SIDE, level_set_function, dir_jump, eta);
         } 
         if (loc == element_location::IN_POSITIVE_SIDE) {
@@ -2019,9 +2019,9 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     }
     
     // JUMP TERM WITH LIFTING 
-    if (loc == element_location::IN_NEGATIVE_SIDE)
+    if (loc == element_location::IN_NEGATIVE_SIDE) {
         f += make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, element_location::IN_NEGATIVE_SIDE, test_case, eta);
-
+    }
 
     return f;
 
@@ -2120,9 +2120,8 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     const auto celdeg  = hdi.cell_degree();
     const auto facdeg  = hdi.face_degree();
     const auto graddeg = hdi.grad_degree();
-    
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb_loc(msh, cl, celdeg, loc);
-    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, loc);
+    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, loc);
+    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
@@ -2148,13 +2147,22 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
         offset = cbs;
 
-    // LOOP OVER DEPENDENT CELLS 
-    size_t offset_extended_dofs = current_dofs;  
-    for (auto &dp_cl : dp_cells) {
-        auto dp_cell = msh.cells[dp_cl];
-        auto gr_n = make_hho_gradrec_vector_interface(msh, dp_cell, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
-        offset_extended_dofs += extended_dofs;
+    Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs);
+    auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+    for (auto& qp : iqps) {
+        const auto g_phi = gb.eval_basis(qp.first);
+        const Matrix<T,2,1> n = level_set_function.normal(qp.first);
+        // F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
     }
+    // f -= F.transpose() * (test_case.kappa_1 * gr_n.first );
+    
+    // // LOOP OVER DEPENDENT CELLS 
+    // size_t offset_extended_dofs = current_dofs;  
+    // for (auto &dp_cl : dp_cells) {
+    //     auto dp_cell = msh.cells[dp_cl];
+    //     auto gr_n = make_hho_gradrec_vector_interface(msh, dp_cell, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
+    //     offset_extended_dofs += extended_dofs;
+    // }
 
     return f;
 
@@ -2616,29 +2624,23 @@ make_vector_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 
     Matrix<T, Dynamic, 1> source_vect = Matrix<T, Dynamic, 1>::Zero(gbs);
 
-    if( sym_grad )
-    {
+    if (sym_grad) {
         sym_matrix_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, degree-1);
         auto qpsi = integrate_interface(msh, cl, 2*degree-1, element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : qpsi)
-        {
+        for (auto& qp : qpsi) {
             const auto n = level_set_function.normal(qp.first);
             const auto g_phi  = gb.eval_basis(qp.first);
             const matrix_type     qp_g_phi_n = qp.second * outer_product(g_phi, n);
-
             source_vect += 2 * qp_g_phi_n * g(qp.first);
         }
     }
-    else
-    {
+    else {
         matrix_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, degree-1);
         auto qpsi = integrate_interface(msh, cl, 2*degree-1, element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : qpsi)
-        {
+        for (auto& qp : qpsi) {
             const auto n = level_set_function.normal(qp.first);
             const auto g_phi  = gb.eval_basis(qp.first);
             const matrix_type     qp_g_phi_n = qp.second * outer_product(g_phi, n);
-
             source_vect += qp_g_phi_n * g(qp.first);
         }
     }
@@ -2652,9 +2654,7 @@ make_vector_GR_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, 
 
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
-make_vector_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc,
-                size_t degree, element_location where, const Function& f)
-{
+make_vector_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc, size_t degree, element_location where, const Function& f) {
     cut_vector_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, degree, where);
     auto fbs = fb.size();
 
