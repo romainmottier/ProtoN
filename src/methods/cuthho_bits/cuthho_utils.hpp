@@ -2000,29 +2000,28 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
 
     vector_type f = vector_type::Zero(local_dofs);
     size_t offset = 0.0;
-    
-    // SOURCE TERM
     if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
         offset = cbs;
+    
+    // SOURCE TERM
     f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, rhs_fun, loc);
     
     // JUMP TERMS LOCAL CELL
     if (is_cut(msh, cl)) {
-        if (loc == element_location::IN_NEGATIVE_SIDE) 
+        if (loc == element_location::IN_NEGATIVE_SIDE) {
+            // JUMP TERMS OF THE CURRENT CELL
             f.head(cbs) -= make_Dirichlet_jump_ext(msh, P, hdi, element_location::IN_NEGATIVE_SIDE, level_set_function, dir_jump, eta);
+        } 
         if (loc == element_location::IN_POSITIVE_SIDE) {
             f.block(cbs, 0, cbs, 1) += make_Dirichlet_jump_ext(msh, P, hdi, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
             f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, neumann_jump);
         }            
     }
     
-    // LOOP OVER DEPENDENT CELLS 
-    size_t offset_extended_dofs = current_dofs;  
-    for (auto &dp_cl : dp_cells) {
-        auto dp_cell = msh.cells[dp_cl];
-        // f += make_Dirichlet_jump_ext_Lifting_part(msh, P_OK, hdi, element_location::IN_NEGATIVE_SIDE, test_case, eta);
-        offset_extended_dofs += extended_dofs;
-    }
+    // JUMP TERM WITH LIFTING 
+    if (loc == element_location::IN_NEGATIVE_SIDE)
+        f += make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, element_location::IN_NEGATIVE_SIDE, test_case, eta);
+
 
     return f;
 
@@ -2109,17 +2108,34 @@ template<typename T, size_t ET, typename testType>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, const element_location where, const testType &test_case, T eta) {
 
+    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
+    typedef Matrix<T, Dynamic, 1>       vector_type;
+
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(P);
     auto cl = msh.cells[cell_index];
     auto loc = std::get<1>(P);
-    auto dp_cells = std::get<2>(P);
 
-    auto celdeg = hdi.cell_degree();
-    cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
-    auto cbs = cb.size();
-    cut_vector_cell_basis<cuthho_poly_mesh<T>,T> gb(msh, cl, celdeg, where);
-    auto gbs = gb.size();
+    // DISCRETIZATION INFOS
+    const auto celdeg  = hdi.cell_degree();
+    const auto facdeg  = hdi.face_degree();
+    const auto graddeg = hdi.grad_degree();
+    
+    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb_loc(msh, cl, celdeg, loc);
+    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, loc);
+    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
+    auto fcs = faces(msh, cl);
+    auto num_faces = fcs.size();
+    auto uncut_dofs = cbs + num_faces*fbs;
+    auto current_dofs = cbs + num_faces*fbs;
+    if (is_cut(msh,cl)) 
+        current_dofs = 2*current_dofs;
+    auto extended_dofs = 2*(cbs + num_faces*fbs);
+    auto dp_cells = std::get<2>(P);
+    auto local_dofs = current_dofs + dp_cells.size()*extended_dofs; 
 
     // TEST CASE
     auto level_set_function = test_case.level_set_;
@@ -2127,38 +2143,20 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     auto neumann_jump = test_case.neumann_jump;
     auto rhs_fun = test_case.rhs_fun;
 
-    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-    auto hT = diameter(msh, cl);
-    if (is_cut(msh, cl)) {
-        if (where == element_location::IN_NEGATIVE_SIDE) {
-            // JUMP TERMS OF THE CURRENT CELL
-            auto qpsi = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE );
-            for (auto& qp : qpsi) {
-                auto phi = cb.eval_basis(qp.first);
-                ret += qp.second*dir_jump(qp.first)*phi*eta/hT;
-            }
-            Matrix<T,Dynamic,1> F = Matrix<T,Dynamic,1>::Zero(gbs);
-            auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-            for (auto& qp : iqps) {
-                const auto g_phi = gb.eval_basis(qp.first);
-                const Matrix<T,2,1> n = level_set_function.normal(qp.first);
-                F += qp.second * dir_jump(qp.first) * g_phi * n;
-            }
-            auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
-            std::cout << "Size F: " << F.transpose().size() << std::endl;
-            std::cout << "Size gr_n: " << F.transpose().size() << std::endl;
-            ret -= F.transpose() * gr_n.first;
-        }
-        else if(where == element_location::IN_POSITIVE_SIDE) {
-            auto qpsi = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE );
-            for (auto& qp : qpsi) {
-                auto phi = cb.eval_basis(qp.first);
-                ret -= qp.second*dir_jump(qp.first)*phi*eta/hT;
-            }
-        }
+    vector_type f = vector_type::Zero(local_dofs);
+    size_t offset = 0.0;
+    if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
+        offset = cbs;
+
+    // LOOP OVER DEPENDENT CELLS 
+    size_t offset_extended_dofs = current_dofs;  
+    for (auto &dp_cl : dp_cells) {
+        auto dp_cell = msh.cells[dp_cl];
+        auto gr_n = make_hho_gradrec_vector_interface(msh, dp_cell, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
+        offset_extended_dofs += extended_dofs;
     }
 
-    return ret;
+    return f;
 
 }
 #endif
