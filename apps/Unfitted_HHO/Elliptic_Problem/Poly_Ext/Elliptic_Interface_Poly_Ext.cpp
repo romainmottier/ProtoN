@@ -448,7 +448,8 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // ################################################## Computation of local Stiff matrices  
             // ##################################################
 
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function); // Homogeneous case with jumps
             auto method = make_gradrec_interface_method(msh, 1.0, test_case);
 
             // ##################################################
@@ -459,7 +460,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = true;
+            bool DEBUG_OPERATORS = false;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
                 bool GRAD = true;

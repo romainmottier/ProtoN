@@ -109,6 +109,7 @@ public:
         auto cell_index = std::get<0>(P_OK);
         auto loc = std::get<1>(P_OK);
         auto cl = msh.cells[cell_index];
+        bool POK = true;
 
         // MATERIAL PROPERTIES
         T kappa;
@@ -138,7 +139,7 @@ public:
         Mat lc = kappa*(gr.second + stab); 
 
         // RHS
-        auto f = make_rhs_jumps(msh, P_OK, hdi, element_location::IN_NEGATIVE_SIDE, test_case, eta);
+        auto f = make_rhs_jumps(msh, P_OK, hdi, gr.first, POK, test_case, eta);
 
         return std::make_pair(lc, f);
 
@@ -151,6 +152,7 @@ public:
         auto cell_index = std::get<0>(P_KO);
         auto loc = std::get<1>(P_KO);
         auto cl = msh.cells[cell_index];
+        bool POK = false;
 
         // MATERIAL PROPERTIES
         T kappa;
@@ -184,13 +186,7 @@ public:
         Mat lc = kappa * (gr.second + stab);  
 
         // RHS
-        Vect f = Vect::Zero(lc.rows());
-        auto celdeg = hdi.cell_degree();
-        auto cbs = cell_basis<Mesh,T>::size(celdeg);
-        size_t offset = 0.0;
-        if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
-            offset = cbs;
-        f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, loc);
+        auto f = make_rhs_jumps(msh, P_KO, hdi, gr.first, POK, test_case, eta);
 
         return std::make_pair(lc, f);
 

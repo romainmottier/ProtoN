@@ -1826,9 +1826,7 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
 
     if (location(msh, cl) == where)
         return make_rhs(msh, cl, degree, f);
-
     else if (location(msh, cl) == element_location::ON_INTERFACE) {
-        
         cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
         auto cbs = cb.size();
         auto hT = diameter(msh, cl);
@@ -1845,17 +1843,12 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
             auto n = level_set_function.normal(qp.first);
             ret += qp.second * bcs(qp.first) * ( phi * cell_eta(msh, cl)/hT - dphi*n);
         }
-
         return ret;
-
     }
     else {
-
         auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(degree);
         Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-        
         return ret;
-    
     }
 }
 
@@ -1961,7 +1954,7 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
 #else 
 template<typename T, size_t ET, typename testType>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, const element_location where, const testType &test_case, T eta) {
+make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> oper_gr, bool POK, const testType &test_case, T eta) {
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
@@ -1997,6 +1990,7 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     auto dir_jump = test_case.dirichlet_jump;
     auto neumann_jump = test_case.neumann_jump;
     auto rhs_fun = test_case.rhs_fun;
+    auto kappa_1 = test_case.parms.kappa_1;
 
     vector_type f = vector_type::Zero(local_dofs);
     size_t offset = 0.0;
@@ -2010,18 +2004,17 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     if (is_cut(msh, cl)) {
         if (loc == element_location::IN_NEGATIVE_SIDE) {
             // JUMP TERMS OF THE CURRENT CELL 
-            f.head(cbs) -= make_Dirichlet_jump_ext(msh, P, hdi, element_location::IN_NEGATIVE_SIDE, level_set_function, dir_jump, eta);
+            f.block(0, 0, cbs, 1) -= kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
         } 
         if (loc == element_location::IN_POSITIVE_SIDE) {
-            f.block(cbs, 0, cbs, 1) += make_Dirichlet_jump_ext(msh, P, hdi, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
-            f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, neumann_jump);
+            f.block(cbs, 0, cbs, 1) += kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
+            f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, loc, neumann_jump);
         }            
     }
     
     // JUMP TERM WITH LIFTING 
-    if (loc == element_location::IN_NEGATIVE_SIDE) {
-        f += make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, element_location::IN_NEGATIVE_SIDE, test_case, eta);
-    }
+    if (loc == element_location::IN_NEGATIVE_SIDE && POK) 
+        f += kappa_1*make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, oper_gr, test_case, eta);
 
     return f;
 
@@ -2106,7 +2099,7 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
 #else
 template<typename T, size_t ET, typename testType>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, const element_location where, const testType &test_case, T eta) {
+make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> oper_gr, const testType &test_case, T eta) {
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
@@ -2120,7 +2113,6 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     const auto celdeg  = hdi.cell_degree();
     const auto facdeg  = hdi.face_degree();
     const auto graddeg = hdi.grad_degree();
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, loc);
     cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
@@ -2143,26 +2135,37 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     auto rhs_fun = test_case.rhs_fun;
 
     vector_type f = vector_type::Zero(local_dofs);
-    size_t offset = 0.0;
-    if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
-        offset = cbs;
-
-    Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs);
-    auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps) {
-        const auto g_phi = gb.eval_basis(qp.first);
-        const Matrix<T,2,1> n = level_set_function.normal(qp.first);
-        // F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
+    if (is_cut(msh,cl)) {
+        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs); 
+        size_t cpt = 0;
+        auto dn = get_discrete_normal(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);    
+        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+        for (auto& qp : iqps) {
+            const auto g_phi = gb.eval_basis(qp.first);
+            Matrix<T,2,1> n = level_set_function.normal(qp.first);
+            n = dn[cpt];
+            F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
+            cpt++;
+        }
+        f -= F_bis.transpose() * oper_gr;
     }
-    // f -= F.transpose() * (test_case.kappa_1 * gr_n.first );
-    
-    // // LOOP OVER DEPENDENT CELLS 
-    // size_t offset_extended_dofs = current_dofs;  
-    // for (auto &dp_cl : dp_cells) {
-    //     auto dp_cell = msh.cells[dp_cl];
-    //     auto gr_n = make_hho_gradrec_vector_interface(msh, dp_cell, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
-    //     offset_extended_dofs += extended_dofs;
-    // }
+
+    // LOOP OVER DEPENDENT CELLS 
+    for (auto &dp_cl : dp_cells) {
+        auto dp_cell = msh.cells[dp_cl];
+        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs);
+        size_t cpt = 0;
+        auto dn = get_discrete_normal(msh, dp_cell, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);    
+        auto iqps = integrate_interface(msh, dp_cell, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+        for (auto& qp : iqps) {
+            const auto g_phi = gb.eval_basis(qp.first);
+            Matrix<T,2,1> n = level_set_function.normal(qp.first);
+            n = dn[cpt];
+            F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
+            cpt++;
+        }
+        f -= F_bis.transpose() * oper_gr;
+    }
 
     return f;
 
