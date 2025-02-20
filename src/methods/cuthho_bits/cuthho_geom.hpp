@@ -796,6 +796,7 @@ std::vector<Matrix<T,2,1>> get_discrete_normal(const cuthho_mesh<T, ET>& msh, co
     
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
     std::vector<Matrix<T,2,1>> ret;
+    
     auto pa = cl.user_data.interface.at(0);
     auto pb = cl.user_data.interface.at(1);
     auto bar = barycenter(msh, cl, where);
@@ -804,26 +805,20 @@ std::vector<Matrix<T,2,1>> get_discrete_normal(const cuthho_mesh<T, ET>& msh, co
     auto vb = point_type({vb_temp.y(), -vb_temp.x()}).to_vector();
     auto int_sign = va.dot(vb) < 0 ? -1.0 : +1.0;
     auto qps = edge_quadrature<T>(degree);
-
     for (size_t i = 1; i < cl.user_data.interface.size(); i++) {
-        auto p0 = cl.user_data.interface.at(i-1);
+        auto p0 = cl.user_data.interface.at(i-1); 
         auto p1 = cl.user_data.interface.at(i);
         auto scale = p1 - p0;
-        auto ni = scale;
+        Matrix<T,2,1> ni;
         auto meas = scale.to_vector().norm();
-        ni[0] =  scale[1];
-        ni[1] = -scale[0];
-        ni = ni / meas;
-        for (auto itor = qps.begin(); itor != qps.end(); itor++) {
-            auto qp = *itor;
-            auto t = qp.first.x();
-            auto p = 0.5*(1-t)*p0 + 0.5*(1+t)*p1;
-            auto w = int_sign * qp.second * meas * 0.5;
+        ni(0) =  scale[1] / meas;
+        ni(1) = -scale[0] / meas;
+        for (auto itor = qps.begin(); itor != qps.end(); itor++) 
             ret.push_back(ni);
-            std::cout << ni << std::endl;
-        }
-    
     }
+
+    return ret;
+
 }
 
 template<typename T, size_t ET>

@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void CutHHOSecondOrderConvTest (int argc, char **argv) {
+
+void CutHHOSecondOrderConvTest(int argc, char **argv) {
     
     timecounter tc, tck, tcl;
     tc.tic();
@@ -120,14 +121,24 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     argc -= optind;
     argv += optind;
 
+    std::ofstream sim_infos("simulation_infos.txt");
+    sim_infos << std::endl << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
     std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
+    sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << std::endl;
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
+    sim_infos << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
+    sim_infos << "   " << "Space refinement level     -l : " << l_divs << std::endl;
     std::cout << "   " << "Space refinement level     -l : " << l_divs << std::endl;
+    sim_infos << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
     std::cout << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
+    sim_infos << "   " << "Interface refinement level -r : " << int_refsteps << std::endl;
     std::cout << "   " << "Interface refinement level -r : " << int_refsteps << std::endl;
+    sim_infos << "   " << "Static condensation        -c : " << sc_Q << std::endl;
     std::cout << "   " << "Static condensation        -c : " << sc_Q << std::endl;
+    sim_infos << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
     std::cout << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
+    sim_infos << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
     std::cout << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
 
     // ##################################################
@@ -138,8 +149,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     RealType radius = 1.0/3.0;  
     // auto level_set_function = line_level_set<RealType>(line_y);
     // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
+    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
 
     // ##################################################
     // ################################################## Space discretization
@@ -147,7 +158,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     
     SparseMatrix<RealType> Kg, Mg;
 
-    std::string error_file_txt = "solution_error_file_centered.txt";
+    // POSTPRO HHO SOLUTION
+    std::string error_file_txt = "solution_error_file.txt";
     std::ofstream error_file(error_file_txt);
     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
 
@@ -160,7 +172,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
         error_file << std::endl << "Polynomial degree k : " << k << std::endl;
-        
+                  
         // Mixed order discretization
         hho_degree_info hdi(k+1, k);
 
@@ -177,7 +189,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
             error_file << "Space refinment level -l : " << l << std::endl;
-        
+
             // ##################################################
             // ################################################## Mesh generation 
             // ##################################################
@@ -196,73 +208,82 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ##################################################
             // ################################################## Assembly  
             // ##################################################
-
+           
             auto bcs_fun = test_case.bcs_fun;
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
-            std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
+            
+            std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
             // Loop on POK subcells 
             for (auto& pair : Pairs.first) { 
                 auto cl = msh.cells[std::get<0>(pair)];
                 auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
-            //     auto lc = contrib.first;
-            //     auto f = contrib.second;
-            //     assembler.assemble_extended(msh, pair, lc, f);  
+                auto lc = contrib.first;
+                auto f = contrib.second;
+                assembler.assemble_ext(msh, pair, lc, f);  
             } 
             // Loop on PKO subcells 
-            for (auto& pair : Pairs.second) { 
+            for (auto& pair : Pairs.second) {  
                 auto cl = msh.cells[std::get<0>(pair)];
                 auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
-            //     auto lc = contrib.first;
-            //     auto f = contrib.second;
-            //     assembler.assemble_extended(msh, pair, lc, f);  
+                auto lc = contrib.first;
+                auto f = contrib.second;
+                assembler.assemble_ext(msh, pair, lc, f);  
             } 
             assembler.finalize();
             Kg = assembler.LHS;
-
+            
             // ##################################################
             // ################################################## Solver  
             // ##################################################
+            
+            linear_solver<RealType> analysis;
+            analysis.set_Kg(Kg);
+            if (direct_solver_Q) 
+                analysis.set_direct_solver(true);
+            else
+                analysis.set_iterative_solver();
+            analysis.factorize();
 
-            // linear_solver<RealType> analysis;
-            // analysis.set_Kg(Kg);
-            // if (direct_solver_Q) 
-            //     analysis.set_direct_solver(true);
-            // else
-            //     analysis.set_iterative_solver();
-            // analysis.factorize();
-
-            // Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-            // x_dof = analysis.solve(assembler.RHS);
-
+            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            x_dof = analysis.solve(assembler.RHS);
+            
             // ##################################################
             // ################################################## Postprocess  
             // ##################################################
-
-            // auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
-            // previous_h  = errors[0]; 
-            // previous_H1 = errors[1];
-            // previous_L2 = errors[2];
-
-            // tcl.toc();
-            // std::cout << bold << yellow << "            Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
-
+            
+            auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+            previous_h  = errors[0]; 
+            previous_H1 = errors[1];
+            previous_L2 = errors[2];
+            
+            if (dump_debug) {
+                bool SILO = false;
+                if (SILO) {
+                    std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);
+                    postprocessor<cuthho_poly_mesh<RealType>>::write_silo_poly_ext(silo_file_name_sol, l, msh, hdi, x_dof, test_case, assembler);  
+                }
+            }
+            
+            tcl.toc();
+            std::cout << bold << yellow << "         Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
+            
         }
-    
-        // error_file << std::endl << std::endl;
-        // tck.toc();
-        // std::cout << bold << yellow << "            Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
+
+        error_file << std::endl << std::endl;
+        tck.toc();
+        std::cout << bold << cyan << "      Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
 
     }
     
-    // error_file.close();
-    // tc.toc();
-    // std::cout << bold << yellow << "            Run completed: " << tc << " seconds" << reset << std::endl;
+    error_file.close();
+    tc.toc();
+    std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl;
 
 }
 
 
-void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
+void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     
     timecounter tc, tck, tcl;
     tc.tic();
@@ -382,7 +403,7 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 2; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -438,12 +459,11 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = false;
+            bool DEBUG_OPERATORS = true;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
-                bool GRAD = false;
-                bool STAB = false;
-                bool GRAD_GRAD = true;
+                bool GRAD = true;
+                bool STAB = true;
                 if (GRAD) {
                     auto grad_dofs_proj = test_gradient_on_proj(msh, hdi, method, test_case);
                     postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_one_field(msh, hdi, assembler, grad_dofs_proj, test_case.sol_grad, grad_proj_error_file);         
@@ -454,13 +474,6 @@ void CutHHOSecondOrderConvTest_DEBUG (int argc, char **argv) {
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_usual_file_txt);
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_cut_file_txt);
                     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
-                }
-                if (GRAD_GRAD) {
-                    Matrix<RealType, Dynamic, 1> proj_sol = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-                    assembler.project_over_cells_and_faces(msh, hdi, proj_sol, test_case.sol_fun);
-                    auto grad_grad = test_grad_grad(msh, hdi, method, test_case);
-                    auto grad_grad_dofs = proj_sol.transpose() * grad_grad * proj_sol;
-                    postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_grad(msh, hdi, grad_grad_dofs, grad_grad_proj_error_file);   
                 }
             }
             if (RUN_HHO) {

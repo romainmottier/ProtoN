@@ -22,21 +22,16 @@
 
 
 template<typename T>
-struct level_set
-{
+struct level_set {
    public:
-    virtual T operator()(const point<T,2>& pt) const
-    {
+    virtual T operator()(const point<T,2>& pt) const {
     }
 
-    virtual Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
-    {
+    virtual Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const {
     }
 
-    Eigen::Matrix<T,2,1> normal(const point<T,2>& pt) const
-    {
+    Eigen::Matrix<T,2,1> normal(const point<T,2>& pt) const {
         Eigen::Matrix<T,2,1> ret;
-
         ret = gradient(pt);
         return ret/ret.norm();
     }
@@ -47,20 +42,16 @@ struct circle_level_set: public level_set<T>
 {
     T radius, alpha, beta;
 
-    circle_level_set(T r, T a, T b)
-        : radius(r), alpha(a), beta(b)
-    {}
+    circle_level_set(T r, T a, T b) : radius(r), alpha(a), beta(b) {
+    }
 
-    T operator()(const point<T,2>& pt) const
-    {
+    T operator()(const point<T,2>& pt) const {
         auto x = pt.x();
         auto y = pt.y();
-
         return (x-alpha)*(x-alpha) + (y-beta)*(y-beta) - radius*radius;
     }
 
-    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
-    {
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const {
         Eigen::Matrix<T,2,1> ret;
         ret(0) = 2*pt.x() - 2*alpha;
         ret(1) = 2*pt.y() - 2*beta;
@@ -85,8 +76,7 @@ struct line_level_set: public level_set<T>
         return y - cut_y;
     }
 
-    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const
-    {
+    Eigen::Matrix<T,2,1> gradient(const point<T,2>& pt) const {
         Eigen::Matrix<T,2,1> ret;
         ret(0) = 0;
         ret(1) = 1;

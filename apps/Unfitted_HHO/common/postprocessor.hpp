@@ -613,7 +613,6 @@ public:
         std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
         std::cout << bold << yellow << "         order H1: " << orderH << reset << std::endl;
         std::cout << bold << yellow << "         order L2: " << orderL << reset << std::endl;
-        std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
        
        return vec;
 
@@ -685,7 +684,7 @@ public:
         grad_l2_error = std::accumulate(l2_error_grad.begin(), l2_error_grad.end(), 0.0);
         tc.toc();
        
-        std::cout << bold << yellow << "         Gradient error completed: " << tc << " seconds" << reset << std::endl;
+        std::cout << bold << yellow << "         Test Gradient completed" << reset << std::endl;
         error_file << "Characteristic h size = " << std::setprecision(16) << h << std::endl;
         error_file << "L2-norm grad error = " << std::setprecision(16) << std::sqrt(grad_l2_error) << std::endl;
         error_file << std::endl;
