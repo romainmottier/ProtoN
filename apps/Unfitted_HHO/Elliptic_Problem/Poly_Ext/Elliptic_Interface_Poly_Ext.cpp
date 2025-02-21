@@ -353,25 +353,12 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     sim_infos << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
     std::cout << "   " << "Direct solver              -s : " << direct_solver_Q << std::endl;
     sim_infos << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
-    std::cout << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
-
-    // ##################################################
-    // ################################################## Level set function
-    // ##################################################
-
-    RealType line_y = 0.5015625; 
-    RealType radius = 1.0/3.0;  
-    // auto level_set_function = line_level_set<RealType>(line_y);
-    // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
+    std::cout << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;          
 
     // ##################################################
     // ################################################## Space discretization
     // ##################################################
     
-    SparseMatrix<RealType> Kg, Mg;
-
     // POSTPRO HHO SOLUTION
     std::string error_file_txt = "solution_error_file.txt";
     std::ofstream error_file(error_file_txt);
@@ -392,11 +379,23 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     std::ofstream stab_proj_cut_error_file(stab_proj_cut_file_txt);
     std::ofstream stab_proj_ill_dofs_error_file(stab_proj_ill_dofs_file_txt);
 
-
     // POSTPRO GRAD.GRAD
     std::string grad_grad_proj_error_file_txt = "grad_grad_proj_error_file.txt";
     std::ofstream grad_grad_proj_error_file(grad_grad_proj_error_file_txt);
     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(grad_grad_proj_error_file_txt);
+
+    // ##################################################
+    // ################################################## Level set function
+    // ##################################################
+
+    RealType line_y = 0.5015625; 
+    RealType radius = 1.0/3.0;  
+    // auto level_set_function = line_level_set<RealType>(line_y);
+    // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
+    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
+
+    SparseMatrix<RealType> Kg, Mg;
 
     // ##################################################
     // ################################################## Loop over polynomial degree
@@ -444,17 +443,29 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
                 output_mesh_info(msh, level_set_function);
 
             // ##################################################
-            // ################################################## Computation of local Stiff matrices  
+            // ################################################## Test case & Computation of local Stiff matrices  
             // ##################################################
-
+            
+            // HOMOGENEOUS WITHOUT JUMPS 
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
-            auto test_case = make_test_case_laplacian_jumps_1(msh, level_set_function); // Homogeneous case with jumps
-            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
+            // auto test_case = make_test_case_laplacian_circle_hom(msh, level_set_function);
+
+            // HOMOGENEOUS WITH JUMPS 
+            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); // Homogeneous case with jumps
+            
+            // NON HOMOGENEOUS WITHOUT JUMPS 
+            // auto parms = params<T>();
+            // parms.kappa_1 = 1.0;
+            // parms.kappa_2 = 1.0;
+            // auto test_case = make_test_case_laplacian_contrast_2(msh, level_set_function, parms);
+                        
+            // NON HOMOGENEOUS WITH JUMPS 
 
             // ##################################################
             // ################################################## Assembly  
             // ##################################################
            
+            auto method = make_gradrec_interface_method(msh, 1.0, test_case);
             auto bcs_fun = test_case.bcs_fun;
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
@@ -553,7 +564,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     stab_proj_cut_error_file.close();
     stab_proj_ill_dofs_error_file.close();
     tc.toc();
-    std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl;
+    std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl << std::endl;
 
 }
 

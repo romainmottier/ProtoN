@@ -489,8 +489,7 @@ template<typename T, typename Mesh>
 class test_case_laplacian_circle_hom: public test_case_laplacian<T, circle_level_set<T>, Mesh>
 {
    public:
-    test_case_laplacian_circle_hom(T R, T a, T b)
-        : test_case_laplacian<T, circle_level_set<T>, Mesh>
+    test_case_laplacian_circle_hom(T R, T a, T b) : test_case_laplacian<T, circle_level_set<T>, Mesh>
         (circle_level_set<T>(R, a, b), params<T>(),
          [R, a, b](const typename Mesh::point_type& pt) -> T { /* sol */
             T x1 = pt.x() - a;
