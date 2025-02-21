@@ -112,24 +112,16 @@ public:
         bool POK = true;
 
         // MATERIAL PROPERTIES
-        T kappa;
-        if (loc == element_location::IN_NEGATIVE_SIDE)
-            kappa = 1.0/test_case.parms.kappa_1;
-        else
-            kappa = 1.0/test_case.parms.kappa_2;
-        auto stab_parms = test_case.parms;
-        stab_parms.kappa_1 = 1.0/(test_case.parms.kappa_1); 
-        stab_parms.kappa_2 = 1.0/(test_case.parms.kappa_2); 
-        auto coeff = 0.0;
-        if (stab_parms.kappa_1 < stab_parms.kappa_2) {
-            if (loc == element_location::IN_POSITIVE_SIDE)
-                coeff = 1.0;
+        T kappa, coeff;
+        if (loc == element_location::IN_NEGATIVE_SIDE) {
+            kappa = test_case.parms.kappa_1;
+            coeff = 1.0;
         }
         else {
-            if (loc == element_location::IN_NEGATIVE_SIDE)
-                coeff = 1.0;
+            kappa = test_case.parms.kappa_2;
+            coeff = 0.0;
         }
-
+        
         // HHO OPERATORS
         auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, test_case.level_set_, coeff);       // G     
         auto stab_usual = make_hho_stabilization(msh, P_OK, hdi);                               // s° 
@@ -155,22 +147,14 @@ public:
         bool POK = false;
 
         // MATERIAL PROPERTIES
-        T kappa;
-        auto stab_parms = test_case.parms;
-        if (std::get<1>(P_KO) == element_location::IN_NEGATIVE_SIDE)
-            kappa = 1.0/test_case.parms.kappa_1;
-        else 
-            kappa = 1.0/test_case.parms.kappa_2;  
-        stab_parms.kappa_1 = 1.0/(test_case.parms.kappa_1); 
-        stab_parms.kappa_2 = 1.0/(test_case.parms.kappa_2); 
-        auto coeff = 0.0;
-        if (stab_parms.kappa_1 < stab_parms.kappa_2) {
-            if (loc == element_location::IN_POSITIVE_SIDE)
-                coeff = 1.0;
+        T kappa, coeff;
+        if (loc == element_location::IN_NEGATIVE_SIDE) {
+            kappa = test_case.parms.kappa_1;
+            coeff = 1.0;
         }
         else {
-            if (loc == element_location::IN_NEGATIVE_SIDE)
-                coeff = 1.0;
+            kappa = test_case.parms.kappa_1;
+            coeff = 0.0;
         }
 
         // LEVEL SET FUNCTION

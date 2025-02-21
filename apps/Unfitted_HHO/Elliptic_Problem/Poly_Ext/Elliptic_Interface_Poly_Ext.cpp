@@ -6,8 +6,7 @@ cmake ../Proton
 (verification that clang is used)
 ///////////////////// RUN
 source /opt/intel/oneapi/setvars.sh intel64
-// ../Elliptic_Interface_Agglo -k 2 -l 6 -r 10 -c 1 -s 1 -f 1
-*/
+../../Elliptic_Interface_Poly_Ext -k 3 -l 4 -r 0 -c 0 -s 1 -f 1*/
 
 #include <iostream>
 #include <fstream>

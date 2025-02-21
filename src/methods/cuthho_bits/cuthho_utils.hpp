@@ -2003,7 +2003,6 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     // JUMP TERMS LOCAL CELL
     if (is_cut(msh, cl)) {
         if (loc == element_location::IN_NEGATIVE_SIDE) {
-            // JUMP TERMS OF THE CURRENT CELL 
             f.block(0, 0, cbs, 1) -= kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
         } 
         if (loc == element_location::IN_POSITIVE_SIDE) {
@@ -2012,7 +2011,7 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
         }            
     }
     
-    // JUMP TERM WITH LIFTING 
+    // JUMP TERM WITH LIFTING ON CURRENT CELL AND EXTENDED CELLS
     if (loc == element_location::IN_NEGATIVE_SIDE && POK) 
         f += kappa_1*make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, oper_gr, test_case, eta);
 
@@ -2080,10 +2079,7 @@ make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element
     auto qpsi = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE );
     for (auto& qp : qpsi) {
         auto phi = cb.eval_basis(qp.first);
-        if (where == element_location::IN_NEGATIVE_SIDE) 
-            ret += qp.second*dir_jump(qp.first)*phi*eta/hT;
-        else if(where == element_location::IN_POSITIVE_SIDE)
-            ret -= qp.second*dir_jump(qp.first)*phi*eta/hT;
+        ret -= qp.second*dir_jump(qp.first)*phi*eta/hT;
     }
 
     return ret;
