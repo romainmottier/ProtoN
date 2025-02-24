@@ -6,7 +6,8 @@ cmake ../Proton
 (verification that clang is used)
 ///////////////////// RUN
 source /opt/intel/oneapi/setvars.sh intel64
-../../Elliptic_Interface_Poly_Ext -k 3 -l 4 -r 0 -c 0 -s 1 -f 1*/
+../../Elliptic_Interface_Poly_Ext -k 3 -l 4 -r 0 -c 0 -s 1 -f 1
+*/
 
 #include <iostream>
 #include <fstream>
@@ -448,7 +449,6 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             
             // HOMOGENEOUS WITHOUT JUMPS 
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
-            // auto test_case = make_test_case_laplacian_circle_hom(msh, level_set_function);
 
             // HOMOGENEOUS WITH JUMPS 
             auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); // Homogeneous case with jumps

@@ -539,7 +539,7 @@ public:
             Matrix<RealType, Dynamic, 1> locdata_n, locdata_p, locdata;
             Matrix<RealType, Dynamic, 1> cell_dofs_n, cell_dofs_p, cell_dofs;
             
-            // COMPUTE ERROR OF (ONE SIDE) 
+            // COMPUTE ERROR OF ONE SIDE
             locdata = assembler.take_local_data(msh, cl, x_dof, loc);
             cell_dofs = locdata.head(cbs);
             
@@ -550,7 +550,7 @@ public:
                     /* Compute H1-error */
                     auto t_dphi = cb.eval_gradients( qp.first );
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-                    for (size_t i = 1; i < cbs; i++ )
+                    for (size_t i = 1; i < cbs; i++ ) 
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
                     H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
@@ -561,13 +561,19 @@ public:
             }
             // CUT CELLS
             else {
+                size_t cpt = 0;
+                auto dn = get_discrete_normal(msh, cl, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);        
                 auto qps = integrate(msh, cl, 2*hho_di.cell_degree(), loc);
                 for (auto& qp : qps) {
                     /* Compute H1-error */
                     auto t_dphi = cb.eval_gradients( qp.first );
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-                    for (size_t i = 1; i < cbs; i++ )
+                    for (size_t i = 1; i < cbs; i++ ) {
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
+                        // Lifting
+                        if (loc == element_location::IN_NEGATIVE_SIDE){}
+                            // grad += ;
+                    }
                     H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
