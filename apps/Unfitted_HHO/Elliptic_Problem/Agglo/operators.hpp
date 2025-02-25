@@ -76,7 +76,7 @@ public:
 
         // stab
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
-
+ 
         Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
         stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
