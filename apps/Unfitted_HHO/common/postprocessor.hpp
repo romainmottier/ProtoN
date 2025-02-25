@@ -192,7 +192,7 @@ public:
     
     #ifndef centering_bases
     static std::vector<double> 
-    compute_error_elliptic_second_order(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
+    compute_error_elliptic_second_order_agglo(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
 
        timecounter tc;
        tc.tic();
@@ -285,6 +285,8 @@ public:
 
         std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
         std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
+        std::cout << bold << yellow << "         order H1 = " << orderH << std::endl;
+        std::cout << bold << yellow << "         order L2 = " << orderL << std::endl;
         std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
 
         return vec;
@@ -292,7 +294,7 @@ public:
     }
     #else
     static std::vector<double> 
-    compute_error_elliptic_second_order(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
+    compute_error_elliptic_second_order_agglo(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
 
        timecounter tc;
        tc.tic();

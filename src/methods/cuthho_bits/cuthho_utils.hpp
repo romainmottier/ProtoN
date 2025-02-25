@@ -410,6 +410,8 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
         }
     }
 
+    size_t cpt = 0;
+    auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE); 
     matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
     const auto iqps = integrate_interface(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
     for (auto& qp : iqps) {
@@ -417,8 +419,10 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
         const auto g_phi = gb.eval_basis(qp.first);
         Matrix<T,2,1> n = level_set_function.normal(qp.first);
         const vector_type qp_g_phi_n = qp.second * g_phi * n;
+        n = dn[cpt];
         interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
         interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
+        cpt++;
     }
     gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
 

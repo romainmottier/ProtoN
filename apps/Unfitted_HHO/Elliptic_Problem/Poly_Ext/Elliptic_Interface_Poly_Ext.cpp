@@ -448,17 +448,17 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // ##################################################
             
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            auto parms = params<T>();
-            parms.kappa_1 = 1.0;
-            parms.kappa_2 = 1000.0;
-            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            // auto parms = params<T>();
+            // parms.kappa_1 = 1.0;
+            // parms.kappa_2 = 1000.0;
+            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // HOMOGENEOUS WITH JUMPS 
-            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); // Homogeneous case with jumps
-            // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); // Homogeneous case with jumps
+            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
+            // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
             
             // NON HOMOGENEOUS WITHOUT JUMPS 
             // auto parms = params<T>();
