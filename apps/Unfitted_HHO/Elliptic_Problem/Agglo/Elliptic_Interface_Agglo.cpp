@@ -134,8 +134,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     RealType radius = 1.0/3.0;  
     // auto level_set_function = line_level_set<RealType>(line_y);
     // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
+    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
 
     // ##################################################
     // ################################################## Space discretization
@@ -151,7 +151,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 1; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -225,19 +225,19 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ################################################## Postprocess  
             // ##################################################
 
-            auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+            auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_agglo(msh, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
             previous_h  = errors[0]; 
             previous_H1 = errors[1];
-            previous_L2 = errors[2];
+            previous_L2 = errors[2]; 
 
             tcl.toc();
-            std::cout << bold << yellow << "            Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
+            std::cout << bold << yellow << "         Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
 
         }
     
         error_file << std::endl << std::endl;
         tck.toc();
-        std::cout << bold << yellow << "            Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
+        std::cout << bold << cyan << "      Run k = " << k << " completed: " << tck << " seconds" << reset << std::endl;
 
     }
     
