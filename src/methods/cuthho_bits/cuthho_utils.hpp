@@ -2002,9 +2002,8 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     
     // JUMP TERMS LOCAL CELL
     if (is_cut(msh, cl)) {
-        if (loc == element_location::IN_NEGATIVE_SIDE) {
+        if (loc == element_location::IN_NEGATIVE_SIDE) 
             f.block(0, 0, cbs, 1) -= kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
-        } 
         if (loc == element_location::IN_POSITIVE_SIDE) {
             f.block(cbs, 0, cbs, 1) += kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
             f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, loc, neumann_jump);

@@ -344,7 +344,7 @@ public:
             auto fc = fcs[face_i];
             auto face_LHS_offset = face_SOL_offset(msh, fc);
             bool in_dom = true;
-            if( loc_zone != element_location::ON_INTERFACE );
+            if( loc_zone != element_location::ON_INTERFACE ); 
             {
                 element_location loc_fc = location(msh, fc);
                 bool in_dom = (loc_fc == element_location::ON_INTERFACE || loc_fc == loc_zone);
@@ -402,8 +402,6 @@ public:
                 bool in_dom = (loc_fc == element_location::ON_INTERFACE || loc_fc == loc_zone);
             }
             bool dirichlet = fc.is_boundary && fc.bndtype == boundary::DIRICHLET && in_dom;
-            if (dirichlet && is_cut(msh,cl))
-                    // std::cout << magenta << bold << "            get_dirichlet_data_extended: Dirichlet boundary on cut cell:   " << offset(msh,cl) << reset << std::endl;
             if (dirichlet && loc_zone == element_location::ON_INTERFACE ) {
                 Matrix<T, Dynamic, Dynamic> mass = make_mass_matrix(msh, fc, facdeg);
                 Matrix<T, Dynamic, 1> loc_rhs = make_rhs(msh, fc, facdeg, dir_func);

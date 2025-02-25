@@ -527,7 +527,7 @@ public:
             auto cell_index = std::get<0>(p_ok);
             auto loc = std::get<1>(p_ok);
             auto cl = msh.cells[cell_index];
-            
+
             // DIAMETER
             RealType h_l = diameter(msh, cl);
             if (h_l < h) 

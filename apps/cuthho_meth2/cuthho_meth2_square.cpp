@@ -1111,14 +1111,11 @@ public:
         auto cbs = cell_basis<Mesh,T>::size(celdeg);
 
         // GR
-        auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_NEGATIVE_SIDE, 1.0);
-        auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi,
-                                                      element_location::IN_POSITIVE_SIDE, 0.0);
+        auto gr_n = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_NEGATIVE_SIDE, 1.0);
+        auto gr_p = make_hho_gradrec_vector_interface(msh, cl, level_set_function, hdi, element_location::IN_POSITIVE_SIDE, 0.0);
 
         // stab
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
-
         Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
         stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
