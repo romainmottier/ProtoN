@@ -477,7 +477,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = false;
+            bool DEBUG_OPERATORS = true;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
                 bool GRAD = true;

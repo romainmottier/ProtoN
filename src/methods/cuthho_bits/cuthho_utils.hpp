@@ -21,7 +21,7 @@
  */
 
 #pragma once
-// #define centering_bases
+#define centering_bases
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////                                            ////////////////////////////
@@ -974,9 +974,9 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
     for (auto& qp : iqps) {
         const auto c_phi = cb.eval_basis(qp.first);
         const auto g_phi = gb.eval_basis(qp.first);
-        Matrix<T,2,1> n = level_set_function.normal(qp.first);
-        const vector_type qp_g_phi_n = qp.second * g_phi * n;
+        Matrix<T,2,1> n = level_set_function.normal(qp.first);        
         n = dn[cpt];
+        const vector_type qp_g_phi_n = qp.second * g_phi * n;
         interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
         interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
     }

@@ -689,10 +689,10 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
         cl.user_data.p1 = cl2.user_data.p1;
     }
     else if(cut1 && cut2) { 
-        // MODIFY THE LOOP TO DON'T HAVE DUPLICATED INTERFACE POINTS
+        // MODIFY THE LOOP (i=1 instead of i=0) TO DON'T HAVE DUPLICATED INTERFACE POINTS
         if(cl1.user_data.p0[0] == cl2.user_data.p1[0] && cl1.user_data.p0[1] == cl2.user_data.p1[1]) {
             cl.user_data.interface = cl2.user_data.interface;
-            for(size_t i = 0; i < cl1.user_data.interface.size(); i++ ) {
+            for(size_t i = 1; i < cl1.user_data.interface.size(); i++ ) {
                 cl.user_data.interface.push_back(cl1.user_data.interface[i]);
             }
             cl.user_data.p0 = cl2.user_data.p0;
@@ -700,7 +700,7 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
         }
         else if(cl2.user_data.p0[0] == cl1.user_data.p1[0] && cl2.user_data.p0[1] == cl1.user_data.p1[1]) {
             cl.user_data.interface = cl1.user_data.interface;
-            for(size_t i = 0; i < cl2.user_data.interface.size(); i++ ) {
+            for(size_t i = 1; i < cl2.user_data.interface.size(); i++ ) {
                 cl.user_data.interface.push_back(cl2.user_data.interface[i]);
             }
             cl.user_data.p0 = cl1.user_data.p0;

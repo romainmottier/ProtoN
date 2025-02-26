@@ -243,7 +243,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     
     error_file.close();
     tc.toc();
-    std::cout << bold << yellow << "            Run completed: " << tc << " seconds" << reset << std::endl;
+    std::cout << std::endl << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl;
 
 }
 
