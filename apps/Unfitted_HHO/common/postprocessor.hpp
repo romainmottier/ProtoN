@@ -393,8 +393,10 @@ public:
 
        std::cout << bold << yellow << "         H1-Error: " << H1_error << reset << std::endl;
        std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
+       std::cout << bold << yellow << "         order H1 = " << orderH << std::endl;
+       std::cout << bold << yellow << "         order L2 = " << orderL << std::endl;
        std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
-       
+
        return vec;
 
     }

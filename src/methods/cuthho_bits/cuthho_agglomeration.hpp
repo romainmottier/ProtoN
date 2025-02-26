@@ -678,37 +678,29 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     // p0, p1 and interface
     bool cut1 = cl1.user_data.location == element_location::ON_INTERFACE;
     bool cut2 = cl2.user_data.location == element_location::ON_INTERFACE;
-    if(cut1 && !cut2)
-    {
+    if(cut1 && !cut2) {
         cl.user_data.interface = cl1.user_data.interface;
         cl.user_data.p0 = cl1.user_data.p0;
         cl.user_data.p1 = cl1.user_data.p1;
     }
-    else if(!cut1 && cut2)
-    {
+    else if(!cut1 && cut2) {
         cl.user_data.interface = cl2.user_data.interface;
         cl.user_data.p0 = cl2.user_data.p0;
         cl.user_data.p1 = cl2.user_data.p1;
     }
-    else if(cut1 && cut2)
-    {
-        if(cl1.user_data.p0[0] == cl2.user_data.p1[0] &&
-           cl1.user_data.p0[1] == cl2.user_data.p1[1])
-        {
+    else if(cut1 && cut2) { 
+        // MODIFY THE LOOP TO DON'T HAVE DUPLICATED INTERFACE POINTS
+        if(cl1.user_data.p0[0] == cl2.user_data.p1[0] && cl1.user_data.p0[1] == cl2.user_data.p1[1]) {
             cl.user_data.interface = cl2.user_data.interface;
-            for(size_t i = 0; i < cl1.user_data.interface.size(); i++ )
-            {
+            for(size_t i = 0; i < cl1.user_data.interface.size(); i++ ) {
                 cl.user_data.interface.push_back(cl1.user_data.interface[i]);
             }
             cl.user_data.p0 = cl2.user_data.p0;
             cl.user_data.p1 = cl1.user_data.p1;
         }
-        else if(cl2.user_data.p0[0] == cl1.user_data.p1[0] &&
-                cl2.user_data.p0[1] == cl1.user_data.p1[1])
-        {
+        else if(cl2.user_data.p0[0] == cl1.user_data.p1[0] && cl2.user_data.p0[1] == cl1.user_data.p1[1]) {
             cl.user_data.interface = cl1.user_data.interface;
-            for(size_t i = 0; i < cl2.user_data.interface.size(); i++ )
-            {
+            for(size_t i = 0; i < cl2.user_data.interface.size(); i++ ) {
                 cl.user_data.interface.push_back(cl2.user_data.interface[i]);
             }
             cl.user_data.p0 = cl1.user_data.p0;
@@ -718,13 +710,11 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
             throw std::logic_error("we shouldn't arrive here (interface) !!!");
     }
     // distorted -> has to be updated for more general merges (if a node is withdrawn)
-    if(cl1.user_data.distorted || cl2.user_data.distorted )
+    if (cl1.user_data.distorted || cl2.user_data.distorted )
         cl.user_data.distorted = true;
-
 
     // for tests
     cl.user_data.highlight = true;
-
 
     // integration -> save composite quadrature
     size_t degree_max = 8; //////// VERY IMPORTANT !!!!!!! -> max deg for quadratures = 8

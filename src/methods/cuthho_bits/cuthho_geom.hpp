@@ -789,6 +789,7 @@ make_test_points(const cuthho_quad_mesh<T>& msh, const typename cuthho_quad_mesh
     return ret;
 }
 
+// NE FONCTIONNE PAS EN AGGLO SI PAS DE MODIFICATION DE MERGE_CELL
 template<typename T, size_t ET>
 std::vector<Matrix<T,2,1>> get_discrete_normal(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
 
@@ -813,6 +814,7 @@ std::vector<Matrix<T,2,1>> get_discrete_normal(const cuthho_mesh<T, ET>& msh, co
         auto meas = scale.to_vector().norm();
         ni(0) =  scale[1] / meas;
         ni(1) = -scale[0] / meas;
+        std::cout << meas << std::endl << std::endl; 
         for (auto itor = qps.begin(); itor != qps.end(); itor++) 
             ret.push_back(ni);
     }
