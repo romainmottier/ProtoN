@@ -487,7 +487,7 @@ class test_case_laplacian_contrast_flux_jump: public test_case_laplacian<T, circ
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             if(r2 < R*R) {return r2*r2*r2 / parms_.kappa_1;}
             else {return (r2*r2*r2*r2 - R*R*R*R*R*R*R*R)/parms_.kappa_2 + (R*R*R*R*R*R)/parms_.kappa_1;} },
-         [a, b](const typename Mesh::point_type& pt) -> T { /* rhs */
+         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { /* rhs */
              T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
              if(r2 < R*R) {return -36*r2*r2 / parms_.kappa_1;}
              else {return -64*r2*r2*r2 / parms_.kappa_2;} },
@@ -509,10 +509,10 @@ class test_case_laplacian_contrast_flux_jump: public test_case_laplacian<T, circ
              }
              return ret;},
          [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
-         [](const typename Mesh::point_type& pt) -> T {/* Neu */
+         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {/* Neu */
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
-            return (6*r2*r2*r - 8*r2*r2*r2*r);})
+            return (6*R*R*R*R*R - 8*R*R*R*R*R*R*R);})
         {}
 };
 
