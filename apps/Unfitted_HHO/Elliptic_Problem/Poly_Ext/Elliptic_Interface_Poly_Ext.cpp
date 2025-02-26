@@ -448,13 +448,13 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // ##################################################
             
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            // auto parms = params<T>();
-            // parms.kappa_1 = 1.0;
-            // parms.kappa_2 = 1000.0;
-            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            auto parms = params<T>();
+            parms.kappa_1 = 1.0;
+            parms.kappa_2 = 10000.0;
+            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // HOMOGENEOUS WITH JUMPS 
             // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
@@ -477,7 +477,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
-            bool DEBUG_OPERATORS = true;
+            bool DEBUG_OPERATORS = false;
             bool RUN_HHO = true;
             if (DEBUG_OPERATORS) {
                 bool GRAD = true;

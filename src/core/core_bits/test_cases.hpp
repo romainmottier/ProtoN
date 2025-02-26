@@ -470,6 +470,51 @@ class test_case_laplacian_contrast_6: public test_case_laplacian<T, circle_level
         {}
 };
 
+///// test_case_laplacian_contrast_6
+// !! available for circle_level_set only !!
+// circle : radius = R, center = (a,b)
+// exact solution : r^6 / \kappa_1 in \Omega_1
+//                  (r^8 - R^8) / \kappa_2 + R^6 / \kappa_1 in \Omega_2
+// \kappa_1 and \kappa_2 : parameters to choose (in parms_)
+template<typename T, typename Mesh>
+class test_case_laplacian_contrast_flux_jump: public test_case_laplacian<T, circle_level_set<T>, Mesh>
+{
+   public:
+   test_case_laplacian_contrast_flux_jump(T R, T a, T b, params<T> parms_)
+        : test_case_laplacian<T, circle_level_set<T>, Mesh>
+        (circle_level_set<T>(R, a, b), parms_,
+         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { /* sol */
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if(r2 < R*R) {return r2*r2*r2 / parms_.kappa_1;}
+            else {return (r2*r2*r2*r2 - R*R*R*R*R*R*R*R)/parms_.kappa_2 + (R*R*R*R*R*R)/parms_.kappa_1;} },
+         [a, b](const typename Mesh::point_type& pt) -> T { /* rhs */
+             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+             if(r2 < R*R) {return -36*r2*r2 / parms_.kappa_1;}
+             else {return -64*r2*r2*r2 / parms_.kappa_2;} },
+         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { // bcs
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            if(r2 < R*R) {return r2*r2*r2 / parms_.kappa_1;}
+            else {return (r2*r2*r2*r2 - R*R*R*R*R*R*R*R)/parms_.kappa_2 + (R*R*R*R*R*R)/parms_.kappa_1;} },
+         [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { // grad    
+             Matrix<T, 1, 2> ret;
+             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+             if (r2 < R*R) {
+                 ret(0) = 6 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_1 ;
+                 ret(1) = 6 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_1 ;
+             }
+             else
+             {
+                 ret(0) = 8 * r2 * r2 * r2 * ( pt.x() - a ) / parms_.kappa_2 ;
+                 ret(1) = 8 * r2 * r2 * r2 * ( pt.y() - b ) / parms_.kappa_2 ;
+             }
+             return ret;},
+         [](const typename Mesh::point_type& pt) -> T {/* Dir */ return 0.0;},
+         [](const typename Mesh::point_type& pt) -> T {/* Neu */
+            T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+            T r = std::sqrt(r2);
+            return (6*r2*r2*r - 8*r2*r2*r2*r);})
+        {}
+};
 
 template<typename Mesh>
 auto make_test_case_laplacian_contrast_6(const Mesh& msh, circle_level_set<typename Mesh::coordinate_type> LS, params<typename Mesh::coordinate_type> parms)

@@ -154,7 +154,7 @@ public:
             coeff = 1.0;
         }
         else {
-            kappa = test_case.parms.kappa_1;
+            kappa = test_case.parms.kappa_2;
             coeff = 0.0;
         }
 
