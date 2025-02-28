@@ -167,7 +167,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         T previous_H1 = 0.0;
         T previous_L2 = 0.0;
         T previous_h = 0.0;
-        for(size_t l = 0; l <= l_divs; l++){
+        for(size_t l = 0; l <= 0; l++){ //l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -243,7 +243,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     
     error_file.close();
     tc.toc();
-    std::cout << std::endl << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl;
+    std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl << std::endl;
 
 }
 

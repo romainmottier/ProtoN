@@ -621,12 +621,9 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
     // identify the common nodes
     std::set<size_t> com_nodes;
     size_t com_n;
-    for(size_t i = 0; i < cl1.ptids.size(); i++)
-    {
-        for(size_t j = 0; j < cl2.ptids.size(); j++)
-        {
-            if(cl1.ptids[i] == cl2.ptids[j])
-            {
+    for(size_t i = 0; i < cl1.ptids.size(); i++) {
+        for(size_t j = 0; j < cl2.ptids.size(); j++) {
+            if(cl1.ptids[i] == cl2.ptids[j]) {
                 com_nodes.insert(cl1.ptids[i]);
                 com_n = cl1.ptids[i];
             }
@@ -635,23 +632,19 @@ merge_cells(Mesh& msh, const typename Mesh::cell_type cl1,
 
     // choose the agglomeration technique
     typename Mesh::cell_type cl;
-    if(com_faces.size() == 0)
-    {
+    if(com_faces.size() == 0) {
         std::cout << "com nodes nb = " << com_nodes.size() << std::endl;
-        if( com_nodes.size() == 1 )
-        {
+        if( com_nodes.size() == 1 ) {
             cl = merge_cells_diag(cl1, cl2, com_n);
         }
         else
             throw std::invalid_argument("The cells have no common faces.");
     }
-    else if( com_faces.size() == 1 )
-    {
+    else if( com_faces.size() == 1 ) {
         assert(com_nodes.size() == 2); // only the nodes of the common face
         cl = merge_cells_face(cl1, cl2, com_faces[0]);
     }
-    else if( com_faces.size() == 2 )
-    {
+    else if( com_faces.size() == 2 ) {
         std::cout << "com nodes nb = " << com_nodes.size() << std::endl;
         assert(com_nodes.size() == 3); // only the case with two adjascent common faces
         cl = merge_cells_two_faces(cl1, cl2, com_faces);

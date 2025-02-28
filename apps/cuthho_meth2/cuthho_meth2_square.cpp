@@ -304,8 +304,6 @@ void test_projection(const Mesh& msh, const Function& level_set_function, size_t
 }
 
 
-
-
 void tests_stabilization()
 {
     using T = double;
@@ -852,12 +850,11 @@ run_cuthho_fictdom(const Mesh& msh, size_t degree, testType test_case)
 }
 
 
-
 //////////////////////////////  INTERFACE METHODS  ///////////////////////////
 
 template<typename T, size_t ET, typename testType>
-class interface_method
-{
+class interface_method {
+
     using Mat  = Matrix<T, Dynamic, Dynamic>;
     using Vect = Matrix<T, Dynamic, 1>;
     using Mesh = cuthho_mesh<T, ET>;
@@ -866,16 +863,14 @@ protected:
     interface_method(){}
 
     virtual std::pair<Mat, Vect>
-    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                     const testType test_case, const hho_degree_info hdi)
-    {
+    make_contrib_cut(const Mesh& msh, const typename Mesh::cell_type& cl, const testType test_case, const hho_degree_info hdi) {
     }
 
 public:
+
     std::pair<Mat, Vect>
-    make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl,
-                       const hho_degree_info hdi, const testType test_case)
-    {
+    make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType test_case) {
+
         T kappa;
         if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
             kappa = test_case.parms.kappa_1;
@@ -891,9 +886,7 @@ public:
 
 
     std::pair<Mat, Vect>
-    make_contrib(const Mesh& msh, const typename Mesh::cell_type& cl,
-                 const testType test_case, const hho_degree_info hdi)
-    {
+    make_contrib(const Mesh& msh, const typename Mesh::cell_type& cl, const testType test_case, const hho_degree_info hdi) {
         if( location(msh, cl) != element_location::ON_INTERFACE )
             return make_contrib_uncut(msh, cl, hdi, test_case);
         else // on interface
@@ -905,8 +898,8 @@ public:
 
 
 template<typename T, size_t ET, typename testType>
-class Nitsche_interface_method : public interface_method<T, ET, testType>
-{
+class Nitsche_interface_method : public interface_method<T, ET, testType> {
+
     using Mat = Matrix<T, Dynamic, Dynamic>;
     using Vect = Matrix<T, Dynamic, 1>;
     using Mesh = cuthho_mesh<T, ET>;
@@ -956,20 +949,13 @@ public:
         ////////    RHS
         Vect f = Vect::Zero(lc.rows());
         // neg part
-        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                          element_location::IN_NEGATIVE_SIDE);
-        f.head(cbs) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE,
-                                level_set_function, dir_jump, eta);
-        f.head(cbs) += make_flux_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE,
-                                      test_case.neumann_jump);
+        f.block(0, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_NEGATIVE_SIDE);
+        f.head(cbs) += parms.kappa_1*make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE, level_set_function, dir_jump, eta);
+        f.head(cbs) += make_flux_jump(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE, test_case.neumann_jump);
 
         // pos part
-        f.block(cbs, 0, cbs, 1) = make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                           element_location::IN_POSITIVE_SIDE);
-        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
+        f.block(cbs, 0, cbs, 1) = make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1) += parms.kappa_1*make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
 
         return std::make_pair(lc, f);
     }
@@ -1131,32 +1117,22 @@ public:
                                           element_location::IN_NEGATIVE_SIDE);
         // we use element_location::IN_POSITIVE_SIDE to get rid of the Nitsche term
         // (see definition of make_Dirichlet_jump)
-        f.head(cbs) -= parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
+        f.head(cbs) -= parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
 
         // pos part
-        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun,
-                                           element_location::IN_POSITIVE_SIDE);
-        f.block(cbs, 0, cbs, 1) += parms.kappa_1 *
-            make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                level_set_function, dir_jump, eta);
-        f.block(cbs, 0, cbs, 1)
-            += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE,
-                                    test_case.neumann_jump);
+        f.block(cbs, 0, cbs, 1) += make_rhs(msh, cl, celdeg, test_case.rhs_fun, element_location::IN_POSITIVE_SIDE);
+        f.block(cbs, 0, cbs, 1) += parms.kappa_1 * make_Dirichlet_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, level_set_function, dir_jump, eta);
+        f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE, test_case.neumann_jump);
 
 
         // rhs term with GR
         auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
         vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree() );
         Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero( gbs );
-        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(),
-                                        element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : iqps)
-        {
-            const auto g_phi    = gb.eval_basis(qp.first);
-            const Matrix<T,2,1> n      = level_set_function.normal(qp.first);
-
+        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+        for (auto& qp : iqps) {
+            const auto g_phi = gb.eval_basis(qp.first);
+            const Matrix<T,2,1> n = level_set_function.normal(qp.first);
             F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
         }
         f -= F_bis.transpose() * (parms.kappa_1 * gr_n.first );

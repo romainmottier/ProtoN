@@ -2089,25 +2089,25 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     auto kappa_1 = test_case.parms.kappa_1;
 
     vector_type f = vector_type::Zero(local_dofs);
+    
+    // SOURCE TERM
     size_t offset = 0.0;
     if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
         offset = cbs;
-    
-    // SOURCE TERM
     f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, rhs_fun, loc);
     
-    // JUMP TERMS LOCAL CELL
+    // JUMP TERMS LOCAL CONTRIBUTION
     if (is_cut(msh, cl)) {
         if (loc == element_location::IN_NEGATIVE_SIDE) 
             f.block(0, 0, cbs, 1) -= kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
-        if (loc == element_location::IN_POSITIVE_SIDE) {
+        else if (loc == element_location::IN_POSITIVE_SIDE) {
             f.block(cbs, 0, cbs, 1) += kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
             f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, loc, neumann_jump);
         }            
     }
     
-    // JUMP TERM WITH LIFTING ON CURRENT CELL AND EXTENDED CELLS
-    if (loc == element_location::IN_NEGATIVE_SIDE && POK) 
+    // JUMP TERMS LIFTING PART
+    if (POK && loc == element_location::IN_NEGATIVE_SIDE)
         f += kappa_1*make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, oper_gr, test_case, eta);
 
     return f;
@@ -2129,8 +2129,6 @@ make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element
     auto celdeg = hdi.cell_degree();
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
     auto cbs = cb.size();
-    vector_cell_basis<cuthho_poly_mesh<T>,T> gb(msh, cl, celdeg);
-    auto gbs = gb.size();
 
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
     auto hT = diameter(msh, cl);
@@ -2153,23 +2151,19 @@ make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(P);
     auto cl = msh.cells[cell_index];
-    auto loc = std::get<1>(P);
-    auto dp_cells = std::get<2>(P);
 
     auto celdeg = hdi.cell_degree();
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
     auto cbs = cb.size();
-    cut_vector_cell_basis<cuthho_poly_mesh<T>,T> gb(msh, cl, celdeg, where);
-    auto gbs = gb.size();
 
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
     auto hT = diameter(msh, cl);
 
     // JUMP TERMS OF THE CURRENT CELL
-    auto qpsi = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE );
+    auto qpsi = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
     for (auto& qp : qpsi) {
         auto phi = cb.eval_basis(qp.first);
-        ret -= qp.second*dir_jump(qp.first)*phi*eta/hT;
+        ret -= qp.second * dir_jump(qp.first) * phi * eta / hT;
     }
 
     return ret;
@@ -2290,8 +2284,8 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     auto rhs_fun = test_case.rhs_fun;
 
     vector_type f = vector_type::Zero(local_dofs);
+    Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs); 
     if (is_cut(msh,cl)) {
-        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs); 
         size_t cpt = 0;
         auto dn = get_discrete_normal(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);    
         auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
@@ -2302,13 +2296,11 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
             F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
             cpt++;
         }
-        f -= F_bis.transpose() * oper_gr;
     }
 
     // LOOP OVER DEPENDENT CELLS 
     for (auto &dp_cl : dp_cells) {
         auto dp_cell = msh.cells[dp_cl];
-        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs);
         size_t cpt = 0;
         auto dn = get_discrete_normal(msh, dp_cell, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);    
         auto iqps = integrate_interface(msh, dp_cell, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
@@ -2319,8 +2311,9 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
             F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
             cpt++;
         }
-        f -= F_bis.transpose() * oper_gr;
     }
+
+    f -= F_bis.transpose() * oper_gr;
 
     return f;
 

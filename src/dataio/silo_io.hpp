@@ -82,42 +82,36 @@ public:
     }
 
     template<typename Mesh>
-    bool add_mesh(const Mesh& msh, const std::string& name)
-    {
-        using T = typename Mesh::coordinate_type;
+    bool add_mesh(const Mesh& msh, const std::string& name) {
 
+        using T = typename Mesh::coordinate_type;
         static_assert(std::is_same<T,double>::value, "Only double for now");
 
         std::vector<T> x_coords, y_coords;
         x_coords.reserve(msh.points.size());
         y_coords.reserve(msh.points.size());
 
-        for (auto itor = msh.points.begin(); itor != msh.points.end(); itor++)
-        {
+        for (auto itor = msh.points.begin(); itor != msh.points.end(); itor++) {
             auto pt = *itor;
             x_coords.push_back(pt.x());
             y_coords.push_back(pt.y());
         }
-
         T *coords[] = {x_coords.data(), y_coords.data()};
-
         std::vector<int>    nodelist;
 
-        for (auto& cl : msh.cells)
-        {
+        for (auto& cl : msh.cells) {
             auto ptids = cl.ptids;
             auto size = ptids.size();
             assert(size > 2);
-            for (auto& ptid : ptids)
+            for (auto& ptid : ptids) {
                 nodelist.push_back(ptid+1); // Silo wants 1-based indices
+            }
         }
 
-        int lnodelist       = nodelist.size();
-        int nshapetypes     = msh.cells.size();
-
+        int lnodelist   = nodelist.size();
+        int nshapetypes = msh.cells.size();
         std::vector<int> shapesize, shapecount;
-        for (auto& cl : msh.cells)
-        {
+        for (auto& cl : msh.cells) {
             auto fcs = faces(msh, cl);
             shapesize.push_back( fcs.size() );
             shapecount.push_back(1);
@@ -153,15 +147,13 @@ public:
             return false;
         }
 
-        if (centering == zonal_variable_t)
-        {
+        if (centering == zonal_variable_t) {
             DBPutUcdvar1(m_siloDb, var_name.c_str(), mesh_name.c_str(),
                          data, data_len, NULL, 0, DB_DOUBLE, DB_ZONECENT, NULL);
             return true;
         }
 
-        if (centering == nodal_variable_t)
-        {
+        if (centering == nodal_variable_t) {
             DBPutUcdvar1(m_siloDb, var_name.c_str(), mesh_name.c_str(),
                          data, data_len, NULL, 0, DB_DOUBLE, DB_NODECENT, NULL);
             return true;

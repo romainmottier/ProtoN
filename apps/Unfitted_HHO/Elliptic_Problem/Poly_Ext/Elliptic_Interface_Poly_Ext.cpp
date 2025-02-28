@@ -339,7 +339,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     std::ofstream sim_infos("simulation_infos.txt");
     sim_infos << std::endl << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
     std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
-    sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << std::endl;
+    sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << std::endl;
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
     sim_infos << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
@@ -424,7 +424,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
         T previous_L2 = 0.0;
         T previous_h = 0.0;
 
-        for(size_t l = 0; l <= l_divs; l++){
+        for(size_t l = 0; l <= 0; l++){ //l_divs; l++){
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -447,27 +447,27 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // ################################################## Test case & Computation of local Stiff matrices  
             // ##################################################
             
+            // MATERIAL PROPERTIES
+            auto parms = params<T>();
+            parms.kappa_1 = 1.0;
+            parms.kappa_2 = 1.0;
+
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            auto parms = params<T>();
-            parms.kappa_1 = 1.0;
-            parms.kappa_2 = 10000.0;
-            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
-            // HOMOGENEOUS WITH JUMPS 
-            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
-            // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
-            
-            // NON HOMOGENEOUS WITHOUT JUMPS 
-            // auto parms = params<T>();
-            // parms.kappa_1 = 1.0;
-            // parms.kappa_2 = 1.0;
-            // auto test_case = make_test_case_laplacian_contrast_2(msh, level_set_function, parms);
-                        
-            // NON HOMOGENEOUS WITH JUMPS 
+            // (NON) HOMOGENEOUS WITH NEUMANN JUMP
+            // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
 
+            // NON HOMOGENEOUS WITH DIRICHLET JUMPS 
+            // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
+
+            // HOMOGENEOUS WITH JUMPS 
+            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
+            // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
+  
             // ##################################################
             // ################################################## Assembly  
             // ##################################################
