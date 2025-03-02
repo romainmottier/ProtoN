@@ -97,13 +97,21 @@ public:
 
         // rhs term with GR
         auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
-        vector_cell_basis<cuthho_poly_mesh<T>, T> gb( msh, cl, hdi.grad_degree() );
-        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero( gbs );
+        #ifndef centering_bases        
+        vector_cell_basis<cuthho_poly_mesh<T>, T> gb(msh, cl, hdi.grad_degree());
+        #else
+        cut_vector_cell_basis<cuthho_poly_mesh<T>, T> gb(msh, cl, hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
+        #endif
+        size_t cpt = 0;
+        auto dn = get_discrete_normal(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE); 
+        Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs);
         auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
         for (auto& qp : iqps) {
             const auto g_phi = gb.eval_basis(qp.first);
-            const Matrix<T,2,1> n = level_set_function.normal(qp.first);
+            Matrix<T,2,1> n = level_set_function.normal(qp.first);
+            n = dn[cpt];
             F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
+            cpt++;
         }
         f -= F_bis.transpose() * (parms.kappa_1 * gr_n.first );
 

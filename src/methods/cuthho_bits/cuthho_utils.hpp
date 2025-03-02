@@ -447,7 +447,7 @@ template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
 make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) {
 
-    if ( !is_cut(msh, cl) )
+    if (!is_cut(msh, cl))
         throw std::invalid_argument("The cell is not cut");
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
@@ -457,7 +457,7 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
     
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, where);
+    cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
     cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, where);
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
@@ -1421,7 +1421,7 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh, const typename c
     const auto stab_p = make_hho_cut_stabilization(msh, cl, di,element_location::IN_POSITIVE_SIDE, scaled_Q);
 
     // cells--cells
-    data.block(0, 0, cbs, cbs)     += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
+    data.block(0, 0, cbs, cbs) += parms.kappa_1 * stab_n.block(0, 0, cbs, cbs);
     data.block(cbs, cbs, cbs, cbs) += parms.kappa_2 * stab_p.block(0, 0, cbs, cbs);
     // cells--faces
     data.block(0, 2*cbs, cbs, num_faces*fbs) += parms.kappa_1 * stab_n.block(0, cbs, cbs, num_faces*fbs);
