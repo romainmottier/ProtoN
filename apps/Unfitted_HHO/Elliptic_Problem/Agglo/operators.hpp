@@ -77,11 +77,17 @@ public:
         // stab
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
  
+        #ifndef centering_bases
         Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
         stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
         stab.block(cbs, 0, cbs, cbs) -= parms.kappa_1 * penalty;
         stab.block(cbs, cbs, cbs, cbs) += parms.kappa_1 * penalty;
+        #else
+        Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, 2*cbs, 2*cbs);
+        stab.block(0, 0, 2*cbs, 2*cbs) += parms.kappa_1 * penalty;
+        #endif
+
 
         Mat lc = stab + parms.kappa_1 * gr_n.second + parms.kappa_2 * gr_p.second;
 
