@@ -393,8 +393,8 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     RealType radius = 1.0/3.0;  
     // auto level_set_function = line_level_set<RealType>(line_y);
     // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
+    // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+    auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
 
     SparseMatrix<RealType> Kg, Mg;
 
@@ -453,13 +453,13 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             parms.kappa_2 = 1.0;
 
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
-            auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
 
             // NON HOMOGENEOUS WITH DIRICHLET JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
