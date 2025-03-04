@@ -450,7 +450,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // MATERIAL PROPERTIES
             auto parms = params<T>();
             parms.kappa_1 = 1.0; 
-            parms.kappa_2 = 10000.0;
+            parms.kappa_2 = 1.0;
 
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
@@ -540,7 +540,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
                 previous_L2 = errors[2];
                 
                 if (dump_debug) {
-                    bool SILO = false;
+                    bool SILO = true;
                     if (SILO) {
                         std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);
                         postprocessor<cuthho_poly_mesh<RealType>>::write_silo_poly_ext(silo_file_name_sol, l, msh, hdi, x_dof, test_case, assembler);  

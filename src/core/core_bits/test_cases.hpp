@@ -585,6 +585,62 @@ auto make_test_case_laplacian_contrast_jump_gN(const Mesh& msh, circle_level_set
 }
 
 // EXACT SOLUTION: r^6/\kappa_1 + (r^2/R^2)(3-2r/R)/\kappa_1 in \Omega_1 & r^6/\kappa_2 in \Omega_2
+// template<typename T, typename Mesh>
+// class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
+   
+//     public:
+
+//     test_case_laplacian_contrast_jump_gD(T R, T a, T b, params<T> parms_) : test_case_laplacian<T, circle_level_set<T>, Mesh> (circle_level_set<T>(R, a, b), parms_,
+//         // SOLUTION
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             T r = std::sqrt(r2);
+//             if (r2 < R*R) 
+//                 return r2*r2*r2/parms_.kappa_1;
+//             else 
+//                 return r2*r2*r2/parms_.kappa_2; 
+//         },
+//         // RHS
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             T r = std::sqrt(r2);
+//             if (r2 < R*R) 
+//                 return -36*r2*r2;
+//             else 
+//                 return -36*r2*r2; 
+//         },
+//         // BOUNDARY CONDITIONS
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             return r2*r2*r2/parms_.kappa_2; 
+//         },
+//         // GRAD
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { 
+//             Matrix<T, 1, 2> ret;
+//             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
+//             T r = std::sqrt(r2);
+//             if (r2 < R*R) {
+//                 ret(0) = (6*r2*r2)*(pt.x()-a) / parms_.kappa_1 ;
+//                 ret(1) = (6*r2*r2)*(pt.y()-b) / parms_.kappa_1 ;
+//             }
+//             else {
+//                 ret(0) = (6*r2*r2)*(pt.x()-a)/parms_.kappa_2 ;
+//                 ret(1) = (6*r2*r2)*(pt.y()-b)/parms_.kappa_2 ;
+//             }
+//             return ret;
+//         },
+//         // DIRICHLET JUMP
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+//             return R*R*R*R*R*R*(1/parms_.kappa_1 - 1/parms_.kappa_2);
+//         },
+//         // NEUMANN JUMP
+//         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
+//             return 0.0;
+//         }
+//     )
+//     {}
+// };
+
 template<typename T, typename Mesh>
 class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
    
@@ -596,23 +652,23 @@ class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
             if (r2 < R*R) 
-                return r2*r2*r2/parms_.kappa_1;
+                return 0.0;
             else 
-                return r2*r2*r2/parms_.kappa_2; 
+                return 1.0; 
         },
         // RHS
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
             if (r2 < R*R) 
-                return -36*r2*r2;
+                return 0.0;
             else 
-                return -36*r2*r2; 
+                return 0.0; 
         },
         // BOUNDARY CONDITIONS
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T { 
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
-            return r2*r2*r2/parms_.kappa_2; 
+            return 1.0; 
         },
         // GRAD
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> auto { 
@@ -620,18 +676,18 @@ class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
             if (r2 < R*R) {
-                ret(0) = (6*r2*r2)*(pt.x()-a) / parms_.kappa_1 ;
-                ret(1) = (6*r2*r2)*(pt.y()-b) / parms_.kappa_1 ;
+                ret(0) = 0.0;
+                ret(1) = 0.0;
             }
             else {
-                ret(0) = (6*r2*r2)*(pt.x()-a)/parms_.kappa_2 ;
-                ret(1) = (6*r2*r2)*(pt.y()-b)/parms_.kappa_2 ;
+                ret(0) = 0.0;
+                ret(1) = 0.0;
             }
             return ret;
         },
         // DIRICHLET JUMP
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
-            return R*R*R*R*R*R*(1/parms_.kappa_1 - 1/parms_.kappa_2);
+            return 1.0;
         },
         // NEUMANN JUMP
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
