@@ -23,7 +23,7 @@ mesh_type MeshGeneration(level_set<RealType> & level_set_function, size_t l_divs
     detect_cell_agglo_set(msh, level_set_function);
     make_neighbors_info_cartesian(msh);
     refine_interface(msh, level_set_function, int_refsteps);
-    make_agglomeration(msh, level_set_function);
+    // make_agglomeration(msh, level_set_function);
 
     return msh;
 

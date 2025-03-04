@@ -186,8 +186,17 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ##################################################
             // ################################################## Computation of local Stiff matrices  
             // ##################################################
-
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            
+            // MATERIAL PROPERTIES
+            auto parms = params<T>();
+            parms.kappa_1 = 1.0; 
+            parms.kappa_2 = 10000.0;
+            
+            // TEST CASES
+            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
+            
             auto method = make_gradrec_interface_method(msh, 1.0, test_case);
 
             // ##################################################
