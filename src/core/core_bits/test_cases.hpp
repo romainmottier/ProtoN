@@ -596,7 +596,7 @@ class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
             if (r2 < R*R) 
-                return r2*r2*r2/parms_.kappa_1 + (r2/R*R)*(3-2*r/R)/parms_.kappa_1;
+                return r2*r2*r2/parms_.kappa_1;
             else 
                 return r2*r2*r2/parms_.kappa_2; 
         },
@@ -605,7 +605,7 @@ class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
             if (r2 < R*R) 
-                return -36*r2*r2 +12*r/(R*R*R) -12/(R*R) +6*r/(R*R*R);
+                return -36*r2*r2;
             else 
                 return -36*r2*r2; 
         },
@@ -620,18 +620,18 @@ class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle
             T r2 = (pt.x() - a) * (pt.x() - a) + (pt.y() - b) * (pt.y() - b);
             T r = std::sqrt(r2);
             if (r2 < R*R) {
-                ret(0) = (6*r2*r2 - 4*r/(R*R*R) + 6/(R*R) - 2*r/(R*R*R))*(pt.x()-a) / parms_.kappa_1 ;
-                ret(1) = (6*r2*r2 - 4*r/(R*R*R) + 6/(R*R) - 2*r/(R*R*R))*(pt.y()-b) / parms_.kappa_1 ;
+                ret(0) = (6*r2*r2)*(pt.x()-a) / parms_.kappa_1 ;
+                ret(1) = (6*r2*r2)*(pt.y()-b) / parms_.kappa_1 ;
             }
             else {
-                ret(0) = 6*r2*r2*(pt.x()-a)/parms_.kappa_2 ;
-                ret(1) = 6*r2*r2*(pt.y()-b)/parms_.kappa_2 ;
+                ret(0) = (6*r2*r2)*(pt.x()-a)/parms_.kappa_2 ;
+                ret(1) = (6*r2*r2)*(pt.y()-b)/parms_.kappa_2 ;
             }
             return ret;
         },
         // DIRICHLET JUMP
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
-            return R*R*R*R*R*R*(1/parms_.kappa_1 - 1/parms_.kappa_2) + 1/parms_.kappa_1;
+            return R*R*R*R*R*R*(1/parms_.kappa_1 - 1/parms_.kappa_2);
         },
         // NEUMANN JUMP
         [R, a, b, parms_](const typename Mesh::point_type& pt) -> T {
