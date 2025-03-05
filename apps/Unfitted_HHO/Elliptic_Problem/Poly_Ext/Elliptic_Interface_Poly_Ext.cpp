@@ -233,13 +233,13 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // MATERIAL PROPERTIES
             auto parms = params<T>();
             parms.kappa_1 = 1.0; 
-            parms.kappa_2 = 1.0;
+            parms.kappa_2 = 10000.0;
 
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
