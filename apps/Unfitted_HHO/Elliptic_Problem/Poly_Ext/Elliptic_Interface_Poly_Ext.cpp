@@ -179,7 +179,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
     // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
 
-    SparseMatrix<RealType> Kg, Mg;
+    SparseMatrix<RealType> Kg, Mg; 
 
     // ##################################################
     // ################################################## Loop over polynomial degree
