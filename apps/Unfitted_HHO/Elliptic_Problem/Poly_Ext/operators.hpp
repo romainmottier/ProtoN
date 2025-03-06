@@ -126,7 +126,6 @@ public:
         // HHO OPERATORS
         auto gr = make_hho_gradrec_vector_POK(msh, P_OK, hdi, test_case.level_set_, coeff);     // G     
         auto stab_usual = make_hho_stabilization(msh, P_OK, hdi);                               // s° 
-        // auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, kappa, eta, coeff); // s^\Gamma
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, eta, coeff); // s^\Gamma
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta);              // s^N
         Mat lc = kappa*(gr.second + stab_usual + stab_ill_dofs) + kappa_1*stab_cut; 

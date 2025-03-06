@@ -513,13 +513,18 @@ public:
 
     }
     #else
+    template<typename testType>
     static std::vector<double> 
-    compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
+    compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, const testType &test_case, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
 
         timecounter tc;
         tc.tic();
         
         using RealType = double;
+        
+        // TEST CASE
+        auto sol_fun = test_case.sol_fun;
+        auto sol_grad = test_case.sol_grad;
         
         RealType H1_error = 0.0;
         RealType L2_error = 0.0;
@@ -529,8 +534,13 @@ public:
             
             // CELL INFOS 
             auto cell_index = std::get<0>(p_ok);
-            auto loc = std::get<1>(p_ok);
             auto cl = msh.cells[cell_index];
+            auto loc = std::get<1>(p_ok);
+            double kappa;
+            if (loc == element_location::IN_NEGATIVE_SIDE)
+                kappa = test_case.parms.kappa_1;
+            else 
+                kappa = test_case.parms.kappa_2;
 
             // DIAMETER
             RealType h_l = diameter(msh, cl);
@@ -556,11 +566,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ ) 
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // CUT CELLS
@@ -572,17 +582,13 @@ public:
                     /* Compute H1-error */
                     auto t_dphi = cb.eval_gradients( qp.first );
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
-                    for (size_t i = 1; i < cbs; i++ ) {
+                    for (size_t i = 1; i < cbs; i++ ) 
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                        // Lifting
-                        if (loc == element_location::IN_NEGATIVE_SIDE){}
-                            // grad += ;
-                    }
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    /* Compute L2-error */
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // DEPENDENT CELLS 
@@ -599,11 +605,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    /* Compute L2-error */
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
         }
