@@ -239,10 +239,10 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
-            // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
+            auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
 
             // NON HOMOGENEOUS WITH DIRICHLET JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);

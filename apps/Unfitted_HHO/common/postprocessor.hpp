@@ -483,11 +483,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    // H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    // L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
         }
