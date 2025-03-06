@@ -242,10 +242,10 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
-            auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
 
             // NON HOMOGENEOUS WITH DIRICHLET JUMPS 
-            // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
+            auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
 
             // HOMOGENEOUS WITH JUMPS 
             // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
@@ -260,80 +260,77 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
+            std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
+            // Loop on POK subcells 
+            for (auto& pair : Pairs.first) { 
+                auto cl = msh.cells[std::get<0>(pair)];
+                auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
+                auto lc = contrib.first;
+                auto f = contrib.second;
+                assembler.assemble_ext(msh, pair, lc, f);  
+            } 
+            // Loop on PKO subcells 
+            for (auto& pair : Pairs.second) {  
+                auto cl = msh.cells[std::get<0>(pair)];
+                auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
+                auto lc = contrib.first;
+                auto f = contrib.second;
+                assembler.assemble_ext(msh, pair, lc, f);  
+            } 
+            assembler.finalize();
+            Kg = assembler.LHS;
+            
+            // ##################################################
+            // ################################################## Solver  
+            // ##################################################
+            
+            linear_solver<RealType> analysis;
+            analysis.set_Kg(Kg);
+            if (direct_solver_Q) 
+                analysis.set_direct_solver(true);
+            else
+                analysis.set_iterative_solver();
+            analysis.factorize();
+
+            Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
+            x_dof = analysis.solve(assembler.RHS);
+            
+            // ##################################################
+            // ################################################## Postprocess  
+            // ##################################################
+            
+            auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
+            previous_h  = errors[0]; 
+            previous_H1 = errors[1];
+            previous_L2 = errors[2];
+            
+            bool SILO = false;
             bool DEBUG_OPERATORS = false;
-            bool RUN_HHO = true;
-            if (DEBUG_OPERATORS) {
-                bool GRAD = true;
-                bool STAB = true;
-                if (GRAD) {
-                    auto grad_dofs_proj = test_gradient_on_proj(msh, hdi, method, test_case);
-                    postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_one_field(msh, hdi, assembler, grad_dofs_proj, test_case.sol_grad, grad_proj_error_file);         
+            bool GRAD = true;
+            bool STAB = true;
+            if (dump_debug && (SILO || DEBUG_OPERATORS)) {
+                if (SILO) {
+                    std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);
+                    postprocessor<cuthho_poly_mesh<RealType>>::write_silo_poly_ext(silo_file_name_sol, l, msh, hdi, x_dof, test_case, assembler);  
                 }
-                if (STAB) {
-                    test_stab_on_proj(msh, hdi, method, test_case, stab_proj_error_file, stab_proj_usual_error_file, stab_proj_cut_error_file, stab_proj_ill_dofs_error_file);
-                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_error_file_txt);
-                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_usual_file_txt);
-                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_cut_file_txt);
-                    postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
-                }
-            }
-            if (RUN_HHO) {
-                std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
-                // Loop on POK subcells 
-                for (auto& pair : Pairs.first) { 
-                    auto cl = msh.cells[std::get<0>(pair)];
-                    auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
-                    auto lc = contrib.first;
-                    auto f = contrib.second;
-                    assembler.assemble_ext(msh, pair, lc, f);  
-                } 
-                // Loop on PKO subcells 
-                for (auto& pair : Pairs.second) {  
-                    auto cl = msh.cells[std::get<0>(pair)];
-                    auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
-                    auto lc = contrib.first;
-                    auto f = contrib.second;
-                    assembler.assemble_ext(msh, pair, lc, f);  
-                } 
-                assembler.finalize();
-                Kg = assembler.LHS;
-                
-                // ##################################################
-                // ################################################## Solver  
-                // ##################################################
-                
-                linear_solver<RealType> analysis;
-                analysis.set_Kg(Kg);
-                if (direct_solver_Q) 
-                    analysis.set_direct_solver(true);
-                else
-                    analysis.set_iterative_solver();
-                analysis.factorize();
-
-                Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
-                x_dof = analysis.solve(assembler.RHS);
-
-                // ##################################################
-                // ################################################## Postprocess  
-                // ##################################################
-                
-                auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, x_dof, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
-                previous_h  = errors[0]; 
-                previous_H1 = errors[1];
-                previous_L2 = errors[2];
-                
-                if (dump_debug) {
-                    bool SILO = false;
-                    if (SILO) {
-                        std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);
-                        postprocessor<cuthho_poly_mesh<RealType>>::write_silo_poly_ext(silo_file_name_sol, l, msh, hdi, x_dof, test_case, assembler);  
+                if (DEBUG_OPERATORS) {
+                    if (GRAD) {
+                        auto grad_dofs_proj = test_gradient_on_proj(msh, hdi, method, test_case);
+                        postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_grad_one_field(msh, hdi, assembler, grad_dofs_proj, test_case.sol_grad, grad_proj_error_file);         
+                    }
+                    if (STAB) {
+                        test_stab_on_proj(msh, hdi, method, test_case, stab_proj_error_file, stab_proj_usual_error_file, stab_proj_cut_error_file, stab_proj_ill_dofs_error_file);
+                        postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_error_file_txt);
+                        postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_usual_file_txt);
+                        postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_cut_file_txt);
+                        postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(stab_proj_ill_dofs_file_txt);
                     }
                 }
-
-                tcl.toc();
-                std::cout << bold << yellow << "         Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
-
             }
+            
+            tcl.toc();
+            std::cout << bold << yellow << "         Run l = " << l << " completed: " << tcl << " seconds" << reset << std::endl;
+            
         }
 
         error_file << std::endl << std::endl;
