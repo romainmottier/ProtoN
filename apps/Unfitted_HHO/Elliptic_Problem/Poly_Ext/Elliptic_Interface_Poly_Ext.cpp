@@ -58,15 +58,14 @@ using RealType = double;
 using VecTuple = std::vector<std::tuple<double,element_location,std::vector<double>>>;
 typedef cuthho_poly_mesh<RealType>  mesh_type;
 
-void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv);
+void CutHHOSecondOrderConvTest(int argc, char **argv);
 
 int main(int argc, char **argv) {
-    // CutHHOSecondOrderConvTest(argc, argv);
-    CutHHOSecondOrderConvTest_DEBUG(argc, argv);
+    CutHHOSecondOrderConvTest(argc, argv);
     return 0;
 }
 
-void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
+void CutHHOSecondOrderConvTest(int argc, char **argv) {
     
     timecounter tc, tck, tcl;
     tc.tic();
@@ -280,7 +279,17 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             } 
             assembler.finalize();
             Kg = assembler.LHS;
-            
+
+            bool CONDITIONING = true;
+            if (dump_debug && CONDITIONING) {
+                auto dense_Kg = Kg.toDense();
+                auto n = dense_Kg.rows() - 1;
+                auto condensedlc = dense_Kg.bottomRightCorner(n,n).eval();
+                auto condlc = cond(condensedlc);
+                std::cout << bold << yellow << "         Condition number: " << condlc << reset << std::endl;
+                error_file << "condition number: " << condlc << std::endl;
+            }
+
             // ##################################################
             // ################################################## Solver  
             // ##################################################
@@ -307,15 +316,9 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             
             bool SILO = false;
             bool DEBUG_OPERATORS = false;
-            bool CONDITIONING = true;
             bool GRAD = true;
             bool STAB = true;
-            if (dump_debug && (SILO || DEBUG_OPERATORS || CONDITIONING)) {
-                if (CONDITIONING) {
-                    std::string conditioning_file = "conditioning_k_" + std::to_string(k) + "_l_" + std::to_string(l);
-                    auto conditioning = test_conditioning(msh, hdi, method, test_case);
-                    // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_conditioning(conditioning_file, msh, hdi, conditioning, assembler);
-                }
+            if (dump_debug && (SILO || DEBUG_OPERATORS)) {
                 if (SILO) {
                     std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);
                     postprocessor<cuthho_poly_mesh<RealType>>::write_silo_poly_ext(silo_file_name_sol, l, msh, hdi, x_dof, test_case, assembler);  
@@ -361,4 +364,3 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
     std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl << std::endl;
 
 }
-

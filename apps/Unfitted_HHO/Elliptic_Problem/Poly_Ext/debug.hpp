@@ -251,9 +251,9 @@ Matrix<RealType, Dynamic, 1> test_conditioning(const Mesh& msh, hho_degree_info 
             auto n = lc.rows() - 1;
             auto condensedlc = lc.bottomRightCorner(n,n).eval();
             auto condlc = cond(condensedlc);
-            std::cout << "conditioning: " << condlc << std::endl;
             // assembler.assemble_conditioning(msh, pair, condlc);  
         }
+        std::cout << std::endl;
     } 
 
     // // Loop on PKO subcells 
