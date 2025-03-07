@@ -27,6 +27,9 @@ source /opt/intel/oneapi/setvars.sh intel64
 #include <unsupported/Eigen/SparseExtra>
 #include <Spectra/GenEigsSolver.h>
 #include <Spectra/MatOp/SparseGenMatProd.h>
+#include <unsupported/Eigen/SparseExtra>
+#include <Spectra/SymEigsSolver.h>
+#include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Eigen/Eigenvalues>
 
 using namespace Eigen;
@@ -282,12 +285,32 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
 
             bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
-                auto dense_Kg = Kg.toDense();
-                auto n = dense_Kg.rows() - 1;
-                auto condensedlc = dense_Kg.bottomRightCorner(n,n).eval();
-                auto condlc = cond(condensedlc);
-                std::cout << bold << yellow << "         Condition number: " << condlc << reset << std::endl;
-                error_file << "condition number: " << condlc << std::endl;
+                // auto dense_Kg = Kg.toDense();
+                // auto n = dense_Kg.rows() - 1;
+                // auto condensedlc = dense_Kg.bottomRightCorner(n,n).eval();
+                // auto condlc = cond(condensedlc);
+
+
+                RealType sigma_max, sigma_min;
+                Spectra::SparseSymMatProd<RealType> op(Kg);
+                // BIGEST EIGENVALUE
+                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 10);
+                max_eigs.init();
+                max_eigs.compute();
+                if(max_eigs.info() == Spectra::SUCCESSFUL)
+                    sigma_max = max_eigs.eigenvalues()(0);
+                // SMALLEST EIGENVALUE
+                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op, 1, 10);
+                min_eigs.init();
+                min_eigs.compute();
+                if(min_eigs.info() == Spectra::SUCCESSFUL)
+                    sigma_min = min_eigs.eigenvalues()(0);
+                // COMPUTE CONDITION NUMBER
+                RealType cond = sigma_max / sigma_min;
+                std::cout << bold << yellow << "         Largest eigenvalue: " << sigma_max << reset << std::endl;
+                std::cout << bold << yellow << "         Smallest eigenvalue: " << sigma_min << reset << std::endl;
+                std::cout << bold << yellow << "         Condition number: " << cond << reset << std::endl;
+                error_file << "condition number: " << cond << std::endl;
             }
 
             // ##################################################
