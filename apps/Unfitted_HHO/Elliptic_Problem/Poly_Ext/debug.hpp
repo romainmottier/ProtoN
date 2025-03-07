@@ -217,3 +217,61 @@ auto cond(const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>& A) {
     auto lmin = svd.singularValues()(svd.singularValues().size()-1);
     return lmax/lmin; 
 }
+
+template<typename Mesh, typename testType, typename meth>
+Matrix<RealType, Dynamic, 1> test_conditioning(const Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case);
+
+template<typename Mesh, typename testType, typename meth>
+Matrix<RealType, Dynamic, 1> test_conditioning(const Mesh& msh, hho_degree_info & hdi, meth &method, testType & test_case) {
+    
+    using RealType = typename Mesh::coordinate_type;
+    using VecTuple = std::vector<std::tuple<double,element_location,std::vector<double>>>;
+    
+    auto level_set_function = test_case.level_set_;
+    auto rhs_fun = test_case.rhs_fun;
+    auto sol_fun = test_case.sol_fun;   
+    auto sol_grad = test_case.sol_grad;
+    auto bcs_fun = test_case.bcs_fun;
+    auto dirichlet_jump = test_case.dirichlet_jump;
+    auto neumann_jump = test_case.neumann_jump;
+    struct params<RealType> parms = test_case.parms;
+    
+    timecounter tc;
+    
+    tc.tic();
+    auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
+    std::pair<VecTuple,VecTuple> Pairs = make_pair_KO_pair_OK(msh);
+    bool matrix_conditioning = true;
+    // Loop on POK subcells 
+    for (auto& pair : Pairs.first) { 
+        auto cl = msh.cells[std::get<0>(pair)];
+        auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
+        auto lc = contrib.first;
+        if (matrix_conditioning) {
+            auto n = lc.rows() - 1;
+            auto condensedlc = lc.bottomRightCorner(n,n).eval();
+            auto condlc = cond(condensedlc);
+            std::cout << "conditioning: " << condlc << std::endl;
+            // assembler.assemble_conditioning(msh, pair, condlc);  
+        }
+    } 
+
+    // // Loop on PKO subcells 
+    // for (auto& pair : Pairs.second) { 
+    //     auto cl = msh.cells[std::get<0>(pair)];
+    //     auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
+    //     auto lc = contrib.first;
+    //     if (matrix_conditioning) {
+    //         auto n = lc.rows() - 1;
+    //         auto condensedlc = lc.bottomRightCorner(n,n).eval();
+    //         auto condlc = cond(condensedlc);
+    //         assembler.assemble_conditioning(msh, pair, condlc);  
+    //     }
+    // } 
+    
+    tc.toc();
+    std::cout << bold << yellow << "         Test conditioning: " << tc << " seconds" << reset << std::endl;
+    
+    return assembler.CONDITIONING;
+
+}

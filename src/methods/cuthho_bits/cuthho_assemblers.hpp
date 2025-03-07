@@ -158,6 +158,7 @@ public:
     // DEBUG SCHEME
     Matrix<T, Dynamic, 1> GRAD;
     SparseMatrix<T> GLOBAL_GRAD_GRAD;
+    Matrix<T, Dynamic, 1> CONDITIONING;
 
     auto get_cell_table() const { return cell_table; }
 
@@ -601,6 +602,21 @@ public:
                 }
             }
         }
+    }
+
+    void assemble_conditioning(const Mesh& msh, Tuple P, double contrib) {
+
+        // CELL INFOS
+        auto cell_index = std::get<0>(P);
+        auto cl = msh.cells[cell_index];
+        auto loc = std::get<1>(P);
+        
+        // Cell offset
+        size_t cell_offset = cell_table.at(offset(msh, cl)); 
+        if (is_cut(msh, cl) && loc == element_location::IN_POSITIVE_SIDE)
+            cell_offset += 1;
+        CONDITIONING(cell_offset) = contrib;
+        
     }
 
     Matrix<T, Dynamic, 1>

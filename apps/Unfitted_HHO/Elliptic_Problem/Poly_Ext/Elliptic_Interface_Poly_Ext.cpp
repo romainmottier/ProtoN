@@ -237,7 +237,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // ##################################################
     
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
@@ -249,7 +249,7 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
 
             // HOMOGENEOUS WITH JUMPS 
-            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
+            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
             // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
   
             // ##################################################
@@ -307,9 +307,15 @@ void CutHHOSecondOrderConvTest_DEBUG(int argc, char **argv) {
             
             bool SILO = false;
             bool DEBUG_OPERATORS = false;
+            bool CONDITIONING = true;
             bool GRAD = true;
             bool STAB = true;
-            if (dump_debug && (SILO || DEBUG_OPERATORS)) {
+            if (dump_debug && (SILO || DEBUG_OPERATORS || CONDITIONING)) {
+                if (CONDITIONING) {
+                    std::string conditioning_file = "conditioning_k_" + std::to_string(k) + "_l_" + std::to_string(l);
+                    auto conditioning = test_conditioning(msh, hdi, method, test_case);
+                    // postprocessor<cuthho_poly_mesh<RealType>>::write_silo_conditioning(conditioning_file, msh, hdi, conditioning, assembler);
+                }
                 if (SILO) {
                     std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);
                     postprocessor<cuthho_poly_mesh<RealType>>::write_silo_poly_ext(silo_file_name_sol, l, msh, hdi, x_dof, test_case, assembler);  

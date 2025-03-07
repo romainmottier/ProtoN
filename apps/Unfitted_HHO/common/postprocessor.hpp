@@ -157,7 +157,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     
     static void 
-    write_silo_conditioning(std::string silo_file_name, Mesh & msh, hho_degree_info & hho_di, Matrix<double, Dynamic, 1> & conditioning, one_field_interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
+    write_silo_conditioning(std::string silo_file_name, Mesh & msh, hho_degree_info & hho_di, Matrix<double, Dynamic, 1> & conditioning, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler) {
 
         using RealType = double;
         timecounter tc;

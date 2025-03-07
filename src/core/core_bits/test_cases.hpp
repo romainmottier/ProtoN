@@ -584,7 +584,7 @@ auto make_test_case_laplacian_contrast_jump_gN(const Mesh& msh, circle_level_set
     return test_case_laplacian_contrast_jump_gN<typename Mesh::coordinate_type, Mesh>(LS.radius, LS.alpha, LS.beta, parms);
 }
 
-// EXACT SOLUTION: r^6/\kappa_1 + (r^2/R^2)(3-2r/R)/\kappa_1 in \Omega_1 & r^6/\kappa_2 in \Omega_2
+// EXACT SOLUTION: r^6/\kappa_1 in \Omega_1 & r^6/\kappa_2 in \Omega_2
 template<typename T, typename Mesh>
 class test_case_laplacian_contrast_jump_gD: public test_case_laplacian<T, circle_level_set<T>, Mesh> {
    
