@@ -190,7 +190,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////
     
-    #ifndef centering_bases
+    #ifndef subcell_centering
     static std::vector<double> 
     compute_error_elliptic_second_order_agglo(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout){
 
@@ -402,7 +402,7 @@ public:
     }
     #endif
 
-    #ifndef centering_bases
+    #ifndef subcell_centering
     static std::vector<double> 
     compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
 
@@ -635,7 +635,7 @@ public:
     }
     #endif
 
-    #ifndef centering_bases
+    #ifndef subcell_centering
     static void 
     compute_errors_grad_one_field(Mesh & msh, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & grad_dof, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> flux_fun, std::ostream & error_file = std::cout){
 
@@ -1606,7 +1606,7 @@ public:
         std::cout << bold << yellow << "         Silo file rendered in : " << tc << " seconds" << reset << std::endl;
     }
         
-    #ifndef centering_bases
+    #ifndef subcell_centering
     template<typename testType>
     static void write_silo_poly_ext(std::string silo_file_name, size_t it, Mesh & msh, 
     hho_degree_info & hho_di, Matrix<double, Dynamic, 1> &x_dof, testType &test_case,

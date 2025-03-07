@@ -77,7 +77,7 @@ public:
         // stab
         Mat stab = make_hho_stabilization_interface(msh, cl, level_set_function, hdi, parms);
  
-        #ifndef centering_bases
+        #ifndef subcell_centering
         Mat penalty = make_hho_cut_interface_penalty(msh, cl, hdi, eta).block(0, 0, cbs, cbs);
         stab.block(0, 0, cbs, cbs) += parms.kappa_1 * penalty;
         stab.block(0, cbs, cbs, cbs) -= parms.kappa_1 * penalty;
@@ -103,7 +103,7 @@ public:
 
         // rhs term with GR
         auto gbs = vector_cell_basis<cuthho_poly_mesh<T>,T>::size(hdi.grad_degree());
-        #ifndef centering_bases        
+        #ifndef subcell_centering        
         vector_cell_basis<cuthho_poly_mesh<T>, T> gb(msh, cl, hdi.grad_degree());
         #else
         cut_vector_cell_basis<cuthho_poly_mesh<T>, T> gb(msh, cl, hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
