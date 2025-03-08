@@ -122,7 +122,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     argv += optind;
 
     std::ofstream sim_infos("simulation_infos.txt");
-    sim_infos << std::endl << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
+    sim_infos << std::endl << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - POLYNOMIAL EXTENSION";
     std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
     sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << std::endl;
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
@@ -169,17 +169,6 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     std::string grad_grad_proj_error_file_txt = "grad_grad_proj_error_file.txt";
     std::ofstream grad_grad_proj_error_file(grad_grad_proj_error_file_txt);
     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_grad(grad_grad_proj_error_file_txt);
-
-    // ##################################################
-    // ################################################## Level set function
-    // ##################################################
-
-    RealType line_y = 0.5015625; 
-    RealType radius = 1.0/3.0;  
-    // auto level_set_function = line_level_set<RealType>(line_y);
-    // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
 
     // MATERIAL PROPERTIES
     auto parms = params<T>();
@@ -230,9 +219,29 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ################################################## Mesh generation 
             // ##################################################
 
+            // ########## Level set function
+            RealType h = 0.1/std::pow(2,l);
+            RealType line_y = 0.5015625; 
+            RealType radius = 1.0/3.0;  
+            RealType a = 1e-2;
+            RealType square_min = std::round(0.25/h)*h-a;
+            RealType square_max = std::round(0.75/h)*h+a;
+            // auto level_set_function = line_level_set<RealType>(line_y);
+            // auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min, square_max);
+            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
+            auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
+            
             mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
-            if (dump_debug) 
+            if (dump_debug) {
                 output_mesh_info(msh, level_set_function);
+                std::string mesh_info = "cuthho_meshinfo_l" + std::to_string(l) + ".silo";
+                std::string command = "mv cuthho_meshinfo.silo " + mesh_info;
+                std::string interface = "interface_l" + std::to_string(l) + ".3D";
+                std::string command2 = "mv interface.3D " + interface;
+                std::system(command.c_str());
+                std::system(command2.c_str());
+            }
 
             // ##################################################
             // ################################################## Test case & Computation of local Stiff matrices  
@@ -285,22 +294,16 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
 
             bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
-                // auto dense_Kg = Kg.toDense();
-                // auto n = dense_Kg.rows() - 1;
-                // auto condensedlc = dense_Kg.bottomRightCorner(n,n).eval();
-                // auto condlc = cond(condensedlc);
-
-
                 RealType sigma_max, sigma_min;
                 Spectra::SparseSymMatProd<RealType> op(Kg);
                 // BIGEST EIGENVALUE
-                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 10);
+                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 100);
                 max_eigs.init();
                 max_eigs.compute();
                 if(max_eigs.info() == Spectra::SUCCESSFUL)
                     sigma_max = max_eigs.eigenvalues()(0);
                 // SMALLEST EIGENVALUE
-                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op, 1, 10);
+                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op, 1, 100);
                 min_eigs.init();
                 min_eigs.compute();
                 if(min_eigs.info() == Spectra::SUCCESSFUL)

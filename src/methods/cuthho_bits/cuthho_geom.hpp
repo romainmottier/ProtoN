@@ -923,7 +923,7 @@ public:
             // OPTION 3: BARYCENTER AND DIAMETER OF THE CUT PART 
             cell_bar     = barycenter(msh, cl, where);
             cell_h       = diameter(msh, cl, where);
-            cell_hx      = cell_h;
+            cell_hx      = cell_h; // Loop sur les sommets pour trouver l'effort maximum en x et y 
             cell_hy      = cell_h;
             // BASIS INFOS
             basis_degree = degree;

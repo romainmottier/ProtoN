@@ -20,21 +20,18 @@
  * DOI: 10.1016/j.cam.2017.09.017
  */
 
-
-
-
 template<typename T, size_t ET, typename Function>
 void
-detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_function)
-{
+detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_function) {
+
     typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
     const T threshold = 0.3;
     const T threshold_cells = 0.3;
 
-    for (auto& cl : msh.cells)
-    {
+    for (auto& cl : msh.cells) {
+
         auto fcs = faces(msh, cl);
         auto pts = points(msh, cl);
         auto nds = nodes(msh, cl);
@@ -42,22 +39,17 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
         if (fcs.size() != 4)
             throw std::invalid_argument("This works only on quads for now");
 
-        if( !is_cut(msh, cl) )
-        {
+        if (!is_cut(msh, cl)) {
             cl.user_data.agglo_set = cell_agglo_set::T_OK;
             continue;
         }
 
         //// another criterion on the area of the cell
-        if( measure(msh, cl, element_location::IN_NEGATIVE_SIDE)
-            < threshold_cells * measure(msh, cl) )
-        {
+        if(measure(msh, cl, element_location::IN_NEGATIVE_SIDE) < threshold_cells*measure(msh, cl)) {
             cl.user_data.agglo_set = cell_agglo_set::T_KO_NEG;
             continue;
         }
-        else if( measure(msh, cl, element_location::IN_POSITIVE_SIDE)
-            < threshold_cells * measure(msh, cl) )
-        {
+        else if (measure(msh, cl, element_location::IN_POSITIVE_SIDE) < threshold_cells * measure(msh, cl)) {
             cl.user_data.agglo_set = cell_agglo_set::T_KO_POS;
             continue;
         }
@@ -65,8 +57,7 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
         /* If it is a quadrilateral we have 6 possible configurations of the
          * element-cut intersection. */
 
-        auto agglo_set_single_node = [&](size_t n) -> void
-        {
+        auto agglo_set_single_node = [&](size_t n) -> void {
             auto f1 = (n == 0) ? fcs.size()-1 : n-1;
             auto f2 = n;
 
