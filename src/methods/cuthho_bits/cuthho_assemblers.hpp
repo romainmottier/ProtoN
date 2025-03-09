@@ -149,6 +149,7 @@ protected:
     std::vector< Triplet<T>> triplets_GRAD;
     std::vector< Triplet<T>> triplets_GRAD_GRAD;
     std::vector< Triplet<T>> triplets_sparsity;
+    std::vector< Triplet<T>> triplets_zip;
 
 public:
 
@@ -161,6 +162,7 @@ public:
     SparseMatrix<T> GLOBAL_GRAD_GRAD;
     SparseMatrix<T> SPARSITY;
     Matrix<T, Dynamic, 1> CONDITIONING;
+    SparseMatrix<T> Kg_ZIP;
 
     auto get_cell_table() const { return cell_table; }
 
@@ -546,11 +548,78 @@ public:
                 continue;
             for (size_t j = current_dofs; j < lhs.cols(); j++) {
                 if (asm_map[j].assemble()) 
-                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 200));
+                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 1));
             }
         }
     }
 
+    template <typename T>
+    SparseMatrix<T>
+    condensed_Kg(const Mesh& msh, const SparseMatrix<T>& Kg) {
+        
+        Matrix<T, Dynamic, Dynamic> denseKg = Kg.toDense();  
+
+        // DOFS INFOS
+        auto celdeg = di.cell_degree();
+        auto facdeg = di.face_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+        
+        // BLOCK INFOS
+        auto CC_BLOCK_SIZE = this->num_cells*cbs;
+        auto FF_BLOCK_SIZE = this->num_other_faces*fbs;
+        
+
+        // COMPUTATION OF THE FROBENIUS NORM OF CELL-CELL CONTRIBS
+        for (size_t cl_i = 0; cl_i < this->num_cells; cl_i++) {
+            for (size_t cl_j = 0; cl_j < this->num_cells; cl_j++) {
+                auto frobenius_norm = 0.0;
+                for (size_t i = 0; i < cbs; i++) {
+                    for (size_t j = 0; j < cbs; j++) {
+                        frobenius_norm += denseKg(cl_i*cbs+i, cl_j*cbs+j)*denseKg(cl_i*cbs+i, cl_j*cbs+j);
+                    }
+                }
+                frobenius_norm = std::sqrt(frobenius_norm);
+                if (frobenius_norm >= 1e-8)
+                    triplets_zip.push_back(Triplet<T>(cl_i, cl_j, 1));
+            }  
+        }
+        
+        // COMPUTATION OF THE FROBENIUS NORM OF CELL-FACE CONTRIBS
+        for (size_t cl_i = 0; cl_i < this->num_cells; cl_i++) {
+            for (size_t cl_j = 0; cl_j < this->num_other_faces; cl_j++) {
+                auto frobenius_norm = 0.0;
+                for (size_t i = 0; i < cbs; i++) {
+                    for (size_t j = 0; j < fbs; j++) 
+                        frobenius_norm += denseKg(cl_i*cbs+i, CC_BLOCK_SIZE+cl_j*fbs+j)*denseKg(cl_i*cbs+i, CC_BLOCK_SIZE+cl_j*fbs+j);
+                }
+                frobenius_norm = std::sqrt(frobenius_norm);
+                if (frobenius_norm >= 1e-8)
+                    triplets_zip.push_back(Triplet<T>(cl_i, this->num_cells+cl_j, 1));
+            }  
+        }
+
+        // COMPUTATION OF THE FROBENIUS NORM OF FACE-FACE CONTRIBS
+        for (size_t cl_i = 0; cl_i < this->num_other_faces; cl_i++) {
+            for (size_t cl_j = 0; cl_j < this->num_other_faces; cl_j++) {
+                auto frobenius_norm = 0.0;
+                for (size_t i = 0; i < fbs; i++) {
+                    for (size_t j = 0; j < fbs; j++) 
+                        frobenius_norm += denseKg(CC_BLOCK_SIZE+cl_i*fbs+i, CC_BLOCK_SIZE+cl_j*fbs+j)*denseKg(CC_BLOCK_SIZE+cl_i*fbs+i, CC_BLOCK_SIZE+cl_j*fbs+j);
+                }
+                frobenius_norm = std::sqrt(frobenius_norm);
+                if (frobenius_norm >= 1e-8)
+                    triplets_zip.push_back(Triplet<T>(this->num_cells+cl_i, this->num_cells+cl_j, 1));
+            }  
+        }
+
+        Kg_ZIP.setFromTriplets(triplets_zip.begin(), triplets_zip.end() );
+        triplets_zip.clear();
+        
+        return Kg_ZIP;
+                
+    }
+    
     void
     assemble_rhs_bis(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, 1>& rhs) {
 
@@ -736,6 +805,8 @@ public:
         triplets.clear();
         MASS.setFromTriplets( triplets_mass.begin(), triplets_mass.end() );
         triplets_mass.clear();
+        Kg_ZIP.setFromTriplets( triplets_zip.begin(), triplets_zip.end() );
+        triplets_zip.clear();
         SPARSITY.setFromTriplets( triplets_sparsity.begin(), triplets_sparsity.end() );
         triplets_sparsity.clear();
         GLOBAL_GRAD_GRAD.setFromTriplets( triplets_GRAD_GRAD.begin(), triplets_GRAD_GRAD.end() );
@@ -1004,6 +1075,7 @@ public:
         this->GRAD = Matrix<T, Dynamic, 1>::Zero(this->num_cells * gbs);
         this->GLOBAL_GRAD_GRAD = SparseMatrix<T>(system_size, system_size);
         this->SPARSITY = SparseMatrix<T>(system_size, system_size);
+    
     }
 
     void

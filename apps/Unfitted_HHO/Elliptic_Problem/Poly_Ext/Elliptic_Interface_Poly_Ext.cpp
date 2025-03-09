@@ -283,7 +283,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
-                if (sparsity)
+                if (dump_debug && sparsity)
                     assembler.assemble_sparsity(msh, pair, lc);
             } 
             // Loop on PKO subcells 
@@ -293,13 +293,15 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
-                if (sparsity)
+                if (dump_debug && sparsity) {
                     assembler.assemble_sparsity(msh, pair, lc);
+                    auto sparse = assembler.condensed_Kg(msh, assembler.SPARSITY);
+                }
             } 
             assembler.finalize();
             Kg = assembler.LHS;
 
-            bool CONDITIONING = true;
+            bool CONDITIONING = false;
             if (dump_debug && CONDITIONING) {
                 RealType sigma_max, sigma_min;
                 Spectra::SparseSymMatProd<RealType> op(Kg);
