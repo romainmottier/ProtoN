@@ -148,6 +148,7 @@ protected:
     // DEBUG SCHEME
     std::vector< Triplet<T>> triplets_GRAD;
     std::vector< Triplet<T>> triplets_GRAD_GRAD;
+    std::vector< Triplet<T>> triplets_sparsity;
 
 public:
 
@@ -158,6 +159,7 @@ public:
     // DEBUG SCHEME
     Matrix<T, Dynamic, 1> GRAD;
     SparseMatrix<T> GLOBAL_GRAD_GRAD;
+    SparseMatrix<T> SPARSITY;
     Matrix<T, Dynamic, 1> CONDITIONING;
 
     auto get_cell_table() const { return cell_table; }
@@ -489,6 +491,67 @@ public:
     }
 
     void
+    assemble_sparsity(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& lhs) {
+
+        // CELL INFOS
+        auto cell_index = std::get<0>(P);
+        auto cl = msh.cells[cell_index];
+        auto dp_cells = std::get<2>(P);
+
+        // DOFS
+        auto celdeg = di.cell_degree();
+        auto facdeg = di.face_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+        auto fcs = faces(msh, cl);
+        auto num_faces = fcs.size();
+        auto current_dofs = cbs + num_faces*fbs;
+        if (is_cut(msh,cl)) 
+            current_dofs = 2*current_dofs;
+        auto extended_dofs = 2*(cbs + num_faces*fbs);
+        auto nb_dp_cells = dp_cells.size();
+        auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
+        
+        auto asm_map = init_asm_map_ext(msh, P);
+        assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
+
+        // ASSEMBLY OF THE LOCAL CONTRIBUTIONS
+        for (size_t i = 0; i < current_dofs; i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            for (size_t j = 0; j < current_dofs; j++) {
+                if (asm_map[j].assemble()) 
+                    triplets_sparsity.push_back(Triplet<T>(asm_map[i],asm_map[j],1));
+            }
+        }
+        // ASSEMBLY OF THE EXTENDED CONTRIBUTIONS
+        for (size_t i = current_dofs; i < lhs.rows(); i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            for (size_t j = 0; j < current_dofs; j++) {
+                if (asm_map[j].assemble()) 
+                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 200));
+            }
+        }
+        for (size_t i = 0; i < current_dofs; i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            for (size_t j = current_dofs; j < lhs.cols(); j++) {                
+                if (asm_map[j].assemble()) 
+                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 200));
+            }
+        }
+        for (size_t i = current_dofs; i < lhs.rows(); i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            for (size_t j = current_dofs; j < lhs.cols(); j++) {
+                if (asm_map[j].assemble()) 
+                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 200));
+            }
+        }
+    }
+
+    void
     assemble_rhs_bis(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, 1>& rhs) {
 
         if( !(location(msh, cl) == loc_zone || location(msh, cl) == element_location::ON_INTERFACE || loc_zone == element_location::ON_INTERFACE ) )
@@ -673,6 +736,8 @@ public:
         triplets.clear();
         MASS.setFromTriplets( triplets_mass.begin(), triplets_mass.end() );
         triplets_mass.clear();
+        SPARSITY.setFromTriplets( triplets_sparsity.begin(), triplets_sparsity.end() );
+        triplets_sparsity.clear();
         GLOBAL_GRAD_GRAD.setFromTriplets( triplets_GRAD_GRAD.begin(), triplets_GRAD_GRAD.end() );
         triplets_GRAD_GRAD.clear();
     }
@@ -938,6 +1003,7 @@ public:
         this->loc_gbs = gbs;
         this->GRAD = Matrix<T, Dynamic, 1>::Zero(this->num_cells * gbs);
         this->GLOBAL_GRAD_GRAD = SparseMatrix<T>(system_size, system_size);
+        this->SPARSITY = SparseMatrix<T>(system_size, system_size);
     }
 
     void

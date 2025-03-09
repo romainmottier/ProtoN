@@ -167,10 +167,10 @@ public:
         auto stab_usual = make_hho_stabilization(msh, P_KO, hdi);
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_KO, hdi, eta, coeff); // s^\Gamma
  
-        Mat lc = 0.0*(kappa * (gr.second + stab_usual) + kappa_1*stab_cut); 
+        Mat lc = kappa * (gr.second + stab_usual) + kappa_1*stab_cut; 
 
         // RHS
-        auto f = 0.0*make_rhs_jumps(msh, P_KO, hdi, gr.first, POK, test_case, eta);
+        auto f = make_rhs_jumps(msh, P_KO, hdi, gr.first, POK, test_case, eta);
 
         return std::make_pair(lc, f);
 

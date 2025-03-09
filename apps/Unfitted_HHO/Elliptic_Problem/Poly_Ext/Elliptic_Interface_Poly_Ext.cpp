@@ -272,6 +272,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             hho_degree_info hdi(k+1, k);
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
+            // SPASITY PROFILES 
+            bool sparsity = true;
+
             std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
             // Loop on POK subcells 
             for (auto& pair : Pairs.first) { 
@@ -280,6 +283,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
+                if (sparsity)
+                    assembler.assemble_sparsity(msh, pair, lc);
             } 
             // Loop on PKO subcells 
             for (auto& pair : Pairs.second) {  
@@ -288,6 +293,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
+                if (sparsity)
+                    assembler.assemble_sparsity(msh, pair, lc);
             } 
             assembler.finalize();
             Kg = assembler.LHS;
