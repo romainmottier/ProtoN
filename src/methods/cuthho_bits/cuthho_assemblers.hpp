@@ -493,6 +493,34 @@ public:
     }
 
     void
+    assemble_sparsity(const Mesh& msh, const typename Mesh::cell_type& cl, const Matrix<T, Dynamic, Dynamic>& lhs) {
+
+        // DOFS
+        auto celdeg = di.cell_degree();
+        auto facdeg = di.face_degree();
+        auto cbs = cell_basis<Mesh,T>::size(celdeg);
+        auto fbs = face_basis<Mesh,T>::size(facdeg);
+        auto fcs = faces(msh, cl);
+        auto num_faces = fcs.size();
+        auto current_dofs = cbs + num_faces*fbs;
+        if (is_cut(msh,cl)) 
+            current_dofs = 2*current_dofs;
+        
+        auto asm_map = init_asm_map(msh, cl);
+        assert(asm_map.size() == lhs.rows() && asm_map.size() == lhs.cols());
+
+        for (size_t i = 0; i < lhs.rows(); i++) {
+            if (!asm_map[i].assemble())
+                continue;
+            for (size_t j = 0; j < lhs.cols(); j++) {
+                if (asm_map[j].assemble()) {
+                    triplets_sparsity.push_back(Triplet<T>(asm_map[i],asm_map[j],1));
+                }
+            }
+        }
+    }
+
+    void
     assemble_sparsity(const Mesh& msh, Tuple P, const Matrix<T, Dynamic, Dynamic>& lhs) {
 
         // CELL INFOS
@@ -531,8 +559,10 @@ public:
             if (!asm_map[i].assemble())
                 continue;
             for (size_t j = 0; j < current_dofs; j++) {
-                if (asm_map[j].assemble()) 
+                if (asm_map[j].assemble()) {
                     triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 200));
+                    triplets_sparsity.push_back( Triplet<T>(asm_map[j], asm_map[i], 200));
+                }
             }
         }
         for (size_t i = 0; i < current_dofs; i++) {
@@ -548,7 +578,7 @@ public:
                 continue;
             for (size_t j = current_dofs; j < lhs.cols(); j++) {
                 if (asm_map[j].assemble()) 
-                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 1));
+                    triplets_sparsity.push_back( Triplet<T>(asm_map[i], asm_map[j], 200));
             }
         }
     }
@@ -568,7 +598,7 @@ public:
         // BLOCK INFOS
         auto CC_BLOCK_SIZE = this->num_cells*cbs;
         auto FF_BLOCK_SIZE = this->num_other_faces*fbs;
-        
+        std::cout << yellow << bold << "         " << "Sparsity profile: " << this->num_cells << "cells" << reset << std::endl;
 
         // COMPUTATION OF THE FROBENIUS NORM OF CELL-CELL CONTRIBS
         for (size_t cl_i = 0; cl_i < this->num_cells; cl_i++) {
@@ -582,11 +612,10 @@ public:
                 // frobenius_norm = std::sqrt(frobenius_norm);
                 if (frobenius_norm >= 1e-8)
                     triplets_zip.push_back(Triplet<T>(cl_i, cl_j, frobenius_norm));
-                    // triplets_zip.push_back(Triplet<T>(cl_i, cl_j, 1));
             }  
         }
         
-        // COMPUTATION OF THE FROBENIUS NORM OF CELL-FACE CONTRIBS
+        // COMPUTATION OF THE FROBENIUS NORM OF CELL-FACE AND FACE-CELL CONTRIBS
         for (size_t cl_i = 0; cl_i < this->num_cells; cl_i++) {
             for (size_t cl_j = 0; cl_j < this->num_other_faces; cl_j++) {
                 auto frobenius_norm = 0.0;
@@ -595,12 +624,14 @@ public:
                         frobenius_norm += denseKg(cl_i*cbs+i, CC_BLOCK_SIZE+cl_j*fbs+j)*denseKg(cl_i*cbs+i, CC_BLOCK_SIZE+cl_j*fbs+j);
                 }
                 // frobenius_norm = std::sqrt(frobenius_norm);
-                if (frobenius_norm >= 1e-8)
+                if (frobenius_norm >= 1e-8) {
                     triplets_zip.push_back(Triplet<T>(cl_i, this->num_cells+cl_j, frobenius_norm));
-                    // triplets_zip.push_back(Triplet<T>(cl_i, this->num_cells+cl_j, 1));
+                    triplets_zip.push_back(Triplet<T>(cl_j + this->num_cells, cl_i, frobenius_norm));
+                }
             }  
         }
 
+        
         // COMPUTATION OF THE FROBENIUS NORM OF FACE-FACE CONTRIBS
         for (size_t cl_i = 0; cl_i < this->num_other_faces; cl_i++) {
             for (size_t cl_j = 0; cl_j < this->num_other_faces; cl_j++) {
@@ -612,7 +643,6 @@ public:
                 // frobenius_norm = std::sqrt(frobenius_norm);
                 if (frobenius_norm >= 1e-8)
                     triplets_zip.push_back(Triplet<T>(this->num_cells+cl_i, this->num_cells+cl_j, frobenius_norm));
-                    // triplets_zip.push_back(Triplet<T>(this->num_cells+cl_i, this->num_cells+cl_j, 1));
             }  
         }
 
