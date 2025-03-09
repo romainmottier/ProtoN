@@ -174,7 +174,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     auto parms = params<T>();
     parms.kappa_1 = 1.0; 
     parms.kappa_2 = 1.0;
-    sim_infos << "   " << "Kappa_2                       : " << parms.kappa_2 << std::endl;
+    sim_infos << "   Kappa_2                       : " << parms.kappa_2 << std::endl;
 
     SparseMatrix<RealType> Kg, Mg; 
 
