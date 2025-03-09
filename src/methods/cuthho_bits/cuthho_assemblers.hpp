@@ -579,9 +579,10 @@ public:
                         frobenius_norm += denseKg(cl_i*cbs+i, cl_j*cbs+j)*denseKg(cl_i*cbs+i, cl_j*cbs+j);
                     }
                 }
-                frobenius_norm = std::sqrt(frobenius_norm);
+                // frobenius_norm = std::sqrt(frobenius_norm);
                 if (frobenius_norm >= 1e-8)
-                    triplets_zip.push_back(Triplet<T>(cl_i, cl_j, 1));
+                    triplets_zip.push_back(Triplet<T>(cl_i, cl_j, frobenius_norm));
+                    // triplets_zip.push_back(Triplet<T>(cl_i, cl_j, 1));
             }  
         }
         
@@ -593,9 +594,10 @@ public:
                     for (size_t j = 0; j < fbs; j++) 
                         frobenius_norm += denseKg(cl_i*cbs+i, CC_BLOCK_SIZE+cl_j*fbs+j)*denseKg(cl_i*cbs+i, CC_BLOCK_SIZE+cl_j*fbs+j);
                 }
-                frobenius_norm = std::sqrt(frobenius_norm);
+                // frobenius_norm = std::sqrt(frobenius_norm);
                 if (frobenius_norm >= 1e-8)
-                    triplets_zip.push_back(Triplet<T>(cl_i, this->num_cells+cl_j, 1));
+                    triplets_zip.push_back(Triplet<T>(cl_i, this->num_cells+cl_j, frobenius_norm));
+                    // triplets_zip.push_back(Triplet<T>(cl_i, this->num_cells+cl_j, 1));
             }  
         }
 
@@ -607,9 +609,10 @@ public:
                     for (size_t j = 0; j < fbs; j++) 
                         frobenius_norm += denseKg(CC_BLOCK_SIZE+cl_i*fbs+i, CC_BLOCK_SIZE+cl_j*fbs+j)*denseKg(CC_BLOCK_SIZE+cl_i*fbs+i, CC_BLOCK_SIZE+cl_j*fbs+j);
                 }
-                frobenius_norm = std::sqrt(frobenius_norm);
+                // frobenius_norm = std::sqrt(frobenius_norm);
                 if (frobenius_norm >= 1e-8)
-                    triplets_zip.push_back(Triplet<T>(this->num_cells+cl_i, this->num_cells+cl_j, 1));
+                    triplets_zip.push_back(Triplet<T>(this->num_cells+cl_i, this->num_cells+cl_j, frobenius_norm));
+                    // triplets_zip.push_back(Triplet<T>(this->num_cells+cl_i, this->num_cells+cl_j, 1));
             }  
         }
 
@@ -1075,7 +1078,8 @@ public:
         this->GRAD = Matrix<T, Dynamic, 1>::Zero(this->num_cells * gbs);
         this->GLOBAL_GRAD_GRAD = SparseMatrix<T>(system_size, system_size);
         this->SPARSITY = SparseMatrix<T>(system_size, system_size);
-    
+        this->Kg_ZIP = SparseMatrix<T>(this->num_cells + this->num_other_faces, this->num_cells + this->num_other_faces);
+
     }
 
     void

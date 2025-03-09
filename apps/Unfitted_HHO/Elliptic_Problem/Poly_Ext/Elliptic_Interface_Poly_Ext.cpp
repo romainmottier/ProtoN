@@ -61,13 +61,24 @@ using RealType = double;
 using VecTuple = std::vector<std::tuple<double,element_location,std::vector<double>>>;
 typedef cuthho_poly_mesh<RealType>  mesh_type;
 
-void CutHHOSecondOrderConvTest(int argc, char **argv);
-
-int main(int argc, char **argv) {
-    CutHHOSecondOrderConvTest(argc, argv);
-    return 0;
+void writeMatrixToCSV(const std::string& filename, const Eigen::MatrixXd& matrix) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        for (int i = 0; i < matrix.rows(); ++i) {
+            for (int j = 0; j < matrix.cols(); ++j) {
+                file << matrix(i, j);
+                if (j < matrix.cols() - 1) 
+                file << ",";
+            }
+            file << "\n"; 
+        }
+        file.close();
+    } 
+    else 
+    std::cerr << "Impossible d'ouvrir le fichier pour écriture." << std::endl;
 }
 
+void CutHHOSecondOrderConvTest(int argc, char **argv);
 void CutHHOSecondOrderConvTest(int argc, char **argv) {
     
     timecounter tc, tck, tcl;
@@ -293,13 +304,16 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
-                if (dump_debug && sparsity) {
+                if (dump_debug && sparsity) 
                     assembler.assemble_sparsity(msh, pair, lc);
-                    auto sparse = assembler.condensed_Kg(msh, assembler.SPARSITY);
-                }
             } 
             assembler.finalize();
             Kg = assembler.LHS;
+
+            if (dump_debug && sparsity) {
+                auto sparse = assembler.condensed_Kg(msh, assembler.SPARSITY);
+                writeMatrixToCSV("LHS_zip.csv", sparse); 
+            }
 
             bool CONDITIONING = false;
             if (dump_debug && CONDITIONING) {
@@ -398,4 +412,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     tc.toc();
     std::cout << std::endl << bold << red << "   Run completed: " << tc << " seconds" << reset << std::endl << std::endl;
 
+}
+
+int main(int argc, char **argv) {
+    CutHHOSecondOrderConvTest(argc, argv);
+    return 0;
 }
