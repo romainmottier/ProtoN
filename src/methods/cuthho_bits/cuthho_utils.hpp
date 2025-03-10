@@ -54,6 +54,7 @@ make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic> 
 make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
+    
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree, where);
     auto cbs = cb.size();
     Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
@@ -376,16 +377,20 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
+
     cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
     const auto num_faces = faces(msh, cl).size();
 
     matrix_type rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
     matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
     matrix_type gr_rhs  = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
+
+    // CELL CONTRIBUTIONS
     const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
     for (auto& qp : qps) {
         const auto c_dphi = cb.eval_gradients(qp.first);
@@ -394,6 +399,7 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
         rhs_tmp.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
     }
 
+    // FACE CONTRIBUTIONS
     const auto fcs = faces(msh, cl);
     const auto ns = normals(msh, cl);
     for (size_t i = 0; i < fcs.size(); i++) {
@@ -402,31 +408,36 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
         cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
         const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), where);
         for (auto& qp : qps_f) {
-            const vector_type c_phi      = cb.eval_basis(qp.first);
-            const vector_type f_phi      = fb.eval_basis(qp.first);
-            const auto        g_phi      = gb.eval_basis(qp.first);
+            const vector_type c_phi = cb.eval_basis(qp.first);
+            const vector_type f_phi = fb.eval_basis(qp.first);
+            const auto        g_phi = gb.eval_basis(qp.first);
             const vector_type qp_g_phi_n = qp.second * g_phi * n;
             rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
             rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
         }
     }
 
-    size_t cpt = 0;
-    auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE); 
+    // INTERFACE TERMS
+    cell_basis<cuthho_mesh<T, ET>,T> cb_neg(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_pos(msh, cl, celdeg);
     matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
+    size_t cpt = 0;
+    auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
     const auto iqps = integrate_interface(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
     for (auto& qp : iqps) {
-        const auto c_phi = cb.eval_basis(qp.first);
+        const auto c_phi_neg = cb_neg.eval_basis(qp.first);
+        const auto c_phi_pos = cb_pos.eval_basis(qp.first);
         const auto g_phi = gb.eval_basis(qp.first);
         Matrix<T,2,1> n = level_set_function.normal(qp.first);
         n = dn[cpt];
         const vector_type qp_g_phi_n = qp.second * g_phi * n;
-        interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
-        interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
+        interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi_neg.transpose();
+        interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi_pos.transpose();
         cpt++;
     }
     gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
 
+    // ADDING CONTRIBUTION
     if(where == element_location::IN_NEGATIVE_SIDE) {
         gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
         gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
@@ -469,7 +480,7 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
     matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
     matrix_type gr_rhs  = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
     
-    // CELL CONTRIBUTION
+    // CELL CONTRIBUTIONS
     const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
     for (auto& qp : qps) {
         const auto c_dphi = cb.eval_gradients(qp.first);
@@ -478,7 +489,7 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
         rhs_tmp.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
     }
     
-    // FACE CONTRIBUTION
+    // FACE CONTRIBUTIONS
     const auto fcs = faces(msh, cl);
     const auto ns = normals(msh, cl);
     for (size_t i = 0; i < fcs.size(); i++) {
@@ -641,12 +652,13 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
+
     cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
     auto fcs = faces(msh, cl);
     auto num_faces = fcs.size();
     auto uncut_dofs = cbs + num_faces*fbs;
@@ -664,7 +676,6 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     // MASS MATRIX
     const auto qps = integrate(msh, cl, celdeg-1 + facdeg, loc);
     for (auto& qp : qps) {
-        const auto c_dphi = cb.eval_gradients(qp.first);
         const auto g_phi  = gb.eval_basis(qp.first);
         gr_lhs.block(0, 0, gbs, gbs)  += qp.second*g_phi*g_phi.transpose();  
     }
@@ -779,6 +790,7 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
     auto fcs = faces(msh, cl);
     auto ns  = normals(msh, cl);
     auto num_faces = fcs.size();
@@ -789,7 +801,7 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
     matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
 
-    // CELLS CONTRIBUTION
+    // CELL CONTRIBUTIONS
     const auto qps = integrate(msh, cl, celdeg-1 + facdeg, loc);
     for (auto& qp : qps) {
         const auto c_dphi = cb.eval_gradients(qp.first);
@@ -844,7 +856,7 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
     matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
 
-    // CELLS CONTRIBUTION
+    // CELL CONTRIBUTIONS
     const auto qps = integrate(msh, cl, celdeg-1 + graddeg, loc);
     for (auto& qp : qps) {
         const auto c_dphi = cb_loc.eval_gradients(qp.first);
@@ -931,11 +943,13 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
-    cell_basis<cuthho_mesh<T, ET>,T>            cb(msh, cl, celdeg);
-    vector_cell_basis<cuthho_mesh<T, ET>,T>     gb(msh, cl, graddeg);
+
+    cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
+    vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
     const auto num_faces = faces(msh, cl).size();
 
     matrix_type rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
@@ -958,9 +972,9 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
         cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
         const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), where);
         for (auto& qp : qps_f) {
-            const vector_type c_phi      = cb.eval_basis(qp.first);
-            const vector_type f_phi      = fb.eval_basis(qp.first);
-            const auto        g_phi      = gb.eval_basis(qp.first);
+            const vector_type c_phi = cb.eval_basis(qp.first);
+            const vector_type f_phi = fb.eval_basis(qp.first);
+            const auto        g_phi = gb.eval_basis(qp.first);
             const vector_type qp_g_phi_n = qp.second * g_phi * n;
             rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
             rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
@@ -979,6 +993,7 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
         const vector_type qp_g_phi_n = qp.second * g_phi * n;
         interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
         interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
+        cpt++;
     }
     gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
 
@@ -1097,6 +1112,7 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+    
     auto fcs = faces(msh, dp_cell);
     auto ns  = normals(msh, dp_cell);
     auto num_faces = fcs.size();

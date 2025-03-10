@@ -239,9 +239,9 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType square_max = std::round(0.75/h)*h+a;
             // auto level_set_function = line_level_set<RealType>(line_y);
             // auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min, square_max);
-            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
-            auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
+            // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
             
             mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
             if (dump_debug) {
@@ -259,7 +259,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ##################################################
     
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
@@ -271,7 +271,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
 
             // HOMOGENEOUS WITH JUMPS 
-            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
+            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
             // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
   
             // ##################################################
@@ -284,7 +284,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             auto assembler = make_interface_assembler(msh, bcs_fun, hdi);
             
             // SPASITY PROFILES 
-            bool sparsity = true;
+            bool sparsity = false;
 
             std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
             // Loop on POK subcells 
