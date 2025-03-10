@@ -1353,7 +1353,7 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_
     auto num_faces = fcs.size();
 
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
-    Matrix<T, Dynamic, Dynamic>   If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
+    Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
 
     auto hT = diameter(msh, cl);
@@ -1395,22 +1395,30 @@ Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, const T eta, bool scaled_Q = true) {
 
     auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto num_faces = faces(msh, cl).size();
 
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_n(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_p(msh, cl, celdeg);
+    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs, 2*cbs);
 
     auto hT = diameter(msh, cl);
     auto iqps = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
     for (auto& qp : iqps) {
-        const auto c_phi  = cb.eval_basis(qp.first);
-        if (scaled_Q) 
-            data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta / hT;
-        else
-            data.block(0, 0, cbs, cbs) += qp.second * c_phi * c_phi.transpose() * eta;
+        const auto c_phi_n  = cb_n.eval_basis(qp.first);
+        const auto c_phi_p  = cb_p.eval_basis(qp.first);
+        if (scaled_Q) {
+            data.block(0, 0, cbs, cbs)     += qp.second * c_phi_n * c_phi_n.transpose() * eta / hT;
+            data.block(cbs, cbs, cbs, cbs) += qp.second * c_phi_p * c_phi_p.transpose() * eta / hT;
+            data.block(0, cbs, cbs, cbs)   -= qp.second * c_phi_n * c_phi_p.transpose() * eta / hT;
+            data.block(cbs, 0, cbs, cbs)   -= qp.second * c_phi_p * c_phi_n.transpose() * eta / hT;
+        }
+        else {
+            data.block(0, 0, cbs, cbs)     += qp.second * c_phi_n * c_phi_n.transpose() * eta;
+            data.block(cbs, cbs, cbs, cbs) += qp.second * c_phi_p * c_phi_p.transpose() * eta;
+            data.block(0, cbs, cbs, cbs)   -= qp.second * c_phi_n * c_phi_p.transpose() * eta;
+            data.block(cbs, 0, cbs, cbs)   -= qp.second * c_phi_p * c_phi_n.transpose() * eta;
+        }
     }
 
     return data;
@@ -1569,12 +1577,9 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
 
     // INTERFACE TERMS
-    if (is_cut(msh,cl)) {
-        Matrix<T, Dynamic, Dynamic> penalty = coeff * make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, cbs, cbs);
-        data.block(0,   0,   cbs, cbs) += penalty;
-        data.block(0,   cbs, cbs, cbs) -= penalty;
-        data.block(cbs, 0,   cbs, cbs) -= penalty;
-        data.block(cbs, cbs, cbs, cbs) += penalty; 
+    if (is_cut(msh, cl)) {
+        Matrix<T, Dynamic, Dynamic> penalty = coeff * make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, 2*cbs, 2*cbs);
+        data.block(0, 0, 2*cbs, 2*cbs) = penalty;
     }
 
     return data;
@@ -1640,8 +1645,8 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
 
-    auto offset = 0;     // 
-    auto offset_cl = 0;  // OFFSET CELLULE LOCALE OK
+    auto offset = 0;    
+    auto offset_cl = 0; 
     if (loc == element_location::IN_POSITIVE_SIDE) {
         offset = cbs;
         if (is_cut(msh,cl)) 
@@ -1658,9 +1663,7 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
         num_faces = fcs_dp.size();
 
         cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg);
-
         for (size_t i = 0; i < fcs_dp.size(); i++) {
-
             auto fc = fcs_dp[i];                
             auto qps = integrate(msh, fc, 2*celdeg, loc);
             for (auto& qp : qps) {
@@ -1680,7 +1683,6 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
                 }
             }
         }
-
         // UPDATING OFFSET 
         offset_dp += extended_dofs;
 
