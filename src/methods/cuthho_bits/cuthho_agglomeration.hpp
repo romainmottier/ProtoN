@@ -27,8 +27,8 @@ detect_cell_agglo_set(cuthho_mesh<T, ET>& msh, const Function& level_set_functio
     typedef typename cuthho_mesh<T, ET>::face_type  face_type;
     typedef typename cuthho_mesh<T, ET>::point_type point_type;
 
-    const T threshold = 0.3;
-    const T threshold_cells = 0.3;
+    const T threshold = 0.0;
+    const T threshold_cells = 0.0;
 
     for (auto& cl : msh.cells) {
 
