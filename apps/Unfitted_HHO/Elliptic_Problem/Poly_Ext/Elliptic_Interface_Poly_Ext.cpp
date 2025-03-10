@@ -96,7 +96,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     size_t int_refsteps  = 4;          // Interface refinment   -r
     bool dump_debug      = false;      // Debug & Silo files    -d 
     bool direct_solver_Q = true;
-    bool sc_Q = true;
+    bool sc_Q = false;
 
     int ch;
     while ( (ch = getopt(argc, argv, "k:l:n:r:c:s:v:f:")) != -1 ) {

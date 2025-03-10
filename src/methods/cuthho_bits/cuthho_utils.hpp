@@ -21,7 +21,7 @@
  */
 
 #pragma once
-#define subcell_centering
+// #define subcell_centering
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////                                            ////////////////////////////
@@ -1112,7 +1112,7 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
     auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-    
+
     auto fcs = faces(msh, dp_cell);
     auto ns  = normals(msh, dp_cell);
     auto num_faces = fcs.size();

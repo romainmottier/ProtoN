@@ -403,19 +403,24 @@ public:
     #endif
 
     #ifndef subcell_centering
+    template<typename testType>
     static std::vector<double> 
-    compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof,std::function<double(const typename Mesh::point_type& )> sol_fun, std::function<Matrix<double, 1, 2>(const typename Mesh::point_type& )> sol_grad, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
+    compute_error_elliptic_second_order_poly_ext(Mesh & msh, VecTuple POK, hho_degree_info & hho_di, interface_assembler<Mesh, std::function<double(const typename Mesh::point_type& )>> & assembler, Matrix<double, Dynamic, 1> & x_dof, const testType &test_case, double previous_h, double previous_L2, double previous_H1, std::ostream & error_file = std::cout) {
 
-       timecounter tc;
-       tc.tic();
+        timecounter tc;
+        tc.tic();
+        
+        using RealType = double;
+        
+        // TEST CASE
+        auto sol_fun = test_case.sol_fun;
+        auto sol_grad = test_case.sol_grad;
 
-       using RealType = double;
-
-       RealType H1_error = 0.0;
-       RealType L2_error = 0.0;
-       size_t   cell_i   = 0;
-       RealType h = 10;
-       for (auto& p_ok : POK) {
+        RealType H1_error = 0.0;
+        RealType L2_error = 0.0;
+        size_t   cell_i   = 0;
+        RealType h = 10;
+        for (auto& p_ok : POK) {
             
             // CELL INFOS 
             auto cell_index = std::get<0>(p_ok);
@@ -629,7 +634,8 @@ public:
         std::cout << bold << yellow << "         L2-Error: " << L2_error << reset << std::endl;
         std::cout << bold << yellow << "         order H1: " << orderH << reset << std::endl;
         std::cout << bold << yellow << "         order L2: " << orderL << reset << std::endl;
-       
+        std::cout << bold << yellow << "         Error completed: " << tc << " seconds" << reset << std::endl;
+
        return vec;
 
     }
