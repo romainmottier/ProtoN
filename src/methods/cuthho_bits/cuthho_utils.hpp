@@ -2041,25 +2041,25 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     auto kappa_1 = test_case.parms.kappa_1;
 
     vector_type f = vector_type::Zero(local_dofs);
+    
+    // SOURCE TERM
     size_t offset = 0.0;
     if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
         offset = cbs;
-    
-    // SOURCE TERM
     f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, rhs_fun, loc);
     
-    // JUMP TERMS LOCAL CELL
+    // JUMP TERMS LOCAL CONTRIBUTION
     if (is_cut(msh, cl)) {
         if (loc == element_location::IN_NEGATIVE_SIDE) 
             f.block(0, 0, cbs, 1) -= kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
-        if (loc == element_location::IN_POSITIVE_SIDE) {
+        else if (loc == element_location::IN_POSITIVE_SIDE) {
             f.block(cbs, 0, cbs, 1) += kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
             f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, loc, neumann_jump);
         }            
     }
     
-    // JUMP TERM WITH LIFTING ON CURRENT CELL AND EXTENDED CELLS
-    if (loc == element_location::IN_NEGATIVE_SIDE && POK) 
+    // JUMP TERMS LIFTING PART
+    if (POK && loc == element_location::IN_NEGATIVE_SIDE)
         f += kappa_1*make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, oper_gr, test_case, eta);
 
     return f;
@@ -2207,9 +2207,9 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     const auto facdeg  = hdi.face_degree();
     const auto graddeg = hdi.grad_degree();
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
 
     auto fcs = faces(msh, cl);
     auto num_faces = fcs.size();

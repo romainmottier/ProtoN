@@ -418,15 +418,20 @@ public:
 
         RealType H1_error = 0.0;
         RealType L2_error = 0.0;
-        size_t   cell_i   = 0;
         RealType h = 10;
+
         for (auto& p_ok : POK) {
             
             // CELL INFOS 
             auto cell_index = std::get<0>(p_ok);
-            auto loc = std::get<1>(p_ok);
             auto cl = msh.cells[cell_index];
-            
+            auto loc = std::get<1>(p_ok);
+            double kappa;
+            if (loc == element_location::IN_NEGATIVE_SIDE)
+                kappa = test_case.parms.kappa_1;
+            else 
+                kappa = test_case.parms.kappa_2;
+
             // DIAMETER
             RealType h_l = diameter(msh, cl);
             if (h_l < h) 
@@ -451,11 +456,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    /* Compute L2-error */
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // CUT CELLS
@@ -467,11 +472,11 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    /* Compute L2-error */
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
-                    /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // DEPENDENT CELLS 
@@ -488,11 +493,12 @@ public:
                     Matrix<RealType, 1, 2> grad = Matrix<RealType, 1, 2>::Zero();
                     for (size_t i = 1; i < cbs; i++ )
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
-                    H1_error += qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    /* Compute L2-error */
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
                     /* Compute L2-error */
-                    L2_error += qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
+                    L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
         }
@@ -572,16 +578,14 @@ public:
                     for (size_t i = 1; i < cbs; i++ ) 
                         grad += cell_dofs(i) * t_dphi.block(i, 0, 1, 2);
                     H1_error += kappa * qp.second * (sol_grad(qp.first) - grad).dot(sol_grad(qp.first) - grad);
+                    /* Compute L2-error */
                     auto t_phi = cb.eval_basis( qp.first );
                     auto v = cell_dofs.dot(t_phi);
-                    /* Compute L2-error */
                     L2_error += kappa * qp.second * (sol_fun(qp.first) - v) * (sol_fun(qp.first) - v);
                 }
             }
             // CUT CELLS
             else {
-                size_t cpt = 0;
-                auto dn = get_discrete_normal(msh, cl, 2*hho_di.cell_degree(), element_location::IN_NEGATIVE_SIDE);        
                 auto qps = integrate(msh, cl, 2*hho_di.cell_degree(), loc);
                 for (auto& qp : qps) {
                     /* Compute H1-error */
