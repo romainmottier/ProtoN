@@ -134,7 +134,14 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
 
     std::ofstream sim_infos("simulation_infos.txt");
     sim_infos << std::endl << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - POLYNOMIAL EXTENSION";
-    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - DEBUG POLYNOMIAL EXTENSION";
+    std::cout << std::endl << bold << red << "   CONVERGENCE TEST ON SECOND ORDER ELLIPTIC CASE - POLYNOMIAL EXTENSION";
+    #ifndef subcell_centering
+    sim_infos << std::endl << std:: endl << "   POLYNOMIAL BASES CENTERED ON THE WHOLE CELLS";
+    std::cout << std::endl << std:: endl << bold << red << "   POLYNOMIAL BASES CENTERED ON THE WHOLE CELLS";
+    #else 
+    sim_infos << std::endl << std::endl << "   POLYNOMIAL BASES CENTERED ON THE SUBCELLS";
+    std::cout << std::endl << std::endl << bold << red << "   POLYNOMIAL BASES CENTERED ON THE SUBCELLS";
+    #endif
     sim_infos << std::endl << std::endl << "   SIMULATION PARAMETERS : " << std::endl;
     std::cout << std::endl << std::endl << "   SIMULATION PARAMETERS : " << reset << bold << cyan << std::endl;
     sim_infos << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
@@ -184,7 +191,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     // MATERIAL PROPERTIES
     auto parms = params<T>();
     parms.kappa_1 = 1.0; 
-    parms.kappa_2 = 1.0;
+    parms.kappa_2 = 10000.0;
     sim_infos << "   Kappa_2                       : " << parms.kappa_2 << std::endl;
 
     SparseMatrix<RealType> Kg, Mg; 
@@ -262,7 +269,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
@@ -271,7 +278,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
 
             // HOMOGENEOUS WITH JUMPS 
-            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
+            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
             // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
   
             // ##################################################
