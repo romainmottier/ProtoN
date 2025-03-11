@@ -241,7 +241,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
             RealType radius = 1.0/3.0;  
-            RealType a = 1e-6;
+            RealType a = 1e-2;
             RealType b = h/2.0;
             RealType square_min = std::round(0.25/h)*h-a;
             RealType square_max = std::round(0.75/h)*h+a;
@@ -323,7 +323,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = false;
+            bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
                 RealType sigma_max, sigma_min;
                 Spectra::SparseSymMatProd<RealType> op(Kg);
