@@ -191,7 +191,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     // MATERIAL PROPERTIES
     auto parms = params<T>();
     parms.kappa_1 = 1.0; 
-    parms.kappa_2 = 10000.0;
+    parms.kappa_2 = 1.0;
     sim_infos << "   Kappa_2                       : " << parms.kappa_2 << std::endl;
 
     SparseMatrix<RealType> Kg, Mg; 
@@ -241,12 +241,13 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
             RealType radius = 1.0/3.0;  
-            RealType a = 1e-2;
+            RealType a = 1e-6;
+            RealType b = h/2.0;
             RealType square_min = std::round(0.25/h)*h-a;
             RealType square_max = std::round(0.75/h)*h+a;
             // auto level_set_function = line_level_set<RealType>(line_y);
-            // auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min, square_max);
-            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min+b, square_max+b);
+            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
             
@@ -266,10 +267,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ##################################################
     
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // (NON) HOMOGENEOUS WITHOUT JUMPS 
-            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);

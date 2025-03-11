@@ -910,21 +910,12 @@ public:
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
         }
         else {
-            // // OPTION 1: BARYCENTER AND DIAMETER OF THE UNCUT CELL - FONCTION POUR LIGNE OK
-            // cell_bar     = barycenter(msh, cl);
-            // cell_h       = diameter(msh, cl);
-            // cell_hx      = cell_h;
-            // cell_hy      = cell_h;
-            // // OPTION 2: BARYCENTER AND DIAMETER OF THE BOUNDING BOX
-            // auto bounding_box = compute_bounding_box(msh, cl, where);
-            // cell_bar     = std::get<0>(bounding_box);
-            // cell_hx      = std::get<1>(bounding_box);
-            // cell_hy      = std::get<2>(bounding_box);
-            // OPTION 3: BARYCENTER AND DIAMETER OF THE CUT PART 
             cell_bar     = barycenter(msh, cl, where);
             cell_h       = diameter(msh, cl, where);
-            cell_hx      = cell_h; // Loop sur les sommets pour trouver l'effort maximum en x et y 
-            cell_hy      = cell_h;
+            // cell_hx      = cell_h;
+            // cell_hy      = cell_h;
+            cell_hx      = compute_hx_hy(msh, cl, where).first; 
+            cell_hy      = compute_hx_hy(msh, cl, where).second; 
             // BASIS INFOS
             basis_degree = degree;
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
@@ -976,9 +967,10 @@ public:
     eval_gradients(const point_type& pt) {
 
         Matrix<VT, Dynamic, 2> ret = Matrix<VT, Dynamic, 2>::Zero(basis_size, 2);
-        auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_h);
-        auto by = (pt.y() - cell_bar.y()) / (0.5*cell_h);
-        auto ih = 2.0/cell_h;
+        auto bx = (pt.x() - cell_bar.x()) / (0.5*cell_hx);
+        auto by = (pt.y() - cell_bar.y()) / (0.5*cell_hy);
+        auto ihx = 2.0/cell_hx;
+        auto ihy = 2.0/cell_hy;
 
 #ifdef POWER_CACHE
         if ( power_cache.size() != (basis_degree+1)*2 )
@@ -1001,13 +993,13 @@ public:
 #ifdef POWER_CACHE
                 auto px = power_cache[2*pow_x];
                 auto py = power_cache[2*pow_y+1];
-                auto dx = (pow_x == 0) ? 0 : pow_x*ih*power_cache[2*(pow_x-1)];
-                auto dy = (pow_y == 0) ? 0 : pow_y*ih*power_cache[2*(pow_y-1)+1];
+                auto dx = (pow_x == 0) ? 0 : pow_x*ihx*power_cache[2*(pow_x-1)];
+                auto dy = (pow_y == 0) ? 0 : pow_y*ihy*power_cache[2*(pow_y-1)+1];
 #else
                 auto px = iexp_pow(bx, pow_x);
                 auto py = iexp_pow(by, pow_y);
-                auto dx = (pow_x == 0) ? 0 : pow_x*ih*iexp_pow(bx, pow_x-1);
-                auto dy = (pow_y == 0) ? 0 : pow_y*ih*iexp_pow(by, pow_y-1);
+                auto dx = (pow_x == 0) ? 0 : pow_x*ihx*iexp_pow(bx, pow_x-1);
+                auto dy = (pow_y == 0) ? 0 : pow_y*ihy*iexp_pow(by, pow_y-1);
 #endif
                 ret(pos,0) = dx*py;
                 ret(pos,1) = px*dy;
@@ -1042,7 +1034,6 @@ class cut_vector_cell_basis {
     typedef Matrix<VT, Dynamic, 2>          function_type;
 
     point_type          cell_bar;
-    coordinate_type     cell_h;
     size_t              basis_degree, basis_size;
 
     cut_cell_basis<Mesh,VT> scalar_basis;
@@ -1142,6 +1133,26 @@ auto diameter(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::
     return diam;
 }
 
+template<typename T, size_t ET>
+auto compute_hx_hy(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, element_location where) {
+    
+    if (!is_cut(msh, cl))
+        return std::make_pair(diameter(msh, cl),diameter(msh, cl));
+
+    auto tp = collect_triangulation_points(msh, cl, where);
+
+    T min_x = tp[0].x(), max_x = tp[0].x();
+    T min_y = tp[0].y(), max_y = tp[0].y();
+
+    for (const auto& p : tp) {
+        min_x = std::min(min_x, p.x());
+        max_x = std::max(max_x, p.x());
+        min_y = std::min(min_y, p.y());
+        max_y = std::max(max_y, p.y());
+    }
+
+    return std::make_pair(max_x - min_x, max_y - min_y);
+}
 
 //////////////////////////  FACE CUT BASIS  ///////////////////////////
 template<typename Mesh, typename VT>
