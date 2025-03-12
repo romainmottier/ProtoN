@@ -34,28 +34,16 @@
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#ifndef subcell_centering
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
 make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
 
+    #ifndef subcell_centering
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
-    auto cbs = cb.size();
-    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
-    auto qps = integrate(msh, cl, 2*degree, where);
-    for (auto& qp : qps) {
-        auto phi = cb.eval_basis(qp.first);
-        ret += qp.second * phi * phi.transpose();
-    }
-
-    return ret;
-}
-#else
-template<typename T, size_t ET>
-Matrix<T, Dynamic, Dynamic> 
-make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
-    
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree, where);
+    #endif 
+
     auto cbs = cb.size();
     Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
     auto qps = integrate(msh, cl, 2*degree, where);
@@ -66,7 +54,6 @@ make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
 
     return ret;
 }
-#endif 
 
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
@@ -362,98 +349,6 @@ make_hho_gradrec_vector(const cuthho_mesh<T, ET>& msh, const typename cuthho_mes
 
 }
 
-// TWO SIDES RECONSTRCUTION 
-#ifndef subcell_centering
-template<typename T, size_t ET, typename Function>
-std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
-make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) {
-
-    if ( !is_cut(msh, cl) )
-        throw std::invalid_argument("The cell is not cut");
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    const auto celdeg  = di.cell_degree();
-    const auto facdeg  = di.face_degree();
-    const auto graddeg = di.grad_degree();
-
-    cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
-    vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    const auto num_faces = faces(msh, cl).size();
-
-    matrix_type rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
-    matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
-    matrix_type gr_rhs  = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
-
-    // CELL CONTRIBUTIONS
-    const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
-    for (auto& qp : qps) {
-        const auto c_dphi = cb.eval_gradients(qp.first);
-        const auto g_phi  = gb.eval_basis(qp.first);
-        gr_lhs.block(0, 0, gbs, gbs) += qp.second * g_phi * g_phi.transpose();
-        rhs_tmp.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
-    }
-
-    // FACE CONTRIBUTIONS
-    const auto fcs = faces(msh, cl);
-    const auto ns = normals(msh, cl);
-    for (size_t i = 0; i < fcs.size(); i++) {
-        const auto fc = fcs[i];
-        const auto n  = ns[i];
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
-        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), where);
-        for (auto& qp : qps_f) {
-            const vector_type c_phi = cb.eval_basis(qp.first);
-            const vector_type f_phi = fb.eval_basis(qp.first);
-            const auto        g_phi = gb.eval_basis(qp.first);
-            const vector_type qp_g_phi_n = qp.second * g_phi * n;
-            rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
-            rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
-        }
-    }
-
-    // INTERFACE TERMS
-    cell_basis<cuthho_mesh<T, ET>,T> cb_neg(msh, cl, celdeg);
-    cell_basis<cuthho_mesh<T, ET>,T> cb_pos(msh, cl, celdeg);
-    matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
-    size_t cpt = 0;
-    auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
-    const auto iqps = integrate_interface(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps) {
-        const auto c_phi_neg = cb_neg.eval_basis(qp.first);
-        const auto c_phi_pos = cb_pos.eval_basis(qp.first);
-        const auto g_phi = gb.eval_basis(qp.first);
-        Matrix<T,2,1> n = level_set_function.normal(qp.first);
-        n = dn[cpt];
-        const vector_type qp_g_phi_n = qp.second * g_phi * n;
-        interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi_neg.transpose();
-        interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi_pos.transpose();
-        cpt++;
-    }
-    gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
-
-    // ADDING CONTRIBUTION
-    if(where == element_location::IN_NEGATIVE_SIDE) {
-        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-    else if( where == element_location::IN_POSITIVE_SIDE) {
-        gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-
-    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
-    matrix_type data = gr_rhs.transpose() * oper;
-
-    return std::make_pair(oper, data);
-
-}
-#else
 template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
 make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) {
@@ -468,8 +363,13 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
     
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+    vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
     cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, where);
+    #endif
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
@@ -508,8 +408,13 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
     }
     
     // INTERFACE TERMS
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb_neg(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_pos(msh, cl, celdeg);
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_neg(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE);
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_pos(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE);
+    #endif
     matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
     size_t cpt = 0;
     auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
@@ -543,7 +448,6 @@ make_hho_gradrec_vector_interface(const cuthho_mesh<T, ET>& msh, const typename 
     return std::make_pair(oper, data);
 
 }
-#endif
 
 template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
@@ -634,73 +538,8 @@ make_hho_gradrec_mixed_vector_interface(const cuthho_mesh<T, ET>& msh, const typ
 }
 
 ////////////////////////////////////////////////// POLYNOMIAL EXTENSION
+
 // WELL CUT SIDES 
-#ifndef subcell_centering
-template<typename T, size_t ET, typename Function>
-std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
-make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P_OK, const hho_degree_info& di, const Function& level_set_function, double coeff) {
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(P_OK);
-    auto cl = msh.cells[cell_index];
-    auto loc = std::get<1>(P_OK);
-
-    // DISCRETIZATION INFOS
-    const auto celdeg  = di.cell_degree();
-    const auto facdeg  = di.face_degree();
-    const auto graddeg = di.grad_degree();
-
-    cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
-    vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto uncut_dofs = cbs + num_faces*fbs;
-    auto current_dofs = cbs + num_faces*fbs;
-    if (is_cut(msh,cl)) 
-        current_dofs = 2*current_dofs;
-    auto extended_dofs = 2*(cbs + num_faces*fbs);
-    auto dp_cells = std::get<2>(P_OK);
-    auto local_dofs = current_dofs + dp_cells.size()*extended_dofs; 
-    
-    matrix_type rhs_tmp = matrix_type::Zero(gbs, uncut_dofs);
-    matrix_type gr_lhs = matrix_type::Zero(gbs, gbs);
-    matrix_type gr_rhs = matrix_type::Zero(gbs, local_dofs);
-    
-    // MASS MATRIX
-    const auto qps = integrate(msh, cl, celdeg-1 + facdeg, loc);
-    for (auto& qp : qps) {
-        const auto g_phi  = gb.eval_basis(qp.first);
-        gr_lhs.block(0, 0, gbs, gbs)  += qp.second*g_phi*g_phi.transpose();  
-    }
-
-    // LOCAL CONTRIBUTIONS
-    if (!is_cut(msh, cl))
-       gr_rhs.block(0, 0, gbs, current_dofs) += make_hho_gradrec_vector_contribution(msh, cl, di);
-    else 
-       gr_rhs.block(0, 0, gbs, current_dofs) += make_hho_gradrec_vector_interface_contribution(msh, cl, level_set_function, di, loc, coeff);
-    
-    // LOOP OVER DEPENDENT CELLS 
-    size_t offset_extended_dofs = current_dofs;  
-    for (auto &dp_cl : dp_cells) {
-        auto dp_cell = msh.cells[dp_cl];
-        gr_rhs.block(0, offset_extended_dofs, gbs, extended_dofs) += make_hho_gradrec_vector_interface_extended_contribution(msh, cl, dp_cell, level_set_function, di, loc, coeff); 
-        offset_extended_dofs += extended_dofs;
-    }
-
-    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
-    matrix_type data = gr_rhs.transpose()*oper;
-
-    return std::make_pair(oper, data);
-
-}
-#else
 template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
 make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P_OK, const hho_degree_info& di, const Function& level_set_function, double coeff) {
@@ -718,8 +557,11 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
     
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb_loc(msh, cl, celdeg, loc);
+    #ifndef subcell_centering
+    vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg);
+    #else
     cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, loc);
+    #endif
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
@@ -765,10 +607,8 @@ make_hho_gradrec_vector_POK(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     return std::make_pair(oper, data);
 
 }
-#endif
 
 // BAD CUT SIDES 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename Function>
 std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
 make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& P_KO, const hho_degree_info& di, const Function& level_set_function) {
@@ -785,11 +625,17 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     const auto celdeg  = di.cell_degree();
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
+
+    #ifndef subcell_centering
     cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+    #else 
+    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, loc);
+    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
+    #endif
+    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
 
     auto fcs = faces(msh, cl);
     auto ns  = normals(msh, cl);
@@ -802,7 +648,7 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
 
     // CELL CONTRIBUTIONS
-    const auto qps = integrate(msh, cl, celdeg-1 + facdeg, loc);
+    const auto qps = integrate(msh, cl, celdeg-1 + graddeg, loc);
     for (auto& qp : qps) {
         const auto c_dphi = cb.eval_gradients(qp.first);
         const auto g_phi  = gb.eval_basis(qp.first);
@@ -822,62 +668,6 @@ make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,ele
     return std::make_pair(oper, data);
 
 }
-#else
-template<typename T, size_t ET, typename Function>
-std::pair<Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>,
-          Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>>
-make_hho_gradrec_vector_PKO(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& P_KO, const hho_degree_info& di, const Function& level_set_function) {
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(P_KO);
-    auto cl = msh.cells[cell_index];
-    auto loc = std::get<1>(P_KO);
-
-    // DISCRETIZATION INFOS
-    const auto celdeg  = di.cell_degree();
-    const auto facdeg  = di.face_degree();
-    const auto graddeg = di.grad_degree();
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb_loc(msh, cl, celdeg, loc);
-    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, loc);
-    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    auto fcs = faces(msh, cl);
-    auto ns  = normals(msh, cl);
-    auto num_faces = fcs.size();
-    auto uncut_dofs = cbs + num_faces*fbs;
-    auto local_dofs = 2*uncut_dofs; 
-    
-    matrix_type rhs_tmp = matrix_type::Zero(gbs, uncut_dofs);
-    matrix_type gr_lhs  = matrix_type::Zero(gbs, gbs);
-    matrix_type gr_rhs  = matrix_type::Zero(gbs, local_dofs);
-
-    // CELL CONTRIBUTIONS
-    const auto qps = integrate(msh, cl, celdeg-1 + graddeg, loc);
-    for (auto& qp : qps) {
-        const auto c_dphi = cb_loc.eval_gradients(qp.first);
-        const auto g_phi  = gb_loc.eval_basis(qp.first);
-        gr_lhs.block(0, 0, gbs, gbs)  += qp.second*g_phi*g_phi.transpose();  
-        rhs_tmp.block(0, 0, gbs, cbs) += qp.second*g_phi*c_dphi.transpose(); 
-    }
-
-    // ADDING CONTRIBUTIONS OF CURRENT CELL  
-    if (loc == element_location::IN_NEGATIVE_SIDE) 
-        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-    else 
-        gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-    
-    matrix_type oper = gr_lhs.ldlt().solve(gr_rhs);
-    matrix_type data = gr_rhs.transpose()*oper;
-
-    return std::make_pair(oper, data);
-
-}
-#endif
 
 // UNCUT CONTRIBUTION - LOCAL UNKNOWNS 
 template<typename Mesh>
@@ -932,10 +722,9 @@ make_hho_gradrec_vector_contribution(const Mesh& msh, const typename Mesh::cell_
 }
 
 // CUT CONTRIBUTION - LOCAL UNKNOWNS 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename Function>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> 
-make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) { 
+make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) {
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
@@ -944,11 +733,16 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
 
+    #ifndef subcell_centering
     cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+    #else
+    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, where);
+    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, where);
+    #endif
+    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
 
     const auto num_faces = faces(msh, cl).size();
 
@@ -982,86 +776,13 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
     }
 
     // INTERFACE TERMS
-    size_t cpt = 0;
-    auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);    matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
-    const auto iqps = integrate_interface(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps) {
-        const auto c_phi = cb.eval_basis(qp.first);
-        const auto g_phi = gb.eval_basis(qp.first);
-        Matrix<T,2,1> n = level_set_function.normal(qp.first);        
-        n = dn[cpt];
-        const vector_type qp_g_phi_n = qp.second * g_phi * n;
-        interface_term.block(0 , 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
-        interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
-        cpt++;
-    }
-    gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
-
-    // ADDING CONTRIBUTION
-    if(where == element_location::IN_NEGATIVE_SIDE) {
-        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-    else if( where == element_location::IN_POSITIVE_SIDE) {
-        gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-    
-    return gr_rhs;
-
-}
-#else
-template<typename T, size_t ET, typename Function>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> 
-make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const Function& level_set_function, const hho_degree_info& di, element_location where, T coeff) {
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    const auto celdeg  = di.cell_degree();
-    const auto facdeg  = di.face_degree();
-    const auto graddeg = di.grad_degree();
-
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb_loc(msh, cl, celdeg, where);
-    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, where);
-    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    const auto num_faces = faces(msh, cl).size();
-
-    matrix_type rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
-    matrix_type gr_rhs  = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
-
-    // CELL CONTRIBUTION
-    const auto qps = integrate(msh, cl, celdeg - 1 + facdeg, where);
-    for (auto& qp : qps) {
-        const auto c_dphi = cb_loc.eval_gradients(qp.first);
-        const auto g_phi  = gb_loc.eval_basis(qp.first);
-        rhs_tmp.block(0, 0, gbs, cbs) += qp.second * g_phi * c_dphi.transpose();
-    }
-
-    // FACE CONTRIBUTION
-    const auto fcs = faces(msh, cl);
-    const auto ns = normals(msh, cl);
-    for (size_t i = 0; i < fcs.size(); i++) {
-        const auto fc = fcs[i];
-        const auto n  = ns[i];
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
-        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), where);
-        for (auto& qp : qps_f) {
-            const vector_type c_phi = cb_loc.eval_basis(qp.first);
-            const vector_type f_phi = fb.eval_basis(qp.first);
-            const auto        g_phi = gb_loc.eval_basis(qp.first);
-            const vector_type qp_g_phi_n = qp.second * g_phi * n;
-            rhs_tmp.block(0, cbs + i * fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose();
-            rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();
-        }
-    }
-
-    // INTERFACE TERMS
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb_neg(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_pos(msh, cl, celdeg);
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_neg(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE);
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_pos(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE);
+    #endif
     matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
     size_t cpt = 0;
     auto dn = get_discrete_normal(msh, cl, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
@@ -1069,7 +790,7 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
     for (auto& qp : iqps) {
         const auto c_phi_neg = cb_neg.eval_basis(qp.first);
         const auto c_phi_pos = cb_pos.eval_basis(qp.first);
-        const auto g_phi = gb_loc.eval_basis(qp.first);
+        const auto g_phi = gb.eval_basis(qp.first);
         Matrix<T,2,1> n = level_set_function.normal(qp.first);
         n = dn[cpt];
         const vector_type qp_g_phi_n = qp.second * g_phi * n;
@@ -1092,13 +813,13 @@ make_hho_gradrec_vector_interface_contribution(const cuthho_mesh<T, ET>& msh, co
     return gr_rhs;
 
 }
-#endif
 
 // CUT CONTRIBUTION - EXTENDED UNKNOWNS 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename Function>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> 
-make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const typename cuthho_mesh<T, ET>::cell_type& dp_cell, const Function& level_set_function, const hho_degree_info& di, element_location loc, T coeff) {
+make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>& msh,
+                                  const typename cuthho_mesh<T, ET>::cell_type& cl, const typename cuthho_mesh<T, ET>::cell_type& dp_cell,
+                                  const Function& level_set_function, const hho_degree_info& di, element_location loc, T coeff) {
 
     typedef Matrix<T, Dynamic, Dynamic> matrix_type;
     typedef Matrix<T, Dynamic, 1>       vector_type;
@@ -1107,12 +828,17 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
     const auto facdeg  = di.face_degree();
     const auto graddeg = di.grad_degree();
 
-    cell_basis<cuthho_mesh<T, ET>,T>        cb_dp(msh, dp_cell, celdeg);
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg);
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-    
+    #else
+    cut_cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg, loc);
+    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
+    #endif
+    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
+    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
+    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
+
     auto fcs = faces(msh, dp_cell);
     auto ns  = normals(msh, dp_cell);
     auto num_faces = fcs.size();
@@ -1147,81 +873,13 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
     }
 
     // INTERFACE TERMS
-    size_t cpt = 0;
-    auto dn = get_discrete_normal(msh, dp_cell, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);    
-    matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
-    const auto iqps = integrate_interface(msh, dp_cell, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps) {
-        const auto c_phi = cb_dp.eval_basis(qp.first);
-        const auto g_phi = gb.eval_basis(qp.first);
-        Matrix<T,2,1> n = level_set_function.normal(qp.first);
-        n = dn[cpt];
-        const vector_type qp_g_phi_n = qp.second * g_phi * n;
-        interface_term.block(0 , 0, gbs, cbs)   -= qp_g_phi_n * c_phi.transpose();
-        interface_term.block(0 , cbs, gbs, cbs) += qp_g_phi_n * c_phi.transpose();
-        cpt++;
-    }
-    gr_rhs.block(0, 0, gbs, 2*cbs) += coeff * interface_term;
-
-    return gr_rhs;
-
-}
-#else
-template<typename T, size_t ET, typename Function>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> 
-make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>& msh,
-                                  const typename cuthho_mesh<T, ET>::cell_type& cl, const typename cuthho_mesh<T, ET>::cell_type& dp_cell,
-                                  const Function& level_set_function, const hho_degree_info& di, element_location loc, T coeff) {
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    const auto celdeg  = di.cell_degree();
-    const auto facdeg  = di.face_degree();
-    const auto graddeg = di.grad_degree();
-
-    cut_cell_basis<cuthho_mesh<T, ET>,T> cb_dp_loc(msh, dp_cell, celdeg, loc);
-    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb_loc(msh, cl, graddeg, loc);
-    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    auto fcs = faces(msh, dp_cell);
-    auto ns  = normals(msh, dp_cell);
-    auto num_faces = fcs.size();
-
-    matrix_type rhs_tmp = matrix_type::Zero(gbs, cbs + num_faces * fbs);
-    matrix_type gr_rhs  = matrix_type::Zero(gbs, 2*cbs + 2*num_faces * fbs);
-
-    // FACE CONTRIBUTION
-    for (size_t i=0; i < num_faces; i++) {
-        const auto fc = fcs[i];
-        const auto n  = ns[i];
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb_dp(msh, fc, facdeg, loc);
-        const auto qps_f = integrate(msh, fc, facdeg + std::max(facdeg, celdeg), loc);
-        for (auto& qp : qps_f) {
-            const vector_type c_phi = cb_dp_loc.eval_basis(qp.first);
-            const vector_type f_phi = fb_dp.eval_basis(qp.first);
-            const auto        g_phi = gb_loc.eval_basis(qp.first);
-            const vector_type qp_g_phi_n = qp.second * g_phi * n;
-            rhs_tmp.block(0, 0, gbs, cbs) -= qp_g_phi_n * c_phi.transpose();           
-            rhs_tmp.block(0, cbs + i*fbs, gbs, fbs) += qp_g_phi_n * f_phi.transpose(); 
-        }
-    }
-
-    // ADDING CONTRIBUTION
-    if (loc == element_location::IN_NEGATIVE_SIDE) {
-        gr_rhs.block(0, 0, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, 2*cbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-    else {
-        gr_rhs.block(0, cbs, gbs, cbs) += rhs_tmp.block(0, 0, gbs, cbs);
-        gr_rhs.block(0, 2*cbs + num_faces*fbs, gbs, num_faces*fbs) += rhs_tmp.block(0, cbs, gbs, num_faces*fbs);
-    }
-
-    // INTERFACE TERMS
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb_dp_neg(msh, dp_cell, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_dp_pos(msh, dp_cell, celdeg);
+    #else 
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_dp_neg(msh, dp_cell, celdeg, element_location::IN_NEGATIVE_SIDE);
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_dp_pos(msh, dp_cell, celdeg, element_location::IN_POSITIVE_SIDE);
+    #endif
     matrix_type interface_term = matrix_type::Zero(gbs, 2*cbs);
     size_t cpt = 0;
     auto dn = get_discrete_normal(msh, dp_cell, celdeg + graddeg, element_location::IN_NEGATIVE_SIDE);    
@@ -1229,7 +887,7 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
     for (auto& qp : iqps) {
         const auto c_phi_neg = cb_dp_neg.eval_basis(qp.first);
         const auto c_phi_pos = cb_dp_pos.eval_basis(qp.first);
-        const auto g_phi = gb_loc.eval_basis(qp.first);
+        const auto g_phi = gb.eval_basis(qp.first);
         Matrix<T,2,1> n = level_set_function.normal(qp.first);
         n = dn[cpt];
         const vector_type qp_g_phi_n = qp.second * g_phi * n;
@@ -1242,7 +900,6 @@ make_hho_gradrec_vector_interface_extended_contribution(const cuthho_mesh<T, ET>
     return gr_rhs;
 
 }
-#endif
 
 // STABILIZATION 
 ////////////////////////////////////////////////////////////////////////
@@ -1286,58 +943,6 @@ make_hho_stabilization_interface(const cuthho_mesh<T, ET>& msh, const typename c
 
 }
 
-#ifndef subcell_centering
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, element_location where, bool scaled_Q = true) {
-
-    if (!is_cut(msh, cl))
-        return make_hho_naive_stabilization(msh, cl, di);
-
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
-    Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    auto hT = diameter(msh, cl);
-    for (size_t i = 0; i < num_faces; i++) {
-
-        auto fc = fcs[i];
-        cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, facdeg, where);
-
-        Matrix<T, Dynamic, Dynamic> oper = Matrix<T, Dynamic, Dynamic>::Zero(fbs, cbs+num_faces*fbs);
-        Matrix<T, Dynamic, Dynamic> mass = Matrix<T, Dynamic, Dynamic>::Zero(fbs, fbs);
-        Matrix<T, Dynamic, Dynamic> trace = Matrix<T, Dynamic, Dynamic>::Zero(fbs, cbs);
-
-        oper.block(0, cbs+i*fbs, fbs, fbs) = -If;
-        auto qps = integrate(msh, fc, facdeg + celdeg, where);
-        for (auto& qp : qps) {
-            auto c_phi = cb.eval_basis(qp.first);
-            auto f_phi = fb.eval_basis(qp.first);
-            mass += qp.second * f_phi * f_phi.transpose();
-            trace += qp.second * f_phi * c_phi.transpose();
-        }
-
-        if (qps.size() == 0) /* Avoid to invert a zero matrix */
-            continue;
-
-        oper.block(0, 0, fbs, cbs) = mass.ldlt().solve(trace);
-        if (scaled_Q) 
-            data += oper.transpose() * mass * oper * (1./hT);
-        else
-            data += oper.transpose() * mass * oper;
-    }
-
-    return data;
-
-}
-#else 
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, element_location where, bool scaled_Q = true) {
@@ -1354,7 +959,12 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_
 
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(cbs+num_faces*fbs, cbs+num_faces*fbs);
     Matrix<T, Dynamic, Dynamic> If = Matrix<T, Dynamic, Dynamic>::Identity(fbs, fbs);
+    
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
+    #endif
 
     auto hT = diameter(msh, cl);
     for (size_t i = 0; i < num_faces; i++) {
@@ -1387,44 +997,7 @@ make_hho_cut_stabilization(const cuthho_mesh<T, ET>& msh, const typename cuthho_
     return data;
 
 }
-#endif
 
-#ifndef subcell_centering
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, const T eta, bool scaled_Q = true) {
-
-    auto celdeg = di.cell_degree();
-    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto num_faces = faces(msh, cl).size();
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb_n(msh, cl, celdeg);
-    cell_basis<cuthho_mesh<T, ET>,T> cb_p(msh, cl, celdeg);
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs, 2*cbs);
-
-    auto hT = diameter(msh, cl);
-    auto iqps = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : iqps) {
-        const auto c_phi_n  = cb_n.eval_basis(qp.first);
-        const auto c_phi_p  = cb_p.eval_basis(qp.first);
-        if (scaled_Q) {
-            data.block(0, 0, cbs, cbs)     += qp.second * c_phi_n * c_phi_n.transpose() * eta / hT;
-            data.block(cbs, cbs, cbs, cbs) += qp.second * c_phi_p * c_phi_p.transpose() * eta / hT;
-            data.block(0, cbs, cbs, cbs)   -= qp.second * c_phi_n * c_phi_p.transpose() * eta / hT;
-            data.block(cbs, 0, cbs, cbs)   -= qp.second * c_phi_p * c_phi_n.transpose() * eta / hT;
-        }
-        else {
-            data.block(0, 0, cbs, cbs)     += qp.second * c_phi_n * c_phi_n.transpose() * eta;
-            data.block(cbs, cbs, cbs, cbs) += qp.second * c_phi_p * c_phi_p.transpose() * eta;
-            data.block(0, cbs, cbs, cbs)   -= qp.second * c_phi_n * c_phi_p.transpose() * eta;
-            data.block(cbs, 0, cbs, cbs)   -= qp.second * c_phi_p * c_phi_n.transpose() * eta;
-        }
-    }
-
-    return data;
-
-}
-#else 
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, const hho_degree_info& di, T eta, bool scaled_Q = true) {
@@ -1433,8 +1006,14 @@ make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cut
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto num_faces = faces(msh, cl).size();
 
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb_n(msh, cl, celdeg);
+    cell_basis<cuthho_mesh<T, ET>,T> cb_p(msh, cl, celdeg);
+    #else 
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_n(msh, cl, celdeg, element_location::IN_NEGATIVE_SIDE);
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb_p(msh, cl, celdeg, element_location::IN_POSITIVE_SIDE);
+    #endif
+    
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(2*cbs, 2*cbs);
 
     auto hT = diameter(msh, cl);
@@ -1459,54 +1038,9 @@ make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cut
     return data;
 
 }
-#endif 
 
 ////////////////////////////////////////////////// POLYNOMIAL EXTENSION
 // STABILIZATION s° 
-#ifndef subcell_centering
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, bool scaled_Q = true) {
-    
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(PAIRE);
-    auto loc = std::get<1>(PAIRE);
-    auto cl = msh.cells[cell_index];
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg); 
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto current_dofs = cbs + num_faces*fbs;
-    if (is_cut(msh,cl)) 
-        current_dofs = 2*current_dofs;
-    auto extended_dofs = 2*(cbs + num_faces*fbs);
-    auto nb_dp_cells = std::get<2>(PAIRE).size();
-    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
-    
-    auto cell_offset = 0.0;
-    auto face_offset = cbs;
-    if (is_cut(msh,cl) && loc == element_location::IN_NEGATIVE_SIDE) {
-        cell_offset = 0.0;
-        face_offset = 2*cbs;
-    }
-    else if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE) {
-        cell_offset = cbs;
-        face_offset = 2*cbs + num_faces*fbs;
-    }
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
-    const auto stab = make_hho_cut_stabilization(msh, cl, di, loc);
-    data.block(cell_offset, cell_offset, cbs,           cbs)           += stab.block(0,     0,           cbs, cbs);           // cells--cells
-    data.block(cell_offset, face_offset, cbs,           num_faces*fbs) += stab.block(0,   cbs,           cbs, num_faces*fbs); // cells--faces
-    data.block(face_offset, cell_offset, num_faces*fbs, cbs)           += stab.block(cbs,   0, num_faces*fbs, cbs);           // faces--cells
-    data.block(face_offset, face_offset, num_faces*fbs, num_faces*fbs) += stab.block(cbs, cbs, num_faces*fbs, num_faces*fbs); // faces--faces
-
-    return data;
-
-}
-#else
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, bool scaled_Q = true) {
@@ -1549,42 +1083,8 @@ make_hho_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_
     return data;
 
 }
-#endif 
 
 // STABILIZATION s^\Gamma
-#ifndef subcell_centering
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, double coeff, bool scaled_Q = true) {
-    
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(PAIRE);
-    auto loc = std::get<1>(PAIRE);
-    auto cl = msh.cells[cell_index];
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg); 
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto current_dofs = cbs + num_faces*fbs;
-    if (is_cut(msh,cl)) 
-        current_dofs = 2*current_dofs;
-    auto extended_dofs = 2*(cbs + num_faces*fbs);
-    auto nb_dp_cells = std::get<2>(PAIRE).size();
-    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs; 
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
-
-    // INTERFACE TERMS
-    if (is_cut(msh, cl)) {
-        Matrix<T, Dynamic, Dynamic> penalty = coeff * make_hho_cut_interface_penalty(msh, cl, di, eta).block(0, 0, 2*cbs, 2*cbs);
-        data.block(0, 0, 2*cbs, 2*cbs) = penalty;
-    }
-
-    return data;
-}
-#else
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, double coeff, bool scaled_Q = true) {
@@ -1616,82 +1116,8 @@ make_hho_stabilization_penalty_term(const cuthho_mesh<T, ET>& msh, std::tuple<do
 
     return data;
 }
-#endif 
 
 // STABILIZATION s^N
-#ifndef subcell_centering
-template<typename T, size_t ET>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
-make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, bool scaled_Q = true) {
-
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(PAIRE);
-    auto loc = std::get<1>(PAIRE);
-    auto dp_cells = std::get<2>(PAIRE);
-    auto cl = msh.cells[cell_index];
-    auto celdeg = di.cell_degree();
-    auto facdeg = di.face_degree();
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg); 
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto current_dofs = cbs + num_faces*fbs;
-    if (is_cut(msh, cl)) 
-        current_dofs = 2*current_dofs;
-    auto extended_dofs = 2*(cbs + num_faces*fbs);
-    auto nb_dp_cells = dp_cells.size();
-    auto local_dofs = current_dofs + nb_dp_cells*extended_dofs;  
-
-    Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-
-    auto offset = 0;    
-    auto offset_cl = 0; 
-    if (loc == element_location::IN_POSITIVE_SIDE) {
-        offset = cbs;
-        if (is_cut(msh,cl)) 
-            offset_cl = cbs;
-    }
-
-    // LOOP OVER DEPENDENT CELLS 
-    size_t offset_dp = current_dofs + offset;  
-    for (auto &dp_cl : dp_cells) {
-
-        auto dp_cell = msh.cells[dp_cl];
-        auto h_dp = diameter(msh, dp_cell);
-        auto fcs_dp = faces(msh, dp_cell);
-        num_faces = fcs_dp.size();
-
-        cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg);
-        for (size_t i = 0; i < fcs_dp.size(); i++) {
-            auto fc = fcs_dp[i];                
-            auto qps = integrate(msh, fc, 2*celdeg, loc);
-            for (auto& qp : qps) {
-                auto c_phi    = cb.eval_basis(qp.first);
-                auto c_phi_dp = cb_dp.eval_basis(qp.first);
-                if (scaled_Q) {
-                    data.block(offset_cl, offset_cl, cbs, cbs) +=  qp.second * c_phi    * c_phi.transpose()    * eta / h_dp;
-                    data.block(offset_cl, offset_dp, cbs, cbs) -=  qp.second * c_phi    * c_phi_dp.transpose() * eta / h_dp;
-                    data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta / h_dp;
-                    data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta / h_dp;
-                }
-                else {
-                    data.block(offset_cl, offset_cl, cbs, cbs) +=  qp.second * c_phi    * c_phi.transpose()    * eta;
-                    data.block(offset_cl, offset_dp, cbs, cbs) -=  qp.second * c_phi    * c_phi_dp.transpose() * eta;
-                    data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta;
-                    data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta;
-                }
-            }
-        }
-        // UPDATING OFFSET 
-        offset_dp += extended_dofs;
-
-    }
-
-    return data;
-
-}
-#else 
 template<typename T, size_t ET>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic>
 make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location,std::vector<double>>& PAIRE, const hho_degree_info& di, double eta, bool scaled_Q = true) {
@@ -1715,7 +1141,11 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
     auto local_dofs = current_dofs + nb_dp_cells*extended_dofs;  
 
     Matrix<T, Dynamic, Dynamic> data = Matrix<T, Dynamic, Dynamic>::Zero(local_dofs, local_dofs);
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
+    #else 
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, loc);
+    #endif
 
     auto offset = 0;     
     auto offset_cl = 0;  
@@ -1734,7 +1164,12 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
         auto fcs_dp = faces(msh, dp_cell);
         num_faces = fcs_dp.size();
 
+        #ifndef subcell_centering
+        cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg);
+        #else 
         cut_cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg, loc);
+        #endif
+
         for (size_t i = 0; i < fcs_dp.size(); i++) {
             auto fc = fcs_dp[i];                
             auto qps = integrate(msh, fc, 2*celdeg, loc);
@@ -1760,7 +1195,6 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
     }
     return data;
 }
-#endif
 
 // NITSCHE TERMS 
 ////////////////////////////////////////////////////////////////////////
@@ -1835,27 +1269,6 @@ make_NS_Nitsche(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#ifndef subcell_centering
-template<typename T, size_t ET, typename F1>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const F1& f, const element_location where) {
-
-    if ( location(msh, cl) == where )
-        return make_rhs(msh, cl, degree, f);
-
-    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
-    auto cbs = cb.size();
-    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-    auto qps = integrate(msh, cl, 2*degree, where);
-    for (auto& qp : qps) {
-        auto phi = cb.eval_basis(qp.first);
-        ret += qp.second * phi * f(qp.first);
-    }
-
-    return ret;
-
-}
-#else 
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const F1& f, const element_location where) {
@@ -1863,7 +1276,12 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
     if (!is_cut(msh, cl))
         return make_rhs(msh, cl, degree, f);
 
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree, where);
+    #endif
+
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
     auto qps = integrate(msh, cl, 2*degree, where);
@@ -1873,7 +1291,6 @@ make_rhs(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_
     }
     return ret;
 }
-#endif 
 
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
@@ -1999,7 +1416,6 @@ make_Dirichlet_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T,
     return ret;
 }
 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename testType>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> oper_gr, bool POK, const testType &test_case, T eta) {
@@ -2017,74 +1433,6 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     const auto facdeg  = hdi.face_degree();
     const auto graddeg = hdi.grad_degree();
     
-    cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg);
-    vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto uncut_dofs = cbs + num_faces*fbs;
-    auto current_dofs = cbs + num_faces*fbs;
-    if (is_cut(msh,cl)) 
-        current_dofs = 2*current_dofs;
-    auto extended_dofs = 2*(cbs + num_faces*fbs);
-    auto dp_cells = std::get<2>(P);
-    auto local_dofs = current_dofs + dp_cells.size()*extended_dofs; 
-
-    // TEST CASE
-    auto level_set_function = test_case.level_set_;
-    auto dir_jump = test_case.dirichlet_jump;
-    auto neumann_jump = test_case.neumann_jump;
-    auto rhs_fun = test_case.rhs_fun;
-    auto kappa_1 = test_case.parms.kappa_1;
-
-    vector_type f = vector_type::Zero(local_dofs);
-    
-    // SOURCE TERM
-    size_t offset = 0.0;
-    if (is_cut(msh,cl) && loc == element_location::IN_POSITIVE_SIDE)
-        offset = cbs;
-    f.block(offset, 0, cbs, 1) += make_rhs(msh, cl, celdeg, rhs_fun, loc);
-    
-    // JUMP TERMS LOCAL CONTRIBUTION
-    if (is_cut(msh, cl)) {
-        if (loc == element_location::IN_NEGATIVE_SIDE) 
-            f.block(0, 0, cbs, 1) -= kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
-        else if (loc == element_location::IN_POSITIVE_SIDE) {
-            f.block(cbs, 0, cbs, 1) += kappa_1*make_Dirichlet_jump_ext(msh, P, hdi, loc, level_set_function, dir_jump, eta);
-            f.block(cbs, 0, cbs, 1) += make_flux_jump(msh, cl, celdeg, loc, neumann_jump);
-        }            
-    }
-    
-    // JUMP TERMS LIFTING PART
-    if (POK && loc == element_location::IN_NEGATIVE_SIDE)
-        f += kappa_1*make_Dirichlet_jump_ext_Lifting_part(msh, P, hdi, oper_gr, test_case, eta);
-
-    return f;
-
-}
-#else 
-template<typename T, size_t ET, typename testType>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> oper_gr, bool POK, const testType &test_case, T eta) {
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(P);
-    auto cl = msh.cells[cell_index];
-    auto loc = std::get<1>(P);
-
-    // DISCRETIZATION INFOS
-    const auto celdeg  = hdi.cell_degree();
-    const auto facdeg  = hdi.face_degree();
-    const auto graddeg = hdi.grad_degree();
-    
-    cut_cell_basis<cuthho_mesh<T, ET>,T>        cb(msh, cl, celdeg, loc);
-    cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
@@ -2131,9 +1479,7 @@ make_rhs_jumps(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location
     return f;
 
 }
-#endif
 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename F1, typename F2>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, const element_location where, const F1& level_set_function, const F2& dir_jump, T eta) {
@@ -2141,37 +1487,15 @@ make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element
     // SUB-CELL INFOS
     auto cell_index = std::get<0>(P);
     auto cl = msh.cells[cell_index];
-    auto loc = std::get<1>(P);
-    auto dp_cells = std::get<2>(P);
 
     auto celdeg = hdi.cell_degree();
+
+    #ifndef subcell_centering
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg);
-    auto cbs = cb.size();
-
-    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-    auto hT = diameter(msh, cl);
-
-    // JUMP TERMS OF THE CURRENT CELL
-    auto qpsi = integrate_interface(msh, cl, 2*celdeg, element_location::IN_NEGATIVE_SIDE );
-    for (auto& qp : qpsi) {
-        auto phi = cb.eval_basis(qp.first);
-        ret -= qp.second*dir_jump(qp.first)*phi*eta/hT;
-    }
-
-    return ret;
-
-}
-#else 
-template<typename T, size_t ET, typename F1, typename F2>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, const element_location where, const F1& level_set_function, const F2& dir_jump, T eta) {
-
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(P);
-    auto cl = msh.cells[cell_index];
-
-    auto celdeg = hdi.cell_degree();
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, celdeg, where);
+    #endif
+    
     auto cbs = cb.size();
 
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
@@ -2187,9 +1511,7 @@ make_Dirichlet_jump_ext(const cuthho_mesh<T, ET>& msh, std::tuple<double,element
     return ret;
 
 }
-#endif
 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename testType>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> oper_gr, const testType &test_case, T eta) {
@@ -2206,80 +1528,11 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     const auto celdeg  = hdi.cell_degree();
     const auto facdeg  = hdi.face_degree();
     const auto graddeg = hdi.grad_degree();
+    #ifndef subcell_centering
     vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg);
-    auto cbs = cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto fbs = face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
-    auto gbs = vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
-
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-    auto uncut_dofs = cbs + num_faces*fbs;
-    auto current_dofs = cbs + num_faces*fbs;
-    if (is_cut(msh,cl)) 
-        current_dofs = 2*current_dofs;
-    auto extended_dofs = 2*(cbs + num_faces*fbs);
-    auto dp_cells = std::get<2>(P);
-    auto local_dofs = current_dofs + dp_cells.size()*extended_dofs; 
-
-    // TEST CASE
-    auto level_set_function = test_case.level_set_;
-    auto dir_jump = test_case.dirichlet_jump;
-    auto neumann_jump = test_case.neumann_jump;
-    auto rhs_fun = test_case.rhs_fun;
-
-    vector_type f = vector_type::Zero(local_dofs);
-    Matrix<T, Dynamic, 1> F_bis = Matrix<T, Dynamic, 1>::Zero(gbs); 
-    if (is_cut(msh,cl)) {
-        size_t cpt = 0;
-        auto dn = get_discrete_normal(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);    
-        auto iqps = integrate_interface(msh, cl, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : iqps) {
-            const auto g_phi = gb.eval_basis(qp.first);
-            Matrix<T,2,1> n = level_set_function.normal(qp.first);
-            n = dn[cpt];
-            F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
-            cpt++;
-        }
-    }
-
-    // LOOP OVER DEPENDENT CELLS 
-    for (auto &dp_cl : dp_cells) {
-        auto dp_cell = msh.cells[dp_cl];
-        size_t cpt = 0;
-        auto dn = get_discrete_normal(msh, dp_cell, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);    
-        auto iqps = integrate_interface(msh, dp_cell, 2*hdi.grad_degree(), element_location::IN_NEGATIVE_SIDE);
-        for (auto& qp : iqps) {
-            const auto g_phi = gb.eval_basis(qp.first);
-            Matrix<T,2,1> n = level_set_function.normal(qp.first);
-            n = dn[cpt];
-            F_bis += qp.second * dir_jump(qp.first) * g_phi * n;
-            cpt++;
-        }
-    }
-
-    f -= F_bis.transpose() * oper_gr;
-
-    return f;
-
-}
-#else
-template<typename T, size_t ET, typename testType>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<double,element_location, std::vector<double>>& P, const hho_degree_info hdi, Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, Dynamic> oper_gr, const testType &test_case, T eta) {
-
-    typedef Matrix<T, Dynamic, Dynamic> matrix_type;
-    typedef Matrix<T, Dynamic, 1>       vector_type;
-
-    // SUB-CELL INFOS
-    auto cell_index = std::get<0>(P);
-    auto cl = msh.cells[cell_index];
-    auto loc = std::get<1>(P);
-
-    // DISCRETIZATION INFOS
-    const auto celdeg  = hdi.cell_degree();
-    const auto facdeg  = hdi.face_degree();
-    const auto graddeg = hdi.grad_degree();
+    #else
     cut_vector_cell_basis<cuthho_mesh<T, ET>,T> gb(msh, cl, graddeg, loc);
+    #endif
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
     auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(facdeg);
     auto gbs = cut_vector_cell_basis<cuthho_mesh<T, ET>,T>::size(graddeg);
@@ -2335,35 +1588,17 @@ make_Dirichlet_jump_ext_Lifting_part(const cuthho_mesh<T, ET>& msh, std::tuple<d
     return f;
 
 }
-#endif
 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename F1>
 Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
 make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location where, const F1& flux_jump) {
-    
+
+    #ifndef subcell_centering
     cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
-    auto cbs = cb.size();
-    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
-
-    if( location(msh, cl) != element_location::ON_INTERFACE )
-        return ret;
-
-    auto qpsi = integrate_interface(msh, cl, 2*degree, element_location::IN_NEGATIVE_SIDE);
-    for (auto& qp : qpsi) {
-        auto phi = cb.eval_basis(qp.first);
-        ret += qp.second * flux_jump(qp.first) * phi;
-    }
-
-    return ret;
-
-}
-#else 
-template<typename T, size_t ET, typename F1>
-Matrix<typename cuthho_mesh<T, ET>::coordinate_type, Dynamic, 1>
-make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, const element_location where, const F1& flux_jump) {
-    
+    #else
     cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree, element_location::IN_POSITIVE_SIDE);
+    #endif
+    
     auto cbs = cb.size();
     Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs);
 
@@ -2379,14 +1614,12 @@ make_flux_jump(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>:
     return ret;
 
 }
-#endif
 
 // DIVERS
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#ifndef subcell_centering
 template<typename T, size_t ET, typename Function>
 Matrix<T, Dynamic, 1>
 project_function(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, hho_degree_info hdi, element_location where, const Function& f) {
@@ -2418,43 +1651,6 @@ project_function(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
     return ret;
 
 }
-#else
-template<typename T, size_t ET, typename Function>
-Matrix<T, Dynamic, 1>
-project_function(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, hho_degree_info& hdi, element_location where, const Function& f) {
-
-    if (!is_cut(msh, cl))
-        return project_function(msh, cl, hdi, f);
-
-    auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(hdi.cell_degree());
-    auto fbs = cut_face_basis<cuthho_mesh<T, ET>,T>::size(hdi.face_degree());
-    auto fcs = faces(msh, cl);
-    auto num_faces = fcs.size();
-
-    Matrix<T, Dynamic, 1> ret = Matrix<T, Dynamic, 1>::Zero(cbs+num_faces*fbs);
-
-    if (location(msh, cl)!=element_location::ON_INTERFACE && location(msh, cl) != where)
-        return ret;
-
-    Matrix<T, Dynamic, Dynamic> cell_mm = make_mass_matrix(msh, cl, hdi.cell_degree(), where);
-    Matrix<T, Dynamic, 1> cell_rhs = make_rhs(msh, cl, hdi.cell_degree(), f, where);
-    ret.block(0, 0, cbs, 1) = cell_mm.llt().solve(cell_rhs);
-
-    for (size_t i = 0; i < num_faces; i++) {
-        auto fc = fcs[i];
-        if (location(msh, fc) != element_location::ON_INTERFACE && location(msh, fc) != where ) 
-            ret.block(cbs+i*fbs, 0, fbs, 1) = Matrix<T, Dynamic, 1>::Zero(fbs);
-        else {
-            Matrix<T, Dynamic, Dynamic> face_mm = make_mass_matrix(msh, fc, hdi.face_degree(), where);
-            Matrix<T, Dynamic, 1> face_rhs = make_rhs(msh, fc, hdi.face_degree(), where, f);
-            ret.block(cbs+i*fbs, 0, fbs, 1) = face_mm.llt().solve(face_rhs);
-        }
-    }
-
-
-    return ret;
-}
-#endif 
 
 template<typename Mesh>
 class cut_assembler {

@@ -27,6 +27,8 @@ source /opt/intel/oneapi/setvars.sh intel64
 #include <unsupported/Eigen/SparseExtra>
 #include <Spectra/GenEigsSolver.h>
 #include <Spectra/MatOp/SparseGenMatProd.h>
+#include <Spectra/SymEigsSolver.h>
+#include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Eigen/Eigenvalues>
 
 using namespace Eigen;
@@ -138,18 +140,6 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     std::cout << "   " << "Debug & Silo files         -f : " << dump_debug << std::endl;
 
     // ##################################################
-    // ################################################## Level set function
-    // ##################################################
-
-    RealType line_y = 0.5015625; 
-    RealType radius = 1.0/3.0;  
-    // auto level_set_function = line_level_set<RealType>(line_y);
-    // auto level_set_function = square_level_set<RealType>(0.77, 0.23, 0.23, 0.77);
-    auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
-    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);            
-    // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
-
-    // ##################################################
     // ################################################## Space discretization
     // ##################################################
     
@@ -189,6 +179,20 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ################################################## Mesh generation 
             // ##################################################
 
+            // ########## Level set function
+            RealType h = 0.1/std::pow(2,l);
+            RealType line_y = 0.5015625; 
+            RealType radius = 1.0/3.0;  
+            RealType a = 1e-1;
+            RealType b = h/2.0;
+            RealType square_min = std::round(0.25/h)*h-a;
+            RealType square_max = std::round(0.75/h)*h+a;
+            // auto level_set_function = line_level_set<RealType>(line_y);
+            auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min-b, square_max-b);
+            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
+            // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
+
             mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
             if (dump_debug) {
                 dump_mesh(msh);
@@ -202,11 +206,11 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // MATERIAL PROPERTIES
             auto parms = params<T>();
             parms.kappa_1 = 1.0; 
-            parms.kappa_2 = 10000.0;
+            parms.kappa_2 = 1.0;
             
             // TEST CASES
-            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
-            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
             
             auto method = make_gradrec_interface_method(msh, 1.0, test_case);
@@ -235,6 +239,30 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             if (dump_debug && sparsity) {
                 auto sparse = assembler.condensed_Kg(msh, assembler.SPARSITY);
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
+            }
+
+            bool CONDITIONING = true;
+            if (dump_debug && CONDITIONING) {
+                RealType sigma_max, sigma_min;
+                Spectra::SparseSymMatProd<RealType> op(Kg);
+                // BIGEST EIGENVALUE
+                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 100);
+                max_eigs.init();
+                max_eigs.compute();
+                if(max_eigs.info() == Spectra::SUCCESSFUL)
+                    sigma_max = max_eigs.eigenvalues()(0);
+                // SMALLEST EIGENVALUE
+                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op, 1, 100);
+                min_eigs.init();
+                min_eigs.compute();
+                if(min_eigs.info() == Spectra::SUCCESSFUL)
+                    sigma_min = min_eigs.eigenvalues()(0);
+                // COMPUTE CONDITION NUMBER
+                RealType cond = sigma_max / sigma_min;
+                std::cout << bold << yellow << "         Largest eigenvalue: " << sigma_max << reset << std::endl;
+                std::cout << bold << yellow << "         Smallest eigenvalue: " << sigma_min << reset << std::endl;
+                std::cout << bold << yellow << "         Condition number: " << cond << reset << std::endl;
+                error_file << "condition number: " << cond << std::endl;
             }
 
             // ##################################################

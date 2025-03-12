@@ -9,8 +9,8 @@ typedef cuthho_poly_mesh<RealType>  mesh_type;
 mesh_type MeshGeneration(level_set<RealType> & level_set_function, size_t l_divs, size_t int_refsteps){
     
     mesh_init_params<RealType> mip;
-    mip.Nx = 10;
-    mip.Ny = 10;
+    mip.Nx = 10; //10;
+    mip.Ny = 10; //10;
     for (unsigned int i = 0; i < l_divs; i++) {
         mip.Nx *= 2;
         mip.Ny *= 2;

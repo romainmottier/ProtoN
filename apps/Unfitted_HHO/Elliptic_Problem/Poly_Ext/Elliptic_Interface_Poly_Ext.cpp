@@ -27,7 +27,6 @@ source /opt/intel/oneapi/setvars.sh intel64
 #include <unsupported/Eigen/SparseExtra>
 #include <Spectra/GenEigsSolver.h>
 #include <Spectra/MatOp/SparseGenMatProd.h>
-#include <unsupported/Eigen/SparseExtra>
 #include <Spectra/SymEigsSolver.h>
 #include <Spectra/MatOp/SparseSymMatProd.h>
 #include <Eigen/Eigenvalues>
@@ -200,7 +199,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 0; k <= degree; k++){
+    for(size_t k = 3; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -240,14 +239,17 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ########## Level set function
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
-            RealType radius = 1.0/3.0;  
-            RealType a = 1e-2;
+            // RealType radius = 1.0/3.0;  
+            RealType p = 0.0;
+            RealType radius = 1.0/3.0 + p/32.0;  
+            RealType a = 0.5*1e-6;
             RealType b = h/2.0;
             RealType square_min = std::round(0.25/h)*h-a;
             RealType square_max = std::round(0.75/h)*h+a;
             // auto level_set_function = line_level_set<RealType>(line_y);
-            auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min+b, square_max+b);
-            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            // auto level_set_function = square_level_set<RealType>(square_max+2, square_min+2, square_min-b+2, square_max-b+2);
+            // auto level_set_function = square_level_set<RealType>(0.70+a, 0.3-a, 0.25, 0.75);
+            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
             
@@ -323,7 +325,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = true;
+            bool CONDITIONING = false;
             if (dump_debug && CONDITIONING) {
                 RealType sigma_max, sigma_min;
                 Spectra::SparseSymMatProd<RealType> op(Kg);
