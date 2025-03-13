@@ -239,7 +239,6 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ########## Level set function
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
-            // RealType radius = 1.0/3.0;  
             RealType p = 0.0;
             RealType radius = 1.0/3.0 + p/32.0;  
             RealType a = 0.5*1e-6;

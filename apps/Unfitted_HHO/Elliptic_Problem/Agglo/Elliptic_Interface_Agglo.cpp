@@ -153,7 +153,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 3; k <= degree; k++) {
+    for(size_t k = 0; k <= degree; k++) {
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -169,7 +169,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         T previous_H1 = 0.0;
         T previous_L2 = 0.0;
         T previous_h = 0.0;
-        for(size_t l = 0; l <= l_divs; l++) {
+        for(size_t l = l_divs; l <= l_divs; l++) {
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;
@@ -182,7 +182,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // ########## Level set function
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
-            RealType radius = 1.0/3.0;  
+            RealType p = 4.0;
+            RealType radius = 1.0/3.0 + p/32.0;  
             RealType a = 1e-1;
             RealType b = h/2.0;
             RealType square_min = std::round(0.25/h)*h-a;
@@ -239,7 +240,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = false;
+            bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
                 RealType sigma_max, sigma_min;
                 Spectra::SparseSymMatProd<RealType> op(Kg);
