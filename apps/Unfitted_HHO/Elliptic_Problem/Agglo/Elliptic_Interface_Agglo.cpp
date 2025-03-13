@@ -194,10 +194,8 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
 
             mesh_type msh = MeshGeneration(level_set_function, l, int_refsteps);
-            if (dump_debug) {
-                dump_mesh(msh);
+            if (dump_debug) 
                 output_mesh_info(msh, level_set_function); 
-            }
 
             // ##################################################
             // ################################################## Computation of local Stiff matrices  

@@ -186,6 +186,7 @@ auto make_test_case_laplacian_waves(double t, const Mesh& msh, Function level_se
 template<typename Mesh, typename testType, typename meth>
 void
 newmark_step_cuthho_interface(size_t it, double  t, typename Mesh::coordinate_type dt, typename Mesh::coordinate_type beta, typename Mesh::coordinate_type gamma, Mesh& msh, hho_degree_info & hdi, meth &method, testType &test_case, Matrix<double, Dynamic, 1> & u_dof_n, Matrix<double, Dynamic, 1> & v_dof_n, Matrix<double, Dynamic, 1> & a_dof_n, SparseMatrix<typename Mesh::coordinate_type> & Kg, linear_solver<typename Mesh::coordinate_type> & analysis) {
+    
     using RealType = typename Mesh::coordinate_type;
     bool write_silo_Q = false;
     auto level_set_function = test_case.level_set_;
@@ -267,7 +268,7 @@ newmark_step_cuthho_interface(size_t it, double  t, typename Mesh::coordinate_ty
     u_dof_n += beta*dt*dt*a_dof_n;
     v_dof_n += gamma*dt*a_dof_n;
     
-    if(write_silo_Q){
+    if (write_silo_Q) {
         std::string silo_file_name = "cut_hho_one_field_";
         postprocessor<Mesh>::write_silo_one_field(silo_file_name, it, msh, hdi, assembler, u_dof_n, sol_fun, false);
     }
@@ -357,9 +358,9 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
     // ################################################## Space discretization
     // ##################################################
     
-    SparseMatrix<RealType> Kg, Kg_c, Mg;
+    SparseMatrix<RealType> Kg, Mg;
 
-    std::string error_file_txt = "solution_error_file_centered.txt";
+    std::string error_file_txt = "solution_error_file.txt";
     std::ofstream error_file(error_file_txt);
     postprocessor<cuthho_poly_mesh<RealType>>::write_conv_sol(error_file_txt);
 
@@ -432,20 +433,23 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 auto cl = msh.cells[std::get<0>(pair)];
                 auto contrib = method.make_contrib_POK(msh, pair, test_case, hdi);
                 auto lc = contrib.first;
-                auto f = contrib.second*0.0;
+                auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
+                // assembler.assemble_mass(msh, cell, mass); // assemble_mass_ext
             } 
             // Loop on PKO subcells 
             for (auto& pair : Pairs.second) {  
                 auto cl = msh.cells[std::get<0>(pair)];
                 auto contrib = method.make_contrib_PKO(msh, pair, test_case, hdi);
                 auto lc = contrib.first;
-                auto f = contrib.second*0.0;
+                auto f = contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
+                // assembler.assemble_mass(msh, cell, mass); // assemble_mass_ext
             } 
             assembler.finalize();
             Kg = assembler.LHS;
-            Kg_c = Kg;
+            
+            // A enlever et remplacer par une version avec extension 
             for (auto& cell : msh.cells) {
                 auto cell_mass = method.make_contrib_mass(msh, cell, test_case, hdi);
                 size_t n_dof = assembler.n_dof(msh,cell);
@@ -482,23 +486,27 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
             // Projecting initial scalar, velocity and acceleration
             Matrix<RealType, Dynamic, 1> u_dof_n, v_dof_n, a_dof_n;
             for(size_t it = 1; it <= nt; it++) { 
+
                 RealType t = dt*it+ti;
-                int mod = static_cast<int>(std::round(nt / 15.0)); // Number of silo files 
+                
+                int mod = static_cast<int>(std::round(nt / 15.0));  
                 if ((it == 1) || (it == std::round(nt/3)) || (it == std::round(nt/2)) || (it == std::round(3*nt/2)) || (it == nt)) 
                     std::cout << "Time step number" << it << " : " << t << "seconds" << std::endl; 
-                auto test_case = make_test_case_laplacian_waves(t,msh, level_set_function);
+                
+                auto test_case = make_test_case_laplacian_waves(t, msh, level_set_function);
                 auto method = make_gradrec_interface_method(msh, 1.0, test_case);
-                newmark_step_cuthho_interface(it, t, dt, beta, gamma, msh, hdi, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg_c, analysis);
+                newmark_step_cuthho_interface(it, t, dt, beta, gamma, msh, hdi, method, test_case, u_dof_n,  v_dof_n, a_dof_n, Kg, analysis);
+
                 if (it == nt) {     
-                    // auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, u_dof_n, test_case.sol_fun, test_case.sol_grad, previous_h, previous_L2, previous_H1, error_file);
-                    // previous_h  = errors[0]; 
-                    // previous_H1 = errors[1];
-                    // previous_L2 = errors[2];  
-                    // postprocessor<cuthho_poly_mesh<RealType>>::compute_errors_one_field_bis(msh, hdi, assembler, u_dof_n, test_case.sol_fun, test_case.sol_grad, error_file);
+                    auto errors = postprocessor<cuthho_poly_mesh<RealType>>::compute_error_elliptic_second_order_poly_ext(msh, Pairs.first, hdi, assembler, u_dof_n, test_case,  previous_h, previous_L2, previous_H1, error_file);
+                    previous_h  = errors[0]; 
+                    previous_H1 = errors[1];
+                    previous_L2 = errors[2];
                     std::cout << "Number of equations : " << analysis.n_equations() << std::endl;
                     std::cout << "Number of steps : " <<  nt << std::endl;
                     std::cout << "Time step size : " <<  dt << std::endl;
                 }
+
             }
         }
     }  
