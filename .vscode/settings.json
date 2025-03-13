@@ -73,6 +73,7 @@
         "shared_mutex": "cpp",
         "cfenv": "cpp",
         "text_encoding": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "cinttypes": "cpp"
     }
 }

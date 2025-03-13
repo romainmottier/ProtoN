@@ -199,7 +199,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 3; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -239,17 +239,16 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ########## Level set function
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
-            // RealType radius = 1.0/3.0;  
             RealType p = 0.0;
             RealType radius = 1.0/3.0 + p/32.0;  
-            RealType a = 0.5*1e-6;
+            RealType a = 5e-8;
             RealType b = h/2.0;
             RealType square_min = std::round(0.25/h)*h-a;
             RealType square_max = std::round(0.75/h)*h+a;
             // auto level_set_function = line_level_set<RealType>(line_y);
-            // auto level_set_function = square_level_set<RealType>(square_max+2, square_min+2, square_min-b+2, square_max-b+2);
-            // auto level_set_function = square_level_set<RealType>(0.70+a, 0.3-a, 0.25, 0.75);
-            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min-b, square_max-b);
+            // auto level_set_function = square_level_set<RealType>(0.70+a, 0.30-a, 0.25, 0.75);
+            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
             
@@ -325,22 +324,36 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = false;
+            bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
-                RealType sigma_max, sigma_min;
+                // LARGEST EIGENVALUE
+                RealType sigma_max = 0.0; 
                 Spectra::SparseSymMatProd<RealType> op(Kg);
-                // BIGEST EIGENVALUE
-                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 100);
+                // Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 200);
+                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_ALGE, Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 200);
                 max_eigs.init();
-                max_eigs.compute();
-                if(max_eigs.info() == Spectra::SUCCESSFUL)
+                // max_eigs.compute(Spectra::LARGEST_MAGN, 5000, 1e-5);
+                max_eigs.compute(Spectra::LARGEST_ALGE, 2000, 1e-10);
+                if (max_eigs.info() == Spectra::SUCCESSFUL) {
                     sigma_max = max_eigs.eigenvalues()(0);
+                }
+                else {
+                    std::cout << "SEARCHING FOR THE MAXIMAL EIGENVALUE FAILED" << std::endl;
+                }
                 // SMALLEST EIGENVALUE
-                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op, 1, 100);
+                RealType sigma_min = 0.0;
+                Spectra::SparseSymMatProd<RealType> op_min(Kg);
+                // Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op_min, 1, 200);
+                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_ALGE, Spectra::SparseSymMatProd<RealType> > min_eigs(&op_min, 1, 200);
                 min_eigs.init();
-                min_eigs.compute();
-                if(min_eigs.info() == Spectra::SUCCESSFUL)
+                // min_eigs.compute(Spectra::SMALLEST_MAGN, 2000, 1e-10);
+                min_eigs.compute(Spectra::SMALLEST_ALGE, 2000, 1e-10);
+                if (min_eigs.info() == Spectra::SUCCESSFUL) {
                     sigma_min = min_eigs.eigenvalues()(0);
+                }
+                else {
+                    std::cout << "SEARCHING FOR THE MINIMAL EIGENVALUE FAILED" << std::endl;
+                }
                 // COMPUTE CONDITION NUMBER
                 RealType cond = sigma_max / sigma_min;
                 std::cout << bold << yellow << "         Largest eigenvalue: " << sigma_max << reset << std::endl;
@@ -355,10 +368,12 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             
             linear_solver<RealType> analysis;
             analysis.set_Kg(Kg);
-            if (direct_solver_Q) 
+            if (direct_solver_Q) {
                 analysis.set_direct_solver(true);
-            else
+            }
+            else {
                 analysis.set_iterative_solver();
+            }
             analysis.factorize();
 
             Matrix<RealType, Dynamic, 1> x_dof = Matrix<RealType, Dynamic, 1>::Zero(assembler.RHS.rows(),1);
@@ -373,10 +388,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             previous_H1 = errors[1];
             previous_L2 = errors[2];
             
-            bool SILO = false;
+            bool SILO = true;
             bool DEBUG_OPERATORS = false;
-            bool GRAD = true;
-            bool STAB = true;
+            bool GRAD = false;
+            bool STAB = false;
             if (dump_debug && (SILO || DEBUG_OPERATORS)) {
                 if (SILO) {
                     std::string silo_file_name_sol = "sol_cut_steady_scalar_k_" + std::to_string(k)   + "_l" + std::to_string(l);

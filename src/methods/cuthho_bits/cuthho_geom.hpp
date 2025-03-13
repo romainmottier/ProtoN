@@ -910,12 +910,11 @@ public:
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
         }
         else {
+            // NEVER DO AN ANYSOTROPING SCALING hx=hy OTHERWISE CONDITIONING ISSUES
             cell_bar     = barycenter(msh, cl, where);
             cell_h       = diameter(msh, cl, where);
-            // cell_hx      = cell_h;
-            // cell_hy      = cell_h;
-            cell_hx      = compute_hx_hy(msh, cl, where).first; 
-            cell_hy      = compute_hx_hy(msh, cl, where).second; 
+            cell_hx      = cell_h;
+            cell_hy      = cell_h;
             // BASIS INFOS
             basis_degree = degree;
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
