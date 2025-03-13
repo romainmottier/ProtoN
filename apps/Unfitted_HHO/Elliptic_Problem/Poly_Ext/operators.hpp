@@ -111,10 +111,9 @@ public:
         auto dir_jump = test_case.dirichlet_jump;
 
         // HHO OPERATORS
-        auto gr = make_hho_gradrec_vector_PKO(msh, P_KO, hdi, level_set_function);
-        auto stab_usual = make_hho_stabilization(msh, P_KO, hdi);
+        auto gr = make_hho_gradrec_vector_PKO(msh, P_KO, hdi, level_set_function);       // G
+        auto stab_usual = make_hho_stabilization(msh, P_KO, hdi);                        // s°
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_KO, hdi, eta, coeff); // s^\Gamma
- 
         Mat lc = kappa * (gr.second + stab_usual) + kappa_1*stab_cut; 
 
         // RHS
