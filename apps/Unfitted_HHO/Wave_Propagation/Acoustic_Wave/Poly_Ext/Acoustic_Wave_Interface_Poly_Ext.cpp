@@ -384,7 +384,13 @@ void ICutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = 0.0*contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
-                // assembler.assemble_mass(msh, cell, mass); // assemble_mass_ext
+
+                // auto cell_mass = method.make_contrib_mass(msh, pair, test_case, hdi);
+                // size_t n_dof = assembler.n_dof(msh,cell);
+                // Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof,n_dof);
+                // mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
+                // assembler.assemble(msh, cell, lc, f);
+                // assembler.assemble_mass(msh, cell, mass);
             } 
             // Loop on PKO subcells 
             for (auto& pair : Pairs.second) {  
@@ -393,20 +399,19 @@ void ICutHHOSecondOrderConvTest(int argc, char **argv) {
                 auto lc = contrib.first;
                 auto f = 0.0*contrib.second;
                 assembler.assemble_ext(msh, pair, lc, f);  
-                // assembler.assemble_mass(msh, cell, mass); // assemble_mass_ext
             } 
             assembler.finalize();
             Kg = assembler.LHS;
             
-            // A enlever et remplacer par une version avec extension 
-            for (auto& cell : msh.cells) {
-                auto cell_mass = method.make_contrib_mass(msh, cell, test_case, hdi);
-                size_t n_dof = assembler.n_dof(msh,cell);
-                Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof,n_dof);
-                mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
-                assembler.assemble_mass(msh, cell, mass);
-            }
-            Mg = assembler.MASS;
+            // // A enlever et remplacer par une version avec extension 
+            // for (auto& cell : msh.cells) {
+            //     auto cell_mass = method.make_contrib_mass(msh, cell, test_case, hdi);
+            //     size_t n_dof = assembler.n_dof(msh,cell);
+            //     Matrix<RealType, Dynamic, Dynamic> mass = Matrix<RealType, Dynamic, Dynamic>::Zero(n_dof,n_dof);
+            //     mass.block(0,0,cell_mass.rows(),cell_mass.cols()) = cell_mass;
+            //     assembler.assemble_mass(msh, cell, mass);
+            // }
+            // Mg = assembler.MASS;
 
             // ##################################################
             // ################################################## Solver  

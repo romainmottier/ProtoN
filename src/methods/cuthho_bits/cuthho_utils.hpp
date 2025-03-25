@@ -57,6 +57,27 @@ make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET
 
 template<typename T, size_t ET>
 Matrix<T, Dynamic, Dynamic>
+make_mass_matrix_extended(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::cell_type& cl, size_t degree, element_location where) {
+
+    #ifndef subcell_centering
+    cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree);
+    #else
+    cut_cell_basis<cuthho_mesh<T, ET>,T> cb(msh, cl, degree, where);
+    #endif 
+
+    auto cbs = cb.size();
+    Matrix<T, Dynamic, Dynamic> ret = Matrix<T, Dynamic, Dynamic>::Zero(cbs, cbs);
+    auto qps = integrate(msh, cl, 2*degree, where);
+    for (auto& qp : qps) {
+        auto phi = cb.eval_basis(qp.first);
+        ret += qp.second * phi * phi.transpose();
+    }
+
+    return ret;
+}
+
+template<typename T, size_t ET>
+Matrix<T, Dynamic, Dynamic>
 make_mass_matrix(const cuthho_mesh<T, ET>& msh, const typename cuthho_mesh<T, ET>::face_type& fc, size_t degree, element_location where) {
 
     cut_face_basis<cuthho_mesh<T, ET>,T> fb(msh, fc, degree, where);

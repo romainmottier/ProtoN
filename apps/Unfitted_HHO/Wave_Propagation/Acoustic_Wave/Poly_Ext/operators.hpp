@@ -35,12 +35,17 @@ public:
     }
 
     Mat
-    make_contrib_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const testType &test_case, const hho_degree_info hdi) {
+    make_contrib_mass(const Mesh& msh, Tuple P, const testType &test_case, const hho_degree_info hdi) {
+
+        // CELL INFOS 
+        auto cell_index = std::get<0>(P);
+        auto loc = std::get<1>(P);
+        auto cl = msh.cells[cell_index];
 
         if( location(msh, cl) != element_location::ON_INTERFACE )
             return make_contrib_uncut_mass(msh, cl, hdi, test_case);
         else 
-            return make_contrib_cut_mass(msh, cl, hdi, test_case);
+            return make_contrib_cut_mass(msh, P, hdi, test_case);
 
     }
 
@@ -61,20 +66,27 @@ public:
     }
     
     Mat
-    make_contrib_cut_mass(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType &test_case) {
+    make_contrib_cut_mass(const Mesh& msh, Tuple P, const hho_degree_info hdi, const testType &test_case) {
 
-        Mat mass_neg = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_NEGATIVE_SIDE);
-        Mat mass_pos = make_mass_matrix(msh, cl, hdi.cell_degree(), element_location::IN_POSITIVE_SIDE);
-        mass_neg *= (1.0/(test_case.parms.c_1*test_case.parms.c_1*test_case.parms.kappa_1));
-        mass_pos *= (1.0/(test_case.parms.c_2*test_case.parms.c_2*test_case.parms.kappa_2));
+        // CELL INFOS 
+        auto cell_index = std::get<0>(P);
+        auto loc = std::get<1>(P);
+        auto cl = msh.cells[cell_index];
         
-        size_t n_data_neg = mass_neg.rows();
-        size_t n_data_pos = mass_pos.rows();
-        size_t n_data = n_data_neg + n_data_pos;
+        Mat mass = make_mass_matrix(msh, cl, hdi.cell_degree(), loc);
+        if (loc == element_location::IN_NEGATIVE_SIDE)
+            mass *= (1.0/(test_case.parms.c_1*test_case.parms.c_1*test_case.parms.kappa_1));
+        else
+            mass *= (1.0/(test_case.parms.c_2*test_case.parms.c_2*test_case.parms.kappa_2));
         
-        Mat mass = Mat::Zero(n_data,n_data);
-        mass.block(0,0,n_data_neg,n_data_neg) = mass_neg;
-        mass.block(n_data_neg,n_data_neg,n_data_pos,n_data_pos) = mass_pos;
+        // // ASSEMBLY 
+        // size_t n_data_loc = mass.rows();
+        // size_t n_data = n_data_neg + n_data_pos;
+        // Mat mass = Mat::Zero(n_data, n_data);
+        // if (loc == element_location::IN_NEGATIVE_SIDE)
+        //     mass.block(0, 0, n_data_neg, n_data_neg) = mass;
+        // else 
+        //     mass.block(n_data_neg, n_data_neg, n_data_pos, n_data_pos) = mass;
 
         return mass;
 
@@ -179,6 +191,9 @@ public:
         // RHS
         auto f = make_rhs_jumps(msh, P_OK, hdi, gr.first, POK, test_case, eta);
 
+        // MASS MATRIC
+        // auto mass = make_contrib_mass(msh, P_OK, test_case, hdi);
+        
         return std::make_pair(lc, f);
 
     }
