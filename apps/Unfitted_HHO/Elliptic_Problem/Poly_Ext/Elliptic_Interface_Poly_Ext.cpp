@@ -146,7 +146,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     sim_infos << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     std::cout << "   " << "Polynomial degree          -k : " << degree << "     (Face unknowns)"  << std::endl;
     sim_infos << "   " << "Space refinement level     -l : " << l_divs << std::endl;
-    std::cout << "   " << "Space refinement level     P_OK-l : " << l_divs << std::endl;
+    std::cout << "   " << "Space refinement level     -l : " << l_divs << std::endl;
     sim_infos << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
     std::cout << "   " << "Time refinement level      -n : " << nt_divs << std::endl;
     sim_infos << "   " << "Interface refinement level -r : " << int_refsteps << std::endl;
