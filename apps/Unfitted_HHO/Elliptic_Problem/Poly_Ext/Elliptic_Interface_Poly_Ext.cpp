@@ -199,7 +199,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     // ################################################## Loop over polynomial degree
     // ##################################################
 
-    for(size_t k = 3; k <= degree; k++){
+    for(size_t k = 0; k <= degree; k++){
 
         tck.tic();
         std::cout << std::endl << bold << red << "   Polynomial degree k : " << k << reset << std::endl;
@@ -247,8 +247,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType square_max = std::round(0.75/h)*h+a;
             // auto level_set_function = line_level_set<RealType>(line_y);
             // auto level_set_function = square_level_set<RealType>(square_max+2, square_min+2, square_min-b+2, square_max-b+2);
-            // auto level_set_function = square_level_set<RealType>(0.70+a, 0.3-a, 0.25, 0.75);
-            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            auto level_set_function = square_level_set<RealType>(0.70+a, 0.3-a, 0.25, 0.75);
+            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
             
