@@ -241,7 +241,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType line_y = 0.5015625; 
             RealType p = 0.0;
             RealType radius = 1.0/3.0 + p/32.0;  
-            RealType a = 0.5*1e-6;
+            RealType a = 5e-8;
             RealType b = h/2.0;
             RealType square_min = std::round(0.25/h)*h-a;
             RealType square_max = std::round(0.75/h)*h+a;
@@ -326,12 +326,14 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
 
             bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
-                RealType sigma_max, sigma_min;
+                // LARGEST EIGENVALUE
+                RealType sigma_max = 0.0; 
                 Spectra::SparseSymMatProd<RealType> op(Kg);
-                // BIGEST EIGENVALUE
-                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN,Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 100);
+                // Spectra::SymEigsSolver< RealType, Spectra::LARGEST_MAGN, Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 200);
+                Spectra::SymEigsSolver< RealType, Spectra::LARGEST_ALGE, Spectra::SparseSymMatProd<RealType> > max_eigs(&op, 1, 200);
                 max_eigs.init();
-                max_eigs.compute();
+                // max_eigs.compute(Spectra::LARGEST_MAGN, 5000, 1e-5);
+                max_eigs.compute(Spectra::LARGEST_ALGE, 2000, 1e-10);
                 if (max_eigs.info() == Spectra::SUCCESSFUL) {
                     sigma_max = max_eigs.eigenvalues()(0);
                 }
@@ -339,10 +341,13 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                     std::cout << "SEARCHING FOR THE MAXIMAL EIGENVALUE FAILED" << std::endl;
                 }
                 // SMALLEST EIGENVALUE
+                RealType sigma_min = 0.0;
                 Spectra::SparseSymMatProd<RealType> op_min(Kg);
-                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op_min, 1, 100);
+                // Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_MAGN, Spectra::SparseSymMatProd<RealType> > min_eigs(&op_min, 1, 200);
+                Spectra::SymEigsSolver< RealType, Spectra::SMALLEST_ALGE, Spectra::SparseSymMatProd<RealType> > min_eigs(&op_min, 1, 200);
                 min_eigs.init();
-                min_eigs.compute();
+                // min_eigs.compute(Spectra::SMALLEST_MAGN, 2000, 1e-10);
+                min_eigs.compute(Spectra::SMALLEST_ALGE, 2000, 1e-10);
                 if (min_eigs.info() == Spectra::SUCCESSFUL) {
                     sigma_min = min_eigs.eigenvalues()(0);
                 }
