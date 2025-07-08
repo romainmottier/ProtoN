@@ -1148,6 +1148,7 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
     auto loc = std::get<1>(PAIRE);
     auto dp_cells = std::get<2>(PAIRE);
     auto cl = msh.cells[cell_index];
+    auto h = diameter(msh, cl);
     auto celdeg = di.cell_degree();
     auto facdeg = di.face_degree();
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg); 
@@ -1176,7 +1177,6 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
             offset_cl = cbs;
     }
 
-    // LOOP OVER DEPENDENT CELLS 
     size_t offset_dp = current_dofs + offset;  
     for (auto &dp_cl : dp_cells) {
 
@@ -1191,6 +1191,7 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
         cut_cell_basis<cuthho_mesh<T, ET>,T> cb_dp(msh, dp_cell, celdeg, loc);
         #endif
 
+        // QUADRATURE ON ILL-CUT FACES V1
         for (size_t i = 0; i < fcs_dp.size(); i++) {
             auto fc = fcs_dp[i];                
             auto qps = integrate(msh, fc, 2*celdeg, loc);
@@ -1211,9 +1212,50 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
                 }
             }
         }
+              
+        // // QUADRATURE ON ILL-CUT CELLS V2
+        // auto qps = integrate(msh, dp_cell, 2*celdeg, loc);
+        // for (auto& qp : qps) {
+        //     auto c_phi    = cb.eval_basis(qp.first);
+        //     auto c_phi_dp = cb_dp.eval_basis(qp.first);
+        //     if (scaled_Q) {
+        //         data.block(offset_cl, offset_cl, cbs, cbs) +=  qp.second * c_phi    * c_phi.transpose()    * eta / (h_dp*h_dp);
+        //         data.block(offset_cl, offset_dp, cbs, cbs) -=  qp.second * c_phi    * c_phi_dp.transpose() * eta / (h_dp*h_dp);
+        //         data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta / (h_dp*h_dp);
+        //         data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta / (h_dp*h_dp);
+        //     }
+        //     else {
+        //         data.block(offset_cl, offset_cl, cbs, cbs) +=  qp.second * c_phi    * c_phi.transpose()    * eta;
+        //         data.block(offset_cl, offset_dp, cbs, cbs) -=  qp.second * c_phi    * c_phi_dp.transpose() * eta;
+        //         data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta;
+        //         data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta;
+        //     }
+        // }
+
+        // // QUADRATURE ON WELL-CUT OR UNCUT CELLS V3
+        // auto qps = integrate(msh, cl, 2*celdeg, loc);
+        // for (auto& qp : qps) {
+        //     auto c_phi    = cb.eval_basis(qp.first);
+        //     auto c_phi_dp = cb_dp.eval_basis(qp.first);
+        //     if (scaled_Q) {
+        //         data.block(offset_cl, offset_cl, cbs, cbs) +=  qp.second * c_phi    * c_phi.transpose()    * eta / (h*h);
+        //         data.block(offset_cl, offset_dp, cbs, cbs) -=  qp.second * c_phi    * c_phi_dp.transpose() * eta / (h*h);
+        //         data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta / (h*h);
+        //         data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta / (h*h);
+        //     }
+        //     else {
+        //         data.block(offset_cl, offset_cl, cbs, cbs) +=  qp.second * c_phi    * c_phi.transpose()    * eta;
+        //         data.block(offset_cl, offset_dp, cbs, cbs) -=  qp.second * c_phi    * c_phi_dp.transpose() * eta;
+        //         data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta;
+        //         data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta;
+        //     }
+        // }
+
+
         // UPDATING OFFSET 
         offset_dp += extended_dofs;
     }
+
     return data;
 }
 
