@@ -910,16 +910,30 @@ public:
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
         }
         else {
-            // NEVER DO AN ANYSOTROPING SCALING hx=hy OTHERWISE CONDITIONING ISSUES
-            cell_bar     = barycenter(msh, cl, where);
-            cell_h       = diameter(msh, cl, where);
-            cell_hx      = cell_h;
-            cell_hy      = cell_h;
+            if (((cl.user_data.agglo_set == cell_agglo_set::T_KO_POS) && (where == element_location::IN_POSITIVE_SIDE)) 
+             || ((cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) && (where == element_location::IN_NEGATIVE_SIDE))) {
+                auto cl_stab = msh.cells[cl.user_data.paired_cell];
+                cell_bar     = 0.5 * (barycenter(msh, cl, where) + barycenter(msh, cl_stab, where));
+                cell_h       = diameter(msh, cl, where) + diameter(msh, cl_stab, where);
+                cell_hx      = cell_h;
+                cell_hy      = cell_h;
+                // cell_bar     = barycenter(msh, cl_stab);
+                // cell_h       = diameter(msh, cl_stab);
+                // cell_hx      = cell_h;
+                // cell_hy      = cell_h;
+            }
+            else {
+                cell_bar     = barycenter(msh, cl, where);
+                cell_h       = diameter(msh, cl, where);
+                cell_hx      = cell_h;
+                cell_hy      = cell_h;
+            }
             // BASIS INFOS
             basis_degree = degree;
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
         }
     }
+
 
     Matrix<VT, Dynamic, 1> eval_basis(const point_type& pt) {
 

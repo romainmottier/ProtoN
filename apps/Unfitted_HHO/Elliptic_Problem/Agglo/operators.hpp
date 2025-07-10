@@ -20,6 +20,7 @@ public:
     make_contrib_uncut(const Mesh& msh, const typename Mesh::cell_type& cl, const hho_degree_info hdi, const testType test_case) {
         
         T kappa;
+        auto k = hdi.cell_degree();
 
         if ( location(msh, cl) == element_location::IN_NEGATIVE_SIDE )
             kappa = test_case.parms.kappa_1;
@@ -28,7 +29,7 @@ public:
 
         auto gr = make_hho_gradrec_vector(msh, cl, hdi);
         Mat stab = make_hho_naive_stabilization(msh, cl, hdi);
-        Mat lc = kappa * (gr.second + stab);
+        Mat lc = kappa * (gr.second + k*stab);
         Mat f = make_rhs(msh, cl, hdi.cell_degree(), test_case.rhs_fun);
         return std::make_pair(lc, f);
 
@@ -65,6 +66,7 @@ public:
         auto parms = test_case.parms;
         auto level_set_function = test_case.level_set_;
         auto dir_jump = test_case.dirichlet_jump;
+        auto k = hdi.cell_degree();
 
         ///////////////    LHS
         auto celdeg = hdi.cell_degree();
@@ -89,7 +91,7 @@ public:
         #endif
 
 
-        Mat lc = stab + parms.kappa_1 * gr_n.second + parms.kappa_2 * gr_p.second;
+        Mat lc = k*stab + parms.kappa_1 * gr_n.second + parms.kappa_2 * gr_p.second;
 
         ///////////////    RHS
         Vect f = Vect::Zero(lc.rows());

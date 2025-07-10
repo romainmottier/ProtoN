@@ -1212,7 +1212,7 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
         //         }
         //     }
         // }
-              
+        
         // // QUADRATURE ON ILL-CUT CELLS V2
         // auto qps = integrate(msh, dp_cell, 2*celdeg, loc);
         // for (auto& qp : qps) {
