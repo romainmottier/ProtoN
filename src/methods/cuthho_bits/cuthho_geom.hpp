@@ -915,6 +915,8 @@ public:
             cell_h       = diameter(msh, cl, where);
             cell_hx      = cell_h;
             cell_hy      = cell_h;
+            // cell_hx      = compute_hx_hy(msh, cl, where).first; 
+            // cell_hy      = compute_hx_hy(msh, cl, where).second; 
             // BASIS INFOS
             basis_degree = degree;
             basis_size   = (basis_degree+2)*(basis_degree+1)/2;
