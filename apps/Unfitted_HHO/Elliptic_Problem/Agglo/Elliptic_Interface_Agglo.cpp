@@ -169,7 +169,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
         T previous_H1 = 0.0;
         T previous_L2 = 0.0;
         T previous_h = 0.0;
-        for(size_t l = l_divs; l <= l_divs; l++) {
+        for(size_t l = 0; l <= l_divs; l++) {
 
             tcl.tic();
             std::cout << bold << cyan << "      Space refinment level -l : " << l << reset << std::endl;

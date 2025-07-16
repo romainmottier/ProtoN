@@ -21,7 +21,7 @@
  */
 
 #pragma once
-#define subcell_centering
+// #define subcell_centering
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////                                            ////////////////////////////
@@ -1212,7 +1212,7 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
         //         }
         //     }
         // }
-              
+        // {    
         // // QUADRATURE ON ILL-CUT CELLS V2
         // auto qps = integrate(msh, dp_cell, 2*celdeg, loc);
         // for (auto& qp : qps) {
@@ -1230,7 +1230,7 @@ make_hho_ill_dofs_stabilization(const cuthho_mesh<T, ET>& msh, std::tuple<double
         //         data.block(offset_dp, offset_cl, cbs, cbs) -=  qp.second * c_phi_dp * c_phi.transpose()    * eta;
         //         data.block(offset_dp, offset_dp, cbs, cbs) +=  qp.second * c_phi_dp * c_phi_dp.transpose() * eta;
         //     }
-        // }
+        // }}
 
         // QUADRATURE ON WELL-CUT OR UNCUT CELLS V3
         auto qps = integrate(msh, cl, 2*celdeg, loc);
