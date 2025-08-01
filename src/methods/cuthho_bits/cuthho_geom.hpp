@@ -914,9 +914,13 @@ public:
              || ((cl.user_data.agglo_set == cell_agglo_set::T_KO_NEG) && (where == element_location::IN_NEGATIVE_SIDE))) {
                 auto cl_stab = msh.cells[cl.user_data.paired_cell];
                 cell_bar     = 0.5 * (barycenter(msh, cl, where) + barycenter(msh, cl_stab, where));
-                cell_h       = diameter(msh, cl_stab, where) + diameter(msh, cl_stab, where);
+                cell_h       = diameter(msh, cl, where) + diameter(msh, cl_stab, where);
                 cell_hx      = cell_h;
                 cell_hy      = cell_h;
+                // cell_bar     = barycenter(msh, cl_stab);
+                // cell_h       = diameter(msh, cl_stab);
+                // cell_hx      = cell_h;
+                // cell_hy      = cell_h;
             }
             else {
                 cell_bar     = barycenter(msh, cl, where);

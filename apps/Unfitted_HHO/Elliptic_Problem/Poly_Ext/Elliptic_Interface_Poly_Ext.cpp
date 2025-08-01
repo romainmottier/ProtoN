@@ -243,11 +243,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType radius = 1.0/3.0 + p/32.0;  
             // RealType radius = 1.0/3.0 + p/640.0;  
             RealType a = 5e-10;
-            RealType b = h/2.0;
-            RealType square_min = std::round(0.25/h)*h-a;
-            RealType square_max = std::round(0.75/h)*h+a;
             // auto level_set_function = line_level_set<RealType>(line_y);
-            // auto level_set_function = square_level_set<RealType>(square_max, square_min, square_min-b, square_max-b);
             // auto level_set_function = square_level_set<RealType>(0.70+a, 0.30-a, 0.25, 0.75);
             auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
