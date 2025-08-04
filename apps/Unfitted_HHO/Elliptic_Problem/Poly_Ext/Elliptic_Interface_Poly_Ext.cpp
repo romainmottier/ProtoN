@@ -239,7 +239,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ########## Level set function
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
-            RealType p = 0.0;
+            RealType p = -4.0;
             RealType radius = 1.0/3.0 + p/32.0;  
             // RealType radius = 1.0/3.0 + p/640.0;  
             RealType a = 5e-10;
@@ -321,7 +321,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = false;
+            bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
                 // LARGEST EIGENVALUE
                 RealType sigma_max = 0.0; 
