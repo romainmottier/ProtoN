@@ -76,9 +76,8 @@ public:
         auto stab_usual = make_hho_stabilization(msh, P_OK, hdi);                           // s° 
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, eta, coeff);    // s^\Gamma
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta);          // s^N
-        stab_ill_dofs = 10.0*stab_ill_dofs;
+        stab_ill_dofs = 20.0*stab_ill_dofs;
         Mat lc = kappa*(gr.second + stab_usual + stab_ill_dofs) + kappa_1*stab_cut; 
-        // Mat lc = kappa*(gr.second + stab_usual) + kappa_1*stab_cut; 
 
         // RHS
         auto f = make_rhs_jumps(msh, P_OK, hdi, gr.first, POK, test_case, eta);
