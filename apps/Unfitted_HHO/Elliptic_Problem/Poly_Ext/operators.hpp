@@ -77,6 +77,10 @@ public:
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, eta, coeff);    // s^\Gamma
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta);          // s^N
         stab_ill_dofs = 20.0*stab_ill_dofs;
+        // auto k = hdi.cell_degree();
+        // stab_usual = k*stab_usual;
+        // stab_cut = k*stab_cut;
+        // stab_ill_dofs = k*k*stab_ill_dofs;
         Mat lc = kappa*(gr.second + stab_usual + stab_ill_dofs) + kappa_1*stab_cut; 
 
         // RHS
@@ -86,7 +90,7 @@ public:
 
     }
 
-    std::pair<Mat, Vect>
+    std::pair<Mat, Vect> 
     make_contrib_PKO(const Mesh& msh, Tuple P_KO, const testType &test_case, const hho_degree_info hdi) {
 
         // CELL INFOS & PARAMETERS

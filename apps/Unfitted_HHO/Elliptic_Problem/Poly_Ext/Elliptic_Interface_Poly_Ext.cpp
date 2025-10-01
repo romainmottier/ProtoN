@@ -241,11 +241,12 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType line_y = 0.5015625; 
             RealType p = 4.0;
             RealType radius = 1.0/3.0 + p/32.0;  
+            // RealType radius = 1.0/3.0 + p/32.0;  
             // RealType radius = 1.0/3.0 + p/640.0;  
-            RealType a = 5e-4;
+            // RealType a = 5e-4;
             // auto level_set_function = line_level_set<RealType>(line_y);
-            auto level_set_function = square_level_set<RealType>(0.70+a, 0.30-a, 0.25, 0.75);
-            // auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
+            // auto level_set_function = square_level_set<RealType>(0.70+a, 0.30-a, 0.25, 0.75);
+            auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 8, 0.03);  
             // auto level_set_function = flower_level_set<RealType>(radius, 0.5, 0.5, 6, 0.045);  
             
@@ -265,10 +266,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ##################################################
     
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // NON-HOMOGENEOUS WITHOUT JUMPS 
-            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // NON-HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
@@ -321,7 +322,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = true;
+            bool CONDITIONING = false;
             if (dump_debug && CONDITIONING) {
                 // LARGEST EIGENVALUE
                 RealType sigma_max = 0.0; 
