@@ -76,7 +76,7 @@ public:
         auto stab_usual = make_hho_stabilization(msh, P_OK, hdi);                           // s° 
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, eta, coeff);    // s^\Gamma
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta);          // s^N
-        stab_ill_dofs = 20.0*stab_ill_dofs;
+        stab_ill_dofs = 10.0*stab_ill_dofs;
         // auto k = hdi.cell_degree();
         // stab_usual = k*stab_usual;
         // stab_cut = k*stab_cut;
