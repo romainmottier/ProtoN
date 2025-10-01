@@ -190,7 +190,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
     // MATERIAL PROPERTIES
     auto parms = params<T>();
     parms.kappa_1 = 1.0; 
-    parms.kappa_2 = 10000.0;
+    parms.kappa_2 = 1.0;
     sim_infos << "   Kappa_2                       : " << parms.kappa_2 << std::endl;
 
     SparseMatrix<RealType> Kg, Mg; 
@@ -267,10 +267,10 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
-            // NON-HOMOGENEOUS WITHOUT JUMPS 
+            // (NON) HOMOGENEOUS WITHOUT JUMPS 
             auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
-            // NON-HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
+            // (NON) HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
 
             // NON HOMOGENEOUS WITH DIRICHLET JUMPS 
@@ -321,7 +321,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = false;
+            bool CONDITIONING = true;
             if (dump_debug && CONDITIONING) {
                 // LARGEST EIGENVALUE
                 RealType sigma_max = 0.0; 
@@ -385,7 +385,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             previous_H1 = errors[1];
             previous_L2 = errors[2];
             
-            bool SILO = false;
+            bool SILO = true;
             bool DEBUG_OPERATORS = false;
             bool GRAD = false;
             bool STAB = false;
