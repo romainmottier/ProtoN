@@ -240,7 +240,7 @@ void CutHHOSecondOrderConvTest (int argc, char **argv) {
                 writeMatrixToCSV("LHS_zip.csv", sparse); 
             }
 
-            bool CONDITIONING = true;
+            bool CONDITIONING = false;
             if (dump_debug && CONDITIONING) {
                 // LARGEST EIGENVALUE
                 RealType sigma_max = 0.0; 

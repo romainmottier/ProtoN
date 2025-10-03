@@ -189,8 +189,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
 
     // MATERIAL PROPERTIES
     auto parms = params<T>();
-    parms.kappa_1 = 1.0; 
-    parms.kappa_2 = 10000.0;
+    parms.kappa_1 = 1.0;  
+    parms.kappa_2 = 1.0;
     sim_infos << "   Kappa_2                       : " << parms.kappa_2 << std::endl;
 
     SparseMatrix<RealType> Kg, Mg; 
@@ -242,7 +242,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             RealType p = -4.0;
             RealType radius = 1.0/3.0 + p/32.0;  
             // RealType radius = 1.0/3.0 + p/640.0;  
-            RealType a = 5e-10;
+            // RealType a = 5e-10;
             // auto level_set_function = line_level_set<RealType>(line_y);
             // auto level_set_function = square_level_set<RealType>(0.70+a, 0.30-a, 0.25, 0.75);
             auto level_set_function = circle_level_set<RealType>(radius, 0.5, 0.5);          
@@ -268,7 +268,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // NON-HOMOGENEOUS WITHOUT JUMPS 
-            auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
+            // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
             
             // NON-HOMOGENEOUS WITH NEUMANN JUMP WITHOUT DIRICHLET JUMP
             // auto test_case = make_test_case_laplacian_contrast_jump_gN(msh, level_set_function, parms);
@@ -276,9 +276,8 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // NON HOMOGENEOUS WITH DIRICHLET JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
 
-            // HOMOGENEOUS WITH JUMPS 
-            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
-            // auto test_case = make_test_case_laplacian_jumps_3(msh, level_set_function); 
+            // HOMOGENEOUS WITH NONPOLY JUMPS 
+            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
   
             // ##################################################
             // ################################################## Assembly  
@@ -291,7 +290,6 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             
             // SPASITY PROFILES 
             bool sparsity = false;
-
             std::pair<VecTuple, VecTuple> Pairs = make_pair_KO_pair_OK(msh);
             // Loop on POK subcells 
             for (auto& pair : Pairs.first) { 
