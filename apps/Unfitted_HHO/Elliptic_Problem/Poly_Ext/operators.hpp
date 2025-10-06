@@ -77,13 +77,15 @@ public:
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_OK, hdi, eta, coeff);    // s^\Gamma
         auto stab_ill_dofs = make_hho_ill_dofs_stabilization(msh, P_OK, hdi, eta);          // s^N
         
-        // stab_ill_dofs = 20.0*stab_ill_dofs;
+        // SCALING
         auto k = hdi.cell_degree();
         stab_usual = k*stab_usual;
         // stab_cut = k*stab_cut;
+        // stab_ill_dofs = 20.0*stab_ill_dofs;
         stab_ill_dofs = k*k*stab_ill_dofs;
 
-        Mat lc = kappa*(gr.second + stab_usual + stab_ill_dofs) + kappa_1*stab_cut; 
+        // LOCAL CONTRIBUTIONS
+        Mat lc = kappa*(gr.second + stab_usual + stab_ill_dofs + stab_cut); 
         
         // RHS
         auto f = make_rhs_jumps(msh, P_OK, hdi, gr.first, POK, test_case, eta);
@@ -122,11 +124,13 @@ public:
         auto stab_usual = make_hho_stabilization(msh, P_KO, hdi);                        // s°
         auto stab_cut = make_hho_stabilization_penalty_term(msh, P_KO, hdi, eta, coeff); // s^\Gamma
         
+        // SCALING
         auto k = hdi.cell_degree();
         stab_usual = k*stab_usual;
         // stab_cut = k*stab_cut;
         
-        Mat lc = kappa * (gr.second + stab_usual) + kappa_1*stab_cut; 
+        // LOCAL CONTRIBUTIONS
+        Mat lc = kappa * (gr.second + stab_usual + stab_cut); 
 
         // RHS
         auto f = make_rhs_jumps(msh, P_KO, hdi, gr.first, POK, test_case, eta);

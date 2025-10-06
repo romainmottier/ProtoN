@@ -1025,7 +1025,6 @@ make_hho_cut_interface_penalty(const cuthho_mesh<T, ET>& msh, const typename cut
 
     auto celdeg = di.cell_degree();
     auto cbs = cut_cell_basis<cuthho_mesh<T, ET>,T>::size(celdeg);
-    auto num_faces = faces(msh, cl).size();
 
     #ifndef subcell_centering
     cell_basis<cuthho_mesh<T, ET>,T> cb_n(msh, cl, celdeg);
