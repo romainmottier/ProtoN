@@ -239,7 +239,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ########## Level set function
             RealType h = 0.1/std::pow(2,l);
             RealType line_y = 0.5015625; 
-            RealType p = -4.0;
+            RealType p = 0.0;
             RealType radius = 1.0/3.0 + p/32.0;  
             // RealType radius = 1.0/3.0 + p/640.0;  
             // RealType a = 5e-10;
@@ -265,7 +265,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // ##################################################
     
             // HOMOGENEOUS WITHOUT JUMPS - SAME SOLUTION ACROSS THE INTERFACE
-            // auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
+            auto test_case = make_test_case_laplacian_sin_sin(msh, level_set_function);
 
             // NON-HOMOGENEOUS WITHOUT JUMPS 
             // auto test_case = make_test_case_laplacian_contrast_6(msh, level_set_function, parms);
@@ -277,7 +277,7 @@ void CutHHOSecondOrderConvTest(int argc, char **argv) {
             // auto test_case = make_test_case_laplacian_contrast_jump_gD(msh, level_set_function, parms);
 
             // HOMOGENEOUS WITH NONPOLY JUMPS 
-            auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
+            // auto test_case = make_test_case_laplacian_jumps_2(msh, level_set_function); 
   
             // ##################################################
             // ################################################## Assembly  
